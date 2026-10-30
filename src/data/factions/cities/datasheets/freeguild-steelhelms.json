@@ -1,0 +1,52 @@
+[
+  {
+    "id": "cities.unit.freeguild-steelhelms",
+    "faction": "cities",
+    "name": "Freeguild Steelhelms",
+    "keywords": [
+      "INFANTRY",
+      "REINFORCEMENTS"
+    ],
+    "factionKeywords": [
+      "CITIES OF SIGMAR",
+      "ORDER"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 1,
+      "Sv": 4,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "steelhelm",
+        "name": "Freeguild Steelhelm",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "cities.weapon.freeguild-weapon"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "cities.ability.consecrate-the-land"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

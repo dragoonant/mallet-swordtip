@@ -1,0 +1,67 @@
+{
+  "id": "cities.army.castelite-company",
+  "faction": "cities",
+  "name": "Castelite Company",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "marshal",
+      "datasheet": "cities.unit.freeguild-cavalier-marshal",
+      "size": 1
+    },
+    {
+      "ref": "steelhelms-a",
+      "datasheet": "cities.unit.freeguild-steelhelms",
+      "size": 5
+    },
+    {
+      "ref": "steelhelms-b",
+      "datasheet": "cities.unit.freeguild-steelhelms",
+      "size": 5
+    },
+    {
+      "ref": "cavaliers",
+      "datasheet": "cities.unit.freeguild-cavaliers",
+      "size": 5
+    },
+    {
+      "ref": "cannon",
+      "datasheet": "cities.unit.ironweld-great-cannon",
+      "size": 1
+    }
+  ],
+  "warlord": "marshal",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "cities.ability.the-officers-order"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "cities.ability.for-sigmar-charge",
+      "default": true
+    },
+    {
+      "id": "cities.ability.ironweld-discipline",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "cities.enh.flask-of-lethisian-darkwater",
+      "default": false
+    },
+    {
+      "id": "cities.enh.heirloom-blade",
+      "default": true
+    },
+    {
+      "id": "cities.enh.brazier-of-holy-flame",
+      "default": false
+    },
+    {
+      "id": "cities.enh.glimmering",
+      "default": false
+    }
+  ]
+}

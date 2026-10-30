@@ -164,9 +164,9 @@ export function BattlefieldAmbience() {
     const out = rand(-7, 0)
     const nx = edge === 0 ? 1 : edge === 1 ? -1 : 0
     const nz = edge === 2 ? 1 : edge === 3 ? -1 : 0
-    const along = nx !== 0 ? rand(-12, 12) : rand(-20, 20)
-    const bx = nx !== 0 ? nx * (22 + out) : along
-    const bz = nx !== 0 ? along : nz * (15 + out)
+    const along = nx !== 0 ? rand(-9, 9) : rand(-13, 13)
+    const bx = nx !== 0 ? nx * (15 + out) : along
+    const bz = nx !== 0 ? along : nz * (11 + out)
     const launchOut = rand(8, 14)
     s.apex.set(bx, rand(10, 15), bz)
     s.launch.set(bx + nx * launchOut, 1, bz + nz * launchOut)

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "ironjawz.unit.ardboyz",
+    "faction": "ironjawz",
+    "name": "Ardboyz",
+    "keywords": [
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "IRONJAWZ"
+    ],
+    "stats": {
+      "M": 4,
+      "W": 2,
+      "Sv": 3,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "ardboy",
+        "name": "Ardboy",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "ironjawz.weapon.choppa-or-stikka"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "ork-boy"
+        }
+      }
+    ],
+    "abilities": [
+      "ironjawz.ability.shield-bash"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "ork-boy"
+    },
+    "spearhead": true
+  }
+]

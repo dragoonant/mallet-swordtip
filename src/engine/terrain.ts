@@ -1,5 +1,9 @@
-// Terrain service (10-rules §3.2, R-5.7). Owner: W1-B. Movement/charge/fight modules call this for climbs, walls,
-// impassable areas and end-of-move legality; LoS uses the shared wall/footprint geometry below for rays (los.ts).
+// Terrain service (Spearhead port, WP4: CORE-6.7, CORE-6.10, CORE-16.7, SPH-5.6). Movement/charge/fight modules call this
+// for climbs, walls, impassable areas and end-of-move legality; LoS uses the shared wall/footprint geometry below for rays
+// (los.ts).
+// AoS in short: terrain parts 1" tall or lower are ignored; taller parts are climbed (vertical distance counts, a wall crossed
+// on the ground costs the climb up and down); any model may climb, FLY ignores terrain; an Unstable feature cannot be ended
+// on, or set up on, anywhere taller than 1"; an Impassable feature cannot be crossed or ended on at all.
 //
 // [interp] heightAt/canEndAt: the data model lets a (x,z) point sit under more than one usable surface (a ruin's
 // ground floor vs. an upper floor at the same footprint). heightAt(x,z) with no hint is "the highest surface directly
@@ -12,6 +16,9 @@ import { partlyWithinPolygon, pointInPolygon, pointToSegment, whollyWithinPolygo
 import { hasKeyword } from './state'
 import type { WallData } from '../data/types'
 import type { GameState, Model, Path, TerrainPiece, TerrainPieceId, Vec2, Vec3 } from './types'
+
+// CORE-6.7: terrain parts this tall or lower are ignored by movement
+export const IGNORED_PART_HEIGHT = 1
 
 // ---------- shared low-level geometry (also used by los.ts) ----------
 
@@ -107,6 +114,7 @@ export function isTerrainId(state: GameState, id: string): id is TerrainPieceId 
 // rather than a crossing segment — used by canEndAt so a model may not end a move with its base inside a wall panel,
 // even a wall its keywords let it move through (R-5.7: crossing ≠ stopping).
 function wallOccupiesPoint(wall: WallData, pos: Vec3, radius: number): boolean {
+  if (wall.height <= IGNORED_PART_HEIGHT + EPS) return false // CORE-6.7: parts of 1" or less are ignored
   if (pos.y > wall.height + EPS || pos.y < -EPS) return false
   const abx = wall.b.x - wall.a.x, abz = wall.b.z - wall.a.z
   const l2 = abx * abx + abz * abz
@@ -139,8 +147,8 @@ export function acrossBarricade(state: GameState, a: Vec2, b: Vec2): boolean {
 export function surfaceY(board: { pieces?: Record<string, TerrainPiece> }, _model: Pick<Model, 'base'> | undefined, pos: Vec3): number {
   if (!Number.isFinite(pos.y) || Math.abs(pos.y) <= EPS) return 0
   for (const p of Object.values(board.pieces ?? {})) {
-    if (p.kind === 'crate' && Math.abs(pos.y - p.height) <= EPS && pointInPolygon(pos, p.footprint)) return p.height
-    if (p.kind === 'ruin') for (const f of p.floors) if (Math.abs(pos.y - f.height) <= EPS && pointInPolygon(pos, f.polygon)) return f.height
+    if (p.kind === 'crate' && p.height > IGNORED_PART_HEIGHT && Math.abs(pos.y - p.height) <= EPS && pointInPolygon(pos, p.footprint)) return p.height
+    if (p.kind === 'ruin') for (const f of p.floors) if (f.height > IGNORED_PART_HEIGHT && Math.abs(pos.y - f.height) <= EPS && pointInPolygon(pos, f.polygon)) return f.height
   }
   return 0
 }
@@ -150,8 +158,8 @@ export function surfaceY(board: { pieces?: Record<string, TerrainPiece> }, _mode
 function surfaceHeightsAt(state: GameState, x: number, z: number): number[] {
   const hs = new Set<number>([0])
   for (const p of Object.values(state.board.pieces)) {
-    if (p.kind === 'crate' && p.height > 0 && pointInPolygon({ x, z }, p.footprint)) hs.add(p.height)
-    if (p.kind === 'ruin') for (const f of p.floors) if (f.height > 0 && pointInPolygon({ x, z }, f.polygon)) hs.add(f.height)
+    if (p.kind === 'crate' && p.height > IGNORED_PART_HEIGHT && pointInPolygon({ x, z }, p.footprint)) hs.add(p.height)
+    if (p.kind === 'ruin') for (const f of p.floors) if (f.height > IGNORED_PART_HEIGHT && pointInPolygon({ x, z }, f.polygon)) hs.add(f.height)
   }
   return [...hs].sort((a, b) => a - b)
 }
@@ -166,23 +174,27 @@ function pickSurface(heights: number[], near: number): number {
 
 export interface TerrainService {
   // surface height under (x, z). Without `near`: the TOPMOST surface (0 on open ground, a ruin's highest floor, the top
-  // of a HILL/container). With `near` (an intended/starting height): the surface nearest that level — the highest one at
+  // of a raised block). With `near` (an intended/starting height): the surface nearest that level — the highest one at
   // or below it, else the lowest one above — so an end point under a ruin upper floor stays on the ground.
   heightAt(state: GameState, x: number, z: number, opts?: { near?: number }): number
-  // may a model end its move with its base centred at pos? (R-5.7: not mid-climb; barricades never; ruin floors only for
-  // INFANTRY/BEAST/FLY; hills only if the base does not overhang)
+  // may a model end its move (or be set up) with its base centred at pos? Not inside a wall or solid block taller than 1",
+  // not on Impassable terrain, not on any part taller than 1" of an Unstable feature (CORE-16.7, SPH-5.6)
   canEndAt(state: GameState, model: Model, pos: Vec3): { ok: boolean; reason?: string }
-  // does the path cross a wall this model cannot pass (ruin walls for non-INFANTRY/BEAST/FLY, impassable pieces)?
+  // does the path cross Impassable terrain this model cannot pass (CORE-16.7)? FLY ignores terrain (CORE-6.10)
   crossesImpassable(state: GameState, model: Model, path: Path): boolean
-  // extra movement cost beyond geometry.pathLength (which already charges |Δy|); 0 unless a rule adds more
+  // extra movement cost beyond geometry.pathLength (which already charges |Δy|): crossing a wall or block taller than 1" on
+  // the ground costs the climb up and the climb down (CORE-6.7); 0 for FLY
   extraMoveCost(state: GameState, model: Model, path: Path): number
-  // AREA TERRAIN pieces the model is wholly within (R-3.6): ruins, craters, woods — not HILL/OBSTACLE pieces
+  // AREA TERRAIN pieces the model is wholly within (ruins, craters, woods)
   piecesWhollyWithin(state: GameState, model: Model): TerrainPieceId[]
 }
 
-function canPassWalls(state: GameState, model: Model): boolean {
-  return hasKeyword(state, model.unitId, 'INFANTRY') || hasKeyword(state, model.unitId, 'BEAST') || hasKeyword(state, model.unitId, 'FLY')
+function isFlyer(state: GameState, model: Model): boolean {
+  return hasKeyword(state, model.unitId, 'FLY')
 }
+
+const isUnstable = (p: TerrainPiece): boolean => p.traits.includes('unstable')
+const isImpassable = (p: TerrainPiece): boolean => p.traits.includes('impassable')
 
 export const terrainService: TerrainService = {
   heightAt(state, x, z, opts) {
@@ -195,41 +207,43 @@ export const terrainService: TerrainService = {
     const radius = Math.max(model.base.radius, model.base.radius2 ?? model.base.radius)
     const groundLevel = Math.abs(pos.y) <= EPS
     for (const p of Object.values(state.board.pieces)) {
-      // barricades are never a standing surface (crossable "up/over/down" but no floor to end a move on) — a base
-      // overlapping the footprint at all, at any height, is "on top of it"
-      if (p.kind === 'barricade' && partlyWithinPolygon(fp, p.footprint)) {
+      // Impassable (CORE-16.7): no model may end any move on any part
+      if (isImpassable(p) && partlyWithinPolygon(fp, p.footprint)) {
+        return { ok: false, reason: 'may not end a move on impassable terrain' }
+      }
+      // barricades are never a standing surface — a base overlapping the footprint at all, at any height, is "on top of it"
+      if (p.kind === 'barricade' && p.height > IGNORED_PART_HEIGHT && partlyWithinPolygon(fp, p.footprint)) {
         return { ok: false, reason: 'may not end a move on top of a barricade' }
       }
-      if (p.kind === 'ruin') {
+      if (p.kind === 'ruin' || p.kind === 'wall') {
         for (const w of p.walls) if (wallOccupiesPoint(w, pos, radius)) {
           return { ok: false, reason: 'may not end a move inside a wall' }
         }
       }
     }
     if (groundLevel) {
-      // §3.2 HILL / LOS-022-inside: a container/hill is solid — no model can stand inside its footprint at ground
-      // level, including a base that merely overhangs the solid volume (LOS-022-inside-overlap)
+      // a solid block taller than 1" is not a standing surface at ground level (it would be inside it); a base that merely
+      // overhangs its footprint is rejected too
       for (const p of Object.values(state.board.pieces)) {
-        if (p.kind === 'crate' && p.height > EPS && partlyWithinPolygon(fp, p.footprint)) {
+        if (p.kind === 'crate' && p.height > IGNORED_PART_HEIGHT + EPS && partlyWithinPolygon(fp, p.footprint)) {
           return { ok: false, reason: 'may not end a move inside a solid terrain piece' }
         }
       }
       return { ok: true }
     }
-    // LOS-022-endAt: several surfaces may share a height (two equal containers, a container and a ruin floor, two
-    // ruins' upper floors). Only surfaces under the base centre are candidates; the move is legal if ANY candidate
-    // wholly contains the base. The most specific failure reason among the candidates is reported otherwise.
-    const infantryLike = canPassWalls(state, model)
+    // elevated end point: several surfaces may share a height; only surfaces under the base centre are candidates and
+    // the move is legal if ANY candidate wholly contains the base. Unstable features (SPH-5.6) refuse anything above 1".
     let reason: string | undefined
     for (const p of Object.values(state.board.pieces)) {
       if (p.kind === 'crate' && Math.abs(pos.y - p.height) <= EPS && pointInPolygon(pos, p.footprint)) {
+        if (isUnstable(p) && pos.y > IGNORED_PART_HEIGHT + EPS) { reason ??= 'unstable terrain: cannot end a move on a part taller than 1"'; continue }
         if (whollyWithinPolygon(fp, p.footprint)) return { ok: true }
         reason ??= 'base would overhang the terrain'
       }
       if (p.kind === 'ruin') {
         for (const f of p.floors) {
           if (Math.abs(pos.y - f.height) > EPS || !pointInPolygon(pos, f.polygon)) continue
-          if (!infantryLike) { reason = 'only INFANTRY/BEAST/FLY models may end on a ruin upper floor'; continue }
+          if (isUnstable(p) && pos.y > IGNORED_PART_HEIGHT + EPS) { reason ??= 'unstable terrain: cannot end a move on a part taller than 1"'; continue }
           if (whollyWithinPolygon(fp, f.polygon)) return { ok: true }
           reason ??= 'base would overhang the floor'
         }
@@ -238,17 +252,31 @@ export const terrainService: TerrainService = {
     return { ok: false, reason: reason ?? 'no terrain surface at that height' }
   },
   crossesImpassable(state, model, path) {
-    if (canPassWalls(state, model)) return false
+    if (isFlyer(state, model)) return false
     for (let i = 1; i < path.length; i++) {
-      const a: Vec3 = { ...path[i - 1], y: 0 }, b: Vec3 = { ...path[i], y: 0 }
       for (const p of Object.values(state.board.pieces)) {
-        if (p.kind !== 'ruin') continue
-        for (const w of p.walls) if (wallCrosses3D(w, a, b)) return true
+        if (isImpassable(p) && segmentIntersectsPolygon2D(path[i - 1], path[i], p.footprint)) return true
       }
     }
     return false
   },
-  extraMoveCost: () => 0,
+  extraMoveCost(state, model, path) {
+    if (isFlyer(state, model)) return 0
+    let extra = 0
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1], b = path[i]
+      for (const p of Object.values(state.board.pieces)) {
+        for (const w of p.walls) {
+          if (w.height <= IGNORED_PART_HEIGHT + EPS) continue
+          // a wall crossed on the ground: up and over (the path's own |Δy| is charged by pathLength, so only flat crossings count)
+          if (Math.max(a.y, b.y) < w.height - EPS && wallCrosses3D(w, { ...a, y: 0 }, { ...b, y: 0 })) extra += 2 * w.height
+        }
+        if (p.kind === 'crate' && p.height > IGNORED_PART_HEIGHT + EPS && Math.max(a.y, b.y) < p.height - EPS
+          && !pointInPolygon(a, p.footprint) && !pointInPolygon(b, p.footprint) && segmentIntersectsPolygon2D(a, b, p.footprint)) extra += 2 * p.height
+      }
+    }
+    return extra
+  },
   piecesWhollyWithin(state, model) {
     return Object.values(state.board.pieces)
       .filter((p) => (p.kind === 'ruin' || p.kind === 'crater' || p.kind === 'forest') && whollyWithinPolygon(model, p.footprint))
@@ -257,7 +285,7 @@ export const terrainService: TerrainService = {
 }
 
 // Standing height for an engine-computed end point of a move that should keep its level (charge, pile-in,
-// consolidation, approach): the surface nearest `near` (normally the model's starting y) at which the model may legally
+// approach): the surface nearest `near` (normally the model's starting y) at which the model may legally
 // end (canEndAt); when none is legal, the nearest surface anyway so the caller's own canEndAt check rejects it. Falling
 // to a different surface than the nearest is how a model still climbs a crate/floor when the lower spot is blocked; the
 // caller charges |Δy| in its move distance.
@@ -269,18 +297,10 @@ export function settleY(state: GameState, model: Model, x: number, z: number, ne
   return first
 }
 
-// Deployment terrain check: a model may only be set up where it could legally end a move (no wall/crate/barricade
-// overlap) and, if it cannot pass ruin walls (VEHICLE/MONSTER without FLY), not even partly inside a ruin footprint —
-// otherwise it starts the game boxed in by walls it can never cross (a Deff Dread trapped in a corner ruin).
+// Set-up check (SPH-5.6, SPH-7): a model may only be set up where it could legally end a move (no wall, tall solid block,
+// impassable part, or part of an Unstable feature taller than 1")
 export function deployTerrainBlock(state: GameState, model: Model, pos: Vec3, facing: number = model.facing): string | null {
   const m: Model = { ...model, facing }
   const end = terrainService.canEndAt(state, m, pos)
-  if (!end.ok) return end.reason ?? 'blocked by terrain'
-  if (!canPassWalls(state, model)) {
-    const fp: Footprint = { pos, facing, base: model.base }
-    for (const p of Object.values(state.board.pieces)) {
-      if (p.kind === 'ruin' && partlyWithinPolygon(fp, p.footprint)) return 'cannot be set up inside a ruin it cannot move out of'
-    }
-  }
-  return null
+  return end.ok ? null : (end.reason ?? 'blocked by terrain')
 }

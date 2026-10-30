@@ -17,12 +17,10 @@ import {
   isApproachPending, startDraft, autoDraft, validateApproach, fightersAfter,
 } from '../interaction'
 import { neededChargeDistance } from '@/engine/phases/charge'
-import { isTeleporting } from '@/engine/teleport'
 import {
   chargeTargetHelp, moveTypeHelp, objectiveLabel, prettifyId, saveAttackContext,
   shootingTargetHelp, type PromptHelp,
 } from './labels'
-import { offeredAmbushMarker, useAmbushHover } from '../interaction/CultAmbushMarkers'
 import { commitStagedDraft } from '../interaction/commitDraft'
 import { FormationPicker } from './FormationPicker'
 import { requestCameraOverview } from '../board/CameraRig'
@@ -32,13 +30,15 @@ import { isOversizeForZone } from '../../engine/geometry'
 import { groupLabel, groupUnitIds, soleDeployUnit } from '../interaction/embarkGroup'
 import { rerollTrayModel, rollForOffer } from './rerollInfo'
 import { RerollTray } from './RerollTray'
-import { overwatchReach } from './overwatchInfo'
 import { useCaughtUp } from '../presentation/presentedStore'
 import { buttonBase, buttonDanger, buttonPrimary, colors, fontStack, mutedText, panel } from './theme'
 import { Tooltip } from './Tooltip'
 import { BottomSheet } from './BottomSheet'
 import { useFormFactor } from './formFactor'
-import { diePoolName, multiDiePick, toggleDie } from './fate'
+// No Miracle / Fate dice in Spearhead (the 40k dice pools are gone); the prompt code that still names them is never reached.
+const diePoolName = (_state?: unknown, _id?: unknown): 'Fate' | 'Miracle' => 'Miracle'
+const multiDiePick = (_data?: Record<string, unknown>): { pool: number[]; max: number } | null => null
+const toggleDie = (selected: readonly number[], i: number, max: number): number[] => (selected.includes(i) ? selected.filter((x) => x !== i) : selected.length >= max ? [...selected] : [...selected, i])
 
 /** The nearest thing worth orienting a move/charge/pile-in/consolidate destination against — an
  *  objective it lands on, or the nearest enemy unit — so a suggested placement reads as "toward
@@ -84,20 +84,17 @@ function placementSummary(state: GameState, unitId: string, placements: { pos: {
 
 const KIND_TITLE: Partial<Record<PendingDecision['kind'], string>> = {
   deployUnit: 'Deploy your forces',
-  chooseUnitToActivate: 'Choose a unit to activate',
-  declareMove: 'Declare a move',
+  chooseUnitToActivate: 'Choose a unit',
+  declareMove: 'Choose a move',
   moveUnit: 'Move the unit',
   declareTargets: 'Choose targets',
   allocateAttack: 'Allocate the attack',
-  declareCharge: 'Declare a charge',
+  declareCharge: 'Charge!',
   chargeMove: 'Make the charge move',
   pileIn: 'Pile in',
-  consolidate: 'Consolidate',
-  chooseFightUnit: 'Choose who fights',
-  stratagemWindow: 'Use a stratagem?',
-  reactionWindow: 'React?',
+  consolidate: 'Move',
+  chooseFightUnit: 'Choose who fights next',
   chooseOption: 'Choose an option',
-  commandReroll: 'Command re-roll?',
   confirm: 'Confirm',
 }
 
@@ -122,6 +119,19 @@ const CHOOSE_OPTION_INFO: Partial<Record<ChooseOptionTopic, { title: string; hin
   rerollOffer: { title: 'Re-roll a die?', hint: 'Choose a die to re-roll, or keep the result.' },
   abilityChoice: { title: 'Ability choice', hint: 'Choose how this ability applies.' },
   chooseSide: { title: 'Choose your side', hint: 'Pick which deployment zone your army sets up in.' },
+  // Spearhead (13-port-plan §2.1)
+  chooseAttacker: { title: 'Attacker or defender?', hint: 'You won the roll-off. The attacker sets up first and picks their army options first; the defender picks the map side and territory, and sets up terrain first.' },
+  armyOptions: { title: 'Choose army options', hint: 'Pick one regiment ability for the battle and one enhancement for your general.' },
+  battlefieldSide: { title: 'Choose the battlefield side', hint: 'Pick which side of the realm battlefield is played. It fixes the objective layout.' },
+  deploymentMap: { title: 'Choose the deployment map', hint: 'Pick how the board is split into two territories, and which one is yours.' },
+  placeTerrain: { title: 'Place a terrain feature', hint: 'Choose where this feature stands. It must be clear of objectives and other terrain.' },
+  firstTurn: { title: 'Who takes the first turn?', hint: 'Going first means you act first this round, then your opponent. The other player takes the second turn.' },
+  priorityChoice: { title: 'You won the priority roll', hint: 'Choose who takes the first turn of this round. If you pick your opponent, you get the last turn of this round and the first of the next: a double turn.' },
+  abilityUse: { title: 'Use an ability?', hint: 'Pick an ability to use now, or pass. Each ability can be used at this timing, and army abilities once per turn.' },
+  abilityTarget: { title: 'Choose a target', hint: 'Pick the unit this ability affects.' },
+  abilityMode: { title: 'Choose an effect', hint: 'This ability has more than one effect. Pick one.' },
+  pileInTarget: { title: 'Choose where to pile in', hint: 'Pick the enemy unit this unit moves toward when it piles in (up to 3").' },
+  contestedObjective: { title: 'Which objective does this unit contest?', hint: 'The unit touches more than one objective circle. It counts toward one of them.' },
 }
 
 const GLIMPSE_INFO = {
@@ -757,9 +767,9 @@ const PASS_LABEL: Partial<Record<PendingDecision['kind'], string>> = {
 
 const MOVE_TYPE_LABEL: Partial<Record<MoveType, string>> = {
   normal: 'Normal move',
-  advance: 'Advance',
-  stationary: 'Remain Stationary',
-  fallBack: 'Fall Back',
+  advance: 'Run',
+  stationary: 'Stay put',
+  fallBack: 'Retreat',
 }
 
 const REACTION_LABEL: Record<string, string> = {
@@ -1567,7 +1577,6 @@ function DecisionPromptBody() {
     cancelHelp()
     setPreviewDraft(null)
     clearBoardHover()
-    useAmbushHover.getState().set(null)
   }
   const armOption = (
     id: string,
@@ -1577,7 +1586,6 @@ function DecisionPromptBody() {
   ) => {
     disarm()
     setArmedId(id)
-    if (/^pt:/.test(id)) useAmbushHover.getState().set(id)
     if (hasHelp) setHelpFor(id)
     if (withPlacements) setPreviewDraft({ decisionId: pending.id, unitId: withPlacements.unitId, anchor: { x: 0, z: 0 }, placements: withPlacements.placements })
     if (hoverTarget?.kind === 'unit') hoverUnit(hoverTarget.ids)
@@ -1589,13 +1597,6 @@ function DecisionPromptBody() {
     <>
       {chooseOptionInfo && <div style={hint}>{chooseOptionInfo.hint}</div>}
       {multiMiracle && pending.kind === 'chooseOption' && <MultiDicePick key={pending.id} pending={pending} poolName={diePoolName(state, pending.player)} dispatch={dispatch} />}
-      {pending.kind === 'chooseOption' && (() => {
-        const step = pending.context.data?.code === 'cultAmbush' ? pending.context.data.step : null
-        if (step === 'marker') return <div style={hint} data-testid="cult-ambush-marker-hint">Blue discs on the board are the legal spots. {compact ? 'Tap an option once to light its spot, or tap a disc.' : 'Hover an option to light its spot, or click a disc.'}</div>
-        const mk = step === 'return' ? offeredAmbushMarker(pending, state) : null
-        return mk ? <div style={hint} data-testid="cult-ambush-return-hint">Marker offered: the ringed disc at {mk.pos.x.toFixed(1)}, {mk.pos.z.toFixed(1)}.</div> : null
-      })()}
-
       {pending.kind === 'stratagemWindow' && (
         <StratagemOffers
           state={state}
@@ -1612,25 +1613,6 @@ function DecisionPromptBody() {
           triggerLine={`${REACTION_LABEL[pending.context.reaction] ?? pending.context.reaction}${pending.context.enemyUnitId ? ` — ${state.units[pending.context.enemyUnitId]?.name ?? pending.context.enemyUnitId}` : ''}`}
         />
       )}
-      {pending.kind === 'reactionWindow' && pending.context.reaction === 'overwatch' && pending.context.enemyUnitId && (() => {
-        const enemyId = pending.context.enemyUnitId
-        const rows = pending.context.eligibleUnits.map((u) => overwatchReach(state, u, enemyId))
-        if (rows.length === 0) return null
-        return (
-          <div style={infoBlock} data-testid="overwatch-reach">
-            {rows.map((r) => (
-              <div key={r.unitId}>
-                <strong>{state.units[r.unitId]?.name ?? r.unitId}</strong>:{' '}
-                {r.total === 0
-                  ? 'no ranged weapons'
-                  : `${r.canFire} of ${r.total} ranged weapon${r.total === 1 ? '' : 's'} can reach ${state.units[enemyId]?.name ?? enemyId}`}
-                {r.inRange > r.canFire && ` (${r.inRange - r.canFire} more in range but won't fire — no line of sight, a one-shot weapon, or a Pistol held back)`}
-              </div>
-            ))}
-            <div style={{ fontSize: '0.9em' }}>Measured base to base against each weapon&apos;s range.</div>
-          </div>
-        )
-      })()}
       {pending.kind === 'declareTargets' && (
         <CollapsibleInfo
           key={weaponPanelOpen ? 'panel' : 'plain'}
@@ -1643,9 +1625,9 @@ function DecisionPromptBody() {
           {pending.context.attackKind === 'ranged'
             ? `${compact ? 'Tap' : 'Click'} an enemy (or Choose weapons…) to pick which weapons fire at whom, or use a Target button to fire everything that can reach it at once. `
             : 'Every weapon that can see the unit you pick fires at it. '}
-          {compact ? 'Tap an option once' : 'Hover an option'} for its weapons, the target&apos;s Toughness and Save, and what each weapon needs to hit and wound.
+          {compact ? 'Tap an option once' : 'Hover an option'} for its weapons, the target&apos;s Health, Save and Ward, and what each weapon needs to hit and wound.
           {pending.context.engagedWith.length > 0 &&
-            ` In Engagement Range of ${pending.context.engagedWith.map((u) => state.units[u]?.name ?? u).join(', ')}.`}
+            ` In combat with ${pending.context.engagedWith.map((u) => state.units[u]?.name ?? u).join(', ')}.`}
         </CollapsibleInfo>
       )}
 
@@ -1656,12 +1638,12 @@ function DecisionPromptBody() {
       {pending.kind === 'declareCharge' && (
         <div style={infoBlock} data-testid="charge-context">
           <div style={{ color: colors.text, fontWeight: 600 }}>
-            {state.units[pending.context.unitId]?.name ?? pending.context.unitId} — declare a charge
-            {pending.context.heroic ? ' (Heroic Intervention)' : ''}
+            {state.units[pending.context.unitId]?.name ?? pending.context.unitId} — charge
+
           </div>
           <div>
-            Roll 2D6 and move that far; every unit you declare must end up within Engagement Range or the charge fails
-            and the unit does not move. {compact ? 'Tap an option once' : 'Hover an option'} for the distance, the roll it needs and the odds.
+            Roll 2D6 and move up to that far. The unit must finish within ½" of an enemy model, or the charge fails and the
+            unit stays where it is. {compact ? 'Tap an option once' : 'Hover an option'} for the distance, the roll it needs and the odds.
           </div>
         </div>
       )}
@@ -1708,7 +1690,7 @@ function DecisionPromptBody() {
           <div style={infoBlock} data-testid="allocate-context">
             <div style={{ color: colors.text, fontWeight: 600 }}>
               {pending.context.mortal ? 'Mortal wounds' : 'A wound gets through'}
-              {ctx?.weaponName ? ` — ${ctx.weaponName} (Armour Penetration ${ctx.ap})` : ''}
+              {ctx?.weaponName ? ` — ${ctx.weaponName} (Rend ${-ctx.ap})` : ''}
               {dmg !== null ? ` · Damage ${dmg}` : ''}
             </div>
             <div>
@@ -1735,7 +1717,7 @@ function DecisionPromptBody() {
           {pending.context.reservesAllowed.map((uid) => {
             const reserveAction = legal?.find((a) => a.type === 'deployUnit' && a.unitId === uid && a.toReserves)
             if (!reserveAction) return null
-            const abandon = isTeleporting(state, uid)
+            const abandon = false
             const nm = state.units[uid]?.name ?? uid
             return (
               <Tooltip key={`res-${uid}`} title="Abandon" body="A teleporting unit that is not placed is destroyed." disabled={!abandon}>
@@ -1764,29 +1746,6 @@ function DecisionPromptBody() {
         return (
           <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }} data-testid="oversize-edge-note">
             {names.join(', ')}: too big for this deployment zone, so it has to be set up with its base touching your battlefield edge. Drag it to that edge and it snaps into place.
-          </div>
-        )
-      })()}
-
-      {pending.kind === 'deployUnit' && pending.constraints.mustTouch && (() => {
-        const auto = legal?.find((a): a is Extract<Action, { type: 'deployUnit' }> => a.type === 'deployUnit' && !a.toReserves && a.placements.length > 0)
-        const mt = pending.constraints.mustTouch
-        return (
-          <div style={infoBlock} data-testid="cult-ambush-context">
-            <div>One model must touch the Cult Ambush marker (the disc on the board at {mt.pos.x.toFixed(1)}, {mt.pos.z.toFixed(1)}), and every model must end more than {pending.constraints.minDistanceFromEnemies}&quot; from enemies. {compact ? 'Tap' : 'Click'} near the marker, or use the button.</div>
-            {auto && (
-              <button
-                style={{ ...buttonPrimary, marginTop: 6 }}
-                data-testid="btn-place-at-marker"
-                onClick={() => {
-                  setDeployTarget(auto.unitId)
-                  const first = auto.placements[0]
-                  setDraft({ decisionId: pending.id, unitId: auto.unitId, anchor: { x: first.pos.x, z: first.pos.z }, placements: auto.placements })
-                }}
-              >
-                Place at marker
-              </button>
-            )}
           </div>
         )
       })()}
@@ -1859,7 +1818,6 @@ function DecisionPromptBody() {
                 onBlur={() => { if (!compact) cancelHelp() }}
                 onMouseEnter={() => {
                   if (compact) return // touch: the first tap arms the choice instead (see onClick)
-                  if (/^pt:/.test(it.id)) useAmbushHover.getState().set(it.id)
                   if (hasHelp) scheduleHelp(it.id)
                   if (withPlacements) setPreviewDraft({ decisionId: pending.id, unitId: withPlacements.unitId, anchor: { x: 0, z: 0 }, placements: withPlacements.placements })
                   if (hoverTarget?.kind === 'unit') hoverUnit(hoverTarget.ids)
@@ -1868,7 +1826,6 @@ function DecisionPromptBody() {
                 }}
                 onMouseLeave={() => {
                   if (compact) return
-                  useAmbushHover.getState().set(null)
                   cancelHelp()
                   setPreviewDraft(null)
                   clearBoardHover()

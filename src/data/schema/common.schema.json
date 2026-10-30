@@ -122,7 +122,12 @@
         "phase.end",
         "turn.end",
         "round.end",
-        "battle.end"
+        "battle.end",
+        "turn.start",
+        "turn.end.abilities",
+        "turn.end.control",
+        "turn.end.scoring",
+        "turn.end.afterScoring"
       ],
       "description": "same list as 00-architecture §4; round.start/round.end/battle.end are outside any turn"
     },
@@ -151,16 +156,23 @@
         "OC": {
           "type": "integer",
           "minimum": 0
+        },
+        "ward": {
+          "$ref": "#/$defs/RollTarget",
+          "description": "AoS Ward (N+), CORE-13.2"
+        },
+        "noSave": {
+          "type": "boolean",
+          "description": "AoS Save '-' (CORE-11.7): the unit has no save"
         }
       },
       "required": [
         "M",
-        "T",
         "Sv",
         "W",
-        "Ld",
         "OC"
-      ]
+      ],
+      "description": "AoS: M Move, Sv Save, W Health, OC Control (+ optional ward / noSave). T and Ld are 40k-only and optional."
     },
     "PartialStats": {
       "type": "object",
@@ -187,6 +199,14 @@
         "OC": {
           "type": "integer",
           "minimum": 0
+        },
+        "ward": {
+          "$ref": "#/$defs/RollTarget",
+          "description": "AoS Ward (N+), CORE-13.2"
+        },
+        "noSave": {
+          "type": "boolean",
+          "description": "AoS Save '-' (CORE-11.7): the unit has no save"
         }
       }
     },
@@ -331,10 +351,16 @@
           "type": "boolean"
         },
         "targetOnObjectiveControlledBy": {
-          "enum": ["self", "opponent"]
+          "enum": [
+            "self",
+            "opponent"
+          ]
         },
         "unitOnObjectiveControlledBy": {
-          "enum": ["self", "opponent"]
+          "enum": [
+            "self",
+            "opponent"
+          ]
         },
         "unitOnObjective": {
           "type": "boolean"
@@ -494,7 +520,10 @@
           "const": "advance"
         },
         "forbid": {
-          "enum": ["charge", "overwatch"]
+          "enum": [
+            "charge",
+            "overwatch"
+          ]
         },
         "setStat": {
           "type": "object",
@@ -708,7 +737,8 @@
         "oncePerBattle",
         "oncePerRound",
         "oncePerTurn",
-        "oncePerPhase"
+        "oncePerPhase",
+        "oncePerTurnArmy"
       ]
     },
     "Trigger": {
@@ -737,7 +767,8 @@
         "unitDestroyed",
         "deployment",
         "reinforcements",
-        "objectiveControl"
+        "objectiveControl",
+        "activated"
       ]
     },
     "AbilityDescriptor": {
@@ -778,6 +809,75 @@
         },
         "params": {
           "type": "object"
+        },
+        "timing": {
+          "$ref": "#/$defs/AbilityTiming"
+        },
+        "keywords": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/AbilityKeyword"
+          }
+        },
+        "declare": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TargetSpec"
+          }
+        },
+        "roll": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "dice": {
+              "$ref": "#/$defs/DiceExpr"
+            },
+            "succeedOn": {
+              "$ref": "#/$defs/RollTarget"
+            }
+          },
+          "required": [
+            "dice",
+            "succeedOn"
+          ]
+        },
+        "modes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+$"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "text": {
+                "$ref": "#/$defs/Text"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "text"
+            ]
+          }
+        },
+        "fromRound": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "castingValue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chantingValue": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "required": [
@@ -796,6 +896,18 @@
           "required": [
             "code"
           ]
+        },
+        {
+          "required": [
+            "timing"
+          ]
+        },
+        {
+          "properties": {
+            "trigger": {
+              "const": "activated"
+            }
+          }
         }
       ]
     },
@@ -831,7 +943,13 @@
         "EXTRA_ATTACKS",
         "ONE_SHOT",
         "PSYCHIC",
-        "CUSTOM"
+        "CUSTOM",
+        "CRIT_2_HITS",
+        "CRIT_AUTO_WOUND",
+        "CRIT_MORTAL",
+        "CHARGE_DAMAGE",
+        "COMPANION",
+        "SHOOT_IN_COMBAT"
       ]
     },
     "WeaponAbility": {
@@ -845,7 +963,15 @@
           "$ref": "#/$defs/DiceExpr"
         },
         "keyword": {
-          "$ref": "#/$defs/Keyword"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Keyword"
+            },
+            {
+              "const": "@charged"
+            }
+          ],
+          "description": "ANTI: a keyword, or '@charged' (target charged this turn); ANTI value = +N Rend in Spearhead"
         },
         "ref": {
           "$ref": "#/$defs/Id"
@@ -1167,7 +1293,7 @@
         },
         "code": {
           "type": "string",
-          "pattern": "^[a-zA-Z][a-zA-Z0-9]*$"
+          "pattern": "^[a-zA-Z][a-zA-Z0-9.]*$"
         }
       },
       "required": [
@@ -1203,6 +1329,113 @@
         "id",
         "code",
         "window"
+      ]
+    },
+    "AbilityTiming": {
+      "description": "AoS ability timing (13-port-plan 3.3). Phase names are the internal ones: command = Hero phase, fight = Combat phase.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "passive"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "phase"
+            },
+            "phase": {
+              "enum": [
+                "command",
+                "movement",
+                "shooting",
+                "charge",
+                "fight"
+              ]
+            },
+            "whose": {
+              "enum": [
+                "your",
+                "enemy",
+                "any"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "phase",
+            "whose"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "startOfTurn",
+                "endOfTurn",
+                "startOfRound",
+                "endOfRound",
+                "deployment"
+              ]
+            },
+            "whose": {
+              "enum": [
+                "your",
+                "enemy",
+                "any"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "whose"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "reaction"
+            },
+            "trigger": {
+              "enum": [
+                "youDeclared",
+                "opponentDeclaredAttack"
+              ]
+            },
+            "abilityId": {
+              "$ref": "#/$defs/Id"
+            }
+          },
+          "required": [
+            "kind",
+            "trigger"
+          ]
+        }
+      ]
+    },
+    "AbilityKeyword": {
+      "enum": [
+        "CORE",
+        "ATTACK",
+        "MOVE",
+        "RUN",
+        "CHARGE",
+        "SPELL",
+        "PRAYER",
+        "UNLIMITED"
       ]
     }
   }

@@ -19,7 +19,8 @@
       "enum": [
         "combatPatrol",
         "incursion",
-        "strikeForce"
+        "strikeForce",
+        "spearhead"
       ]
     },
     "board": {
@@ -78,6 +79,15 @@
               "A",
               "B"
             ]
+          },
+          "radius": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Spearhead: objective circle radius (default objectiveMarkerRadius)"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 60
           }
         },
         "required": [
@@ -143,6 +153,23 @@
     },
     "terrainLayouts": {
       "$ref": "common.schema.json#/$defs/IdList"
+    },
+    "territories": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "A": {
+          "$ref": "common.schema.json#/$defs/Polygon"
+        },
+        "B": {
+          "$ref": "common.schema.json#/$defs/Polygon"
+        }
+      },
+      "required": [
+        "A",
+        "B"
+      ],
+      "description": "Spearhead: the two territories of the deployment map (friendly-territory tests, SPH-1.4)"
     }
   },
   "required": [

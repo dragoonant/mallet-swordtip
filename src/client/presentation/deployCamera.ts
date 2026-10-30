@@ -12,10 +12,10 @@ import { clusterOf, discInFrame, fitDistance, withinLimits, type Pt } from './fr
 export const DEPLOY_FLY_MS = 550
 export const DEPLOY_HOLD_MS = 900
 /** Nearest the camera comes to a unit it is visiting (inches). */
-export const DEPLOY_MIN_DISTANCE = 14
-export const DEPLOY_MAX_DISTANCE = 36
+export const DEPLOY_MIN_DISTANCE = 10
+export const DEPLOY_MAX_DISTANCE = 28
 /** Furthest a visit backs off to get a wide or steeply viewed unit wholly in frame. */
-export const DEPLOY_FIT_MAX_DISTANCE = 70
+export const DEPLOY_FIT_MAX_DISTANCE = 52
 /** Two visits this close in one batch are one unit group arriving together (a leader and its bodyguard). */
 const SAME_SPOT = 2.5
 

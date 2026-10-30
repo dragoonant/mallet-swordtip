@@ -4,7 +4,7 @@
 import type { CSSProperties } from 'react'
 import { useGameStore } from '../store/game'
 import { useDisplayState } from '../presentation/presentedStore'
-import { missionRuleLabel, primaryScoringSummary, secondaryFor } from './labels'
+import { missionRuleLabel, primaryScoringSummary } from './labels'
 import { colors, mutedText, panel } from './theme'
 import { useFormFactor } from './formFactor'
 import { CompactDrawer } from './compactSheets'
@@ -34,8 +34,12 @@ export function MissionPanel({ open, onClose }: { open: boolean; onClose: () => 
 
   const mission = state.mission.data
   const primary = primaryScoringSummary(mission)
-  const secondaryA = secondaryFor(bundle, state, 'A')
-  const secondaryB = secondaryFor(bundle, state, 'B')
+  const armyLine = (player: 'A' | 'B'): string => {
+    const pl = state.players[player]
+    const regiment = pl.regimentAbilityId ? state.abilities[pl.regimentAbilityId]?.name ?? bundle?.abilities[pl.regimentAbilityId]?.name : undefined
+    const enhancement = bundle?.enhancements[pl.enhancementId]?.name
+    return [regiment, enhancement].filter(Boolean).join(' · ')
+  }
 
   const content = (
     <>
@@ -59,17 +63,14 @@ export function MissionPanel({ open, onClose }: { open: boolean; onClose: () => 
         </>
       )}
 
-      <div style={sectionTitle}>Secondaries</div>
-      {([
-        { player: 'A' as const, secondary: secondaryA },
-        { player: 'B' as const, secondary: secondaryB },
-      ] as const).map(({ player, secondary }) => (
-        <div key={player} style={{ marginBottom: 6 }}>
+      <div style={sectionTitle}>Battle</div>
+      <div style={{ fontSize: 12.5 }} data-testid="mission-round">Round {state.round} of {mission.rounds}{state.underdog ? ` · ${state.players[state.underdog].name} is the underdog` : ''}</div>
+      {(['A', 'B'] as const).map((player) => (
+        <div key={player} style={{ marginTop: 6 }}>
           <div style={{ fontWeight: 700, fontSize: 12.5, color: player === 'A' ? colors.playerA : colors.playerB }}>
-            {state.players[player].name}
-            {secondary ? ` — ${secondary.name}` : ''}
+            {state.players[player].name} — {state.players[player].vp} VP
           </div>
-          {secondary && <div style={{ fontSize: 12 }}>{secondary.text}</div>}
+          {armyLine(player) && <div style={{ fontSize: 12 }}>{armyLine(player)}</div>}
         </div>
       ))}
     </>

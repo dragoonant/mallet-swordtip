@@ -1,28 +1,34 @@
 # 20 — Data schema
 
-All game content is JSON under `src/data/`, validated at build by `tools/validate-data.ts` against
-`docs/spec/schemas/*.schema.json` (JSON Schema 2020-12). Every schema `$id` is `https://mallet42k.dev/schemas/<name>.schema.json`; cross-refs use `common.schema.json#/$defs/…`.
+All game content is JSON under `src/data/`, validated by `tools/validate-data.ts` (`npm run validate:data`) against
+`docs/spec/schemas/*.schema.json` (JSON Schema 2020-12; `src/data/schema/*.schema.json` is the same set, keep the two identical). Every
+schema `$id` is `https://mallet42k.dev/schemas/<name>.schema.json`; cross-refs use `common.schema.json#/$defs/…`.
 All prose fields (`text`, `name` of abilities) are original wording — never copied from any published book.
+
+**Mallet Swordtip (AoS 4 Spearhead).** The schemas describe Spearhead data (13-engine-port-plan §3) and still accept the inherited
+40k data until the cleanup package deletes it (PORT-0.1). Spearhead-only fields are marked **AoS** below. The two shipped Spearhead
+armies are `cities.army.castelite-company` and `ironjawz.army.bigmob` (specs in `docs/spec/factions/`).
 
 ## 1. Files
 
 | Path | Schema | Content |
 |---|---|---|
-| `src/data/core/abilities.json` | `ability[]` | shared abilities (cover, leader mechanics, core rules named abilities) |
-| `src/data/core/stratagems.json` | `stratagem[]` | core stratagems (faction `core`) |
-| `src/data/<faction>/faction.json` | `faction` | keywords, army rule, detachments, paint scheme |
-| `src/data/<faction>/datasheets.json` | `datasheet[]` | |
-| `src/data/<faction>/weapons.json` | `weapon[]` | |
-| `src/data/<faction>/abilities.json` | `ability[]` | |
-| `src/data/<faction>/stratagems.json` | `stratagem[]` | |
-| `src/data/<faction>/enhancements.json` | `enhancement[]` | |
-| `src/data/<faction>/patrols/*.json` | `combat-patrol` | one fixed force each |
-| `src/data/missions/*.json` | `mission` | |
+| `src/data/core/abilities.json` | `ability[]` | shared abilities |
+| `src/data/core/stratagems.json` | `stratagem[]` | core stratagems (40k; Spearhead has none, SPH-13.1) |
+| `src/data/factions/<faction>/faction.json` | `faction` | keywords, army rule, paint scheme, army list (`combatPatrols`); `detachments` may be `[]` |
+| `src/data/factions/<faction>/datasheets/<unit>.json` | `datasheet[]` | one warscroll per file (a one-element array) |
+| `src/data/factions/<faction>/weapons.json` | `weapon[]` | |
+| `src/data/factions/<faction>/abilities.json` | `ability[]` | battle traits, regiment abilities, enhancement effects, warscroll abilities |
+| `src/data/factions/<faction>/stratagems.json` | `stratagem[]` | 40k only |
+| `src/data/factions/<faction>/enhancements.json` | `enhancement[]` | |
+| `src/data/factions/<faction>/patrols/*.json` | `combat-patrol` | one fixed force (40k) or **AoS** Spearhead army (`mode: 'spearhead'`) |
+| `src/data/missions/*.json` | `mission` | **AoS** one battleplan × side × deployment map per file (`format: 'spearhead'`) |
 | `src/data/terrain/*.json` | `terrain-layout` | |
-| `src/data/index.ts` | — | assembles `DataBundle { byId: Record<Id, …>, version }`, throws on duplicate id or dangling ref |
+| `src/data/index.ts` | — | assembles `DataBundle`, throws on duplicate id |
 
-Ids: lowercase kebab, namespaced by dot: `sm.intercessor-squad`, `sm.w.bolt-rifle`, `core.s.command-reroll`,
-`ork.a.waaagh`, `mission.cp-01`, `terrain.cp-01`. Pattern in `common.schema.json#/$defs/Id`.
+Ids: lowercase kebab, namespaced by dot: `cities.unit.freeguild-steelhelms`, `cities.weapon.dragoon-pistol`,
+`ironjawz.ability.natural-disaster`, `ironjawz.enhancement.armour-of-gork` (40k: `sm.w.bolt-rifle`, `ork.a.waaagh`). Mission and
+layout ids are plain kebab (`sph-fire-and-jade-aqshy-horizontal`, `sph-fire-and-jade-standard`). Pattern in `common.schema.json#/$defs/Id`.
 
 ## 2. Shared primitives (`common.schema.json`)
 
@@ -37,7 +43,7 @@ Ids: lowercase kebab, namespaced by dot: `sm.intercessor-squad`, `sm.w.bolt-rifl
 | `Phase` | `command \| movement \| shooting \| charge \| fight \| any` | |
 | `TimingWindowId` | enum, same list as 00-architecture §4 | includes `round.start`, `round.end`, `battle.end` (outside any turn), `movement.moveStarted`, `charge.moveStarted`, `fight.targetsDeclared`, `fight.beforeConsolidate` |
 | `MissionRule` | `{id, code, window, params?}` | §9; `code` must exist in the hook registry |
-| `Stats` | `{M, T, Sv, W, Ld, OC}` | `M` inches int, `Sv`/`Ld` RollTarget, others int |
+| `Stats` | `{M, Sv, W, OC, ward?, noSave?, T?, Ld?}` | **AoS** `M` Move (inches), `Sv` Save (RollTarget), `W` Health, `OC` Control, `ward` Ward (N+), `noSave` for Save "-". `T`/`Ld` are 40k-only and optional (0 at runtime) |
 | `Base` | `{shape: round\|oval, mm, mm2?}` | mm2 = minor axis for oval |
 | `Condition` | see §3 | |
 | `Effect` | see §3 | |
@@ -59,13 +65,20 @@ still gate it so bespoke hooks stay cheap. A descriptor with `code` may omit `ef
 
 | Field | Type | Notes |
 |---|---|---|
-| `trigger` | enum | `always phaseStart phaseEnd turnStart turnEnd commandPhase battleShockTest advanceRoll chargeRoll unitMoved unitSelectedToShoot unitSelectedToFight targetsDeclared attacksAllocated hitRoll woundRoll saveRoll damageRoll feelNoPainRoll damageApplied modelDestroyed unitDestroyed deployment reinforcements objectiveControl` |
+| `trigger` | enum | `always phaseStart phaseEnd turnStart turnEnd commandPhase battleShockTest advanceRoll chargeRoll unitMoved unitSelectedToShoot unitSelectedToFight targetsDeclared attacksAllocated hitRoll woundRoll saveRoll damageRoll feelNoPainRoll damageApplied modelDestroyed unitDestroyed deployment reinforcements objectiveControl` and **AoS** `activated` (the descriptor is run by `src/engine/abilities.ts`, never by the hook dispatcher). In Spearhead `feelNoPainRoll` / `feelNoPain` is Ward (PORT-0.3) |
+| `timing` | AbilityTiming | **AoS**. `{kind:'passive'}`; `{kind:'phase', phase: command\|movement\|shooting\|charge\|fight, whose: your\|enemy\|any}` (`command` = Hero phase, `fight` = Combat phase); `{kind: startOfTurn\|endOfTurn\|startOfRound\|endOfRound\|deployment, whose}`; `{kind:'reaction', trigger: youDeclared\|opponentDeclaredAttack, abilityId?}`. Absent = legacy 40k trigger-driven descriptor. A descriptor needs one of `effect`, `code`, `timing`, or `trigger: 'activated'` |
+| `keywords` | enum[] | **AoS** ability keywords: `CORE ATTACK MOVE RUN CHARGE SPELL PRAYER UNLIMITED` |
+| `declare` | TargetSpec[] | **AoS** targets picked at Declare; the code hook may refine them (e.g. match a datasheet id, "wholly within") |
+| `roll` | `{dice, succeedOn}` | **AoS** the declared roll, e.g. `{dice:'D6', succeedOn:2}` |
+| `modes` | `{id, name, text}[]` | **AoS** "choose one" effects |
+| `fromRound` | int | **AoS** first battle round the ability may be used (Ere We Go: 3) |
+| `castingValue`, `chantingValue` | int | **AoS** spells and prayers (none shipped yet) |
 | `when` | Condition | all keys AND-ed; `any: Condition[]`, `not: Condition` |
 | `effect` | Effect \| Effect[] | applied in array order; each entry may carry its own `when` (AND-ed with the descriptor's), e.g. Veteran Instincts = `[{when:{targetKeyword:["MONSTER","VEHICLE"]}, reroll:"all"}, {reroll:"ones"}]` — the first matching entry wins for the same key |
 | `scope` | `{who: self\|bearer\|target\|attacker\|friendly\|enemy, within?, keyword?}` | who the effect applies to; `self` = the whole unit (attached unit included); `bearer` = only the model carrying the ability (engine `RuntimeAbility.bearerModelId`); default `self` for abilities, `bearer` for enhancements |
 | `duration` | `instant \| untilEndOfPhase \| untilEndOfTurn \| untilNextTurn \| untilEndOfRound \| battle` | default `instant` for roll effects, `battle` for `always`; `untilEndOfRound` = until the start of the next battle round (engine `expires.kind: roundEnd`; Waaagh!, Dead 'ard, Stomp 'Em) |
-| `limit` | `oncePerBattle \| oncePerRound \| oncePerTurn \| oncePerPhase` | |
-| `code` | string | hook name; must exist in registry or validation fails |
+| `limit` | `oncePerBattle \| oncePerRound \| oncePerTurn \| oncePerPhase \| oncePerTurnArmy` | `oncePerTurnArmy` (**AoS**): once per turn for the whole army |
+| `code` | string | hook name; must exist in registry or validation fails. Spearhead hook names are `<faction><Name>` camelCase (`citiesDecisiveCommander`, `ironjawzShieldBash`); `params` carries the numbers the spec states |
 | `params` | object | free-form parameters for `code` |
 
 Condition keys (all optional): `phase`, `ownTurn`, `attackerKeyword`, `attackerNotKeyword`, `targetKeyword` (Keyword or Keyword[] = any of),
@@ -120,9 +133,11 @@ One entry per profile. Multi-profile weapons share `profileGroup`; a model picks
 | `type` | `ranged \| melee` | |
 | `range` | int inches | 0 for melee |
 | `A` | DiceExpr | attacks |
-| `skill` | RollTarget \| null | BS/WS; null = auto-hit (TORRENT) |
-| `S`, `AP`, `D` | int, int ≤ 0, DiceExpr | |
-| `abilities` | WeaponAbility[] | enum `ASSAULT HEAVY RAPID_FIRE TORRENT BLAST SUSTAINED_HITS LETHAL_HITS DEVASTATING_WOUNDS ANTI TWIN_LINKED LANCE MELTA IGNORES_COVER INDIRECT_FIRE PISTOL HAZARDOUS PRECISION EXTRA_ATTACKS ONE_SHOT PSYCHIC CUSTOM`; `value` for RAPID_FIRE/SUSTAINED_HITS/MELTA (DiceExpr), `keyword`+`value` for ANTI, `ref` (ability id) for CUSTOM |
+| `skill` | RollTarget \| null | **AoS** Hit (N+). 40k BS/WS; null = auto-hit (TORRENT) |
+| `wound`, `rend` | RollTarget, int ≥ 0 | **AoS** Wound (N+) and Rend (positive number worsens the save). A weapon needs either `S`+`AP` (40k) or `wound`+`rend` (AoS); a `spearhead` datasheet's weapons must use the AoS pair (checked by `validate-data`) |
+| `S`, `AP` | int, int ≤ 0 | 40k only, optional |
+| `D` | DiceExpr | damage |
+| `abilities` | WeaponAbility[] | enum `ASSAULT HEAVY RAPID_FIRE TORRENT BLAST SUSTAINED_HITS LETHAL_HITS DEVASTATING_WOUNDS ANTI TWIN_LINKED LANCE MELTA IGNORES_COVER INDIRECT_FIRE PISTOL HAZARDOUS PRECISION EXTRA_ATTACKS ONE_SHOT PSYCHIC CUSTOM` plus **AoS** `CRIT_2_HITS CRIT_AUTO_WOUND CRIT_MORTAL CHARGE_DAMAGE COMPANION SHOOT_IN_COMBAT`; `value` for RAPID_FIRE/SUSTAINED_HITS/MELTA (DiceExpr), `keyword`+`value` for ANTI, `ref` (ability id) for CUSTOM. **AoS** `ANTI` means "+`value` Rend against `keyword`"; `keyword: '@charged'` = the target charged this turn (Anti-charge). `CHARGE_DAMAGE` value = bonus damage on a charge turn |
 | `profileGroup` | Id | optional |
 | `figure` | `{part: Id}` | which weapon part to mount (30-figures) |
 
@@ -141,8 +156,13 @@ One entry per profile. Multi-profile weapons share `profileGroup`; a model picks
 | `leader` | `{attachTo: Id[], effects: (Id\|AbilityDescriptor)[]}` | CHARACTER only |
 | `damaged` | `{threshold: int, effect: Effect}` | vehicles/monsters |
 | `transport` | `{capacity: int, keywords?: Keyword[], excludeKeywords?: Keyword[], firingDeck?: int}` | transports; capacity counts models; passengers need every `keywords` entry and none of `excludeKeywords` |
-| `points` | `{models, points}[]` | |
-| `figure` | `{archetype, kit, parts?: Record<Slot, Id>}` | see 30-figures; composition entries may override |
+| `points` | `{models, points}[]` | 40k only, optional (Spearhead has no points) |
+| `spearhead` | boolean | **AoS** the datasheet is a Spearhead warscroll; a Spearhead army may only use these (SPH-13.7) |
+| `coherencyRange` | number ≥ 0.5 | **AoS** CORE-1.6: a longer coherency range than ½" |
+| `wizard`, `priest` | int | **AoS** power level (P2, none shipped) |
+| `figure` | `{archetype, kit, parts?: Record<Slot, Id>}` | see 30-figures; composition entries may override. Spearhead entries use the placeholder kits `generic-infantry/heavy/monster/vehicle` and the ork kits until MGSD figures exist |
+
+AoS keywords are the printed ones (`HERO`, `INFANTRY`, `CAVALRY`, `WAR MACHINE`, `BRUTE`, `REINFORCEMENTS`, `FLY`); faction keywords are display-only. Abilities that name a unit match on datasheet id (`params.datasheet`), never on a keyword.
 
 Unit-level state in the engine (`wounds`, `battleShocked`, `moved`, `advanced`) is not data and is not in the schema.
 
@@ -173,27 +193,36 @@ Unit-level state in the engine (`wounds`, `battleShocked`, `moved`, `advanced`) 
 
 `faction`: `{id, name, factionKeyword, armyRule: Id, detachments:[{id, name, rule: Id, stratagems: Id[], enhancements: Id[]}], paintScheme:{primary, secondary, trim, metal, decal} (hex), combatPatrols: Id[]}`.
 
+**Spearhead army** (SPH-2, 13-engine-port-plan §3.4) = a `combat-patrol` file with `mode: 'spearhead'`. Mapping from the SPH-16.4 shape: `general` → `warlord`, `units[].models` → `size`, `stratagems: []`, `secondaries: []`. Extra fields: `battleTraits: Id[]` (ability ids attached to every unit), `regimentAbilities: [{id, default}, {id, default}]` (exactly 2, one default; the chosen one is player-wide), `enhancements` (exactly 4, one default; only ever given to the general), `units[].reserve: {ability}` (the unit starts in reserve and arrives through that ability), `units[].tokens` (P2). The faction's `armyRule` is a passive marker ability (`timing: {kind:'passive'}`) so the 40k setup path finds one. Enhancement `effect` is an ability id whose descriptor has `scope: {who:'bearer'}`.
+
 `combat-patrol`: `{id, faction, name, detachment?, armyRule?: Id (patrol-level override of the faction armyRule), warlord: ref, units:[{ref, datasheet, size, wargear?: [{modelId, count, weapons: Id[]}], patrolSquads?: [{ref, size, wargear: [{modelId, count, weapons: Id[]}]}], attachTo?: ref, enhancement?: Id}], unitChoices?: [{id, refs: ref[], default: ref}] (exactly one ref per group is fielded; Grey Knights Terminators/Dreadknight), stratagems: Id[], enhancements: [{id, default}], secondaries: [{id, name, text, default, scoring: ScoringRule[]}]}`. `ref` is unique inside the patrol and becomes the engine `unitId` prefix. `attachTo` references another unit's `ref` (leader attachment chosen at setup; the setup UI may change it within `leader.attachTo`). Exactly one enhancement and one secondary have `default: true`; the player may swap to the optional one at setup (11-combat-patrol CP-1.4/1.5).
 
 ## 9. Missions
 
 | Field | Type | Notes |
 |---|---|---|
-| `id`, `name`, `format` | | `format: combatPatrol \| incursion \| strikeForce` |
-| `board` | `{w, h}` | 44 × 30 for Combat Patrol |
-| `deploymentZones` | `{A: Polygon, B: Polygon}` | inches, board coords |
-| `objectives` | `{id, x, z}[]` | marker centre; control radius from `objectiveRange` (3" from marker edge, marker radius 0.79") |
-| `rounds` | int | 5 |
+| `id`, `name`, `format` | | `format: combatPatrol \| incursion \| strikeForce \| spearhead` |
+| `board` | `{w, h}` | 44 × 30 for Combat Patrol; **AoS** 30 × 22 |
+| `deploymentZones` | `{A: Polygon, B: Polygon}` | inches, board coords. **AoS**: the SPH-7.2 deploy area, i.e. the territory minus the 6" strip next to the dividing line |
+| `territories` | `{A: Polygon, B: Polygon}` | **AoS** the two territories of the deployment map (friendly-territory tests, SPH-1.4); optional |
+| `objectives` | `{id, x, z, home?, radius?, name?}[]` | marker centre; 40k control radius from `objectiveRange` (3" from marker edge, marker radius 0.79"). **AoS**: `radius` = objective circle (default `objectiveMarkerRadius`), `name` = display name; `objectiveRange: 0` and `objectiveMarkerRadius: 3` reproduce SPH-6.2 (a model contests while any part of its base overlaps the circle) |
+| `rounds` | int | 5 (**AoS** 4) |
 | `firstTurn` | `roll \| attackerChoice` | |
 | `scoring` | ScoringRule[] | `{id, when: TimingWindowId, rounds:{from,to}, who?: active\|opponent\|both\|first\|second, rule, pointsPer, cap, params?, code?}` (`common#/$defs/ScoringRule`, shared with patrol secondaries). `when` may be any window incl. `round.start`/`round.end`/`battle.end`; `who: first/second` = the player who took the first/second turn of the round (round-5 split: `{command.end, 5–5, first}` + `{turn.end, 5–5, second}`, 11-combat-patrol CP-2.1). `rule`: `holdObjectives` (per marker; `params.objectiveIds` restricts, `params.min` = threshold form "≥ n markers"), `holdMore` (`params.allowTie` = a tie, incl. 0 v 0, also scores), `holdHome`, `holdEnemyHome`, `holdNamed` (`params.objectiveIds`, all must be held), `unitsInEnemyZone`, `destroyedUnits`, `razedThisTurn`, `claimedSite`, `claimedSiteConsecutive` (`params.turns`), `custom` (`code`). `params.capGroup` lets several rules share one per-instance cap. |
 | `rules` | MissionRule[] | `{id, code, window, params?}` — non-scoring mission rules (Retrieve Intelligence, Irradiated Power Cells, Sabotage Comms, Raze and Ruin, Supply Lines, Break Their Spirit, Claim Sites); `code` validated against the hook registry; state they keep is listed in 11-combat-patrol §2.6 |
 | `victory` | `{tie: draw \| fewerDestroyed}` | |
 | `terrainLayouts` | Id[] | allowed layouts |
 
+**AoS scoring.** Spearhead scores at the end of the active player's own turn (SPH-11.1) with three `custom` rules, `when: 'turn.end'`, `who: 'active'`, rounds 1–4, `pointsPer: 1`, `cap: 1`: `code: 'sph.vp.holdOne'` (control ≥ 1 objective), `'sph.vp.holdTwo'` (≥ 2), `'sph.vp.holdMore'` (more than the opponent). The reducer never opens `turn.end`; the missions service runs these rules in the `turn.end.scoring` window. `ScoringRule.code` may contain dots. The battle-tactic rule `sph.vp.tactic` is P2 (no card data).
+
+The shipped battleplan is `sph-fire-and-jade-aqshy-horizontal` (SPH-14.2/14.3): territory A is z < 0, B is z > 0, deploy strips |z| from 6 to 11, objectives Dracothion (0, 0), Vulcatrix (−11, −7), Ignax (10, −7), Behemat (−10, 7), Nagendra (11, 7), all radius 3. Diagonal map and the Ghyran side are P1/P2.
+
 ## 10. Terrain layouts
 
 `{id, board, pieces: Piece[]}`; `Piece = {id, kind: ruin|crate|barricade|crater|wall|forest, pos: Vec2, rot: number(rad), footprint: Polygon (local), height, traits: (obscuring|cover|breachable|scalable|difficult|impassable|unstable)[], walls?: [{a: Vec2, b: Vec2, height, thickness, gaps?: [{from, to}] }], floors?: [{polygon, height}]}`.
 `footprint` is the area used for "wholly within" tests; `walls` are the raycast blockers; `floors` are standable surfaces.
+
+**AoS** (SPH-5): no new `kind`. The large *Ruined Domicile* is `kind: 'ruin'`, a 5 × 3 footprint, two 4"-tall walls, `traits: ['cover','obscuring','unstable']`, no floors. The small *Ravaged Shrine* is `kind: 'crate'`, 3 × 2, height 2, `traits: ['cover','unstable']`. Board `{w: 30, h: 22}`. The shipped layout `sph-fire-and-jade-standard` is the SPH-14.4 table (piece ids `tf-a-large`, `tf-a-small`, `tf-b-large`, `tf-b-small`); the B pieces are rotated π so the layout is point-symmetric.
 
 ## 11. Worked examples
 
@@ -255,3 +284,6 @@ Validator: `ajv` (2020-12 class, `strict: true, strictRequired: false`), all sch
 | `combat-patrol.attachTo` targets a unit the leader's `leader.attachTo` allows | illegal attach |
 | paint scheme hex colours parse | colour |
 | every `text` field ≤ 400 chars | verbosity guard |
+| **implemented now** (`checkSpearheadArmy`, `tests/data/spearhead.test.ts`): a `mode: 'spearhead'` army has exactly 2 regiment abilities (SPH-2.3) and 4 enhancements (SPH-2.4), one default of each, a general that is one of its units, only `spearhead: true` datasheets (SPH-13.7), weapons with `wound` + `rend`, and every referenced ability / enhancement / datasheet / weapon id exists | SPH-024 |
+
+The schemas themselves also enforce the SPH-2.3 / 2.4 counts for any file with `mode: 'spearhead'`. The other rows above (hook-name registry, geometry, text length) remain unimplemented.

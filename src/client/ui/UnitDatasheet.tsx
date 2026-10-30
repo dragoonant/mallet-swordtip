@@ -43,18 +43,18 @@ const statValue: CSSProperties = {
 }
 const table: CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 11.5, tableLayout: 'fixed' }
 // Same column widths for both tables so the ranged and melee stats line up.
-const statCols = [44, 34, 30, 28, 30, 42]
+const statCols = [44, 34, 30, 30, 34, 34]
 const th: CSSProperties = { textAlign: 'center', fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: colors.muted, padding: '3px 4px', textTransform: 'uppercase' }
 const td: CSSProperties = { textAlign: 'center', padding: '3px 4px', borderTop: `1px solid ${colors.border}`, whiteSpace: 'nowrap' }
 const keywordsLine: CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: colors.text }
 
 const plus = (n: number | null | undefined) => (typeof n === 'number' && n < 7 ? `${n}+` : '–')
-const ap = (n: number) => (n === 0 ? '0' : n < 0 ? `${n}` : `+${n}`)
+const rend = (n: number) => (n === 0 ? '–' : `-${n}`)
 
 function coreAbilityName(c: CoreAbility): string {
   const base = prettifyId(c.ability.toLowerCase())
   if (c.value === undefined) return base
-  return c.ability === 'FEEL_NO_PAIN' ? `${base} ${c.value}+` : `${base} ${c.value}`
+  return c.ability === 'FEEL_NO_PAIN' ? `Ward ${c.value}+` : `${base} ${c.value}`
 }
 
 function WeaponTable({ weapons, melee }: { weapons: RuntimeWeapon[]; melee: boolean }) {
@@ -71,11 +71,11 @@ function WeaponTable({ weapons, melee }: { weapons: RuntimeWeapon[]; melee: bool
         <tr>
           <th style={{ ...th, textAlign: 'left', color: colors.accent, whiteSpace: 'nowrap' }}>{melee ? 'Melee weapons' : 'Ranged weapons'}</th>
           <th style={th}>Range</th>
-          <th style={th}>A</th>
-          <th style={th}>{melee ? 'WS' : 'BS'}</th>
-          <th style={th}>S</th>
-          <th style={th}>AP</th>
-          <th style={th}>D</th>
+          <th style={th}>Atk</th>
+          <th style={th}>Hit</th>
+          <th style={th}>Wnd</th>
+          <th style={th}>Rend</th>
+          <th style={th}>Dmg</th>
         </tr>
       </thead>
       <tbody>
@@ -92,8 +92,8 @@ function WeaponTable({ weapons, melee }: { weapons: RuntimeWeapon[]; melee: bool
             <td style={td}>{melee ? 'Melee' : `${w.range}"`}</td>
             <td style={td}>{w.A}</td>
             <td style={td}>{typeof w.skill === 'number' ? plus(w.skill) : 'N/A'}</td>
-            <td style={td}>{w.S}</td>
-            <td style={td}>{ap(w.AP)}</td>
+            <td style={td}>{plus(w.wound)}</td>
+            <td style={td}>{rend(w.rend)}</td>
             <td style={td}>{w.D}</td>
           </tr>
         ))}
@@ -172,12 +172,11 @@ export function UnitDatasheet({ state, unitId, modelIds }: { state: GameState; u
               <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end' }}>
                 {(
                   [
-                    ['M', `${p.stats.M}"`],
-                    ['T', `${p.stats.T}`],
-                    ['SV', plus(p.stats.Sv)],
-                    ['W', `${p.stats.W}`],
-                    ['LD', plus(p.stats.Ld)],
-                    ['OC', `${p.stats.OC}`],
+                    ['Move', `${p.stats.M}"`],
+                    ['Health', `${p.stats.W}`],
+                    ['Save', p.stats.noSave ? '–' : plus(p.stats.Sv)],
+                    ['Control', `${p.stats.OC}`],
+                    ...(p.stats.ward !== null ? ([['Ward', plus(p.stats.ward)]] as const) : []),
                   ] as const
                 ).map(([label, value]) => (
                   <div key={label} style={statCell}>
@@ -185,12 +184,6 @@ export function UnitDatasheet({ state, unitId, modelIds }: { state: GameState; u
                     <span style={statValue}>{value}</span>
                   </div>
                 ))}
-                {ds.invuln !== null && (
-                  <div style={statCell}>
-                    <span style={statLabel}>INV</span>
-                    <span style={{ ...statValue, borderColor: colors.accent, color: colors.accent }}>{plus(ds.invuln)}</span>
-                  </div>
-                )}
               </div>
             </div>
           ))}

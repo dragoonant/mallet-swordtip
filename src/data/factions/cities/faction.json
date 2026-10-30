@@ -1,0 +1,17 @@
+{
+  "id": "cities",
+  "name": "Cities of Sigmar",
+  "factionKeyword": "CITIES OF SIGMAR",
+  "armyRule": "cities.ability.castelite-company",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#2c4f8c",
+    "secondary": "#7a1f2b",
+    "trim": "#d4af37",
+    "metal": "#9aa3ad",
+    "decal": "#f2ead3"
+  },
+  "combatPatrols": [
+    "cities.army.castelite-company"
+  ]
+}

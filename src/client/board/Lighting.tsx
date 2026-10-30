@@ -21,9 +21,9 @@ const SUN_POSITION: [number, number, number] = [SUN_DIRECTION[0] * SUN_DISTANCE,
 export function Lighting() {
   const lowGraphics = usePresentationSettings((s) => s.lowGraphics)
   const { w, h } = useBoardSize()
-  // shadow frustum: +-30 x +-24 for the 44x30 board; grown by the extra board size for larger boards (unchanged at 44x30)
-  const sx = 30 + (w - 44) / 2
-  const sy = 24 + (h - 30) / 2
+  // shadow frustum follows the board's half-diagonal plus a margin for tall terrain: about +-22 x +-18 for 30x22
+  const sx = Math.hypot(w, h) / 2 + 3.4
+  const sy = sx * 0.8
   return (
     <>
       <hemisphereLight intensity={1} color="#9dbaff" groundColor="#7a6446" />

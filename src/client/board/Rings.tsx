@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import type { Vec2 } from './types'
 
 const ACCENT_COLOR = '#f5d95a'
-const ENGAGEMENT_RANGE_IN = 1
+const ENGAGEMENT_RANGE_IN = 3 // combat range (CORE-1.4)
 const RING_HEIGHT = 0.05
 
 export interface SelectionRingProps {
@@ -42,11 +42,11 @@ export function TargetRing({ pos, baseRadius, color = '#ff4f4f' }: TargetRingPro
 
 export interface EngagementRingProps {
   pos: Vec2
-  /** Model base radius in inches; the disc extends 1" (engagement range) beyond it. */
+  /** Model base radius in inches; the disc extends 3" (combat range) beyond it. */
   baseRadius: number
 }
 
-/** Engagement range disc: radius = base + 1", red 25% opacity (§50-client §4). */
+/** Engagement range disc: radius = base + 3" combat range, red 25% opacity (§50-client §4). */
 export function EngagementRing({ pos, baseRadius }: EngagementRingProps) {
   const radius = baseRadius + ENGAGEMENT_RANGE_IN
   return (

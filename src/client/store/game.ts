@@ -72,7 +72,7 @@ export function resolveFactionId(key: FactionKey): Id {
 /** Every Combat Patrol a faction can field, sorted by id (the first is the default). */
 export function patrolsForFaction(bundle: DataBundle, factionKey: FactionKey): CombatPatrolData[] {
   const factionId = resolveFactionId(factionKey)
-  return Object.values(bundle.patrols).filter((p) => p.faction === factionId).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  return Object.values(bundle.patrols).filter((p) => p.faction === factionId && p.mode === 'spearhead').sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 }
 /** The chosen patrol if it belongs to the faction, else the faction's default (first) patrol. */
 export function resolvePatrol(bundle: DataBundle, factionKey: FactionKey, patrolId?: string): CombatPatrolData | undefined {
@@ -82,17 +82,15 @@ export function resolvePatrol(bundle: DataBundle, factionKey: FactionKey, patrol
 function factionLabel(bundle: DataBundle, key: FactionKey): string {
   return bundle.factions[resolveFactionId(key)]?.name ?? key
 }
-// Opponent when none is chosen: keeps the original Marines-vs-Orks pairing, otherwise the first other
-// faction (Marines, then Orks, then bundle order) that has a Combat Patrol.
-const DEFAULT_OPPONENT_ORDER = ['sm', 'ork']
+// Opponent when none is chosen: Ironjawz vs Cities of Sigmar, otherwise the first other faction with a Spearhead army.
+const DEFAULT_OPPONENT_ORDER = ['ironjawz', 'cities']
 function defaultOpponentFaction(bundle: DataBundle, own: FactionKey): FactionKey {
   const ownId = resolveFactionId(own)
-  const hasPatrol = (id: string) => Object.values(bundle.patrols).some((p) => p.faction === id)
+  const hasPatrol = (id: string) => Object.values(bundle.patrols).some((p) => p.faction === id && p.mode === 'spearhead')
   const candidates = [...DEFAULT_OPPONENT_ORDER, ...Object.keys(bundle.factions)].filter((id) => id !== ownId && bundle.factions[id] && hasPatrol(id))
   return candidates[0] ?? ownId
 }
 
-const DEFAULT_MISSION_ID = 'mission.cp-01'
 // The bot's own small "thinking" pace, once presentation has caught up — scaled by the player's chosen
 // animation speed (src/client/presentation/settings.ts) so a 'fast'/'instant' game doesn't sit through a
 // fixed 400ms per decision regardless of setting.
@@ -152,176 +150,64 @@ function resolveMissionId(bundle: DataBundle, mission?: string): Id {
     const prefixed = `mission.${mission}`
     if (bundle.missions[prefixed]) return prefixed
   }
-  if (bundle.missions[DEFAULT_MISSION_ID]) return DEFAULT_MISSION_ID
+  const spearhead = Object.values(bundle.missions).find((m) => m.format === 'spearhead')
+  if (spearhead) return spearhead.id
   const first = Object.keys(bundle.missions)[0]
   if (!first) throw new Error('newGame: data bundle has no missions')
   return first
 }
 
-// Tellyporta-style enhancement choice: name the first friendly unit carrying the required keyword.
-function enhancementChoiceFor(
-  bundle: DataBundle,
-  patrol: CombatPatrolData,
-  enhancement: EnhancementData | undefined,
-): { unitRef: string } | undefined {
-  if (!enhancement?.choice) return undefined
-  const kw = enhancement.choice.unitKeyword
-  const match = patrol.units.find((u) => {
-    const ds = bundle.datasheets[u.datasheet]
-    return !!ds && ((ds.keywords as string[]).includes(kw) || (ds.factionKeywords as string[]).includes(kw))
-  })
-  return match ? { unitRef: match.ref } : undefined
+// ---- Spearhead setup (13-port-plan §4.3) -------------------------------------------------------------
+// The one battleplan we ship: Fire and Jade, Aqshy side, horizontal split, standard terrain layout. The mission is found
+// by data (format 'spearhead'), never by a hard-coded id, so a renamed file still loads.
+export const SPEARHEAD_SIDE = 'aqshy' as const
+export const DEFAULT_SPEARHEAD_FACTIONS: { player: string; opponent: string } = { player: 'cities', opponent: 'ironjawz' }
+
+/** Every Spearhead army the data bundle ships (CombatPatrolData with mode 'spearhead'), sorted by id. */
+export function spearheadArmies(bundle: DataBundle): CombatPatrolData[] {
+  return Object.values(bundle.patrols).filter((p) => p.mode === 'spearhead').sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 }
 
-// Attach every LEADER-capable datasheet in the patrol to a bodyguard it may join (R-10.1), one leader per bodyguard.
-// Prefers the patrol data's own `attachTo` hint when present, otherwise infers from the datasheet's `leader.attachTo`.
-function defaultAttachments(bundle: DataBundle, patrol: CombatPatrolData): PlayerSetup['attachments'] {
-  const used = new Set<string>()
-  const attachments: PlayerSetup['attachments'] = []
-  for (const u of patrol.units) {
-    const ds = bundle.datasheets[u.datasheet]
-    if (!ds?.leader) continue
-    let bodyguardRef = u.attachTo && patrol.units.some((b) => b.ref === u.attachTo && !used.has(b.ref)) ? u.attachTo : undefined
-    if (!bodyguardRef) {
-      const candidate = patrol.units.find((b) => b.ref !== u.ref && !used.has(b.ref) && ds.leader!.attachTo.includes(b.datasheet))
-      bodyguardRef = candidate?.ref
-    }
-    if (bodyguardRef) {
-      attachments.push({ leaderRef: u.ref, bodyguardRef })
-      used.add(bodyguardRef)
-    }
-  }
-  return attachments
+/** The two regiment abilities an army offers (exactly 2 for Spearhead, SPH-2.3), default first. */
+export function regimentChoices(bundle: DataBundle, army: CombatPatrolData): { id: Id; name: string; text: string; default: boolean }[] {
+  return (army.regimentAbilities ?? []).map((r) => ({ id: r.id, name: bundle.abilities[r.id]?.name ?? r.id, text: bundle.abilities[r.id]?.text ?? '', default: r.default }))
 }
 
-/** After a setup-time split the parent ref no longer exists, so its leaders move onto the halves (one leader per half, R-10.1):
- *  leaders already attached to the parent first, then any unattached leader whose datasheet may join the squad's datasheet. */
-function remapSplitAttachments(bundle: DataBundle, patrol: CombatPatrolData, attachments: PlayerSetup['attachments'], splitRefs: string[]): PlayerSetup['attachments'] {
-  let out = [...(attachments ?? [])]
-  for (const parentRef of splitRefs) {
-    const parent = patrol.units.find((u) => u.ref === parentRef)
-    const parts = parent?.patrolSquads
-    if (!parent || !parts?.length) continue
-    const queue = out.filter((a) => a.bodyguardRef === parentRef).map((a) => a.leaderRef)
-    out = out.filter((a) => a.bodyguardRef !== parentRef)
-    const attached = new Set(out.map((a) => a.leaderRef))
-    for (const u of patrol.units) {
-      if (u.ref === parentRef || attached.has(u.ref) || queue.includes(u.ref)) continue
-      const ls = bundle.datasheets[u.datasheet]?.leader
-      if (ls && ls.attachTo.includes(parent.datasheet)) queue.push(u.ref)
-    }
-    parts.forEach((part, i) => { if (queue[i]) out.push({ leaderRef: queue[i], bodyguardRef: part.ref }) })
-  }
-  return out
-}
-
-/** Patrol unit refs that carry setup-time Patrol Squads parts (e.g. Sororitas Battle Sisters); AM/Tyranids use the in-engine deployment prompt instead. */
-export function splittablePatrolRefs(bundle: DataBundle, factionKey: FactionKey, patrolId?: string): string[] {
-  const patrol = resolvePatrol(bundle, factionKey, patrolId)
-  return patrol ? patrol.units.filter((u) => u.patrolSquads?.length).map((u) => u.ref) : []
-}
-
-/** The patrol's either/or unit slots (Grey Knights: Terminators or Dreadknight), each with its refs and default. */
-export function patrolUnitChoices(bundle: DataBundle, factionKey: FactionKey, patrolId?: string): { id: string; refs: string[]; default: string }[] {
-  const patrol = resolvePatrol(bundle, factionKey, patrolId)
-  return patrol?.unitChoices ?? []
-}
-
-export interface EmbarkOption { unitRef: string; transportRef: string; unitName: string; transportName: string; models: number }
-
-/** Units of the patrol that may start the battle embarked in one of its Transports (SDC E1). Mirrors the engine's canCarry
- *  (keyword gates + spare capacity) from datasheet data; a Patrol Squads unit is offered only while it stays whole. */
-export function embarkOptions(bundle: DataBundle, factionKey: FactionKey, patrolId?: string, split = false): EmbarkOption[] {
-  const patrol = resolvePatrol(bundle, factionKey, patrolId)
-  if (!patrol) return []
-  const kwOf = (dsId: string): string[] => { const d = bundle.datasheets[dsId]; return d ? [...(d.keywords as string[]), ...(d.factionKeywords as string[])] : [] }
-  const out: EmbarkOption[] = []
-  for (const t of patrol.units) {
-    const spec = bundle.datasheets[t.datasheet]?.transport
-    if (!spec) continue
-    for (const parent of patrol.units) {
-      if (parent.ref === t.ref) continue
-      if (parent.attachTo && patrol.units.some((u) => u.ref === parent.attachTo)) continue // an attached Leader only travels with its bodyguard
-      // Split Patrol Squads: offer each half (own ref + own size) in place of the parent unit.
-      const parts = split && parent.patrolSquads?.length ? parent.patrolSquads.map((h, i) => ({ ref: h.ref, size: h.size, name: `${bundle.datasheets[parent.datasheet]?.name ?? parent.ref} (half ${i + 1})` })) : [{ ref: parent.ref, size: parent.size, name: bundle.datasheets[parent.datasheet]?.name ?? parent.ref }]
-      // E3: an attached Leader rides with its bodyguard as one unit, so it must pass the keyword gates and fit the capacity too.
-      const leaders = split && parent.patrolSquads?.length ? [] : patrol.units.filter((l) => l.attachTo === parent.ref)
-      const gateOk = [parent.datasheet, ...leaders.map((l) => l.datasheet)].every((ds) => {
-        const kw = kwOf(ds)
-        return (spec.keywords ?? []).every((k) => kw.includes(k)) && !(spec.excludeKeywords ?? []).some((k) => kw.includes(k))
-      })
-      if (!gateOk) continue
-      const extra = leaders.reduce((n, l) => n + l.size, 0)
-      const withLeaders = leaders.length > 0 ? ` with ${leaders.map((l) => bundle.datasheets[l.datasheet]?.name ?? l.ref).join(' and ')}` : ''
-      for (const u of parts) {
-        if (u.size + extra > spec.capacity) continue
-        out.push({ unitRef: u.ref, transportRef: t.ref, unitName: `${u.name}${withLeaders}`, transportName: bundle.datasheets[t.datasheet]?.name ?? t.ref, models: u.size + extra })
-      }
-    }
-  }
-  return out
-}
-
-export function buildPlayerSetup(bundle: DataBundle, factionKey: FactionKey, secondaryId?: string, split = false, unitChoices?: Record<string, string>, patrolId?: string, embarked?: { unitRef: string; transportRef: string }[]): PlayerSetup {
+export function buildPlayerSetup(bundle: DataBundle, factionKey: FactionKey, patrolId?: string, regimentAbilityId?: string, enhancementId?: string): PlayerSetup {
   const factionId = resolveFactionId(factionKey)
   const patrol = resolvePatrol(bundle, factionKey, patrolId)
-  if (!patrol) throw new Error(`newGame: no Combat Patrol data for faction "${factionId}"`)
-  const enhancement = patrol.enhancements.find((e) => e.default) ?? patrol.enhancements[0]
-  const chosen = secondaryId ? patrol.secondaries.find((s) => s.id === secondaryId) : undefined
-  const secondary = chosen ?? patrol.secondaries.find((s) => s.default) ?? patrol.secondaries[0]
-  const enhancementData = enhancement ? bundle.enhancements[enhancement.id] : undefined
-  const splitRefs = split ? splittablePatrolRefs(bundle, factionKey, patrol.id) : []
+  if (!patrol) throw new Error(`newGame: no Spearhead army data for faction "${factionId}"`)
+  const enhancement = patrol.enhancements.find((e) => e.id === enhancementId) ?? patrol.enhancements.find((e) => e.default) ?? patrol.enhancements[0]
+  const regiments = patrol.regimentAbilities ?? []
+  const regiment = regiments.find((r) => r.id === regimentAbilityId) ?? regiments.find((r) => r.default) ?? regiments[0]
   return {
     name: factionLabel(bundle, factionKey),
     faction: factionId,
     patrolId: patrol.id,
     enhancementId: enhancement?.id ?? '',
-    enhancementChoice: enhancementChoiceFor(bundle, patrol, enhancementData),
-    secondaryId: secondary?.id ?? '',
-    attachments: splitRefs.length ? remapSplitAttachments(bundle, patrol, defaultAttachments(bundle, patrol), splitRefs) : defaultAttachments(bundle, patrol),
-    reserves: [], // no reserves unless a unit requires them (handled by the deployment decision itself)
-    battleReadyVp: 0,
-    ...(unitChoices && Object.keys(unitChoices).length ? { unitChoices } : {}),
-    ...(embarked && embarked.length ? { embarked } : {}),
-    ...(splitRefs.length ? { splitUnits: splitRefs } : {}),
+    ...(regiment ? { regimentAbilityId: regiment.id } : {}),
   }
-}
-
-/** Sentinel unit-choice value: pick one of the group's refs at random (seeded, so a seed replays the same roster). */
-export const RANDOM_UNIT_CHOICE = 'random'
-
-/** Resolves a seat's either/or picks. Random picks (and every unset group on a bot seat) roll from the game seed. */
-function resolveUnitChoices(bundle: DataBundle, factionKey: FactionKey, picks: Record<string, string> | undefined, randomUnset: boolean, seed: string, patrolId?: string): Record<string, string> | undefined {
-  const out: Record<string, string> = {}
-  for (const g of patrolUnitChoices(bundle, factionKey, patrolId)) {
-    const pick = picks?.[g.id]
-    if (pick && pick !== RANDOM_UNIT_CHOICE) out[g.id] = pick
-    else if (pick === RANDOM_UNIT_CHOICE || randomUnset) {
-      let h = 2166136261
-      for (const c of `${seed}:unitChoice:${g.id}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
-      out[g.id] = g.refs[(h >>> 0) % g.refs.length]
-    }
-  }
-  return Object.keys(out).length ? out : undefined
 }
 
 function buildSetup(bundle: DataBundle, opts: NewGameOptions): GameSetup {
   const missionId = resolveMissionId(bundle, opts.mission)
   const mission = bundle.missions[missionId]
-  const terrainLayoutId = mission.terrainLayouts[0]
+  const terrainLayoutId = mission.terrainLayouts.find((l) => l.includes('standard')) ?? mission.terrainLayouts[0]
   if (!terrainLayoutId) throw new Error(`newGame: mission "${missionId}" lists no terrain layouts`)
   const opponentFaction = opts.opponentFaction ?? defaultOpponentFaction(bundle, opts.playerFaction)
   return {
     missionId,
     terrainLayoutId,
     players: {
-      A: buildPlayerSetup(bundle, opts.playerFaction, opts.secondaryId, opts.splitSquads, resolveUnitChoices(bundle, opts.playerFaction, opts.unitChoices, false, opts.seed, opts.patrolId), opts.patrolId, opts.embark),
-      B: buildPlayerSetup(bundle, opponentFaction, undefined, opts.opponentSplitSquads,
-        resolveUnitChoices(bundle, opponentFaction, opts.opponentUnitChoices, opts.opponent === 'bot', opts.seed, opts.opponentPatrolId), opts.opponentPatrolId, opts.opponentEmbark),
+      A: buildPlayerSetup(bundle, opts.playerFaction, opts.patrolId, opts.regimentAbilityId, opts.enhancementId),
+      B: buildPlayerSetup(bundle, opponentFaction, opts.opponentPatrolId, opts.opponentRegimentAbilityId, opts.opponentEnhancementId),
     },
     sides: 'rollOff',
     firstTurn: 'rollOff',
     dataVersion: bundle.version,
+    mode: 'spearhead',
+    side: SPEARHEAD_SIDE,
+    defenderTerritory: 'B',
   }
 }
 
@@ -337,20 +223,11 @@ export interface NewGameOptions {
   opponentPatrolId?: string
   opponent: OpponentKind
   seed: string
-  /** Player A's chosen secondary (patrol.secondaries[].id); falls back to the patrol's default. */
-  secondaryId?: string
-  /** Split the seat's setup-time Patrol Squads units (Sororitas Battle Sisters) into their listed halves. Default: keep whole.
-   *  Per seat, so a hotseat Player B can split too; a bot seat keeps its units whole unless asked. AM/Tyranids split through the
-   *  engine's own deployment prompt, which is offered to whichever seat owns the unit. */
-  splitSquads?: boolean
-  opponentSplitSquads?: boolean
-  /** Either/or unit picks (patrol.unitChoices group id -> chosen ref, or RANDOM_UNIT_CHOICE) per seat. An omitted group takes
-   *  the patrol default, except on a bot seat, where it is picked at random from the seed. */
-  unitChoices?: Record<string, string>
-  opponentUnitChoices?: Record<string, string>
-  /** Units that start embarked in a friendly Transport (PlayerSetup.embarked), per seat. Offered by embarkOptions. */
-  embark?: { unitRef: string; transportRef: string }[]
-  opponentEmbark?: { unitRef: string; transportRef: string }[]
+  /** Chosen regiment ability / enhancement per seat (ids from the army's own lists); omitted = the army's default. */
+  regimentAbilityId?: string
+  enhancementId?: string
+  opponentRegimentAbilityId?: string
+  opponentEnhancementId?: string
   /** Bot opponent strength; ignored for 'hotseat'. Defaults to DEFAULT_AI_DIFFICULTY ('normal'). */
   difficulty?: AiDifficulty
   /** Spike-only: rewrite the bundle + setup after buildSetup (see src/spike/incursion.ts). Unused by normal games. */

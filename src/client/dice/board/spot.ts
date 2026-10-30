@@ -6,8 +6,8 @@ export interface Disc { x: number; z: number; r: number }
 export interface Poly { footprint: { x: number; z: number }[]; height: number }
 export interface Obstacles { discs: Disc[]; polys: Poly[] }
 
-export const BOARD_HALF_W = 22
-export const BOARD_HALF_D = 15
+export const BOARD_HALF_W = 15
+export const BOARD_HALF_D = 11
 export const BOARD_MARGIN = 1
 /** Die edge length at scale 1 (matches throw.ts DIE). */
 const DIE_LOCAL = 0.6

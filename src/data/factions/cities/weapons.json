@@ -1,0 +1,113 @@
+[
+  {
+    "id": "cities.weapon.dragoon-pistol",
+    "name": "Dragoon Pistol",
+    "type": "ranged",
+    "range": 10,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "SHOOT_IN_COMBAT"
+      }
+    ]
+  },
+  {
+    "id": "cities.weapon.master-forged-longsword",
+    "name": "Master-forged Longsword",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "cities.weapon.warhorse-hooves",
+    "name": "Warhorse's Steel-shod Hooves",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 5,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "COMPANION"
+      }
+    ]
+  },
+  {
+    "id": "cities.weapon.freeguild-weapon",
+    "name": "Freeguild Weapon",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "cities.weapon.cavalier-weapon",
+    "name": "Cavalier Weapon",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "CHARGE_DAMAGE",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "cities.weapon.great-cannon-cannonball",
+    "name": "Great Cannon: Cannonball",
+    "type": "ranged",
+    "range": 24,
+    "A": 2,
+    "skill": 4,
+    "wound": 2,
+    "rend": 2,
+    "D": "D3+2",
+    "abilities": [],
+    "profileGroup": "cities.weapon.great-cannon"
+  },
+  {
+    "id": "cities.weapon.great-cannon-grapeshot",
+    "name": "Great Cannon: Grapeshot",
+    "type": "ranged",
+    "range": 12,
+    "A": 5,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [],
+    "profileGroup": "cities.weapon.great-cannon"
+  },
+  {
+    "id": "cities.weapon.crews-tools-and-sidearms",
+    "name": "Crew's Tools and Sidearms",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  }
+]

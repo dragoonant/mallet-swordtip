@@ -3,7 +3,7 @@
 // the JSON. Pure lookups over DataBundle/GameState — no engine/scoring logic duplicated here beyond a
 // generic id-to-title-case fallback for whatever id we don't have a curated name for.
 import type { DiceRoll, GameEvent, GameState, MoveType, PlayerId, RollPurpose, RuntimeWeapon } from '@/engine'
-import { horizontalGap, modelStats, woundRollNeeded } from '@/engine'
+import { horizontalGap, modelStats } from '@/engine'
 // Deep import: the charge module owns this geometry and the engine barrel is a frozen contract.
 import { neededChargeDistance } from '@/engine/phases/charge'
 import type { DataBundle, MissionData, MissionRule, ScoringRule } from '@/data/types'
@@ -34,7 +34,7 @@ export function objectiveLabel(id: string): string {
  *  descriptor id actually granted the points/CP — a mission scoring rule, a mission special rule, a
  *  secondary's own scoring rule, a stratagem, or an ability — so every one of those is checked. */
 export function sourceName(state: GameState, bundle: DataBundle | null, source: string): string {
-  if (source === 'commandPhase') return 'Command phase'
+  if (source === 'commandPhase') return 'Hero phase'
   const strat = state.stratagems[source]
   if (strat) return strat.name
   const ability = state.abilities[source]
@@ -77,6 +77,12 @@ export function secondaryScoringIds(bundle: DataBundle | null, state: GameState,
 
 function scoringLineFor(rule: ScoringRule): string {
   switch (rule.rule) {
+    case 'custom':
+      // Spearhead end-of-turn scoring (SPH-11.1)
+      if (rule.code === 'sph.vp.holdOne') return '1 VP at the end of your turn for holding at least one objective'
+      if (rule.code === 'sph.vp.holdTwo') return '1 more VP for holding two or more objectives'
+      if (rule.code === 'sph.vp.holdMore') return '1 more VP for holding more objectives than your opponent'
+      return `${prettifyId(rule.id)} (up to ${rule.cap} VP)`
     case 'holdObjectives':
       return `${rule.pointsPer} VP per objective you hold (cap ${rule.cap})`
     case 'holdMore':
@@ -120,9 +126,10 @@ export function primaryScoringSummary(mission: MissionData): string[] {
 }
 
 const WINDOW_LABEL: Partial<Record<string, string>> = {
-  'command.end': 'end of your Command phase',
-  'command.start': 'start of your Command phase',
+  'command.end': 'end of your Hero phase',
+  'command.start': 'start of your Hero phase',
   'turn.end': 'end of your turn',
+  'turn.end.scoring': 'end of your turn',
   'turn.start': 'start of your turn',
   'round.end': 'end of the round',
   'round.start': 'start of the round',
@@ -130,7 +137,7 @@ const WINDOW_LABEL: Partial<Record<string, string>> = {
   'battle.end': 'the end of the battle',
 }
 
-/** "Scoring: end of your Command phase (rounds 2-4)" — read off the primary's own-turn scoring
+/** "Scoring: end of your turn (rounds 1-4)" — read off the primary's own-turn scoring
  *  rule, since that's the moment a player actually needs to remember to act before. */
 export function primaryScoringWindowHint(mission: MissionData): string | null {
   const rule = mission.scoring.find((r) => r.who === 'active') ?? mission.scoring[0]
@@ -158,11 +165,11 @@ export const ROLL_PURPOSE_LABEL: Record<RollPurpose, string> = {
   save: 'Save',
   damage: 'Damage',
   attacks: 'Attacks',
-  fnp: 'Feel No Pain',
+  fnp: 'Ward',
   charge: 'Charge',
-  advance: 'Advance',
+  advance: 'Run',
   battleShock: 'Battle-shock',
-  desperateEscape: 'Desperate Escape',
+  desperateEscape: 'Escape',
   hazardous: 'Hazardous',
   deadlyDemise: 'Deadly Demise',
   mortal: 'Mortal wounds',
@@ -171,7 +178,7 @@ export const ROLL_PURPOSE_LABEL: Record<RollPurpose, string> = {
   mission: 'Mission',
   ability: 'Ability',
   stratagem: 'Stratagem',
-  priority: 'Priority',
+  priority: 'Priority roll',
   retreat: 'Retreat',
   random: 'Random',
 }
@@ -186,18 +193,6 @@ export function describeRoll(roll: DiceRoll, state: GameState): string {
   const who = unitNameOf(state, roll.unitId) || state.players[roll.player]?.name || roll.player
   const vs = roll.targetUnitId ? ` vs ${unitNameOf(state, roll.targetUnitId)}` : ''
   return `${who}${vs} — ${ROLL_PURPOSE_LABEL[roll.purpose] ?? roll.purpose}`
-}
-
-/** Toughness of the unit being attacked, from its first model. Null when it can't be resolved. */
-export function unitToughness(state: GameState, unitId: string | null): number | null {
-  const unit = unitId ? state.units[unitId] : undefined
-  const model = unit ? state.models[unit.models[0]] : undefined
-  if (!model) return null
-  try {
-    return modelStats(state, model).T
-  } catch {
-    return null
-  }
 }
 
 /** The attack currently being resolved, from the log — who is attacking and with what. A save or
@@ -231,14 +226,8 @@ function rerollTargetText(state: GameState, events: readonly GameEvent[], roll: 
   switch (roll.purpose) {
     case 'hit':
       return typeof weapon?.skill === 'number' ? ` — needs ${weapon.skill}+` : ''
-    case 'wound': {
-      // RuntimeWeapon.S is already a number — the datasheet's 'user'/'user+1' forms are resolved
-      // when the runtime weapon table is built, and effectiveWeapon folds stat modifiers in.
-      const S = weapon?.S ?? null
-      const T = unitToughness(state, roll.targetUnitId)
-      if (S === null || T === null) return ''
-      return ` — Strength ${S} vs Toughness ${T}, needs ${woundRollNeeded(S, T)}+`
-    }
+    case 'wound':
+      return weapon ? ` — needs ${weapon.wound}+` : ''
     case 'save': {
       // The engine publishes the target of the save actually being made (armour or invulnerable,
       // whichever the player took) before it rolls — this window opens before SaveRolled exists.
@@ -304,7 +293,7 @@ export function saveAttackContext(state: GameState, events: readonly GameEvent[]
     if (e.type !== 'WoundRolled' && e.type !== 'AttackAllocated') continue
     const weapon = state.weapons[e.attack.weaponId]
     if (!weapon) continue
-    return { weaponName: weapon.name, ap: weapon.AP, attackerName: unitNameOf(state, e.attack.attackerUnitId) }
+    return { weaponName: weapon.name, ap: -weapon.rend, attackerName: unitNameOf(state, e.attack.attackerUnitId) }
   }
   return null
 }
@@ -351,60 +340,44 @@ function unitHasWeaponAbility(state: GameState, unitId: string, ability: string)
   return false
 }
 
-/** What one move type means for this particular unit, for the hover help on a `declareMove` prompt.
- *  Null for a type that isn't a move (or a unit that can't be resolved). */
+/** What one move type means for this particular unit, for the hover help on a `declareMove` prompt (CORE-6).
+ *  Null for a type that isn't a move (or a unit that can't be resolved). PORT-0.3: advance = Run, fallBack = Retreat. */
 export function moveTypeHelp(state: GameState, unitId: string, moveType: MoveType): PromptHelp | null {
   const unit = state.units[unitId]
   if (!unit) return null
   const M = unitMove(state, unitId)
   const far = M === null ? 'its Move' : `${M}"`
-  const assault = unitHasWeaponAbility(state, unitId, 'ASSAULT')
-  const heavy = unitHasWeaponAbility(state, unitId, 'HEAVY')
-  const waaagh = state.players[unit.player]?.waaagh?.activeRound === state.round
 
   switch (moveType) {
     case 'normal':
       return {
         title: 'Normal move',
         lines: [
-          `Move each model up to ${far}, no closer than 1" to any enemy.`,
-          'The unit can still shoot and declare a charge this turn.',
+          `Move each model up to ${far}. A unit that starts in combat cannot make a normal move; it must Retreat or stay.`,
+          'The unit can still shoot and charge this turn.',
         ],
       }
     case 'advance':
       return {
-        title: 'Advance',
+        title: 'Run',
         lines: [
           M === null
-            ? "Move as normal, with 1D6\" added to the unit's Move for this phase."
-            : `Move each model up to ${far} + 1D6" — ${M + 1}" to ${M + 6}" this phase.`,
-          assault
-            ? 'The unit cannot shoot this turn except with its Assault weapons.'
-            : 'The unit cannot shoot this turn.',
-          waaagh
-            ? 'Normally it could not charge either, but the Waaagh! lets it charge anyway.'
-            : 'It cannot declare a charge this turn.',
+            ? 'Roll a die and add it to the unit\'s Move for this phase.'
+            : `Roll a die and add it to the move: ${M + 1}" to ${M + 6}" this phase.`,
+          'The unit cannot shoot or charge this turn.',
         ],
       }
     case 'stationary':
       return {
-        title: 'Remain Stationary',
-        lines: [
-          'No model moves.',
-          heavy
-            ? 'Its Heavy weapons get +1 to hit this turn — the reason to stand still.'
-            : 'It can still shoot and charge; nothing is given up by standing still.',
-        ],
+        title: 'Stay put',
+        lines: ['No model moves. Nothing is given up: the unit can still shoot and charge.'],
       }
     case 'fallBack':
       return {
-        title: 'Fall Back',
+        title: 'Retreat',
         lines: [
-          `Move each model up to ${far}, and every model must end more than 1" from every enemy.`,
-          'The unit cannot shoot or declare a charge this turn.',
-          unit.battleShocked
-            ? 'Battle-shocked: every model takes a Desperate Escape test — each 1 or 2 destroys a model.'
-            : 'Any model that moves over an enemy takes a Desperate Escape test — a 1 or 2 destroys a model.',
+          `Move each model up to ${far}, and the unit must end the move out of combat with every enemy.`,
+          'The unit takes D3 mortal damage first, and cannot shoot or charge this turn.',
         ],
       }
     default:
@@ -413,12 +386,8 @@ export function moveTypeHelp(state: GameState, unitId: string, moveType: MoveTyp
 }
 
 // ---------- shooting and charge: what an option actually commits you to ----------
-// Owner playtest: "do the same for the shooting and charge prompts". Both name a target unit and
-// nothing else — the numbers that decide whether it is a good target (its Toughness and Save against
-// these particular weapons, how far away it is, what a charge would have to roll) are all derivable
-// from state the client already has, and none of them were on screen.
 
-/** 2D6 ≥ `needed`, as a percentage — a charge's whole risk in one number. */
+/** 2D6 >= `needed`, as a percentage — a charge's whole risk in one number. */
 function chargeOdds(needed: number): number {
   let ways = 0
   for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) if (a + b >= needed) ways++
@@ -445,11 +414,8 @@ function unitGap(state: GameState, a: string, b: string): number | null {
 
 const inches = (n: number): string => `${n < 10 ? n.toFixed(1) : Math.round(n)}"`
 
-/** What firing this unit's weapons at one target would mean: the target's own defences, and for each
- *  weapon what it needs to hit and to wound *this* target. The hit number is the weapon's skill and
- *  the wound number comes from the engine's own `woundRollNeeded`, so neither is a second copy of a
- *  rule — but both are before modifiers (a hit modifier from an ability or cover isn't included),
- *  which is the same caveat the Dice Log carries. */
+/** What firing this unit's weapons at one target would mean: the target's own defences, and for each weapon its
+ *  Attacks, Hit, Wound, Rend and Damage (CORE-11). Before modifiers, the same caveat the Dice Log carries. */
 export function shootingTargetHelp(
   state: GameState,
   targets: readonly { modelId: string; weaponId: string; targetUnitId: string }[],
@@ -461,26 +427,29 @@ export function shootingTargetHelp(
   if (!target) return null
   const targetName = target.name ?? targetUnitId
   const defender = state.models[target.models[0]]
-  let T: number | null = null
-  let Sv: number | null = null
+  let health: number | null = null
+  let save: number | null = null
+  let ward: number | null = null
+  let noSave = false
   if (defender) {
     try {
       const stats = modelStats(state, defender)
-      T = stats.T
-      Sv = stats.Sv
+      health = stats.W
+      save = stats.Sv
+      ward = stats.ward
+      noSave = stats.noSave
     } catch {
       // unresolvable profile: the weapon lines below still stand on their own
     }
   }
-  const invuln = state.datasheets[target.datasheetId]?.invuln ?? null
 
   const lines: string[] = []
-  const gap = unitGap(state, targets[0] ? (state.models[first.modelId]?.unitId ?? '') : '', targetUnitId)
+  const gap = unitGap(state, state.models[first.modelId]?.unitId ?? '', targetUnitId)
   lines.push(
     `${targetName}: ${unitModelCount(state, targetUnitId)} model(s)` +
-      (T !== null ? `, Toughness ${T}` : '') +
-      (Sv !== null ? `, Save ${Sv}+` : '') +
-      (invuln !== null ? `, invulnerable save ${invuln}+` : '') +
+      (health !== null ? `, Health ${health}` : '') +
+      (noSave ? ', no Save' : save !== null ? `, Save ${save}+` : '') +
+      (ward !== null ? `, Ward ${ward}+` : '') +
       (gap !== null ? ` — ${inches(gap)} away` : ''),
   )
 
@@ -498,28 +467,30 @@ export function shootingTargetHelp(
     }
     shown++
     const hit = typeof w.skill === 'number' ? `hits on ${w.skill}+` : 'hits automatically'
-    const wound = T === null ? null : `wounds on ${woundRollNeeded(w.S, T)}+`
-    const ap = `Armour Penetration ${w.AP}`
-    lines.push(`${count}× ${w.name} — ${w.A} attack(s), ${hit}${wound ? `, ${wound}` : ''}, ${ap}, damage ${w.D}.`)
+    lines.push(`${count}× ${w.name} — ${w.A} attack(s), ${hit}, wounds on ${w.wound}+, Rend ${w.rend}, damage ${w.D}.`)
   }
   return { title: `Shoot ${targetName}`, lines }
 }
 
-/** What declaring this charge would need: the roll, the odds, and the two things that can go wrong
- *  (Overwatch, and having to reach *every* unit declared). `needed` comes from the engine's own
- *  `neededChargeDistance` — the same function the charge roll is judged against. */
+/** What declaring this charge would need: the 2D6 roll and the odds. There are no declared targets in Spearhead
+ *  (CORE-9.4), so `targetUnitIds` is just the units the prompt is hovering over. `needed` comes from the engine's own
+ *  `neededChargeDistance`, the same function the charge roll is judged against. */
 export function chargeTargetHelp(state: GameState, unitId: string, targetUnitIds: readonly string[]): PromptHelp | null {
   if (targetUnitIds.length === 0) return null
   const names = targetUnitIds.map((id) => state.units[id]?.name ?? id)
-  const needed = neededChargeDistance(state, unitId, [...targetUnitIds])
+  let needed: number | null = null
+  try {
+    needed = neededChargeDistance(state, unitId, [...targetUnitIds])
+  } catch {
+    needed = null
+  }
   const lines: string[] = []
   if (needed === null) {
     lines.push('The distance to this target cannot be measured from here.')
   } else {
     const roll = Math.max(2, Math.ceil(needed))
-    lines.push(`Closest model is ${inches(needed)} short of Engagement Range — the 2D6 charge roll needs ${roll}+ (${chargeOdds(roll)}%).`)
+    lines.push(`Closest model is ${inches(needed)} short of touching distance — the 2D6 charge roll needs ${roll}+ (${chargeOdds(roll)}%).`)
   }
-  if (targetUnitIds.length > 1) lines.push('Every unit declared must be reached, or the whole charge fails.')
-  lines.push('The target may fire Overwatch before the charge move, and fights back in the Fight phase.')
+  lines.push('A charging unit must finish within ½" of an enemy model. A failed charge leaves the unit where it was.')
   return { title: `Charge ${names.join(' and ')}`, lines }
 }

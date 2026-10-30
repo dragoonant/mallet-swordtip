@@ -1,54 +1,12 @@
-// Missions: scoring rules, mission rules, deployment zones, game end (10-rules §12, 11-combat-patrol §2). Owner: W1-F.
-// ctx.window() calls `onWindow` exactly once per window occurrence before any stratagem window: run every ScoringRule
-// whose `when` matches (respect rounds/who/cap, append MissionState.scored, VpScored) and every MissionRule code hook.
-//
-// Re-entrancy: a "pick" (Stomp 'Em's target, Retrieve Intelligence's marker, …) raises a chooseOption decision, which
-// pauses everything until answered — `ctx.window`'s own once-per-occurrence gate means `onWindow` itself is NOT called
-// again for this occurrence, so `missionService.handler` resumes the same occurrence itself (via `window`/`key` carried
-// in the decision's `context.data`) once the pick is answered, mirroring the pattern `hookService.offerPicks` uses for
-// Oath of Moment / Waaagh!. Per-rule "done" marks (`phaseState.marks`) make every step idempotent across that resume.
-import { championOfTheDarkGodsAmount } from './factions/chaos-space-marines'
-import { murderousMonsterAmount } from './factions/drukhari'
-import { darkConjunctionAmount, worthyOfferingsAmount } from './factions/chaos-daemons'
-import { alphaPredationAmount, alphaXenoformAmount, chitinousTideAmount, leftToLastAmount } from './factions/tyranids'
-import type { AttackKind } from './types'
-import type { MissionRule, ScoringRule, TimingWindowId } from '../data/types'
-import { exploratorAcquisitionAmount, mvaHolyApparatusAmount, prescribedExcoriationAmount } from './factions/adeptus-mechanicus'
-import { etherealEdictAmount, etherealEdictOffer, kauyonLureAmount, leadershipCasteAmount, surpriseAttackAmount } from './factions/tau-empire'
-import { riseUpAmount, willOfThePatriarchAmount, infiltrationAgendaAmount, safeguardTheSanctuaryAmount } from './factions/genestealer-cults'
-import { holdTheLineAmount, methodicalDestructionAmount, methodicalDestructionOffer } from './factions/astra-militarum'
-import { OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE, playerBattlefieldEdge, pointInPolygon, whollyWithinPolygon, withinObjectiveRange } from './geometry'
-import { consecratedGroundAmount, divineJudgementAmount, divineJudgementOffer, hallowedRetributionAmount } from './factions/adepta-sororitas'
-import {
-  archeotechReliquaryAmount, archeotechReliquaryOffer, endlessHuntAmount, vbHuntersOfHereticsEndAmount, vbHuntersOfHereticsModelDestroyed,
-  vbTakeTheStrongholdAmount, vbTakeTheStrongholdOffer,
-} from './factions/dark-angels'
-import { pinpointPurgeAmount, reconnaissanceInForceAmount } from './factions/space-marines'
-import { pathOfPurgationAmount, sacredVowAmount, sacredVowDestroyed, sacredVowOffer } from './factions/black-templars'
-import { ineffableAgendaAmount } from './factions/aeldari'
-import { contaminateGroundAmount, spreadTheBlightGain, spreadTheBlightSnapshot } from './factions/death-guard'
-import { bloodOfferingAward, bloodOfferingSnapshot, ravageAndRansackAmount } from './factions/world-eaters'
-import { bringerOfChangeAmount, sorcerousRitualAmount } from './factions/thousand-sons'
-import { hookService } from './hooks-impl'
-import { leaderService } from './leaders'
-import { transportService } from './transports'
-import { liveClaimers, pruneClaim, recordClaim } from './objectives'
+// Spearhead scoring and the end of the battle (SPH-11, CORE-4.14). The three objective rules (sph.vp.holdOne /
+// holdTwo / holdMore) are scored by the active player at the turn.end.scoring window, after objective control has been
+// worked out (SPH-8.6); the reducer never opens the legacy `turn.end` window, so mission data that still says
+// when: 'turn.end' is scored at turn.end.scoring. Reserve units still off the table at the start of round 4 are
+// destroyed at the round.start window of round 4. There are no mission rules, secondaries or early endings here.
+import type { ScoringRule, TimingWindowId } from '../data/types'
 import type { DecisionHandler, EngineContext, WindowTrigger } from './modules'
-import { otherPlayer } from './modules'
-import { isTeleporting } from './teleport'
-import { championOfTitanModelDestroyed, noEscapeAmount } from './factions/grey-knights'
-import { headTakerModelDestroyed, headTakerSweepAmount, huntersInsightAmount, huntersInsightOffer } from './factions/deathwatch'
-import { holyApparatusAmount, holyApparatusOffer, toilEarnsAmount, toilEarnsOffer } from './factions/leagues-of-votann'
-import {
-  guardianOfTheRealmAmount, guardianOfTheRealmModelDestroyed, guardianOfTheRealmSnapshot,
-  tgbConsecratedGroundGain, tgbConsecratedGroundLoss, vexillaObjectiveIds,
-} from './factions/adeptus-custodes'
-import { boardUnitsOf, deploymentZone, hasKeyword, keywordsOf, modelIdFor, unitModels } from './state'
-import type {
-  ChooseOptionDecision, ChooseOptionTopic, GameResult, GameState, ModelId, Objective, ObjectiveId, PendingDecision,
-  PlayerId, Rejection, Unit, UnitId,
-} from './types'
-import type { Action, ChooseOptionAction } from './actions'
+import { removeModel } from './state'
+import type { AttackKind, GameResult, GameState, ModelId, ObjectiveId, PlayerId, UnitId } from './types'
 
 export interface ModelDestroyedInfo {
   unitId: UnitId; modelId: ModelId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: ModelId | null
@@ -56,63 +14,26 @@ export interface ModelDestroyedInfo {
 
 export interface MissionService {
   onWindow(ctx: EngineContext, window: TimingWindowId, key: string, trigger?: WindowTrigger): void
-  // R-12.6: models on the battlefield, or Reserves that can still arrive (CP-1.9: rounds 1–3)
+  // SPH-11.3: a tabled player keeps taking empty turns, so this is always true
   playerHasForces(state: GameState, player: PlayerId): boolean
-  // R-12.6 [interp]: both players without forces → the battle ends at once on VP
+  // never: there is no early end (SPH-11.3)
   isTabled(state: GameState): boolean
-  // R-12.7 / CP-1.11: VP totals incl. Battle Ready; equal → draw
+  // SPH-11.3: more VP wins, equal VP is a draw
   finalResult(state: GameState, reason: GameResult['reason']): GameResult
-  // a unit was just destroyed (attack.ts destroyModel): kill-triggered secondaries (Treasures of Aeons, NEC-4)
+  // kept optional for the attack module's call sites (nothing to do in Spearhead)
   unitDestroyed?(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: string | null; kind?: AttackKind | 'mortal' | 'other'; rangedAttack?: boolean }): void
-  // E4 (Grey Knights Champion of Titan): a model was just destroyed (attack.ts announceDestroyed, after the onModelDestroyed hooks)
   modelDestroyed?(ctx: EngineContext, info: ModelDestroyedInfo): void
-  // answers chooseOption topics razeObjective / recoverObjective / stompTarget / bagTarget
+  // the old 40k mission topics are gone; this handler rejects anything routed to it
   readonly handler: DecisionHandler
 }
 
-// ---------- small shared helpers ----------
-function rangeParams(state: GameState): { range: number; radius: number } {
-  return { range: state.mission.data.objectiveRange ?? OBJECTIVE_RANGE, radius: state.mission.data.objectiveMarkerRadius ?? OBJECTIVE_MARKER_RADIUS }
-}
+// CORE-4.14 / SPH-7.3
+export const RESERVE_DEADLINE_ROUND = 4
 
-// CP-2.3 / R-12.3: who controls the marker AT THIS MOMENT. Scoring windows (command.end, turn.end) and every other
-// mission-rule code hook run before the core's next evaluateControl, so the stored controller can be stale after
-// Battle-shock tests or recovery earlier in the phase (MISSION-004-scoring / -recover, MISSION-019-holdmore).
-// Mirrors evaluateControl without mutating state: secured → securer, UNLESS the opponent's live LoC now exceeds the
-// securer's at a Command phase end, in which case the secure has broken at this same moment (CP-2.4/2.5,
-// MISSION-007-scoring) and control falls through to live LoC below like any unsecured marker. Otherwise: live LoC,
-// ties falling to a sticky flag — except when neither side has any live evidence at all (0 vs 0), where the stored
-// field is trusted UNLESS a unit has actually been destroyed this battle: once that's happened, "0 vs 0" can mean a
-// marker's last in-range model died since the previous evaluation (R-2.6 cull, MISSION-011-stale), which is
-// contested, not the possibly-stale stored value.
-export function liveController(ctx: EngineContext, id: ObjectiveId): PlayerId | null {
-  const s = ctx.state
-  const obj = s.objectives[id]
-  if (!obj || obj.removed) return null
-  const svc = ctx.services.objectives
-  if (obj.securedBy) {
-    // RC-048: a higher enemy LoC takes control at any check; with none, control falls back to the securer
-    const lv = svc.levelOfControl(s, id)
-    return lv[otherPlayer(obj.securedBy)] > lv[obj.securedBy] ? otherPlayer(obj.securedBy) : obj.securedBy
-  }
-  if (svc.modelsInRange(s, id, 'A').length === 0 && svc.modelsInRange(s, id, 'B').length === 0) {
-    const anyoneDestroyedYet = Object.values(s.units).some((u) => u.location === 'destroyed')
-    return anyoneDestroyedYet ? (obj.stickyBy ?? null) : obj.controller
-  }
-  const levels = svc.levelOfControl(s, id)
-  return levels.A > levels.B ? 'A' : levels.B > levels.A ? 'B' : (obj.stickyBy ?? null)
-}
-
-function holds(ctx: EngineContext, id: ObjectiveId, pid: PlayerId): boolean {
-  return liveController(ctx, id) === pid
-}
-
-// same live view as `holds` — mission-rule code hooks (claimSites, retrieveIntelligence, dutyAndHonour, …) ask "does
-// pid control this marker right now", exactly the question `holds` answers; kept as a separate name for readability
-// at call sites that read as "controls" rather than "holds".
-function controls(ctx: EngineContext, id: ObjectiveId, pid: PlayerId): boolean {
-  return holds(ctx, id, pid)
-}
+// the default Spearhead rules (SPH-11.1, SPH-11.4), used when a Spearhead battleplan lists none of its own
+const DEFAULT_RULES: ScoringRule[] = ['sph.vp.holdOne', 'sph.vp.holdTwo', 'sph.vp.holdMore'].map((code) => ({
+  id: code, when: 'turn.end', rounds: { from: 1, to: 4 }, who: 'active', rule: 'custom', code, pointsPer: 1, cap: 1,
+}))
 
 function awardVp(ctx: EngineContext, pid: PlayerId, amount: number, source: string): void {
   if (amount <= 0) return
@@ -120,9 +41,10 @@ function awardVp(ctx: EngineContext, pid: PlayerId, amount: number, source: stri
   p.vp += amount
   p.vpBySource[source] = (p.vpBySource[source] ?? 0) + amount
   ctx.emit({ type: 'VpScored', source, amount, total: p.vp, player: pid })
+  ctx.state.mission.scored.push({ ruleId: source, player: pid, round: ctx.state.round, turn: ctx.state.activePlayer, amount })
 }
 
-// VP loss, floored so the source's own running total never drops below 0. Returns the VP actually removed (>= 0).
+// kept for callers that still deduct VP (floored so a source never goes below 0). Returns the VP actually removed.
 export function deductVp(ctx: EngineContext, pid: PlayerId, amount: number, source: string): number {
   const p = ctx.state.players[pid]
   const removed = Math.min(amount, p.vpBySource[source] ?? 0)
@@ -134,885 +56,79 @@ export function deductVp(ctx: EngineContext, pid: PlayerId, amount: number, sour
   return removed
 }
 
-function once(state: GameState, key: string): boolean {
-  if (state.phaseState.marks.includes(key)) return false
-  state.phaseState.marks.push(key)
-  return true
-}
-
-// raises a chooseOption decision; `window`/`key` are echoed into context.data so the handler can resume this
-// occurrence (see file header) after the answer is applied
-function offerChoice(
-  ctx: EngineContext, player: PlayerId, window: TimingWindowId, key: string, topic: ChooseOptionTopic,
-  options: { id: string; label: string }[], data: Record<string, unknown> = {}, canPass = false,
-): void {
-  ctx.decide({
-    kind: 'chooseOption', player, window, canPass,
-    context: { topic, unitId: null, abilityId: null, data: { ...data, window, key } },
-    options: options.map((o) => ({ id: o.id, label: o.label, action: { type: 'chooseOption', player, decisionId: '', optionId: o.id } })),
-  })
-}
-
-function removeObjective(ctx: EngineContext, id: string | undefined, reason: string): void {
-  if (!id) return
+// who controls the marker now (control is sticky and evaluated by objectives.ts; nothing is recomputed here)
+export function liveController(ctx: EngineContext, id: ObjectiveId): PlayerId | null {
   const obj = ctx.state.objectives[id]
-  if (!obj || obj.removed) return
-  obj.removed = true
-  ctx.emit({ type: 'ObjectiveRemoved', objectiveId: id, reason })
+  return obj && !obj.removed ? obj.controller : null
 }
 
-// engine RNG selection among candidates (11-combat-patrol §2: "random selections use the engine RNG, purpose 'mission'").
-// MISSION-014-uniform: always roll a D6 and bucket its faces into `n` equal-size groups (`floor(6/n)` faces each);
-// a face beyond the largest such group is rejected and re-rolled so every candidate stays equally likely.
-function pickRandomObjective(ctx: EngineContext, player: PlayerId, ids: string[]): string {
-  const n = ids.length
-  if (n <= 1) return ids[0]
-  const sides = 6
-  const bucket = Math.floor(sides / n)
-  const limit = bucket * n
-  for (;;) {
-    const roll = ctx.roll({ purpose: 'mission', player, sides, count: 1, mode: 'sum', commandRerollable: false })
-    const die = roll.final[0]
-    if (die > limit) continue
-    return ids[Math.floor((die - 1) / bucket)]
-  }
+function controlledBy(s: GameState, pid: PlayerId): number {
+  return Object.values(s.objectives).filter((o) => !o.removed && o.controller === pid).length
 }
 
-function objectiveIdsOf(s: GameState, rule: ScoringRule): string[] {
-  const params = rule.params ?? {}
-  if (Array.isArray(params.objectiveIds)) return params.objectiveIds as string[]
-  const fromCustom = params.objectiveIdsFromCustom as string | undefined
-  if (fromCustom) {
-    const v = s.mission.custom[fromCustom]
-    if (typeof v === 'string') return [v]
-    if (Array.isArray(v)) return v as string[]
-    return []
-  }
-  return Object.keys(s.objectives)
-}
-
-function whoApplies(who: ScoringRule['who'], pid: PlayerId, s: GameState): boolean {
-  switch (who) {
+function appliesTo(who: ScoringRule['who'], pid: PlayerId, s: GameState): boolean {
+  switch (who ?? 'active') {
     case 'active': return pid === s.activePlayer
-    case 'opponent': return pid === otherPlayer(s.activePlayer)
-    // 'first'/'second' gate on the CURRENT turn's active player too, not just on pid's seat: 'command.end' and
-    // 'turn.end' windows both fire once per player per round (once at the end of each player's own Command phase /
-    // turn), so without this a round-5 rule scoped to who:'first'/'second' would double-award — once when its own
-    // phase/turn ends and again when the OTHER player's phase/turn ends (MISSION-R5-double-score).
-    case 'first': return pid === s.firstPlayer && s.activePlayer === s.firstPlayer
-    case 'second': return pid !== s.firstPlayer && s.activePlayer === pid
-    default: return true // 'both' | undefined
+    case 'opponent': return pid !== s.activePlayer
+    case 'both': return true
+    case 'first': return pid === s.firstPlayer
+    case 'second': return pid !== s.firstPlayer
   }
 }
 
-function applicable(rule: ScoringRule, pid: PlayerId, window: TimingWindowId, s: GameState): boolean {
-  return rule.when === window && s.round >= rule.rounds.from && s.round <= rule.rounds.to && whoApplies(rule.who, pid, s)
-}
-
-function rulesFor(s: GameState, pid: PlayerId): ScoringRule[] {
-  return [...s.mission.scoring, ...(s.mission.secondaries[pid] ?? [])]
-}
-
-// ScoringRule-shaped "pick" instances (pointsPer 0): raise a decision instead of computing an amount
-const PICK_CODES = new Set(['stompEmPick', 'bagPick', 'treasuresOfAeonsPick', 'methodicalDestructionPick', 'etherealEdictPick', 'targetedPurgePick', 'divineJudgementPick', 'toilEarnsPick', 'holyApparatusPick', 'archeotechReliquaryPick', 'vbTakeTheStrongholdPick', 'huntersInsightPick', 'sacredVowPick'])
-
-// ---------- generic ScoringRule.rule amounts ----------
-function tierPoints(tiers: Record<string, number>, die: number): number {
-  for (const [range, pts] of Object.entries(tiers)) {
-    const [lo, hi] = range.split('-').map(Number)
-    if (die >= lo && die <= (Number.isFinite(hi) ? hi : lo)) return pts
-  }
-  return 0
-}
-
-function destroyedUnitsAmount(s: GameState, rule: ScoringRule, pid: PlayerId): number {
-  const key = `destroyedCounted:${rule.id}`
-  const counted = (s.mission.custom[key] as string[] | undefined) ?? []
-  const newly = Object.values(s.units).filter((u) => u.player !== pid && u.location === 'destroyed' && !counted.includes(u.id))
-  if (newly.length === 0) return 0
-  s.mission.custom[key] = [...counted, ...newly.map((u) => u.id)]
-  return newly.length * rule.pointsPer
-}
-
-function wrathOfTheEmperorAmount(s: GameState, rule: ScoringRule, pid: PlayerId): number {
-  // find the Captain unit by keyword (CAPTAIN datasheets in this roster are always single-model, so its one model's
-  // id is always `${unitId}#0` per modelIdFor — stable even the phase the Captain itself dies, unlike reading
-  // captain.models[0], which goes empty once the unit is destroyed and would drop a kill scored just before death)
-  const captain = Object.values(s.units).find((u) => u.player === pid && keywordsOf(s, u.id).includes('CAPTAIN'))
-  const killsThisPhase = s.players[pid].secondaryState.killsThisPhase as Record<string, number> | undefined
-  s.players[pid].secondaryState.killsThisPhase = {} // reset at phase end (11-combat-patrol §2.6)
-  if (!captain || !killsThisPhase) return 0
-  return (killsThisPhase[modelIdFor(captain.id, 0)] ?? 0) >= 1 ? rule.pointsPer : 0
-}
-
-function shockTacticsAmount(ctx: EngineContext, rule: ScoringRule, pid: PlayerId): number {
-  const s = ctx.state
-  const opp = otherPlayer(pid)
-  const held = Object.values(s.objectives).some((o) => !o.removed && o.controllerAtTurnStart === opp && controls(ctx, o.id, pid))
-  return held ? rule.pointsPer : 0
-}
-
-function sweepingRaidBonusAmount(ctx: EngineContext, rule: ScoringRule, pid: PlayerId): number {
-  const s = ctx.state
-  const side = s.players[pid].side
-  const list = (side === 'attacker' ? rule.params?.attacker : side === 'defender' ? rule.params?.defender : undefined) as
-    { objectiveId: string; points: number }[] | undefined
-  if (!list) return 0
-  let total = 0
-  for (const entry of list) if (controls(ctx, entry.objectiveId, pid)) total += entry.points
-  return total
-}
-
-function stompEmScoreAmount(s: GameState, rule: ScoringRule, pid: PlayerId): number {
-  const targetId = s.players[pid].secondaryState.stompTargetUnitId as UnitId | undefined
-  if (!targetId) return 0
-  const unit = s.units[targetId]
-  const scored = !!unit && unit.location === 'destroyed' && !!unit.destroyedBy &&
-    unit.destroyedBy.round === s.round && unit.destroyedBy.kind === 'melee' && unit.destroyedBy.player === pid
-  // a fresh pick is offered every round this secondary is active; never let a stale kill re-score in a later round
-  s.players[pid].secondaryState.stompTargetUnitId = undefined
-  return scored ? rule.pointsPer : 0
-}
-
-function properLootinAmount(ctx: EngineContext, rule: ScoringRule, pid: PlayerId): number {
-  const s = ctx.state
-  const zone = deploymentZone(s, pid)
-  const { range, radius } = rangeParams(s)
-  const tiers = (rule.params?.rollTiers as Record<string, number> | undefined) ?? { '2-4': 3, '5-6': 5 }
-  const keyword = (rule.params?.armyKeyword as string | undefined) ?? 'ORKS'
-  let total = 0
-  for (const obj of Object.values(s.objectives) as Objective[]) {
-    if (obj.removed || obj.lootedBy.includes(pid)) continue
-    if (pointInPolygon(obj.pos, zone)) continue // must be outside the looting player's own deployment zone
-    if (!controls(ctx, obj.id, pid)) continue // 11-combat-patrol §6: a marker you don't control cannot be looted
-    const inRange = boardUnitsOf(s, pid).filter((u) => hasKeyword(s, u.id, keyword) && unitModels(s, u.id).some((m) => withinObjectiveRange(m, obj, 0, range, radius)))
-    if (inRange.length === 0) continue
-    if (inRange.some((u) => leaderService.inEngagementWithEnemy?.(s, u.id))) continue
-    const roll = ctx.roll({ purpose: 'mission', player: pid, sides: 6, count: 1, mode: 'sum', commandRerollable: false })
-    const points = tierPoints(tiers, roll.final[0])
-    if (points > 0) { obj.lootedBy = [...obj.lootedBy, pid]; total += points }
-  }
-  return total
-}
-
-// the Warlord's model id; removeModel moves a dead model out of unit.models into destroyedModels, so fall back to that
-function warlordModelId(s: GameState, pid: PlayerId): ModelId | null {
-  const wu = s.units[s.players[pid].warlordUnitId]
-  return wu?.models[0] ?? wu?.destroyedModels?.[0]?.id ?? null
-}
-
-// Bag the Big 'Un (11-combat-patrol §6 appendix roster, not present in current data — exercised only by synthetic
-// tests; see issues). `secondaryState.bagTargetUnitId` is the enemy unit whose (single) model was picked.
-function bagTheBigUnAmount(s: GameState, rule: ScoringRule, pid: PlayerId): number {
-  const modelTarget = s.players[pid].secondaryState.bagTargetModelId as ModelId | undefined
-  if (modelTarget) return bagByModelAmount(s, rule, pid, modelTarget)
-  const targetId = s.players[pid].secondaryState.bagTargetUnitId as UnitId | undefined
-  if (!targetId) return 0
-  const unit = s.units[targetId]
-  if (!unit) return 0
-  const unitPoints = (rule.params?.unitPoints as number | undefined) ?? 8
-  const beastbossPoints = (rule.params?.beastbossPoints as number | undefined) ?? 12
-  // R-5.16 [interp]: a Reserves unit that never arrived counts as destroyed for this secondary; with no credited
-  // killer it scores the lower "unit" tier rather than nothing — 11-combat-patrol §5.3 does not give an exact
-  // number for this case and the alternate roster's data does not exist yet (see issues).
-  // an embarked unit is alive inside its transport (stored as 'reserves'); only never-arrived Reserves count as destroyed
-  if (unit.location === 'reserves' && transportService.transportOf(s, targetId) === null) return unitPoints
-  if (unit.location === 'destroyed' && !unit.destroyedBy) return unitPoints // RC-050: stranded-Reserves cull credits no killer
-  if (unit.location !== 'destroyed' || !unit.destroyedBy) return 0
-  // 11-combat-patrol §6: 8 VP if the target is destroyed by ANY unit; 12 only for the Beastboss's own kill, keyed on
-  // the killing model (destroyedBy.modelId) with the unitId as a fallback for kills that carry no model attribution
-  const warlordUnitId = s.players[pid].warlordUnitId // the Beastboss belongs to the scoring (Ork) player, not the target
-  const warlord = s.units[warlordUnitId]
-  const beastbossModelId = warlordModelId(s, pid)
-  const byBeastboss = unit.destroyedBy.modelId === beastbossModelId || unit.destroyedBy.unitId === warlordUnitId
-  return byBeastboss ? beastbossPoints : unitPoints
-}
-
-// Bag the Big 'Un by model (Morgrim's Butchas, spec 7.1 B3): one picked model; its own death scores, not its unit's
-function bagByModelAmount(s: GameState, rule: ScoringRule, pid: PlayerId, modelId: ModelId): number {
-  const sec = s.players[pid].secondaryState
-  const unitPoints = (rule.params?.unitPoints as number | undefined) ?? 8
-  const beastbossPoints = (rule.params?.beastbossPoints as number | undefined) ?? 12
-  if (rule.params?.bigScoreOn === 'unit') {
-    // E2 (Mighty Saga): 12 only when the picked model's whole unit was destroyed by the Warlord's model; else 8 when the picked model died
-    const uid = (sec.bagTargetUnitId as UnitId | undefined) ?? s.models[modelId]?.unitId
-    const pu = uid ? s.units[uid] : undefined
-    if (pu && pu.location === 'destroyed' && pu.destroyedBy) {
-      // the Warlord may have died since: removeModel moves dead models out of unit.models into destroyedModels
-      const warlordModel = warlordModelId(s, pid)
-      if (warlordModel && pu.destroyedBy.modelId === warlordModel) return beastbossPoints
-    }
-    if (sec.bagKilled) return unitPoints
-    if (pu && pu.location === 'reserves' && transportService.transportOf(s, pu.id) === null) return unitPoints
-    if (pu && pu.location === 'destroyed') return unitPoints
-    return 0
-  }
-  if (sec.bagKilled) {
-    const warlordModel = warlordModelId(s, pid)
-    return sec.bagKilledByModelId && sec.bagKilledByModelId === warlordModel ? beastbossPoints : unitPoints
-  }
-  const unitId = (sec.bagTargetUnitId as UnitId | undefined) ?? s.models[modelId]?.unitId
-  const unit = unitId ? s.units[unitId] : undefined
-  if (!unit) return 0
-  if (unit.location === 'reserves' && transportService.transportOf(s, unitId) === null) return unitPoints // R-5.16 [interp]: never-arrived Reserves count as destroyed
-  if (unit.location === 'destroyed' && !unit.destroyedBy) return unitPoints // stranded-Reserves cull credits no killer
-  return 0
-}
-
-function bagTheBigUnModelDestroyed(ctx: EngineContext, info: ModelDestroyedInfo): void {
-  for (const pid of ['A', 'B'] as PlayerId[]) {
-    const sec = ctx.state.players[pid].secondaryState
-    if (sec.bagTargetModelId === info.modelId) { sec.bagKilled = true; sec.bagKilledByModelId = info.byModelId }
-  }
-}
-
-// Krumpin' Spree (Morgrim's Butchas, spec 7.1 B2): marker(s) nearest the opponent's battlefield edge, plus others outside own zone
-function krumpinSpreeAmount(ctx: EngineContext, rule: ScoringRule, pid: PlayerId): number {
-  const s = ctx.state
-  const nearestPoints = (rule.params?.nearestPoints as number | undefined) ?? 3
-  const otherPoints = (rule.params?.otherPoints as number | undefined) ?? 1
-  const edge = playerBattlefieldEdge(s.board, deploymentZone(s, otherPlayer(pid)))
-  const hw = s.board.w / 2, hh = s.board.h / 2
-  const dist = (o: { pos: { x: number; z: number } }): number =>
-    edge === 'L' ? o.pos.x + hw : edge === 'R' ? hw - o.pos.x : edge === 'T' ? o.pos.z + hh : hh - o.pos.z
-  const live = Object.values(s.objectives).filter((o) => !o.removed)
-  if (live.length === 0) return 0
-  const min = Math.min(...live.map(dist))
-  const nearest = live.filter((o) => dist(o) <= min + 0.01)
-  const paying = nearest.find((o) => holds(ctx, o.id, pid))
-  const ownZone = deploymentZone(s, pid)
-  const others = live.filter((o) => o !== paying && holds(ctx, o.id, pid) && !pointInPolygon(o.pos, ownZone)).length
-  return (paying ? nearestPoints : 0) + others * otherPoints
-}
-
-// Reclaim and Dominate (NEC-4): flat award when at least one non-Battle-shocked NECRONS unit (attached pair = one unit) has
-// every model wholly inside the opponent's deployment zone
-function reclaimAndDominateAmount(s: GameState, rule: ScoringRule, pid: PlayerId): number {
-  const zone = deploymentZone(s, otherPlayer(pid))
-  const keyword = (rule.params?.keyword as string | undefined) ?? 'NECRONS'
-  // Drukhari Rapacious Raiders (DRU-4.1): a qualifying unit with `bonusKeyword` on either half raises the award to `bonusPoints`
-  const bonusKeyword = rule.params?.bonusKeyword as string | undefined
-  let best = 0
-  for (const u of boardUnitsOf(s, pid)) {
-    if (u.bodyguardUnitId) continue
-    const halves = leaderService.halves(s, u.id).map((id) => s.units[id]).filter((h) => h.location === 'board')
-    if (halves.length === 0 || !halves.some((h) => hasKeyword(s, h.id, keyword)) || halves.some((h) => h.battleShocked)) continue
-    const models = halves.flatMap((h) => unitModels(s, h.id))
-    if (models.length === 0 || !models.every((m) => whollyWithinPolygon(m, zone))) continue
-    if (!bonusKeyword) return rule.pointsPer
-    best = Math.max(best, rule.pointsPer)
-    if (halves.some((h) => hasKeyword(s, h.id, bonusKeyword))) return (rule.params?.bonusPoints as number | undefined) ?? rule.pointsPer
-  }
-  return best
-}
-
-// ---- Treasures of Aeons (NEC-4) ----
-// markers whose range counts: the picked treasure marker plus the player's own deployment-zone marker, if the mission has one
-function treasureMarkers(s: GameState, pid: PlayerId): Objective[] {
-  const picked = s.players[pid].secondaryState.treasureObjectiveId as string | undefined
-  const out: Objective[] = []
-  const treasure = picked ? s.objectives[picked] : undefined
-  if (treasure && !treasure.removed) out.push(treasure)
-  const home = Object.values(s.objectives).find((o) => o.home === pid && !o.removed && o.id !== picked)
-  if (home) out.push(home)
-  return out
-}
-
-function scoresTreasures(s: GameState, pid: PlayerId): ScoringRule | null {
-  return rulesFor(s, pid).find((r) => r.rule === 'custom' && r.code === 'treasuresOfAeonsScore' && s.round >= r.rounds.from && s.round <= r.rounds.to) ?? null
-}
-
-// phase-start snapshot: every enemy unit (canonical + halves) within objective range of a treasure marker right now
-function snapshotTreasures(s: GameState): void {
-  const { range, radius } = rangeParams(s)
-  for (const pid of ['A', 'B'] as PlayerId[]) {
-    if (!scoresTreasures(s, pid)) continue
-    const markers = treasureMarkers(s, pid)
-    const nearby = new Set<string>()
-    for (const e of boardUnitsOf(s, otherPlayer(pid))) {
-      if (unitModels(s, e.id).some((m) => markers.some((o) => withinObjectiveRange(m, o, 0, range, radius)))) {
-        for (const id of leaderService.halves(s, e.id)) nearby.add(id)
-      }
-    }
-    s.players[pid].secondaryState.treasureNearby = [...nearby]
-  }
-}
-
-function treasuresPickRule(ctx: EngineContext, rule: ScoringRule, pid: PlayerId, key: string): void {
-  const s = ctx.state
-  const candidates = Object.values(s.objectives).filter((o) => !o.removed && o.home === null)
-  if (candidates.length === 0) return
-  offerChoice(ctx, pid, rule.when, key, 'treasureObjective', candidates.map((o) => ({ id: o.id, label: o.id })), { ruleId: rule.id }, false)
-}
-
-function handleTreasureObjective(ctx: EngineContext, action: Action, pending: ChooseOptionDecision): Rejection | void {
-  if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'treasureObjective expects chooseOption' }
-  const obj = ctx.state.objectives[action.optionId]
-  if (!obj || obj.removed || obj.home !== null) return { code: 'E_NOT_AN_OPTION', reason: `${action.optionId} is not a No Man's Land marker` }
-  ctx.state.players[pending.player].secondaryState.treasureObjectiveId = obj.id
-}
-
-function treasuresUnitDestroyed(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: string | null }): void {
-  const s = ctx.state
-  const pid = info.byPlayer
-  if (!pid || !info.byModelId || !info.byUnitId || !s.units[info.byUnitId] || s.units[info.byUnitId].player !== pid) return
-  const rule = scoresTreasures(s, pid)
-  if (!rule || !hasKeyword(s, info.byUnitId, 'NECRONS')) return
-  const nearby = (s.players[pid].secondaryState.treasureNearby as string[] | undefined) ?? []
-  if (!nearby.includes(info.unitId)) return
-  const amount = Math.min(rule.pointsPer, rule.cap - (s.players[pid].vpBySource[rule.id] ?? 0))
-  if (amount <= 0) return
-  awardVp(ctx, pid, amount, rule.id)
-  s.mission.scored.push({ ruleId: rule.id, player: pid, round: s.round, turn: s.activePlayer, amount })
-}
-
-// CHA-4 Marked for Execution: the moment the opponent's Warlord is destroyed (any cause), once per battle. A Warlord that never arrives
-// from Reserves counts as destroyed when the end-of-round-3 cull strands it (CSM-06), so it scores the early tier then.
-function markedForExecutionDestroyed(ctx: EngineContext, info: { unitId: UnitId }): void {
-  const s = ctx.state
-  for (const pid of ['A', 'B'] as PlayerId[]) {
-    const rule = rulesFor(s, pid).find((r) => r.rule === 'custom' && r.code === 'markedForExecution' && s.round >= r.rounds.from && s.round <= r.rounds.to)
-    if (!rule || s.players[pid].secondaryState.markedScored) continue
-    if (info.unitId !== s.players[otherPlayer(pid)].warlordUnitId) continue
-    s.players[pid].secondaryState.markedScored = true
-    const amount = s.round >= ((rule.params?.lateFromRound as number | undefined) ?? 4) ? ((rule.params?.latePoints as number | undefined) ?? 6) : rule.pointsPer
-    awardVp(ctx, pid, amount, rule.id)
-    s.mission.scored.push({ ruleId: rule.id, player: pid, round: s.round, turn: s.activePlayer, amount })
-  }
-}
-
-// Hallowed Retribution (ADE-4): kill-triggered like Treasures of Aeons, but for either player's turn (who:'both') and
-// with the amount decided in factions/adepta-sororitas.ts (3 VP, 4 when the killer performed an Act of Faith this phase)
-function hallowedRetributionUnitDestroyed(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: string | null }): void {
-  const s = ctx.state
-  const pid = info.byPlayer
-  if (!pid) return
-  const rule = rulesFor(s, pid).find((r) => r.rule === 'custom' && r.code === 'hallowedRetribution' && s.round >= r.rounds.from && s.round <= r.rounds.to)
-  if (!rule) return
-  const raw = hallowedRetributionAmount(s, info, rule.pointsPer)
-  const amount = Math.min(raw, rule.cap - (s.players[pid].vpBySource[rule.id] ?? 0))
-  if (amount <= 0) return
-  awardVp(ctx, pid, amount, rule.id)
-  s.mission.scored.push({ ruleId: rule.id, player: pid, round: s.round, turn: s.activePlayer, amount })
-}
-
-// Consecrated Ground (TRI-4.2): event-driven in both directions; amounts decided in factions/adeptus-custodes.ts
-export function tgbConsecratedGroundUnitDestroyed(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: string | null }): void {
-  const s = ctx.state
-  for (const pid of ['A', 'B'] as PlayerId[]) {
-    const rule = rulesFor(s, pid).find((r) => r.rule === 'custom' && r.code === 'tgbConsecratedGround' && s.round >= r.rounds.from && s.round <= r.rounds.to)
-    if (!rule) continue
-    const raw = tgbConsecratedGroundGain(s, info, pid, rule)
-    const amount = Math.min(raw, rule.cap - (s.players[pid].vpBySource[rule.id] ?? 0))
-    if (amount <= 0) continue
-    awardVp(ctx, pid, amount, rule.id)
-    s.mission.scored.push({ ruleId: rule.id, player: pid, round: s.round, turn: s.activePlayer, amount })
-  }
-}
-
-export function tgbConsecratedGroundModelDestroyed(ctx: EngineContext, info: ModelDestroyedInfo): void {
-  const s = ctx.state
-  const owner = s.units[info.unitId]?.player
-  if (!owner) return
-  const rule = rulesFor(s, owner).find((r) => r.rule === 'custom' && r.code === 'tgbConsecratedGround' && s.round >= r.rounds.from && s.round <= r.rounds.to)
-  if (!rule) return
-  const loss = tgbConsecratedGroundLoss(s, info, owner, rule)
-  if (loss > 0) deductVp(ctx, owner, loss, rule.id)
-}
-
-// Pinpoint Purge (SOL-4.2, Strike Team Solarien): a ranged attack by the scoring player destroys an enemy unit (amount in factions/space-marines.ts)
-function pinpointPurgeDestroyed(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; rangedAttack?: boolean }): void {
-  const s = ctx.state
-  const pid = info.byPlayer
-  if (!pid) return
-  const rule = rulesFor(s, pid).find((r) => r.rule === 'custom' && r.code === 'pinpointPurge' && s.round >= r.rounds.from && s.round <= r.rounds.to)
-  if (!rule) return
-  const amount = Math.min(pinpointPurgeAmount(s, rule, pid, info), rule.cap - (s.players[pid].vpBySource[rule.id] ?? 0))
-  if (amount <= 0) return
-  awardVp(ctx, pid, amount, rule.id)
-  s.mission.scored.push({ ruleId: rule.id, player: pid, round: s.round, turn: s.activePlayer, amount })
-}
-
-// Alpha Predation / Left to Last (INF-4): kill-triggered; amounts decided in factions/tyranids.ts
-function infiltratorsUnitDestroyed(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null }): void {
-  const s = ctx.state
-  for (const pid of ['A', 'B'] as PlayerId[]) {
-    for (const code of ['alphaPredation', 'leftToLast']) {
-      const rule = rulesFor(s, pid).find((r) => r.rule === 'custom' && r.code === code && s.round >= r.rounds.from && s.round <= r.rounds.to)
-      if (!rule) continue
-      const raw = code === 'alphaPredation' ? alphaPredationAmount(s, rule, pid, info.unitId) : leftToLastAmount(s, rule, pid, info)
-      const amount = Math.min(raw, rule.cap - (s.players[pid].vpBySource[rule.id] ?? 0))
-      if (amount <= 0) continue
-      awardVp(ctx, pid, amount, rule.id)
-      s.mission.scored.push({ ruleId: rule.id, player: pid, round: s.round, turn: s.activePlayer, amount })
-    }
-  }
-}
-
-// Spread the Blight (DTG-4): kill-triggered for either player; the victim must have been within a Contagion Range at the start of the phase
-function spreadTheBlightDestroyed(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; byUnitId: UnitId | null }): void {
-  const s = ctx.state
-  const pid = info.byPlayer
-  if (!pid) return
-  const rule = rulesFor(s, pid).find((r) => r.rule === 'custom' && r.code === 'spreadTheBlight' && s.round >= r.rounds.from && s.round <= r.rounds.to)
-  if (!rule) return
-  const amount = Math.min(spreadTheBlightGain(s, info, pid, rule), rule.cap - (s.players[pid].vpBySource[rule.id] ?? 0))
-  if (amount <= 0) return
-  awardVp(ctx, pid, amount, rule.id)
-  s.mission.scored.push({ ruleId: rule.id, player: pid, round: s.round, turn: s.activePlayer, amount })
-}
-
-// Blood Offering (WOR-4): a WORLD EATERS melee kill of an enemy unit that stood near a marker at the start of the phase; the
-// amount and once-per-unit guard live in factions/world-eaters.ts
-function bloodOfferingUnitDestroyed(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: string | null; kind?: string }): void {
-  const s = ctx.state
-  const award = bloodOfferingAward(s, info)
-  if (!award) return
-  awardVp(ctx, award.pid, award.amount, award.rule.id)
-  s.mission.scored.push({ ruleId: award.rule.id, player: award.pid, round: s.round, turn: s.activePlayer, amount: award.amount })
-}
-
-function unitDestroyedHook(ctx: EngineContext, info: { unitId: UnitId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: string | null; kind?: AttackKind | 'mortal' | 'other'; rangedAttack?: boolean }): void {
-  treasuresUnitDestroyed(ctx, info)
-  markedForExecutionDestroyed(ctx, info)
-  hallowedRetributionUnitDestroyed(ctx, info)
-  tgbConsecratedGroundUnitDestroyed(ctx, info)
-  bloodOfferingUnitDestroyed(ctx, info)
-  pinpointPurgeDestroyed(ctx, info)
-  infiltratorsUnitDestroyed(ctx, info)
-  spreadTheBlightDestroyed(ctx, info)
-  sacredVowDestroyed(ctx, info)
-}
-
-function customAmount(ctx: EngineContext, rule: ScoringRule, pid: PlayerId): number {
-  const s = ctx.state
+// points one scoring rule gives `pid` right now
+function amountFor(s: GameState, rule: ScoringRule, pid: PlayerId): number {
+  const mine = controlledBy(s, pid)
+  const theirs = controlledBy(s, pid === 'A' ? 'B' : 'A')
+  let hit = false
   switch (rule.code) {
-    case 'guardianOfTheRealm': return guardianOfTheRealmAmount(s, rule, pid)
-    case 'reconnaissanceInForce': return reconnaissanceInForceAmount(s, rule, pid)
-    case 'reclaimAndDominate': return reclaimAndDominateAmount(s, rule, pid)
-    case 'wrathOfTheEmperor': return wrathOfTheEmperorAmount(s, rule, pid)
-    case 'alphaXenoform': return alphaXenoformAmount(s, rule, pid)
-    case 'championOfTheDarkGods': return championOfTheDarkGodsAmount(s, rule, pid)
-    case 'murderousMonster': return murderousMonsterAmount(s, rule, pid)
-    case 'worthyOfferings': return worthyOfferingsAmount(s, rule, pid)
-    case 'darkConjunction': return darkConjunctionAmount(s, rule, pid)
-    case 'chitinousTide': return chitinousTideAmount(s, rule, pid, (id) => holds(ctx, id, pid))
-    case 'shockTactics': return shockTacticsAmount(ctx, rule, pid)
-    case 'sweepingRaidEndgameBonus': return sweepingRaidBonusAmount(ctx, rule, pid)
-    case 'stompEmScore': return stompEmScoreAmount(s, rule, pid)
-    case 'properLootin': return properLootinAmount(ctx, rule, pid)
-    case 'bagTheBigUnScore': return bagTheBigUnAmount(s, rule, pid)
-    case 'krumpinSpreeScore': return krumpinSpreeAmount(ctx, rule, pid)
-    case 'ravageAndRansack': return ravageAndRansackAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'consecratedGround': return consecratedGroundAmount(s, pid, rule.pointsPer)
-    case 'holdTheLine': return holdTheLineAmount(s, rule, pid)
-    case 'kauyonLure': return kauyonLureAmount(s, rule, pid)
-    case 'leadershipCaste': return leadershipCasteAmount(s, rule, pid)
-    case 'surpriseAttack': return surpriseAttackAmount(s, rule, pid, (id) => holds(ctx, id, pid))
-    case 'etherealEdictScore': return etherealEdictAmount(s, rule, pid)
-    case 'targetedPurgeScore': return etherealEdictAmount(s, rule, pid) // same secondaryState['tau:edict'] storage (a player has one secondary)
-    case 'prescribedExcoriation': return prescribedExcoriationAmount(s, rule, pid)
-    case 'exploratorAcquisition': return exploratorAcquisitionAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'mvaHolyApparatus': return mvaHolyApparatusAmount(s, rule, pid)
-    case 'endlessHunt': return endlessHuntAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'archeotechReliquaryScore': return archeotechReliquaryAmount(s, rule, pid, (id) => holds(ctx, id, pid))
-    case 'vbHuntersOfHereticsEnd': return vbHuntersOfHereticsEndAmount(s, rule, pid)
-    case 'vbTakeTheStrongholdScore': return vbTakeTheStrongholdAmount(s, rule, pid, (id) => holds(ctx, id, pid))
-    case 'vbHuntersOfHeretics': return 0 // event-driven, scored in the model-destroyed fan-out
-    case 'divineJudgementScore': return divineJudgementAmount(s, rule, pid)
-    case 'riseUp': return riseUpAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'willOfThePatriarch': return willOfThePatriarchAmount(s, rule, pid)
-    case 'infiltrationAgenda': return infiltrationAgendaAmount(s, rule, pid)
-    case 'safeguardTheSanctuary': return safeguardTheSanctuaryAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'noEscape': return noEscapeAmount(ctx, rule, pid)
-    case 'toilEarnsScore': return toilEarnsAmount(s, rule, pid, (id) => holds(ctx, id, pid))
-    case 'holyApparatusScore': return holyApparatusAmount(s, rule, pid)
-    case 'methodicalDestructionScore': return methodicalDestructionAmount(s, rule, pid)
-    case 'pathOfPurgation': return pathOfPurgationAmount(s, rule, pid)
-    case 'sacredVowScore': return sacredVowAmount(s, rule, pid)
-    case 'raiseTheVexillas': {
-      const v = vexillaObjectiveIds(s, pid)
-      return v.own.some((id) => holds(ctx, id, pid)) && v.enemy.some((id) => holds(ctx, id, pid)) ? rule.pointsPer : 0
-    }
-    case 'ineffableAgenda': return ineffableAgendaAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'sorcerousRitual': return sorcerousRitualAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'bringerOfChange': return bringerOfChangeAmount(ctx, rule, pid)
-    case 'tgbConsecratedGround': return 0 // event-driven, scored in the destroy fan-outs
-    case 'huntersInsightScore': return huntersInsightAmount(ctx, rule, pid, (id) => holds(ctx, id, pid))
-    case 'headTakerDoctrine': return 0 // event-driven, scored in the modelDestroyed fan-out
-    case 'headTakerSweep': return headTakerSweepAmount(s, rule, pid)
-    case 'contaminateGround': return contaminateGroundAmount(s, rule, pid)
-    case 'spreadTheBlight': return 0 // event-driven, scored in the destroy fan-out
-    default: return 0
+    case 'sph.vp.holdOne': hit = mine >= 1; break
+    case 'sph.vp.holdTwo': hit = mine >= 2; break
+    case 'sph.vp.holdMore': hit = mine > theirs; break
+    default: return 0 // sph.vp.tactic: tactic cards are P2
   }
+  return hit ? Math.min(rule.pointsPer, rule.cap > 0 ? rule.cap : rule.pointsPer) : 0
 }
 
-function computeAmount(ctx: EngineContext, rule: ScoringRule, pid: PlayerId): number {
+// SPH-11.1: the active player scores at the end of their own turn
+function scoreTurn(ctx: EngineContext): void {
   const s = ctx.state
-  switch (rule.rule) {
-    case 'holdObjectives': {
-      const ids = objectiveIdsOf(s, rule)
-      const count = ids.filter((id) => holds(ctx, id, pid)).length
-      const min = rule.params?.min as number | undefined
-      return min !== undefined ? (count >= min ? rule.pointsPer : 0) : count * rule.pointsPer
-    }
-    case 'holdMore': {
-      const ids = objectiveIdsOf(s, rule)
-      const mine = ids.filter((id) => holds(ctx, id, pid)).length
-      const theirs = ids.filter((id) => holds(ctx, id, otherPlayer(pid))).length
-      // C6: params.allowTie — holding as many as the opponent (incl. 0 vs 0) also scores
-      return (rule.params?.allowTie ? mine >= theirs : mine > theirs) ? rule.pointsPer : 0
-    }
-    case 'holdHome': {
-      const home = Object.values(s.objectives).find((o) => o.home === pid)
-      return home && holds(ctx, home.id, pid) ? rule.pointsPer : 0
-    }
-    case 'holdEnemyHome': {
-      const home = Object.values(s.objectives).find((o) => o.home === otherPlayer(pid))
-      return home && holds(ctx, home.id, pid) ? rule.pointsPer : 0
-    }
-    case 'holdNamed': {
-      const ids = objectiveIdsOf(s, rule)
-      return ids.some((id) => holds(ctx, id, pid)) ? rule.pointsPer : 0
-    }
-    case 'unitsInEnemyZone': {
-      const zone = deploymentZone(s, otherPlayer(pid))
-      const count = boardUnitsOf(s, pid).filter((u) => unitModels(s, u.id).some((m) => pointInPolygon({ x: m.pos.x, z: m.pos.z }, zone))).length
-      return count * rule.pointsPer
-    }
-    case 'destroyedUnits': return destroyedUnitsAmount(s, rule, pid)
-    case 'razedThisTurn': {
-      const razed = s.mission.custom.razedThisTurn as { player: PlayerId; round: number } | undefined
-      return razed && razed.player === pid && razed.round === s.round ? rule.pointsPer : 0
-    }
-    case 'claimedSite':
-      return Object.values(s.objectives).some((o) => (o as Objective).claimedBy?.player === pid && claimStillValid(ctx, o as Objective)) ? rule.pointsPer : 0
-    case 'claimedSiteConsecutive': {
-      const turns = (rule.params?.turns as number | undefined) ?? 2
-      return Object.values(s.objectives).some((o) => {
-        const c = (o as Objective).claimedBy
-        return c?.player === pid && claimStillValid(ctx, o as Objective) && s.round - c.sinceTurn + 1 >= turns
-      }) ? rule.pointsPer : 0
-    }
-    case 'custom': return customAmount(ctx, rule, pid)
-    default: return 0
-  }
-}
-
-function runScoring(ctx: EngineContext, window: TimingWindowId): void {
-  const s = ctx.state
+  const listed = s.mission.scoring.filter((r) => r.rule === 'custom' && typeof r.code === 'string' && r.code.startsWith('sph.vp.'))
+  const rules = listed.length > 0 ? listed : s.mission.data.format === 'spearhead' ? DEFAULT_RULES : []
   for (const pid of ['A', 'B'] as PlayerId[]) {
-    const rules = rulesFor(s, pid).filter((r) => applicable(r, pid, window, s) && !(r.rule === 'custom' && r.code && PICK_CODES.has(r.code)))
-    const groups = new Map<string, ScoringRule[]>()
     for (const rule of rules) {
-      const gid = (rule.params?.capGroup as string | undefined) ?? rule.id
-      const arr = groups.get(gid)
-      if (arr) arr.push(rule); else groups.set(gid, [rule])
-    }
-    for (const [gid, grules] of groups) {
-      let raw = 0
-      for (const rule of grules) raw += computeAmount(ctx, rule, pid)
-      const cap = Math.max(...grules.map((r) => r.cap))
-      const amount = Math.min(raw, cap)
-      if (amount > 0) {
-        awardVp(ctx, pid, amount, gid)
-        s.mission.scored.push({ ruleId: gid, player: pid, round: s.round, turn: s.activePlayer, amount })
-      }
+      if (s.round < rule.rounds.from || s.round > rule.rounds.to) continue
+      if (!appliesTo(rule.who, pid, s)) continue
+      awardVp(ctx, pid, amountFor(s, rule, pid), rule.id)
     }
   }
 }
 
-// ---------- picks (raise a decision) ----------
-function stompEmPickRule(ctx: EngineContext, rule: ScoringRule, pid: PlayerId, key: string): void {
+// CORE-4.14: every unit still in reserve at the start of round 4 is destroyed
+function destroyReserves(ctx: EngineContext): void {
   const s = ctx.state
-  const candidates = Object.values(s.units).filter((u) => u.player !== pid && u.location !== 'destroyed')
-  if (candidates.length === 0) return
-  offerChoice(ctx, pid, rule.when, key, 'stompTarget', candidates.map((u) => ({ id: u.id, label: u.name })), { ruleId: rule.id }, true)
-}
-
-function bagPickRule(ctx: EngineContext, rule: ScoringRule, pid: PlayerId, key: string): void {
-  const s = ctx.state
-  const opp = otherPlayer(pid)
-  // E2 (Mighty Saga): optional params; defaults keep Bag the Big 'Un unchanged
-  const pickKeywords = (rule.params?.pickKeywords as string[] | undefined) ?? ['MONSTER', 'VEHICLE']
-  const fallbackWarlord = (rule.params?.fallbackWarlord as boolean | undefined) ?? true
-  // Blood Angels: every enemy unit with params.fallbackKeyword (CHARACTER) when no pick-keyword unit exists
-  const fallbackKeyword = rule.params?.fallbackKeyword as string | undefined
-  const big = Object.values(s.units).filter((u) => u.player === opp && u.location !== 'destroyed' && keywordsOf(s, u.id).some((k) => pickKeywords.includes(k)))
-  const fallback: Unit[] = fallbackKeyword
-    ? Object.values(s.units).filter((u) => u.player === opp && u.location !== 'destroyed' && keywordsOf(s, u.id).includes(fallbackKeyword))
-    : fallbackWarlord ? ([s.units[s.players[opp].warlordUnitId]].filter((u): u is Unit => !!u)) : []
-  const candidates = big.length > 0 ? big : fallback
-  if (candidates.length === 0) return
-  // one option per model (spec 7.1 B3); multi-model units get a "#n" label suffix
-  const options = candidates.flatMap((u) => {
-    const ms = unitModels(s, u.id)
-    return ms.map((m, i) => ({ id: m.id, label: ms.length > 1 ? `${u.name} #${i + 1}` : u.name }))
-  })
-  if (options.length === 0) return
-  offerChoice(ctx, pid, rule.when, key, 'bagTarget', options, { ruleId: rule.id }, false)
-}
-
-function runPick(ctx: EngineContext, rule: ScoringRule, pid: PlayerId, key: string): void {
-  if (rule.code === 'stompEmPick') stompEmPickRule(ctx, rule, pid, key)
-  else if (rule.code === 'treasuresOfAeonsPick') treasuresPickRule(ctx, rule, pid, key)
-  else if (rule.code === 'bagPick') bagPickRule(ctx, rule, pid, key)
-  else if (rule.code === 'methodicalDestructionPick') methodicalDestructionOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'etherealEdictPick') etherealEdictOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'targetedPurgePick') {
-    etherealEdictOffer(ctx, pid, rule.when, key, {
-      code: 'targetedPurgePick', abilityId: 'adm.sec.targeted-purge', label: 'Targeted Purge',
-      excludeKeywords: (rule.params?.excludeKeywords as string[] | undefined) ?? [],
-    })
+  for (const unit of Object.values(s.units)) {
+    if (unit.location !== 'reserves') continue
+    for (const id of [...unit.models]) if (s.models[id]) removeModel(s, id)
+    unit.location = 'destroyed'
+    ctx.emit({ type: 'UnitDestroyed', unitId: unit.id, byPlayer: null, byUnitId: null, byModelId: null, kind: 'other', player: unit.player })
   }
-  else if (rule.code === 'divineJudgementPick') divineJudgementOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'toilEarnsPick') toilEarnsOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'holyApparatusPick') holyApparatusOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'archeotechReliquaryPick') archeotechReliquaryOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'vbTakeTheStrongholdPick') vbTakeTheStrongholdOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'huntersInsightPick') huntersInsightOffer(ctx, pid, rule.when, key)
-  else if (rule.code === 'sacredVowPick') sacredVowOffer(ctx, pid, rule.when, key)
-}
-
-// ---------- MissionRule (non-scoring) codes ----------
-function retrieveIntelligenceRule(ctx: EngineContext, rule: MissionRule, key: string): void {
-  const s = ctx.state
-  const pid = s.activePlayer
-  const p = rule.params ?? {}
-  if (s.round < ((p.roundFrom as number | undefined) ?? 1)) return
-  const candidates = Object.values(s.objectives).filter((o) => !o.removed && !o.used && controls(ctx, o.id, pid))
-  if (candidates.length === 0) return
-  offerChoice(ctx, pid, rule.window, key, (p.chooseOptionTopic as ChooseOptionTopic | undefined) ?? 'recoverObjective',
-    candidates.map((o) => ({ id: o.id, label: o.id })), { ruleId: rule.id }, true)
-}
-
-function razeAndRuinRule(ctx: EngineContext, rule: MissionRule, key: string): void {
-  const s = ctx.state
-  const pid = s.activePlayer
-  const p = rule.params ?? {}
-  if (s.round < ((p.roundFrom as number | undefined) ?? 1)) return
-  const remaining = Object.values(s.objectives).filter((o) => !o.removed)
-  if (remaining.length < ((p.minMarkersRemaining as number | undefined) ?? 2)) return
-  const side = s.players[pid].side
-  const forbidden = new Set<string>(((side === 'attacker' ? p.forbiddenForAttacker : p.forbiddenForDefender) as string[] | undefined) ?? [])
-  const noEnemyWithin = (p.noEnemyWithinInches as number | undefined) ?? 3
-  const { radius } = rangeParams(s)
-  const candidates = remaining.filter((o) =>
-    controls(ctx, o.id, pid) && !forbidden.has(o.id) &&
-    !boardUnitsOf(s, otherPlayer(pid)).some((u) => unitModels(s, u.id).some((m) => withinObjectiveRange(m, o, 0, noEnemyWithin, radius))))
-  if (candidates.length === 0) return
-  offerChoice(ctx, pid, rule.window, key, (p.chooseOptionTopic as ChooseOptionTopic | undefined) ?? 'razeObjective',
-    candidates.map((o) => ({ id: o.id, label: o.id })), { ruleId: rule.id }, true)
-}
-
-function irradiatedPowerCellsRule(ctx: EngineContext, rule: MissionRule): void {
-  const s = ctx.state
-  const p = rule.params ?? {}
-  const rounds = (p.rounds as number[] | undefined) ?? [3, 4, 5]
-  const nmlIds = (p.nmlObjectiveIds as string[] | undefined) ?? []
-  if (s.round === rounds[0]) {
-    const defender: PlayerId = (Object.values(s.players).find((pl) => pl.side === 'defender')?.id as PlayerId | undefined) ?? 'A'
-    s.mission.custom.gammaObjectiveId = pickRandomObjective(ctx, defender, nmlIds)
-  } else if (s.round === rounds[1]) {
-    const gamma = s.mission.custom.gammaObjectiveId as string | undefined
-    removeObjective(ctx, gamma, 'irradiatedPowerCells')
-    const attacker: PlayerId = (Object.values(s.players).find((pl) => pl.side === 'attacker')?.id as PlayerId | undefined) ?? 'A'
-    const remaining = nmlIds.filter((id) => id !== gamma)
-    const beta = pickRandomObjective(ctx, attacker, remaining)
-    s.mission.custom.betaObjectiveId = beta
-    const last = nmlIds.find((id) => id !== gamma && id !== beta)
-    if (last) s.mission.custom.lastNmlObjectiveId = last
-  } else if (s.round === rounds[2]) {
-    removeObjective(ctx, s.mission.custom.betaObjectiveId as string | undefined, 'irradiatedPowerCells')
-  }
-}
-
-function sabotageCommsRule(ctx: EngineContext): void {
-  const s = ctx.state
-  const pid = s.activePlayer
-  const oppHome = Object.values(s.objectives).find((o) => o.home === otherPlayer(pid))
-  if (!oppHome || oppHome.removed) return
-  if (controls(ctx, oppHome.id, pid)) s.players[otherPlayer(pid)].commandRerollLocked = true
-}
-
-function supplyLinesRule(ctx: EngineContext, rule: MissionRule): void {
-  const s = ctx.state
-  const pid = s.activePlayer
-  const p = rule.params ?? {}
-  const home = Object.values(s.objectives).find((o) => o.home === pid)
-  if (!home || home.removed || !controls(ctx, home.id, pid)) return
-  const roll = ctx.roll({ purpose: 'mission', player: pid, sides: 6, count: 1, mode: 'sum', commandRerollable: false })
-  if (roll.final[0] >= ((p.rollThreshold as number | undefined) ?? 4)) hookService.gainCp(ctx, pid, (p.cpBonus as number | undefined) ?? 1, rule.id)
-}
-
-// MISSION-025-leave / -coclaim: is `obj`'s claim still backed by at least one of its claiming models, on the board and
-// in range right now? Used at scoring time so a claim whose models all walked away mid-turn cannot score.
-function claimStillValid(ctx: EngineContext, obj: Objective): boolean {
-  return liveClaimers(ctx.state, obj).length > 0
-}
-
-function claimSitesRule(ctx: EngineContext, rule: MissionRule): void {
-  const s = ctx.state
-  const pid = s.activePlayer
-  const siteIds = (rule.params?.siteObjectiveIds as string[] | undefined) ?? []
-  const { range, radius } = rangeParams(s)
-  for (const id of siteIds) {
-    const obj = s.objectives[id] as Objective | undefined
-    if (!obj || obj.removed) continue
-    // MISSION-025-deadclaimant / -coclaim: first drop any claim (either player's) with no claimer left in range, or
-    // rotate it to a surviving co-claimer keeping sinceTurn. MISSION-025-persist: a surviving claim persists whoever
-    // controls the site — control is only required to START a claim — and an opponent's live claim blocks a new one.
-    pruneClaim(s, obj)
-    if (obj.claimedBy) continue
-    const chars = boardUnitsOf(s, pid)
-      .filter((u) => keywordsOf(s, u.id).includes('CHARACTER'))
-      .flatMap((u) => unitModels(s, u.id))
-      .filter((m) => withinObjectiveRange(m, obj, 0, range, radius))
-    if (chars.length > 0 && liveController(ctx, obj.id) === pid) recordClaim(s, obj, pid, chars.map((m) => m.id))
-  }
-}
-
-function runMissionRule(ctx: EngineContext, rule: MissionRule, key: string): void {
-  switch (rule.code) {
-    case 'retrieveIntelligence': retrieveIntelligenceRule(ctx, rule, key); break
-    case 'razeAndRuin': razeAndRuinRule(ctx, rule, key); break
-    case 'irradiatedPowerCells': irradiatedPowerCellsRule(ctx, rule); break
-    case 'sabotageComms': sabotageCommsRule(ctx); break
-    case 'supplyLines': supplyLinesRule(ctx, rule); break
-    case 'claimSites': claimSitesRule(ctx, rule); break
-    // 'breakTheirSpirit' restricts Insane Bravery directly in services.stratagems (reads state.mission.rules) —
-    // nothing to do here; the code is only registered in code-hooks.ts for data validation.
-    default: break
-  }
-}
-
-// ---------- occurrence driver (re-entrant: see file header) ----------
-function processWindow(ctx: EngineContext, window: TimingWindowId, key: string): void {
-  const s = ctx.state
-  // Treasures of Aeons reads which enemy units were near a marker at the START of the phase in which they die
-  if (window.endsWith('.start') && once(s, `treasureSnapshot:${window}`)) snapshotTreasures(s)
-  if (window.endsWith('.start') && once(s, `gotrSnapshot:${window}`)) guardianOfTheRealmSnapshot(s)
-  if (window.endsWith('.start') && once(s, `blightSnapshot:${window}`)) {
-    for (const pid of ['A', 'B'] as PlayerId[]) if (rulesFor(s, pid).some((r) => r.rule === 'custom' && r.code === 'spreadTheBlight')) spreadTheBlightSnapshot(s, pid)
-  }
-  if (window.endsWith('.start') && once(s, `bloodSnapshot:${window}`)) bloodOfferingSnapshot(s, rangeParams(s).range, rangeParams(s).radius)
-  for (const rule of s.mission.rules) {
-    if (rule.window !== window) continue
-    if (!once(s, `missionRuleDone:${rule.id}:${key}`)) continue
-    runMissionRule(ctx, rule, key)
-    if (s.pending) return
-  }
-  for (const pid of ['A', 'B'] as PlayerId[]) {
-    for (const rule of rulesFor(s, pid)) {
-      if (!(rule.rule === 'custom' && rule.code && PICK_CODES.has(rule.code))) continue
-      if (!applicable(rule, pid, window, s)) continue
-      if (!once(s, `pickDone:${rule.id}:${pid}:${key}`)) continue
-      runPick(ctx, rule, pid, key)
-      if (s.pending) return
-    }
-  }
-  runScoring(ctx, window)
-}
-
-function hasForces(state: GameState, player: PlayerId): boolean {
-  if (boardUnitsOf(state, player).length > 0) return true
-  // GRE-2.7: a Teleport Assault unit can arrive in any round
-  if (Object.values(state.units).some((u) => u.player === player && u.location === 'reserves' && isTeleporting(state, u.id))) return true
-  if (state.round > 3) return false // CP-1.9: Reserves never arrive after round 3
-  return Object.values(state.units).some((u) => u.player === player && u.location === 'reserves')
-}
-
-// ---------- decision handler (razeObjective / recoverObjective / stompTarget / bagTarget) ----------
-function asChoice(action: Action): ChooseOptionAction | { type: 'pass' } | null {
-  return action.type === 'chooseOption' || action.type === 'pass' ? action : null
-}
-
-function handleRecoverObjective(ctx: EngineContext, action: Action, pending: ChooseOptionDecision): Rejection | void {
-  const s = ctx.state
-  const a = asChoice(action)
-  if (!a) return { code: 'E_NOT_AN_OPTION', reason: 'recoverObjective expects chooseOption or pass' }
-  if (a.type === 'pass') return
-  const obj = s.objectives[a.optionId]
-  if (!obj) return { code: 'E_NOT_AN_OPTION', reason: `objective ${a.optionId} not found` }
-  obj.used = true
-  const ruleId = (pending.context.data as { ruleId?: string }).ruleId
-  const rule = s.mission.rules.find((r) => r.id === ruleId)
-  const bonus = (rule?.params?.cpBonusIfWarlordOnBoard as number | undefined) ?? 0
-  const warlord = s.units[s.players[pending.player].warlordUnitId]
-  if (bonus > 0 && warlord.location === 'board') hookService.gainCp(ctx, pending.player, bonus, rule?.id ?? 'retrieveIntelligence')
-}
-
-function handleRazeObjective(ctx: EngineContext, action: Action, pending: ChooseOptionDecision): Rejection | void {
-  const s = ctx.state
-  const a = asChoice(action)
-  if (!a) return { code: 'E_NOT_AN_OPTION', reason: 'razeObjective expects chooseOption or pass' }
-  if (a.type === 'pass') return
-  const obj = s.objectives[a.optionId]
-  if (!obj) return { code: 'E_NOT_AN_OPTION', reason: `objective ${a.optionId} not found` }
-  obj.removed = true
-  ctx.emit({ type: 'ObjectiveRemoved', objectiveId: obj.id, reason: 'razeAndRuin' })
-  s.mission.custom.razedThisTurn = { player: pending.player, round: s.round }
-}
-
-function handleStompTarget(ctx: EngineContext, action: Action, pending: ChooseOptionDecision): Rejection | void {
-  const a = asChoice(action)
-  if (!a) return { code: 'E_NOT_AN_OPTION', reason: 'stompTarget expects chooseOption or pass' }
-  if (a.type === 'pass') return
-  if (!ctx.state.units[a.optionId]) return { code: 'E_NOT_AN_OPTION', reason: `unit ${a.optionId} not found` }
-  ctx.state.players[pending.player].secondaryState.stompTargetUnitId = a.optionId
-}
-
-function handleBagTarget(ctx: EngineContext, action: Action, pending: ChooseOptionDecision): Rejection | void {
-  if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'bagTarget expects chooseOption' }
-  const sec = ctx.state.players[pending.player].secondaryState
-  const model = ctx.state.models[action.optionId]
-  if (model) {
-    sec.bagTargetModelId = model.id
-    sec.bagTargetUnitId = model.unitId
-    return
-  }
-  if (!ctx.state.units[action.optionId]) return { code: 'E_NOT_AN_OPTION', reason: `unit or model ${action.optionId} not found` }
-  sec.bagTargetUnitId = action.optionId
 }
 
 export const missionService: MissionService = {
-  onWindow(ctx, window, key) {
-    processWindow(ctx, window, key)
+  onWindow(ctx, window) {
+    const s = ctx.state
+    if (window === 'round.start' && s.round === RESERVE_DEADLINE_ROUND && ctx.once('missions:reserves')) destroyReserves(ctx)
+    if (window === 'turn.end.scoring' && ctx.once(`missions:score:${s.round}:${s.activePlayer}`)) scoreTurn(ctx)
   },
-  playerHasForces: hasForces,
-  unitDestroyed: unitDestroyedHook,
-  modelDestroyed(ctx, info) {
-    championOfTitanModelDestroyed(ctx, info)
-    vbHuntersOfHereticsModelDestroyed(ctx, info)
-    headTakerModelDestroyed(ctx, info)
-    guardianOfTheRealmModelDestroyed(ctx, info)
-    tgbConsecratedGroundModelDestroyed(ctx, info)
-    bagTheBigUnModelDestroyed(ctx, info)
-  },
-  isTabled(state) { return !hasForces(state, 'A') && !hasForces(state, 'B') },
+  playerHasForces: () => true,
+  isTabled: () => false,
   finalResult(state, reason) {
-    const vp = { A: state.players.A.vp + state.players.A.battleReadyVp, B: state.players.B.vp + state.players.B.battleReadyVp }
+    const vp = { A: state.players.A.vp + (state.players.A.battleReadyVp ?? 0), B: state.players.B.vp + (state.players.B.battleReadyVp ?? 0) }
     const winner: GameResult['winner'] = vp.A > vp.B ? 'A' : vp.B > vp.A ? 'B' : 'draw'
     return { winner, reason, vp }
   },
   handler: {
-    handle(ctx, action, pending) {
-      if (pending.kind !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'missions: expected chooseOption' }
-      const topic = pending.context.topic
-      let rej: Rejection | void
-      switch (topic) {
-        case 'recoverObjective': rej = handleRecoverObjective(ctx, action, pending); break
-        case 'razeObjective': rej = handleRazeObjective(ctx, action, pending); break
-        case 'stompTarget': rej = handleStompTarget(ctx, action, pending); break
-        case 'bagTarget': rej = handleBagTarget(ctx, action, pending); break
-        case 'treasureObjective': rej = handleTreasureObjective(ctx, action, pending); break
-        default: return { code: 'E_NOT_AN_OPTION', reason: `missions: no handler for topic ${topic}` }
-      }
-      if (rej) return rej
-      const data = pending.context.data as { window?: TimingWindowId; key?: string }
-      if (data.window && data.key !== undefined) processWindow(ctx, data.window, data.key)
-    },
+    handle: () => ({ code: 'E_NOT_AN_OPTION', reason: 'missions: Spearhead battleplans raise no decisions of their own' }),
   },
 }
-
-export type { PendingDecision }

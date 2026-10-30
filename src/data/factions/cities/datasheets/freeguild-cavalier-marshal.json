@@ -1,0 +1,55 @@
+[
+  {
+    "id": "cities.unit.freeguild-cavalier-marshal",
+    "faction": "cities",
+    "name": "Freeguild Cavalier-Marshal",
+    "keywords": [
+      "HERO",
+      "CAVALRY"
+    ],
+    "factionKeywords": [
+      "CITIES OF SIGMAR",
+      "ORDER"
+    ],
+    "stats": {
+      "M": 10,
+      "W": 7,
+      "Sv": 3,
+      "OC": 2
+    },
+    "composition": [
+      {
+        "modelId": "cavalier-marshal",
+        "name": "Freeguild Cavalier-Marshal",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "oval",
+          "mm": 90,
+          "mm2": 52
+        },
+        "weapons": {
+          "default": [
+            "cities.weapon.dragoon-pistol",
+            "cities.weapon.master-forged-longsword",
+            "cities.weapon.warhorse-hooves"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "cities.ability.decisive-commander"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

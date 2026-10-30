@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ironjawz.enhancement.amberbone-whetstone",
+    "faction": "ironjawz",
+    "name": "Amberbone Whetstone",
+    "text": "The general's melee weapons have Rend 2.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ironjawz.ability.amberbone-whetstone"
+  },
+  {
+    "id": "ironjawz.enhancement.trophy-skulls",
+    "faction": "ironjawz",
+    "name": "Trophy Skulls",
+    "text": "The general's Control characteristic is 5.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ironjawz.ability.trophy-skulls"
+  },
+  {
+    "id": "ironjawz.enhancement.armour-of-gork",
+    "faction": "ironjawz",
+    "name": "Armour of Gork",
+    "text": "The general has Ward (6+).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ironjawz.ability.armour-of-gork"
+  },
+  {
+    "id": "ironjawz.enhancement.mega-bossy",
+    "faction": "ironjawz",
+    "name": "Mega-bossy",
+    "text": "After the general charges, nearby friendly units add 1 to their charge rolls for the rest of the turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ironjawz.ability.mega-bossy"
+  }
+]

@@ -153,11 +153,11 @@ export function relativeTime(savedAt: number, now: number = Date.now()): string 
 const PHASE_LABEL: Record<string, string> = {
   setup: 'Setup',
   deployment: 'Deployment',
-  command: 'Command phase',
+  command: 'Hero phase',
   movement: 'Movement phase',
   shooting: 'Shooting phase',
   charge: 'Charge phase',
-  fight: 'Fight phase',
+  fight: 'Combat phase',
 }
 export function phaseLabel(phase: string): string {
   return PHASE_LABEL[phase] ?? phase.charAt(0).toUpperCase() + phase.slice(1)

@@ -1,71 +1,31 @@
-// Shooting phase module (10-rules §6, R-6.1-R-6.10). Owner: W1-D. Steps: 'selectUnit' -> 'declareTargets' -> 'resolve'.
+// Shooting phase module, AoS 4 / Spearhead (10-rules-core CORE-8, CORE-11.1, CORE-14.2, CORE-16.6). Steps:
+// 'selectUnit' -> 'declareTargets' -> 'resolve' (per unit), then 'enemyAbilities'. The dice live in attack.ts.
 //
-// Everything below R-6.10 (the actual hit/wound/allocate/save/damage machinery, Hazardous, Feel No Pain, Deadly
-// Demise, Devastating Wounds, Big Guns Never Tire's -1 to hit, Stealth's -1 to hit, Indirect Fire's roll penalty,
-// Overwatch's hits-only-on-6) already lives in the shared attack sequence (attack.ts) and is exercised directly by
-// tests/engine/attack*.test.ts. This module's job is everything ABOVE that: which unit may be selected (R-6.1-R-6.3
-// eligibility, Engagement Range / Big Guns Never Tire / Pistol exceptions), which (model, weapon, target) tuples are
-// legal to declare (R-6.4 range+LoS, Lone Operative's 12" cap, Indirect Fire waiving visibility, the target-side
-// Engagement Range restriction and Blast's "never at a unit within Engagement Range of ANY unit in the firing
-// player's army" — not just the firing unit itself: SHOOT-005-blast-friendly), R-6.7's per-model Pistol-xor-other-
-// weapons rule and R-6.11's "one profile per activation", and driving services.attack through to
-// `shooting.targetsDeclared` / `shooting.attacksResolved`.
-//
-// Fire Overwatch is a reaction resolved entirely by the phase module that owns the triggering window (movement.ts /
-// charge.ts): it calls services.attack directly with `overwatch: true` and never raises a declareTargets decision
-// here (see movement.ts's `drainOverwatch`) — 00-arch §4 / phases/README §4 "Overwatch reuses this sequence".
-//
-// R-6.7 "a unit in ER may shoot only Pistols and only at one unit it is in ER of": each Pistol's legal targets are the
-// engaged enemy units (targetLegality), and `validateDeclareTargets` also requires that the whole declaration names a
-// single one of them (SHOOT-003-one-unit). This does not apply to MONSTER/VEHICLE units (Big Guns Never Tire).
-//
-// R-6.3's Big Guns Never Tire -1 to hit ("if the unit was in ER when targets were selected") is a snapshot taken by
-// `attack.begin` the instant this module calls it from `handle`'s `declareTargets` case — see attack.ts's module
-// header — so it survives the engaging enemy dying or moving away mid-volley (SHOOT-005-timing).
-import { filterValid, optionActions, passAction } from './legal'
-import { resolveDeferredActivations } from '../deferred'
-import type { WeaponTarget } from '../actions'
+//  - A unit that ran or retreated this turn cannot Shoot (CORE-8.1). A unit in combat may only fire Shoot in Combat weapons,
+//    and only at units it is in combat with (CORE-8.3 / 11.2). Enemies in combat with a friendly unit may be shot (CORE-8.4).
+//  - Each (model, weapon) names one target; a weapon's attacks are not split (CORE-11.1, lean). Only one profile of a
+//    `profileGroup` may fire per model (CITIES-AB-4).
+//  - Guarded Hero (CORE-14.2) and Obscuring (CORE-16.6) can make a unit an illegal target (`targetLegality`).
+import type { Action, WeaponTarget } from '../actions'
+import { attackService, enemyUnitsInCombat, guardedHero, isInCombat, obscuredFrom, unitDistance } from '../attack'
 import { distance, EPS } from '../geometry'
 import { hookService } from '../hooks-impl'
-import { leaderService } from '../leaders'
 import { losService } from '../los'
-import { attackService, pruneUnreachableTargets } from '../attack'
-import { consumeReaction } from '../code-hooks'
-import { PHANTOMS_REDECLARE_MARK, phantomsRedeclareHandle, psionicPhantomsStep } from '../factions/tyranids'
-import { handleReactiveMove, resolveSurgeMove, reactiveMoveLegalActions, validateReactiveMove } from './movement'
-import { weaponService } from '../weapons'
-import { transportService } from '../transports'
 import { notImplementedHandle, otherPlayer, type AdvanceResult, type EngineContext, type PhaseModule } from '../modules'
-import { boardUnitsOf, datasheetOf, hasCoreAbility, hasKeyword, unitModels } from '../state'
-import type { Action } from '../actions'
+import { boardUnitsOf, keywordsOf, unitModels } from '../state'
 import {
   EngineInvariantError,
-  type DeclaredTarget, type GameState, type Id, type Model, type ModelId, type PendingDecision, type PlayerId,
-  type Rejection, type RuntimeWeapon, type UnitId, type WeaponId,
+  type DeclaredTarget, type GameState, type Id, type Model, type ModelId, type PendingDecision, type PlayerId, type Rejection,
+  type RuntimeWeapon, type UnitId, type WeaponId,
 } from '../types'
+import { weaponService } from '../weapons'
+import { filterValid, optionActions, passAction } from './legal'
 
-// E2 (DA March of Vengeance): turn-scoped list of canonical unit ids selected to shoot this turn (not Overwatch),
-// stored in state.mission.custom[SHOT_LOG_KEY]; stale when round/turn differ
+export { shotThisTurn } from '../attack'
 export const SHOT_LOG_KEY = 'shotLog'
 export interface ShotLog { round: number; turn: PlayerId; unitIds: UnitId[] }
 
-function peekShotLog(state: GameState): ShotLog | null {
-  const log = (state.mission.custom as Record<string, unknown>)[SHOT_LOG_KEY] as ShotLog | undefined
-  if (!log || log.round !== state.round || log.turn !== state.activePlayer) return null
-  return log
-}
-export function shotThisTurn(state: GameState, unitId: UnitId): boolean {
-  const log = peekShotLog(state)
-  return !!log && log.unitIds.includes(leaderService.canonicalUnitId(state, unitId))
-}
-function recordShot(state: GameState, unitId: UnitId): void {
-  let log = peekShotLog(state)
-  if (!log) { log = { round: state.round, turn: state.activePlayer, unitIds: [] }; (state.mission.custom as Record<string, unknown>)[SHOT_LOG_KEY] = log }
-  const id = leaderService.canonicalUnitId(state, unitId)
-  if (!log.unitIds.includes(id)) log.unitIds.push(id)
-}
-
-// ---------- single-value progress markers (phaseState.marks; reset every time the phase is entered) ----------
+// ---------- progress markers (phaseState.marks; reset every time the phase is entered) ----------
 function readMark(state: GameState, key: string): string | null {
   const prefix = `${key}=`
   const m = state.phaseState.marks.find((x) => x.startsWith(prefix))
@@ -77,8 +37,6 @@ function writeMark(state: GameState, key: string, value: string | null): void {
   if (value !== null) state.phaseState.marks.push(prefix + value)
 }
 
-// same generic option-membership check movement.ts uses (see its comment): needed because a custom `validate` for
-// one pending.kind opts the whole module out of the reducer's own default check for every other kind too.
 function actionKey(a: Action): string {
   const { seq: _s, decisionId: _d, player: _p, ...rest } = a as Action & { seq?: number }
   return JSON.stringify(rest, Object.keys(rest).sort())
@@ -93,199 +51,73 @@ function optionCheck(pending: PendingDecision, action: Action): Rejection | null
   return pending.options.some((o) => actionKey(o.action) === key) ? null : { code: 'E_NOT_AN_OPTION', reason: 'answer is not one of the offered options' }
 }
 
-// ---------- keyword / engagement helpers (attached-unit aware via leaderService) ----------
-export function isBigGunsUnit(state: GameState, unitId: UnitId): boolean {
-  return leaderService.halves(state, unitId).some((id) => hasKeyword(state, id, 'MONSTER') || hasKeyword(state, id, 'VEHICLE'))
-}
-function hasPistolWeapon(state: GameState, unitId: UnitId): boolean {
-  return leaderService.combinedModels(state, unitId).some((m) => m.weapons.some((wid) => {
-    const w = weaponService.effectiveWeapon(state, m.id, wid)
-    return !!w && w.kind === 'ranged' && weaponService.hasAbility(w, 'PISTOL')
-  }))
-}
-function enemyCanonicalUnits(state: GameState, firingPlayer: PlayerId): UnitId[] {
-  const seen = new Set<UnitId>()
-  const out: UnitId[] = []
-  for (const u of boardUnitsOf(state, otherPlayer(firingPlayer))) {
-    const canon = leaderService.canonicalUnitId(state, u.id)
-    if (seen.has(canon)) continue
-    seen.add(canon)
-    out.push(canon)
-  }
-  return out
-}
-function isLoneOperative(state: GameState, unitId: UnitId): boolean {
-  if (leaderService.isAttached(state, unitId)) return false
-  // datasheet / effect-granted Lone Operative, plus any granted by a code hook (Gunnery Officer)
-  return hasCoreAbility(state, unitId, 'LONE_OPERATIVE') || hookService.hasCoreAbility(state, unitId, 'LONE_OPERATIVE')
+// ---------- stubs kept for importers outside this package (WP8 removes them) ----------
+export function isBigGunsUnit(_state: GameState, _unitId: UnitId): boolean { return false }
+export function firingDeckValue(_state: GameState, _unitId: UnitId): number { return 0 }
+export function firingDeckWeapons(_state: GameState, _transportUnitId: UnitId): { modelId: ModelId; weaponIds: WeaponId[] }[] { return [] }
+export function deferredShootStep(_ctx: EngineContext, _entry: { unitId: UnitId; modelIds: ModelId[] }): 'pending' | 'done' { return 'done' }
+
+const hasAb = (w: RuntimeWeapon, a: 'SHOOT_IN_COMBAT'): boolean => w.abilities.some((x) => x.ability === a)
+
+function enemyUnits(state: GameState, firingPlayer: PlayerId): UnitId[] {
+  return boardUnitsOf(state, otherPlayer(firingPlayer)).map((u) => u.id)
 }
 
-// ---------- R-6.4/R-6.2/R-6.3/R-6.9 target legality for one (firing model, weapon, candidate target) ----------
+// ---------- target legality for one (firing model, weapon, candidate target unit) ----------
 export function targetLegality(state: GameState, firingUnitId: UnitId, firingModelId: ModelId, weapon: RuntimeWeapon, targetUnitId: UnitId): Rejection | null {
   const attackerModel = state.models[firingModelId]
-  const targetModels = leaderService.halves(state, targetUnitId).flatMap((id) => (state.units[id]?.location === 'board' ? unitModels(state, id) : []))
-  if (!attackerModel || targetModels.length === 0) return { code: 'E_INVALID_TARGET', reason: `${targetUnitId} is not on the board`, details: { modelId: firingModelId, weaponId: weapon.id, targetUnitId } }
-  // R-6.9 Lone Operative: unattached, only within 12" (whichever is smaller than the weapon's own range)
-  const effRange = Math.min(weapon.range, isLoneOperative(state, targetUnitId) ? 12 : Infinity, hookService.targetRangeCapFor?.(state, targetUnitId, firingModelId) ?? Infinity)
-  // [INDIRECT FIRE] waives visibility — but never for a Torrent weapon (SHOOT-041-torrent)
-  const indirect = weaponService.hasAbility(weapon, 'INDIRECT_FIRE') && !weaponService.hasAbility(weapon, 'TORRENT')
-  const inRange = (tm: typeof targetModels[number]) => distance(attackerModel, tm) <= effRange + EPS
-  // R-6.4: the SAME model must be both within range and visible (Indirect Fire waives visibility) — a target unit
-  // is not legal merely because *some* model is in range and a *different* model happens to be visible.
-  const hasLegalModel = targetModels.some((tm) => inRange(tm) && (indirect || losService.visible(state, firingModelId, tm.id)))
-  if (!hasLegalModel) {
-    if (!targetModels.some(inRange)) return { code: 'E_NOT_IN_RANGE', reason: `${targetUnitId} is out of ${weapon.id}'s range`, details: { modelId: firingModelId, weaponId: weapon.id, targetUnitId } }
-    return { code: 'E_NO_LOS', reason: `${firingModelId} has no line of sight to ${targetUnitId}`, details: { modelId: firingModelId, weaponId: weapon.id, targetUnitId } }
+  const target = state.units[targetUnitId]
+  const targetModels = target && target.location === 'board' ? unitModels(state, targetUnitId) : []
+  const details = { modelId: firingModelId, weaponId: weapon.id, targetUnitId }
+  if (!attackerModel || targetModels.length === 0) return { code: 'E_INVALID_TARGET', reason: `${targetUnitId} is not on the board`, details }
+  if (target.player === state.units[firingUnitId]?.player) return { code: 'E_INVALID_TARGET', reason: 'cannot shoot a friendly unit', details }
+  // CORE-8.2: the same model must be within Range and see the target
+  const inRange = (tm: Model): boolean => distance(attackerModel, tm) <= weapon.range + EPS
+  if (!targetModels.some(inRange)) return { code: 'E_NOT_IN_RANGE', reason: `${targetUnitId} is out of ${weapon.id}'s range`, details }
+  if (!targetModels.some((tm) => inRange(tm) && losService.visible(state, firingModelId, tm.id))) {
+    return { code: 'E_NO_LOS', reason: `${firingModelId} has no line of sight to ${targetUnitId}`, details }
   }
-  const bigGuns = isBigGunsUnit(state, firingUnitId)
-  const isPistol = weaponService.hasAbility(weapon, 'PISTOL')
-  const selfEngagedWithTarget = leaderService.unitsInEngagement(state, firingUnitId, targetUnitId)
-  // R-6.2/R-6.7: a non-Big-Guns unit in Engagement Range may only shoot (Pistols, filtered upstream) at a unit it is
-  // itself engaged with — not merely a nearby unengaged target.
-  if (!bigGuns && leaderService.inEngagementWithEnemy(state, firingUnitId) && !selfEngagedWithTarget) {
-    return { code: 'E_INVALID_TARGET', reason: 'a unit in Engagement Range may only shoot the unit(s) it is engaged with', details: { modelId: firingModelId, weaponId: weapon.id, targetUnitId } }
+  // CORE-8.3 / 11.2 / 12.8: in combat -> Shoot in Combat weapons only, at units it is in combat with
+  if (isInCombat(state, firingUnitId)) {
+    if (!hasAb(weapon, 'SHOOT_IN_COMBAT')) return { code: 'E_IN_COMBAT', reason: `${weapon.id} cannot be used while the unit is in combat`, details }
+    if (!enemyUnitsInCombat(state, firingUnitId).includes(targetUnitId)) return { code: 'E_INVALID_TARGET', reason: 'a unit in combat may only target units it is in combat with', details }
   }
-  // any unit in the FIRING PLAYER'S army (the firing unit included) that is engaged with the target — computed
-  // regardless of the target's own keywords since [BLAST] below needs it even for a MONSTER/VEHICLE target.
-  const engagedWithSomeFriendly = boardUnitsOf(state, state.units[firingUnitId].player).some((fu) => leaderService.unitsInEngagement(state, fu.id, targetUnitId))
-  // R-6.2/R-6.3: an enemy unit in Engagement Range of ANY friendly unit cannot be targeted, unless it is itself
-  // MONSTER/VEHICLE, or the shooter is engaged with it AND (uses a Pistol, or is itself MONSTER/VEHICLE — R-6.3).
-  const targetBig = leaderService.halves(state, targetUnitId).some((id) => hasKeyword(state, id, 'MONSTER') || hasKeyword(state, id, 'VEHICLE'))
-  if (!targetBig) {
-    const exempt = selfEngagedWithTarget && (isPistol || bigGuns)
-    if (engagedWithSomeFriendly && !exempt) {
-      return { code: 'E_INVALID_TARGET', reason: `${targetUnitId} is in Engagement Range of a friendly unit and cannot be targeted`, details: { modelId: firingModelId, weaponId: weapon.id, targetUnitId } }
-    }
+  // CORE-14.2 Guarded Hero: an INFANTRY hero next to friendlies cannot be shot from more than 12" away
+  if (guardedHero(state, targetUnitId) && keywordsOf(state, targetUnitId).includes('INFANTRY') && unitDistance(state, firingUnitId, targetUnitId) > 12 + EPS) {
+    return { code: 'E_INVALID_TARGET', reason: `${targetUnitId} is a Guarded Hero and cannot be targeted from more than 12" away`, details }
   }
-  // [BLAST]: never at a unit within Engagement Range of ANY unit in the attacker's army (not just the firing unit
-  // itself), Big Guns Never Tire notwithstanding — this must still catch an unengaged Big-Guns unit's Blast weapon
-  // targeting an enemy MONSTER/VEHICLE that is engaged with a different friendly unit (SHOOT-005-blast-friendly).
-  if (weaponService.hasAbility(weapon, 'BLAST') && engagedWithSomeFriendly) {
-    return { code: 'E_INVALID_TARGET', reason: 'Blast weapons cannot target a unit within Engagement Range of a unit in the firing player\'s army', details: { modelId: firingModelId, weaponId: weapon.id, targetUnitId } }
-  }
+  // CORE-16.6 Obscuring
+  if (obscuredFrom(state, firingUnitId, targetUnitId)) return { code: 'E_NO_LOS', reason: `${targetUnitId} is hidden by an Obscuring feature`, details }
   return null
 }
 
-// ---------- R-6.1/R-6.4/R-6.5/R-6.7 the weapons (and their legal targets) this unit may declare right now ----------
+// ---------- the weapons (and their legal targets) this unit may declare right now ----------
 export interface ShootingWeaponEntry { modelId: ModelId; weaponId: WeaponId; profileGroup: Id | null; legalTargets: UnitId[]; attacks: number | null }
 
-function weaponUsableThisActivation(state: GameState, firingUnitId: UnitId, weapon: RuntimeWeapon, ignoreAdvance = false): boolean {
-  const advancedOverride = ignoreAdvance || hookService.eligibilityFor(state, firingUnitId, 'shoot')
-  const advanced = leaderService.halves(state, firingUnitId).some((id) => state.units[id].turn.moveType === 'advance') && !advancedOverride
-  if (advanced && !weaponService.hasAbility(weapon, 'ASSAULT')) return false
-  const bigGuns = isBigGunsUnit(state, firingUnitId)
-  // R-6.2/R-6.7: an engaged, non-Big-Guns unit may fire Pistols only.
-  if (!bigGuns && leaderService.inEngagementWithEnemy(state, firingUnitId) && !weaponService.hasAbility(weapon, 'PISTOL')) return false
-  return true
-}
-
-// ---------- E-PEN2 Firing Deck (R-5.19): embarked models' ranged weapons fire through the transport ----------
-// the Firing Deck value of a transport (datasheet.transport.firingDeck, else the FIRING_DECK core ability), 0 when none
-export function firingDeckValue(state: GameState, unitId: UnitId): number {
-  const ds = datasheetOf(state, unitId)
-  if (ds.transport?.firingDeck) return ds.transport.firingDeck
-  return Number(ds.coreAbilities.find((c) => c.ability === 'FIRING_DECK')?.value ?? 0) || 0
-}
-
-// the embarked models that could fire through `transportUnitId` right now, with their eligible ranged weapons: the
-// passenger unit has not shot this phase and is genuinely embarked; [ONE SHOT] weapons never qualify
-export function firingDeckWeapons(state: GameState, transportUnitId: UnitId): { modelId: ModelId; weaponIds: WeaponId[] }[] {
-  if (firingDeckValue(state, transportUnitId) <= 0) return []
-  const out: { modelId: ModelId; weaponIds: WeaponId[] }[] = []
-  for (const pid of transportService.embarkedIn(state, transportUnitId)) {
-    const pu = state.units[pid]
-    if (!pu || pu.turn.shotThisPhase || state.phaseState.activated.includes(pid)) continue
-    for (const mid of pu.models) {
-      const m = state.models[mid]
-      if (!m) continue
-      const weaponIds = m.weapons.filter((wid) => {
-        const w = weaponService.effectiveWeapon(state, mid, wid)
-        return !!w && w.kind === 'ranged' && !weaponService.hasAbility(w, 'ONE_SHOT')
-      })
-      if (weaponIds.length > 0) out.push({ modelId: mid, weaponIds })
-    }
-  }
-  return out
-}
-
-// an embarked model has no meaningful position: fire from the transport's hull instead.
-// The passenger is never permanently changed: the original pos/facing/base are returned (or parked in a mark) and restored.
-type Anchor = { pos: Model['pos']; facing: Model['facing']; base: Model['base'] }
-function anchorToTransport(state: GameState, modelId: ModelId, transportUnitId: UnitId): Anchor | null {
-  const m = state.models[modelId]
-  const hull = state.units[transportUnitId].models.map((id) => state.models[id]).find((x) => !!x)
-  if (!m || !hull) return null
-  const saved: Anchor = { pos: m.pos, facing: m.facing, base: m.base }
-  m.pos = { ...hull.pos }
-  m.facing = hull.facing
-  m.base = hull.base
-  return saved
-}
-function restoreAnchor(state: GameState, modelId: ModelId, a: Anchor | null): void {
-  const m = state.models[modelId]
-  if (!m || !a) return
-  m.pos = a.pos
-  m.facing = a.facing
-  m.base = a.base
-}
-const ANCHOR_PREFIX = 'sh:anch:'
-function restoreAnchoredPassengers(state: GameState): void {
-  for (const mark of [...state.phaseState.marks]) {
-    if (!mark.startsWith(ANCHOR_PREFIX)) continue
-    const rest = mark.slice(ANCHOR_PREFIX.length)
-    const eq = rest.indexOf('=')
-    restoreAnchor(state, rest.slice(0, eq) as ModelId, JSON.parse(rest.slice(eq + 1)) as Anchor)
-    state.phaseState.marks = state.phaseState.marks.filter((x) => x !== mark)
-  }
-}
-
-// `models` overrides the firing models (E4: a unit's deferred last-stand models shoot alone)
-export function buildShootingWeaponEntries(ctx: EngineContext, firingUnitId: UnitId, models?: Model[], opts?: { ignoreAdvance?: boolean }): ShootingWeaponEntry[] {
+// `models` overrides the firing models
+export function buildShootingWeaponEntries(ctx: EngineContext, firingUnitId: UnitId, models?: Model[], _opts?: { ignoreAdvance?: boolean }): ShootingWeaponEntry[] {
   const s = ctx.state
-  const candidates = enemyCanonicalUnits(s, s.units[firingUnitId].player)
+  const candidates = enemyUnits(s, s.units[firingUnitId].player)
   const out: ShootingWeaponEntry[] = []
-  for (const m of models ?? leaderService.combinedModels(s, firingUnitId)) {
+  for (const m of models ?? unitModels(s, firingUnitId)) {
     for (const wid of m.weapons) {
       const w = weaponService.effectiveWeapon(s, m.id, wid)
       if (!w || w.kind !== 'ranged') continue
-      // [ONE SHOT]: once fired (Model.oneShotUsed, set by attack.ts) the weapon is never a legal choice again
-      if (weaponService.hasAbility(w, 'ONE_SHOT') && m.oneShotUsed.includes(wid)) continue
-      if (!weaponService.isAvailable(s, m.id, wid)) continue // C4
-      if (!weaponUsableThisActivation(s, firingUnitId, w, opts?.ignoreAdvance)) continue
+      if (!weaponService.isAvailable(s, m.id, wid)) continue
       const legalTargets = candidates.filter((t) => targetLegality(s, firingUnitId, m.id, w, t) === null)
       out.push({ modelId: m.id, weaponId: wid, profileGroup: w.profileGroup, legalTargets, attacks: null })
     }
   }
-  // E-PEN2: Firing Deck passengers (not for a deferred last-stand activation)
-  if (!models) {
-    for (const { modelId, weaponIds } of firingDeckWeapons(s, firingUnitId)) {
-      const saved = anchorToTransport(s, modelId, firingUnitId)
-      const m = s.models[modelId]
-      for (const wid of weaponIds) {
-        const w = weaponService.effectiveWeapon(s, modelId, wid)
-        if (!w || !weaponService.isAvailable(s, modelId, wid)) continue
-        if (!weaponUsableThisActivation(s, firingUnitId, w, opts?.ignoreAdvance)) continue
-        const legalTargets = candidates.filter((t) => targetLegality(s, firingUnitId, m.id, w, t) === null)
-        out.push({ modelId, weaponId: wid, profileGroup: w.profileGroup, legalTargets, attacks: null })
-      }
-      restoreAnchor(s, modelId, saved)
-    }
-  }
   return out
 }
 
-// ---------- R-6.1-R-6.3 eligibility to be selected to shoot ----------
-// C5: `ignoreAdvance` treats an Advanced unit as if it had not Advanced (T'au Observer after Advancing)
-export function unitEligibleToShoot(ctx: EngineContext, unitId: UnitId, opts?: { ignoreAdvance?: boolean }): boolean {
+// CORE-8.1: not Run / Retreat this turn, and some weapon has a legal target
+export function unitEligibleToShoot(ctx: EngineContext, unitId: UnitId, _opts?: { ignoreAdvance?: boolean }): boolean {
   const s = ctx.state
   const u = s.units[unitId]
   if (!u || u.location !== 'board') return false
-  const halves = leaderService.halves(s, unitId).map((id) => s.units[id])
-  const fellBack = halves.some((h) => h.turn.moveType === 'fallBack')
-  if (fellBack && !hookService.eligibilityFor(s, unitId, 'shoot')) return false
-  const bigGuns = isBigGunsUnit(s, unitId)
-  if (leaderService.inEngagementWithEnemy(s, unitId) && !bigGuns && !hasPistolWeapon(s, unitId)) return false
-  return buildShootingWeaponEntries(ctx, unitId, undefined, opts).some((e) => e.legalTargets.length > 0)
+  if ((u.turn.moveType === 'advance' || u.turn.moveType === 'fallBack') && !hookService.eligibilityFor?.(s, unitId, 'shoot')) return false
+  return buildShootingWeaponEntries(ctx, unitId).some((e) => e.legalTargets.length > 0)
 }
 
 // ---------- select ----------
@@ -297,11 +129,7 @@ function doSelectUnit(ctx: EngineContext): 'pending' | 'declareTargets' | 'done'
   const activated = new Set(s.phaseState.activated)
   const eligible: UnitId[] = []
   for (const u of boardUnitsOf(s, active)) {
-    if (u.bodyguardUnitId) continue
-    // R-6.1 (SHOOT-046-detach): a unit already selected or shot this phase — including a Leader that shot as part of an
-    // attached unit and was detached mid-attack when its bodyguard was wiped out — is never offered again
-    const halves = leaderService.halves(s, u.id)
-    if (halves.some((id) => activated.has(id) || s.units[id]?.turn.shotThisPhase)) continue
+    if (activated.has(u.id) || u.turn.shotThisPhase) continue
     if (!unitEligibleToShoot(ctx, u.id)) continue
     eligible.push(u.id)
   }
@@ -314,16 +142,14 @@ function doSelectUnit(ctx: EngineContext): 'pending' | 'declareTargets' | 'done'
   return 'pending'
 }
 
-// ---------- declare targets ----------
 function doOpenDeclareTargets(ctx: EngineContext): void {
   const s = ctx.state
   const unitId = readMark(s, 'sh:cur')
   if (!unitId) throw new EngineInvariantError('shooting: declareTargets step with no current unit')
   const weapons = buildShootingWeaponEntries(ctx, unitId)
-  const engagedWith = enemyCanonicalUnits(s, s.units[unitId].player).filter((t) => leaderService.unitsInEngagement(s, unitId, t))
   ctx.decide({
     kind: 'declareTargets', player: s.units[unitId].player, window: 'shooting.start', canPass: true,
-    context: { unitId, attackKind: 'ranged', overwatch: false, weapons, engagedWith },
+    context: { unitId, attackKind: 'ranged', overwatch: false, weapons, engagedWith: enemyUnitsInCombat(s, unitId) },
   })
 }
 
@@ -331,167 +157,58 @@ export function validateDeclareTargets(state: GameState, action: Action, pending
   if (action.type === 'pass') return pending.canPass ? null : { code: 'E_PASS_NOT_ALLOWED', reason: 'this unit must declare targets or none' }
   if (action.type !== 'declareTargets') return { code: 'E_NOT_AN_OPTION', reason: 'expected declareTargets' }
   if (action.unitId !== pending.context.unitId) return { code: 'E_INVALID_TARGET', reason: 'targets are for the wrong unit', details: { expected: pending.context.unitId } }
-  const weapons = pending.context.weapons
   const seen = new Set<string>()
-  const pistolUsed = new Set<ModelId>()
-  const nonPistolUsed = new Set<ModelId>()
   const profileChosen = new Map<string, WeaponId>()
   for (const t of action.targets) {
-    if (t.attacks != null) return { code: 'E_SCHEMA', reason: 'attacks may only be set for melee (Fight-phase) targets', details: { modelId: t.modelId, weaponId: t.weaponId } }
-    const dupKey = `${t.modelId}::${t.weaponId}`
-    // SHOOT-010: one ranged weapon may not be listed twice (no split-target ranged attacks)
-    if (seen.has(dupKey)) return { code: 'E_SCHEMA', reason: `${t.weaponId} on ${t.modelId} is listed more than once`, details: { modelId: t.modelId, weaponId: t.weaponId } }
-    seen.add(dupKey)
-    const entry = weapons.find((w) => w.modelId === t.modelId && w.weaponId === t.weaponId)
+    if (t.attacks != null) return { code: 'E_SCHEMA', reason: 'attacks may only be set for melee (combat phase) targets', details: { modelId: t.modelId, weaponId: t.weaponId } }
+    const dup = `${t.modelId}::${t.weaponId}`
+    if (seen.has(dup)) return { code: 'E_SCHEMA', reason: `${t.weaponId} on ${t.modelId} is listed more than once`, details: { modelId: t.modelId, weaponId: t.weaponId } }
+    seen.add(dup)
+    const entry = pending.context.weapons.find((w) => w.modelId === t.modelId && w.weaponId === t.weaponId)
     if (!entry) return { code: 'E_INVALID_TARGET', reason: `${t.weaponId} on ${t.modelId} is not available this activation`, details: { modelId: t.modelId, weaponId: t.weaponId } }
     if (!entry.legalTargets.includes(t.targetUnitId)) {
       const w = weaponService.effectiveWeapon(state, t.modelId, t.weaponId)
       return targetLegality(state, action.unitId, t.modelId, w, t.targetUnitId) ?? { code: 'E_INVALID_TARGET', reason: `${t.targetUnitId} is not a legal target for ${t.weaponId}`, details: { modelId: t.modelId, weaponId: t.weaponId, targetUnitId: t.targetUnitId } }
     }
-    // SHOOT-011: only one profile of a shared profileGroup may be fired per model per activation (Smite/focused Smite)
     if (entry.profileGroup) {
-      const pgKey = `${t.modelId}::${entry.profileGroup}`
-      const chosen = profileChosen.get(pgKey)
+      const key = `${t.modelId}::${entry.profileGroup}`
+      const chosen = profileChosen.get(key)
       if (chosen && chosen !== t.weaponId) return { code: 'E_INVALID_TARGET', reason: `only one profile of ${entry.profileGroup} may be fired per activation`, details: { modelId: t.modelId, profileGroup: entry.profileGroup } }
-      profileChosen.set(pgKey, t.weaponId)
+      profileChosen.set(key, t.weaponId)
     }
-    const w = weaponService.effectiveWeapon(state, t.modelId, t.weaponId)
-    if (weaponService.hasAbility(w, 'PISTOL')) pistolUsed.add(t.modelId)
-    else nonPistolUsed.add(t.modelId)
-  }
-  // E-PEN2 (R-5.19): at most FIRING_DECK passenger models fire, one ranged weapon each
-  const deckModels = new Map<ModelId, Set<WeaponId>>()
-  for (const t of action.targets) {
-    const mu = state.models[t.modelId]?.unitId
-    if (mu && mu !== action.unitId && transportService.transportOf(state, mu) === action.unitId) {
-      const set = deckModels.get(t.modelId) ?? new Set<WeaponId>()
-      set.add(t.weaponId)
-      deckModels.set(t.modelId, set)
-    }
-  }
-  if (deckModels.size > 0) {
-    if (deckModels.size > firingDeckValue(state, action.unitId)) return { code: 'E_INVALID_TARGET', reason: `Firing Deck allows at most ${firingDeckValue(state, action.unitId)} embarked models to fire`, details: { models: [...deckModels.keys()] } }
-    for (const [modelId, ws] of deckModels) if (ws.size > 1) return { code: 'E_INVALID_TARGET', reason: 'an embarked model fires only one ranged weapon through Firing Deck', details: { modelId } }
-  }
-  // SHOOT-003-one-unit (R-6.7): an engaged, non-MONSTER/VEHICLE unit's Pistols may all fire at only ONE of the
-  // enemy units it is in Engagement Range of
-  if (!isBigGunsUnit(state, action.unitId) && leaderService.inEngagementWithEnemy(state, action.unitId)) {
-    const distinct = new Set(action.targets.map((t) => t.targetUnitId))
-    if (distinct.size > 1) return { code: 'E_INVALID_TARGET', reason: 'a unit in Engagement Range may shoot at only one of the enemy units it is engaged with', details: { targetUnitIds: [...distinct] } }
-  }
-  // SHOOT-012/013 (R-6.7): a model fires either its Pistols or all its other weapons, never both — MONSTER/VEHICLE excepted
-  for (const modelId of pistolUsed) {
-    if (!nonPistolUsed.has(modelId)) continue
-    const unitId = state.models[modelId]?.unitId
-    if (unitId && isBigGunsUnit(state, unitId)) continue
-    return { code: 'E_INVALID_TARGET', reason: `${modelId} must fire its Pistols or its other weapons this activation, not both`, details: { modelId } }
   }
   return null
 }
 
-// ---------- resolve (drives the shared attack sequence) ----------
-// the acting unit id is kept in a mark (not read off `phaseState.attack`) because that sequence is cleared the
-// instant it finishes — and `shooting.attacksResolved` (opened AFTER it finishes) must still know which unit this
-// was across however many re-entrant decisions that window itself raises.
+// ---------- resolve ----------
 function doResolve(ctx: EngineContext): 'pending' | 'selectUnit' {
   const s = ctx.state
   const unitId = readMark(s, 'sh:resolveUnit')
   if (!unitId) return 'selectUnit'
-  const opponent = otherPlayer(s.units[unitId].player)
-  // R-11.5: `shooting.targetsDeclared` opens before any hit is rolled, defensive (targeted player) first
-  if (ctx.window('shooting.targetsDeclared', unitId, ctx.order.defensive(opponent), { unitId })) return 'pending'
-  pruneUnreachableTargets(ctx, unitId) // E6: a reactive move in the window above may have taken targets out of reach
-  // INF-3.6..3.8 (Psionic Phantoms): the after-move visibility check / re-declaration, before any hit is rolled
-  if (s.phaseState.attack && psionicPhantomsStep(ctx, unitId) === 'pending') return 'pending'
+  // CORE-3.2: the active player is always offered first
+  if (ctx.window('shooting.targetsDeclared', unitId, ctx.order.active(), { unitId })) return 'pending'
   if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
   if (ctx.window('shooting.attacksResolved', unitId, ctx.order.active(), { unitId })) return 'pending'
-  // mortal wounds queued by an attacksResolved window (late Dark Pact test) resolve before the next unit is chosen
   if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
-  // RC-014/061: Krump da Gitz! (queued in the window above) — the targeted unit surges toward the shooter now
-  for (let r = consumeReaction(s, 'surge'); r; r = consumeReaction(s, 'surge')) resolveSurgeMove(ctx, r.unitId, r.distance ?? 0, r.enemyUnitId)
-  // E4: models kept on the table by A Martyr's Death shoot now, then leave
-  if (resolveDeferredActivations(ctx, unitId) === 'awaiting') return 'pending'
-  restoreAnchoredPassengers(s)
   writeMark(s, 'sh:resolveUnit', null)
   return 'selectUnit'
 }
 
-const ATTACK_CHOOSE_TOPICS = new Set(['saveType', 'hazardousCasualty', 'rerollOffer'])
-
-// ---------- E4: deferred last-stand shooting (A Martyr's Death) ----------
-const defKey = (unitId: UnitId): string => `shdef:${unitId}`
-function deferredOpen(state: GameState, unitId: UnitId): boolean {
-  return state.phaseState.marks.includes(`${defKey(unitId)}:open`) && !state.phaseState.marks.includes(`${defKey(unitId)}:begun`)
-}
-
-// the deferred models of `entry` shoot once, after the destroying unit finished: 'pending' while their declareTargets
-// decision / attack is open, 'done' once resolved (or when nothing can be shot)
-export function deferredShootStep(ctx: EngineContext, entry: { unitId: UnitId; modelIds: ModelId[] }): 'pending' | 'done' {
-  const s = ctx.state
-  const key = defKey(entry.unitId)
-  if (ctx.marked(`${key}:begun`)) return 'done'
-  const models = entry.modelIds.map((id) => s.models[id]).filter((m): m is Model => !!m)
-  const weapons = buildShootingWeaponEntries(ctx, entry.unitId, models)
-  if (!weapons.some((w) => w.legalTargets.length > 0)) { ctx.once(`${key}:begun`); return 'done' }
-  if (!ctx.once(`${key}:open`)) return 'pending'
-  const engagedWith = enemyCanonicalUnits(s, s.units[entry.unitId].player).filter((t) => leaderService.unitsInEngagement(s, entry.unitId, t))
-  ctx.decide({
-    kind: 'declareTargets', player: s.units[entry.unitId].player, window: 'shooting.start', canPass: true,
-    context: { unitId: entry.unitId, attackKind: 'ranged', overwatch: false, weapons, engagedWith },
-  })
-  return 'pending'
-}
-
-
-// ---------- legal-action candidates (W1-G): one declaration per target unit (every weapon able to hit it), plus pass ----------
+// ---------- legal-action candidates: one declaration per target unit (every weapon able to hit it), plus pass ----------
 function shootingLegalActions(state: GameState, pending: PendingDecision): Action[] | null {
   if (pending.kind !== 'declareTargets') return optionActions(pending)
   const { unitId, weapons } = pending.context
-  const bigGuns = state.units[unitId] ? isBigGunsUnit(state, unitId) : false
   const all = [...new Set(weapons.flatMap((w) => w.legalTargets))]
   const candidates: Action[] = []
-  // E-PEN2: embarked passengers' weapons (Firing Deck) are kept apart from the transport's own so the transport-only
-  // declaration is always offered, plus one Firing Deck variant (best <= deck-value passengers, one non-pistol weapon each)
-  const isPassenger = (modelId: ModelId): boolean => {
-    const mu = state.models[modelId]?.unitId
-    return !!mu && mu !== unitId && transportService.transportOf(state, mu) === unitId
-  }
-  const deckCap = firingDeckValue(state, unitId)
-  const build = (target: UnitId, entries0: typeof weapons, deckVariant: boolean): WeaponTarget[] => {
-    const byModel = new Map<ModelId, typeof weapons>()
-    for (const w of entries0) if (w.legalTargets.includes(target)) byModel.set(w.modelId, [...(byModel.get(w.modelId) ?? []), w])
-    const targets: WeaponTarget[] = []
-    const deckPicks: { modelId: ModelId; entry: (typeof weapons)[number]; score: number }[] = []
-    for (const [modelId, entries] of byModel) {
-      const isPistol = (e: (typeof weapons)[number]): boolean => weaponService.hasAbility(weaponService.effectiveWeapon(state, e.modelId, e.weaponId), 'PISTOL')
-      if (deckVariant) {
-        const pool = entries.filter((e) => !isPistol(e))
-        const use = pool.length > 0 ? pool : entries
-        const best = use[0]
-        if (best) deckPicks.push({ modelId, entry: best, score: weaponService.effectiveWeapon(state, best.modelId, best.weaponId).S ?? 0 })
-        continue
-      }
-      const others = entries.filter((e) => !isPistol(e))
-      const chosen = bigGuns ? entries : others.length > 0 ? others : entries.filter(isPistol)
-      const groups = new Set<string>()
-      for (const e of chosen) {
-        if (e.profileGroup) { if (groups.has(e.profileGroup)) continue; groups.add(e.profileGroup) }
-        targets.push({ modelId, weaponId: e.weaponId, targetUnitId: target, ...(e.profileGroup ? { profileGroup: e.profileGroup } : {}) })
-      }
-    }
-    deckPicks.sort((a, b) => b.score - a.score)
-    for (const d of deckPicks.slice(0, deckCap)) targets.push({ modelId: d.modelId, weaponId: d.entry.weaponId, targetUnitId: target, ...(d.entry.profileGroup ? { profileGroup: d.entry.profileGroup } : {}) })
-    return targets
-  }
-  const own = weapons.filter((w) => !isPassenger(w.modelId))
-  const deck = weapons.filter((w) => isPassenger(w.modelId))
   for (const target of all) {
-    const base = build(target, own, false)
-    if (base.length > 0) candidates.push({ type: 'declareTargets', player: pending.player, decisionId: pending.id, unitId, targets: base })
-    if (deck.length > 0 && deckCap > 0) {
-      const d = build(target, deck, true)
-      if (d.length > 0) candidates.push({ type: 'declareTargets', player: pending.player, decisionId: pending.id, unitId, targets: [...base, ...d] })
+    const targets: WeaponTarget[] = []
+    const groups = new Set<string>()
+    for (const e of weapons) {
+      if (!e.legalTargets.includes(target)) continue
+      if (e.profileGroup) { const g = `${e.modelId}::${e.profileGroup}`; if (groups.has(g)) continue; groups.add(g) }
+      targets.push({ modelId: e.modelId, weaponId: e.weaponId, targetUnitId: target, ...(e.profileGroup ? { profileGroup: e.profileGroup } : {}) })
     }
+    if (targets.length > 0) candidates.push({ type: 'declareTargets', player: pending.player, decisionId: pending.id, unitId, targets })
   }
   const out = filterValid(candidates, (a) => validateDeclareTargets(state, a, pending), 6)
   if (pending.canPass) out.push(passAction(pending))
@@ -500,7 +217,7 @@ function shootingLegalActions(state: GameState, pending: PendingDecision): Actio
 
 export const shootingModule: PhaseModule = {
   name: 'shooting',
-  legalActions(state, pending) { return reactiveMoveLegalActions(state, pending) ?? shootingLegalActions(state, pending) },
+  legalActions(state, pending) { return shootingLegalActions(state, pending) },
   enter(ctx) {
     ctx.state.step = 'selectUnit'
     ctx.state.phaseState.activated = []
@@ -509,107 +226,66 @@ export const shootingModule: PhaseModule = {
   advance(ctx): AdvanceResult {
     const s = ctx.state
     for (;;) {
+      // CORE-3.13: abilities of the active player's Shooting Phase first
+      if (!ctx.marked('sh:ab:active')) {
+        if (ctx.services.abilities.runWindow(ctx, 'shooting', s.activePlayer, 'shooting:active')) return 'pending'
+        ctx.once('sh:ab:active')
+      }
       if (s.step === 'selectUnit') {
         const r = doSelectUnit(ctx)
         if (r === 'pending') return 'pending'
-        if (r === 'done') return 'done'
-        s.step = r
+        s.step = r === 'done' ? 'enemyAbilities' : r
         continue
       }
       if (s.step === 'declareTargets') {
-        // C1 (Dark Pacts, Sacrificial Dagger): `shooting.unitSelected` opens once the unit is chosen, before targets are declared.
-        // Never for Overwatch (which never reaches this module). The window is idempotent per (window, key), so re-entry after an
-        // answered pick simply falls through.
-        const cur = readMark(s, 'sh:cur')
-        if (cur) {
-          if (ctx.window('shooting.unitSelected', cur, ctx.order.active(), { unitId: cur })) return 'pending'
-          // mortal wounds queued by a pick (Dark Pact, Sacrificial Dagger) wait in an open sequence: resolve them before targets
-          if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
-          // a pact's mortal wounds may have wiped the unit out: nothing left to declare for
-          if (!leaderService.halves(s, cur).some((id) => s.units[id]?.location === 'board' && unitModels(s, id).length > 0)) {
-            writeMark(s, 'sh:cur', null)
-            s.step = 'selectUnit'
-            continue
-          }
-        }
         doOpenDeclareTargets(ctx)
         return 'pending'
       }
-      if (s.step === 'resolve' || s.step === 'hazardous') {
+      if (s.step === 'resolve') {
         const r = doResolve(ctx)
         if (r === 'pending') return 'pending'
         s.step = r
         continue
       }
+      if (s.step === 'enemyAbilities') {
+        // the opponent's Shooting Phase abilities come after the active player is done (CORE-3.13)
+        if (!ctx.marked('sh:ab:enemy')) {
+          if (ctx.services.abilities.runWindow(ctx, 'shooting', otherPlayer(s.activePlayer), 'shooting:enemy')) return 'pending'
+          ctx.once('sh:ab:enemy')
+        }
+        return 'done'
+      }
       throw new EngineInvariantError(`shooting: unexpected step ${s.step}`)
     }
   },
-  validate(state, action, pending) {
-    const rm = validateReactiveMove(state, action, pending)
-    if (rm !== undefined) return rm
-    if (pending.kind === 'declareTargets') return validateDeclareTargets(state, action, pending)
+  validate(_state, action, pending) {
+    if (pending.kind === 'declareTargets') return validateDeclareTargets(_state, action, pending)
     return optionCheck(pending, action)
   },
   handle(ctx, action, pending): Rejection | void {
     const s = ctx.state
-    const reactive = handleReactiveMove(ctx, action, pending)
-    if (reactive !== null) return reactive
-    // INF-3.7: a declareTargets answer while Psionic Phantoms' re-declaration is open (pass = no new targets)
-    if (pending.kind === 'declareTargets' && (action.type === 'declareTargets' || action.type === 'pass') && s.phaseState.marks.some((m) => m.startsWith(`${PHANTOMS_REDECLARE_MARK}=`))) {
-      const rej = phantomsRedeclareHandle(ctx, action, pending)
-      if (rej) return rej
-      writeMark(s, PHANTOMS_REDECLARE_MARK, null)
-      return
-    }
     if (action.type === 'pass') {
-      if (s.phaseState.attack && pending.kind === 'allocateAttack') return attackService.handler.handle(ctx, action, pending)
       if (pending.kind === 'chooseUnitToActivate') { writeMark(s, 'sh:ended', '1'); return }
-      if (pending.kind === 'declareTargets' && deferredOpen(s, pending.context.unitId)) { ctx.once(`${defKey(pending.context.unitId)}:begun`); return }
       if (pending.kind === 'declareTargets') { writeMark(s, 'sh:cur', null); s.step = 'selectUnit'; return }
       return { code: 'E_NOT_AN_OPTION', reason: `shooting: pass is not valid for ${pending.kind}` }
     }
     if (pending.kind === 'chooseUnitToActivate' && action.type === 'chooseUnitToActivate') {
-      for (const id of leaderService.halves(s, action.unitId)) {
-        if (!s.phaseState.activated.includes(id)) s.phaseState.activated.push(id)
-      }
+      if (!s.phaseState.activated.includes(action.unitId)) s.phaseState.activated.push(action.unitId)
       writeMark(s, 'sh:cur', action.unitId)
-      return
-    }
-    if (pending.kind === 'declareTargets' && action.type === 'declareTargets' && deferredOpen(s, action.unitId)) {
-      // E4: the deferred models' last stand — the shot does not count as the unit's activation
-      ctx.once(`${defKey(action.unitId)}:begun`)
-      if (action.targets.length === 0) return
-      const targets: DeclaredTarget[] = action.targets.map((t) => ({ modelId: t.modelId, weaponId: t.weaponId, targetUnitId: t.targetUnitId, profileGroup: t.profileGroup ?? null, attacks: null }))
-      attackService.begin(ctx, { kind: 'ranged', attackerUnitId: action.unitId, overwatch: false, targets })
+      s.step = 'declareTargets'
       return
     }
     if (pending.kind === 'declareTargets' && action.type === 'declareTargets') {
       writeMark(s, 'sh:cur', null)
       if (action.targets.length === 0) { s.step = 'selectUnit'; return }
-      // R-6.1: each unit shoots at most once per phase
-      for (const id of leaderService.halves(s, action.unitId)) s.units[id].turn.shotThisPhase = true
-      recordShot(s, action.unitId)
-      // E-PEN2: Firing Deck passengers fired through the transport; their units are spent for the phase
-      for (const t of action.targets) {
-        const mu = s.models[t.modelId]?.unitId
-        if (mu && mu !== action.unitId && transportService.transportOf(s, mu) === action.unitId) {
-          if (!s.phaseState.marks.some((x) => x.startsWith(`${ANCHOR_PREFIX}${t.modelId}=`))) {
-            const saved = anchorToTransport(s, t.modelId, action.unitId)
-            if (saved) s.phaseState.marks.push(`${ANCHOR_PREFIX}${t.modelId}=${JSON.stringify(saved)}`)
-          }
-          for (const id of leaderService.halves(s, mu)) s.units[id].turn.shotThisPhase = true
-          recordShot(s, mu)
-        }
-      }
+      s.units[action.unitId].turn.shotThisPhase = true
       const targets: DeclaredTarget[] = action.targets.map((t) => ({ modelId: t.modelId, weaponId: t.weaponId, targetUnitId: t.targetUnitId, profileGroup: t.profileGroup ?? null, attacks: null }))
       attackService.begin(ctx, { kind: 'ranged', attackerUnitId: action.unitId, overwatch: false, targets })
       writeMark(s, 'sh:resolveUnit', action.unitId)
       s.step = 'resolve'
       return
     }
-    if (s.phaseState.attack && (pending.kind === 'allocateAttack' || (pending.kind === 'chooseOption' && ATTACK_CHOOSE_TOPICS.has(pending.context.topic)))) {
-      return attackService.handler.handle(ctx, action, pending)
-    }
     return notImplementedHandle('shooting')(ctx, action, pending)
   },
 }
+

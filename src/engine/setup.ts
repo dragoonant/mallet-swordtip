@@ -1,14 +1,24 @@
-// Pre-battle sequence (10-rules §13): phase 'setup' (P4 sides) and phase 'deployment' (P6 deploy, P7 first turn, P8 Scouts).
-// Owner: W1-F.
-import { basesOverlap, checkPlacements, emptyMoveConstraints, growConvexPolygon, horizontalGap, isOversizeForZone, oversizeEdgePlacementOk, snapToBattlefieldEdge, whollyOnBoard, whollyWithinPolygon, type Footprint, type ResolvedPlacement } from './geometry'
+// Spearhead pre-battle sequence and deployment (SPH-4, SPH-5.2, SPH-7). Phase 'setup' raises, in this order, one decision
+// each (a step is skipped when GameSetup / PlayerSetup pre-fills it, SPH-16.5): chooseAttacker (the roll-off winner),
+// armyOptions (attacker, then defender), battlefieldSide (defender), deploymentMap (defender: which territory is theirs),
+// placeTerrain (defender large + small, attacker large + small; only when the terrain layout has no pieces). Phase
+// 'deployment' lets the attacker set up the whole army, then the defender (SPH-7.1); every model must be wholly in friendly
+// territory and more than 6" from enemy territory (SPH-7.2). The round-1 first-turn choice is raised by the reducer.
+import {
+  baseEdgePoints, basesOverlap, checkPlacements, EPS, emptyMoveConstraints, horizontalGap, isOversizeForZone, isRound, oversizeEdgePlacementOk,
+  pointInPolygon, pointToPolygonEdge, snapToBattlefieldEdge, whollyOnBoard, whollyWithinOfPolygon, whollyWithinPolygon,
+  type Footprint, type ResolvedPlacement,
+} from './geometry'
 import type { EngineContext, PhaseModule } from './modules'
 import { otherPlayer } from './modules'
+import { getDataBundle } from './reducer'
 import { deployTerrainBlock } from './terrain'
-import { transportService } from './transports'
-import { assignSides, boardModelsOf, deploymentZone, hasCoreAbility, hasDeepStrike, unitModels, setModelPos } from './state'
+import { assignSides, boardModelsOf, deploymentZone, hasDeepStrike, setModelPos, territoryOf, unitModels } from './state'
+import type { TerrainTrait } from '../data/types'
 import type { Action, DeployUnitAction, ModelPlacement } from './actions'
 import type {
-  Board, DeployUnitDecision, GameState, Model, ModelId, MoveConstraints, PendingDecision, PlayerId, Polygon, Rejection, Unit, UnitId, Vec3,
+  Board, DeployUnitDecision, GameState, Model, ModelId, MoveConstraints, PlayerId, Polygon, Rejection, RuntimeAbility,
+  TerrainPiece, Unit, UnitId, Vec2, Vec3,
 } from './types'
 
 // R-1.4: each player rolls 1D6, higher wins, ties re-roll; never modified or re-rolled
@@ -22,39 +32,37 @@ export function rollOff(ctx: EngineContext, purpose: 'rollOff' | 'firstTurn' = '
 }
 
 function sidesChosen(state: GameState): boolean { return state.players.A.side !== null }
+function attackerOf(state: GameState): PlayerId { return state.players.A.side === 'attacker' ? 'A' : 'B' }
 
-// CP-1.9 / R-5.14: a unit set aside for Reserves at Declare Battle Formations never gets a deployUnit decision here —
-// it stays `location: 'reserves'` and arrives later via the Movement phase's `reinforcements` window (movement.ts).
-// datasheet DEEP_STRIKE, a Tellyporta pairing, or a hook-granted Deep Strike (enhancement, e.g. Temporal Sorceries): one helper, hasDeepStrike
+// kept for the 40k tests that still import it (Deep Strike no longer exists in Spearhead)
 export function unitCanDeepStrike(state: GameState, unit: Unit): boolean { return hasDeepStrike(state, unit.id) || unit.deepStrikeWith !== null }
-function canDeepStrike(state: GameState, unit: Unit): boolean { return unitCanDeepStrike(state, unit) }
 
-// MISSION-027-attached (R-10.1): an attached Leader has no drop of its own — it deploys as part of its bodyguard's
-// single deployUnit answer. `combo*` below treats the bodyguard's decision as covering both units' models.
-function comboUnits(state: GameState, unit: Unit): Unit[] {
-  return unit.attachedLeaderId ? [unit, state.units[unit.attachedLeaderId]] : [unit]
-}
-function comboModels(state: GameState, unit: Unit): Model[] {
-  return comboUnits(state, unit).flatMap((u) => unitModels(state, u.id))
-}
-function comboCanDeepStrike(state: GameState, unit: Unit): boolean {
-  return comboUnits(state, unit).every((u) => canDeepStrike(state, u))
+// ---------- polygon helpers (terrain placement, SPH-5.2; territory buffer, SPH-7.2) ----------
+const segmentsCross = (a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean => {
+  const o = (p: Vec2, q: Vec2, r: Vec2): number => (q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x)
+  const d1 = o(a, b, c), d2 = o(a, b, d), d3 = o(c, d, a), d4 = o(c, d, b)
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
 }
 
-// ---------- Infiltrators (R-10.7) ----------
-function comboInfiltrates(state: GameState, unit: Unit): boolean {
-  return comboUnits(state, unit).every((u) => hasCoreAbility(state, u.id, 'INFILTRATORS'))
+// smallest distance between two simple polygons, 0 when they touch, cross or one contains the other
+export function polygonGap(a: Polygon, b: Polygon): number {
+  if (a.some((p) => pointInPolygon(p, b)) || b.some((p) => pointInPolygon(p, a))) return 0
+  for (let i = 0; i < a.length; i++) {
+    for (let j = 0; j < b.length; j++) if (segmentsCross(a[i], a[(i + 1) % a.length], b[j], b[(j + 1) % b.length])) return 0
+  }
+  let best = Infinity
+  for (const p of a) best = Math.min(best, pointToPolygonEdge(p, b))
+  for (const p of b) best = Math.min(best, pointToPolygonEdge(p, a))
+  return best
 }
 
-// an Infiltrators unit may instead be set up anywhere wholly on the battlefield more than 9" horizontally from the enemy
-// deployment zone and from every enemy model (R-10.7). The forbidden area is the enemy zone grown by 9" (exact offset of the
-// convex zone, so the triangular cp-04 wedges work too); minDistanceFromEnemies covers the models.
-function infiltratorConstraints(state: GameState, player: PlayerId): MoveConstraints {
-  const dz = deploymentZone(state, otherPlayer(player))
-  return emptyMoveConstraints(1e9, {
-    region: null, mustEndOutsideEngagement: false, minDistanceFromEnemies: 9,
-    forbidden: [growConvexPolygon(dz, 9 + 1e-3)],
-  })
+// horizontal gap between a base and a polygon (0 when they overlap)
+function baseGapToPolygon(fp: Footprint, poly: Polygon): number {
+  if (pointInPolygon(fp.pos, poly)) return 0
+  if (isRound(fp.base)) return Math.max(0, pointToPolygonEdge(fp.pos, poly) - fp.base.radius)
+  const edge = baseEdgePoints(fp)
+  if (edge.some((p) => pointInPolygon(p, poly))) return 0
+  return Math.min(...edge.map((p) => pointToPolygonEdge(p, poly)))
 }
 
 // ---------- Patrol Squads (Tyranid Termagants) ----------
@@ -123,117 +131,71 @@ export function splitPatrolSquad(state: GameState, unitId: UnitId, sizes: number
   return ids
 }
 
-// units of the player with a patrolSquads ability that have not been offered the split yet
-function squadCandidates(state: GameState, player: PlayerId): Unit[] {
-  return Object.values(state.units).filter((u) => {
-    if (u.player !== player || u.location !== 'reserves' || u.ref.includes('~')) return false
-    if (state.phaseState.marks.includes(`squads:${u.id}`)) return false
-    const ds = state.datasheets[u.datasheetId]
-    return ds.abilities.some((a) => state.abilities[a]?.code === 'patrolSquads')
-  })
-}
-function squadSizes(state: GameState, unit: Unit): number[] | null {
-  const ds = state.datasheets[unit.datasheetId]
-  for (const a of ds.abilities) {
-    const ab = state.abilities[a]
-    if (ab?.code === 'patrolSquads' && Array.isArray(ab.params?.sizes)) {
-      const sizes = (ab.params!.sizes as unknown[]).map(Number)
-      if (sizes.reduce((x, y) => x + y, 0) === unit.models.length) return sizes
-    }
-  }
-  return null
-}
-
-// MISSION-027-reserves: mark that a unit's deployment decision (board placement or Reserves) has been resolved, so it
-// is never offered again and always counts toward the alternation below — independent of its final `location`, which
-// for a Reserves choice stays 'reserves' forever (or until the Movement phase's `reinforcements` window fills it in).
+// a unit's deployment decision has been taken (placed on the board)
 function dropMark(unitId: UnitId): string { return `deployDrop:${unitId}` }
 function hasDropped(state: GameState, unitId: UnitId): boolean { return state.phaseState.marks.includes(dropMark(unitId)) }
 function markDropped(state: GameState, unitId: UnitId): void {
   if (!hasDropped(state, unitId)) state.phaseState.marks.push(dropMark(unitId))
 }
-// unitId format is always "<player>:<ref>", so a prefix match also scopes the count to `player`
-function dropsCount(state: GameState, player: PlayerId): number {
-  const prefix = `deployDrop:${player}:`
-  return state.phaseState.marks.filter((m) => m.startsWith(prefix)).length
-}
 
+// units that still have to be set up: not placed yet and not arriving from reserve (SPH-7.3)
 function remainingToDeploy(state: GameState, player: PlayerId): UnitId[] {
-  const reservedRefs = new Set(state.setup.players[player].reserves)
+  const reservedRefs = new Set(state.setup.players[player].reserves ?? [])
   return Object.values(state.units)
-    .filter((u) => u.player === player && u.location === 'reserves' && !reservedRefs.has(u.ref) && !u.bodyguardUnitId && !hasDropped(state, u.id) && transportService.transportOf(state, u.id) === null)
+    .filter((u) => u.player === player && u.location === 'reserves' && !u.reserveArrival && !reservedRefs.has(u.ref) && !hasDropped(state, u.id))
     .map((u) => u.id)
 }
 
-// CP-1.10: alternate one drop at a time, Defender first; when one side runs out the other deploys the rest.
+// SPH-7.1: the attacker sets up the whole army first, then the defender
 function deploymentTurnPlayer(state: GameState): PlayerId | null {
-  const defender: PlayerId = state.players.A.side === 'defender' ? 'A' : 'B'
-  const attacker = otherPlayer(defender)
-  const remD = remainingToDeploy(state, defender).length
-  const remA = remainingToDeploy(state, attacker).length
-  if (remD === 0 && remA === 0) return null
-  if (remD === 0) return attacker
-  if (remA === 0) return defender
-  const deployedD = dropsCount(state, defender)
-  const deployedA = dropsCount(state, attacker)
-  return deployedD <= deployedA ? defender : attacker
+  const attacker = attackerOf(state)
+  if (remainingToDeploy(state, attacker).length > 0) return attacker
+  const defender = otherPlayer(attacker)
+  if (remainingToDeploy(state, defender).length > 0) return defender
+  return null
+}
+
+// SPH-7.2: more than 6" from enemy territory (strictly), on top of the deploy polygon from the data
+export const TERRITORY_BUFFER = 6
+
+function territoryProblem(state: GameState, player: PlayerId, placed: Footprint[]): Rejection | null {
+  if (!state.mission.data.territories) return null
+  const own = territoryOf(state, player)
+  const enemy = territoryOf(state, otherPlayer(player))
+  for (const fp of placed) {
+    if (!whollyWithinOfPolygon(fp, own, 1e-3)) return { code: 'E_TERRITORY', reason: 'every model must be set up wholly within friendly territory' }
+    if (baseGapToPolygon(fp, enemy) <= TERRITORY_BUFFER + EPS) return { code: 'E_TERRITORY', reason: `every model must be set up more than ${TERRITORY_BUFFER}" from enemy territory` }
+  }
+  return null
 }
 
 // shared by validate() and handle(): resolves + checks a deployUnit answer without mutating state
 function resolveDeploy(
   state: GameState, action: DeployUnitAction, pending: DeployUnitDecision,
-): { rejection: Rejection } | { rejection: null; toReserves: true } | { rejection: null; toReserves: false; resolved: ResolvedPlacement[] } {
+): { rejection: Rejection } | { rejection: null; resolved: ResolvedPlacement[] } {
   if (!pending.context.unitIds.includes(action.unitId)) {
-    return { rejection: { code: 'E_INVALID_TARGET', reason: `it is not ${pending.player}'s turn to deploy ${action.unitId}`, details: { unitId: action.unitId } } }
+    return { rejection: { code: 'E_WRONG_PLAYER', reason: `it is not ${pending.player}'s turn to deploy ${action.unitId}`, details: { unitId: action.unitId } } }
   }
   const unit = state.units[action.unitId]
   if (!unit) return { rejection: { code: 'E_SCHEMA', reason: `unknown unit ${action.unitId}` } }
-  if (action.toReserves) {
-    if (!comboCanDeepStrike(state, unit)) return { rejection: { code: 'E_INVALID_TARGET', reason: `${unit.ref} cannot go to Reserves (no Deep Strike)` } }
-    return { rejection: null, toReserves: true }
-  }
-  const placements: ModelPlacement[] = action.placements
-  const check = (constraints: MoveConstraints) => checkPlacements({
-    unitModels: comboModels(state, unit),
-    placements,
-    constraints,
+  if (action.toReserves) return { rejection: { code: 'E_NOT_AN_OPTION', reason: 'units cannot be put in reserve at deployment (only units that arrive by an ability start there)' } }
+  const result = checkPlacements({
+    unitModels: unitModels(state, unit.id),
+    placements: action.placements,
+    constraints: pending.constraints,
     otherFriendly: boardModelsOf(state, pending.player),
     enemies: boardModelsOf(state, otherPlayer(pending.player)),
     board: state.board,
+    coherencyRange: state.datasheets[unit.datasheetId]?.coherencyRange,
   })
-  let result = check(pending.constraints)
-  // R-10.7 Infiltrators: a unit that cannot be set up in its own zone may use the wider infiltration area instead
-  if (result.rejection && pending.context.infiltrators.includes(unit.id)) {
-    const alt = check(infiltratorConstraints(state, pending.player))
-    if (!alt.rejection) result = alt
-  }
-  // Rules Commentary "Deploying Units": a model whose base is too big to be set up wholly within its zone (Onager Dunecrawler vs
-  // cp-01's 5" strips) is set up touching its player's battlefield edge instead; the unit's other models stay wholly in the zone
-  if (result.rejection && pending.window === 'deployment.unit') {
-    const zone = pending.context.zone
-    const unitModels = comboModels(state, unit)
-    if (unitModels.some((m) => isOversizeForZone(m.base, zone))) {
-      const alt = check({ ...pending.constraints, region: null })
-      if (alt.rejection) return { rejection: alt.rejection }
-      for (const r of alt.resolved) {
-        const fp: Footprint = { pos: r.to, facing: r.facing, base: r.model.base }
-        if (isOversizeForZone(r.model.base, zone)) {
-          if (!oversizeEdgePlacementOk(fp, zone, state.board)) {
-            return { rejection: { code: 'E_OUT_OF_RANGE', reason: `${r.model.id} is too large for the deployment zone: it must be set up with its base touching your battlefield edge`, details: { modelId: r.model.id } } }
-          }
-        } else if (!whollyWithinPolygon(fp, zone)) {
-          return { rejection: { code: 'E_OUT_OF_RANGE', reason: `${r.model.id} must end wholly within the allowed region`, details: { modelId: r.model.id } } }
-        }
-      }
-      result = alt
-    }
-  }
   if (result.rejection) return { rejection: result.rejection }
+  const territory = territoryProblem(state, pending.player, result.resolved.map((r) => ({ pos: r.to, facing: r.facing, base: r.model.base })))
+  if (territory) return { rejection: territory }
   for (const r of result.resolved) {
     const blocked = deployTerrainBlock(state, r.model, r.to, r.facing)
     if (blocked) return { rejection: { code: 'E_OVERLAP', reason: `${r.model.id} ${blocked}`, details: { modelId: r.model.id } } }
   }
-  return { rejection: null, toReserves: false, resolved: result.resolved }
+  return { rejection: null, resolved: result.resolved }
 }
 
 // facing for a freshly deployed model: from the zone's centre toward the board centre (the origin), snapped to an axis,
@@ -414,6 +376,154 @@ export function chainDeployPlacements(
   return null
 }
 
+// ---------- terrain (SPH-5) ----------
+export type TerrainSize = 'large' | 'small'
+
+// SPH-5.3 and the default footprints of SPH-5 (not in the sources; data-free defaults)
+const TERRAIN_SPEC: Record<TerrainSize, { w: number; d: number; height: number; kind: TerrainPiece['kind']; traits: TerrainTrait[] }> = {
+  large: { w: 5, d: 3, height: 4, kind: 'ruin', traits: ['cover', 'obscuring', 'unstable'] },
+  small: { w: 3, d: 2, height: 2, kind: 'crate', traits: ['cover', 'unstable'] },
+}
+export const TERRAIN_GRID = 0.5
+const TERRAIN_FEATURE_GAP = 6
+const TERRAIN_EDGE_GAP = 3
+
+// who sets up what, in order (SPH-4.5, SPH-5.1): the defender's large and small, then the attacker's
+const TERRAIN_ORDER: { who: 'defender' | 'attacker'; size: TerrainSize }[] = [
+  { who: 'defender', size: 'large' }, { who: 'defender', size: 'small' }, { who: 'attacker', size: 'large' }, { who: 'attacker', size: 'small' },
+]
+
+export function terrainPieceAt(owner: PlayerId, size: TerrainSize, x: number, z: number): TerrainPiece {
+  const spec = TERRAIN_SPEC[size]
+  const hw = spec.w / 2, hd = spec.d / 2
+  const walls = size === 'large'
+    ? [
+      { a: { x: x - hw, z: z - hd }, b: { x: x + hw, z: z - hd }, height: spec.height },
+      { a: { x: x - hw, z: z - hd }, b: { x: x - hw, z: z + hd }, height: spec.height },
+    ]
+    : []
+  return {
+    id: `tf.${owner}-${size}`, kind: spec.kind, pos: { x, z }, rot: 0,
+    footprint: [{ x: x - hw, z: z - hd }, { x: x + hw, z: z - hd }, { x: x + hw, z: z + hd }, { x: x - hw, z: z + hd }],
+    height: spec.height, traits: spec.traits, walls, floors: [],
+  }
+}
+
+// SPH-5.2: why `piece` may not be set up by `owner` (null = legal)
+export function terrainPlacementProblem(state: GameState, owner: PlayerId, piece: TerrainPiece): string | null {
+  const own = territoryOf(state, owner)
+  const enemy = territoryOf(state, otherPlayer(owner))
+  const inOrOn = (p: Vec2): boolean => pointInPolygon(p, own) || pointToPolygonEdge(p, own) <= 1e-6
+  if (!piece.footprint.every(inOrOn)) return 'it must be wholly within your own territory'
+  const { w, h } = state.board
+  const xs = piece.footprint.map((p) => p.x), zs = piece.footprint.map((p) => p.z)
+  if (w >= h) {
+    if (Math.min(...zs) <= -h / 2 + TERRAIN_EDGE_GAP + EPS || Math.max(...zs) >= h / 2 - TERRAIN_EDGE_GAP - EPS) return 'it must be more than 3" from both long edges'
+  } else if (Math.min(...xs) <= -w / 2 + TERRAIN_EDGE_GAP + EPS || Math.max(...xs) >= w / 2 - TERRAIN_EDGE_GAP - EPS) return 'it must be more than 3" from both long edges'
+  if (polygonGap(piece.footprint, enemy) <= TERRAIN_EDGE_GAP + EPS) return 'it must be more than 3" from enemy territory'
+  for (const other of Object.values(state.board.pieces)) {
+    if (other.id !== piece.id && polygonGap(piece.footprint, other.footprint) <= TERRAIN_FEATURE_GAP + EPS) return 'it must be more than 6" from every other terrain feature'
+  }
+  for (const obj of Object.values(state.objectives)) {
+    const d = pointInPolygon(obj.pos, piece.footprint) ? 0 : pointToPolygonEdge(obj.pos, piece.footprint)
+    if (d < obj.radius - EPS) return 'it may not overlap an objective circle'
+  }
+  return null
+}
+
+// legal centres on a 0.5" grid (SPH-5.2)
+export function terrainOptions(state: GameState, owner: PlayerId, size: TerrainSize): { x: number; z: number }[] {
+  const out: { x: number; z: number }[] = []
+  const { w, h } = state.board
+  for (let z = -h / 2; z <= h / 2 + EPS; z += TERRAIN_GRID) {
+    for (let x = -w / 2; x <= w / 2 + EPS; x += TERRAIN_GRID) {
+      if (terrainPlacementProblem(state, owner, terrainPieceAt(owner, size, x, z)) === null) out.push({ x, z })
+    }
+  }
+  return out
+}
+
+// ---------- pre-battle decisions ----------
+const optionAction = (player: PlayerId, optionId: string) => ({ type: 'chooseOption' as const, player, decisionId: '', optionId })
+
+// SPH-4.2: the regiment abilities `player` can still pick (needs the registered data bundle; pre-filled = none)
+function regimentOptions(state: GameState, player: PlayerId): { id: string; name: string }[] {
+  if (state.setup.players[player].regimentAbilityId !== undefined) return []
+  const bundle = getDataBundle()
+  const regs = bundle?.patrols[state.players[player].patrolId]?.regimentAbilities ?? []
+  if (!bundle || regs.length < 2) return []
+  return regs.map((r) => ({ id: r.id, name: bundle.abilities[r.id]?.name ?? r.id }))
+}
+
+// SPH-4.3: only sides the loaded battleplan can play (named in its id); both when it names neither
+function sideOptions(state: GameState): string[] {
+  const named = ['aqshy', 'ghyran'].filter((side) => state.mission.data.id.includes(side))
+  return named.length > 0 ? named : ['aqshy', 'ghyran']
+}
+
+function preBattle(ctx: EngineContext): 'pending' | 'done' {
+  const s = ctx.state
+  const attacker = attackerOf(s)
+  const defender = otherPlayer(attacker)
+  const window = 'deployment.unit' as const
+
+  // SPH-4.2 army options, attacker first
+  for (const p of [attacker, defender]) {
+    if (!ctx.once(`pre:army:${p}`)) continue
+    const opts = regimentOptions(s, p)
+    if (opts.length < 2) continue
+    ctx.decide({
+      kind: 'chooseOption', player: p, window, canPass: false,
+      context: { topic: 'armyOptions', unitId: null, abilityId: null, data: { player: p, regiments: opts.map((o) => o.id) } },
+      options: opts.map((o) => ({ id: o.id, label: o.name, action: optionAction(p, o.id) })),
+    })
+    return 'pending'
+  }
+
+  // SPH-4.3 battlefield side
+  if (ctx.once('pre:side')) {
+    if (s.setup.side !== undefined) s.mission.custom.side = s.setup.side
+    else {
+      ctx.decide({
+        kind: 'chooseOption', player: defender, window, canPass: false,
+        context: { topic: 'battlefieldSide', unitId: null, abilityId: null, data: {} },
+        options: sideOptions(s).map((side) => ({ id: side, label: side === 'aqshy' ? 'Aqshy (Realm of Fire)' : 'Ghyran (Realm of Life)', action: optionAction(defender, side) })),
+      })
+      return 'pending'
+    }
+  }
+
+  // SPH-4.4 deployment map: the defender picks which territory is theirs (the loaded battleplan fixes the map itself)
+  if (ctx.once('pre:map') && s.setup.defenderTerritory === undefined) {
+    ctx.decide({
+      kind: 'chooseOption', player: defender, window, canPass: false,
+      context: { topic: 'deploymentMap', unitId: null, abilityId: null, data: {} },
+      options: (['A', 'B'] as const).map((t) => ({ id: t, label: `Territory ${t}`, action: optionAction(defender, t) })),
+    })
+    return 'pending'
+  }
+
+  // SPH-4.5 terrain: only when the layout is empty (a layout with pieces is a pre-filled one)
+  if (ctx.once('pre:terrain') && Object.keys(s.board.pieces).length === 0) s.phaseState.marks.push('pre:terrain:on')
+  if (ctx.marked('pre:terrain:on')) {
+    for (let i = 0; i < TERRAIN_ORDER.length; i++) {
+      if (ctx.marked(`pre:terrain:${i}`)) continue
+      const spec = TERRAIN_ORDER[i]
+      const owner = spec.who === 'defender' ? defender : attacker
+      const options = terrainOptions(s, owner, spec.size)
+      if (options.length === 0) { ctx.once(`pre:terrain:${i}`); continue }
+      ctx.decide({
+        kind: 'chooseOption', player: owner, window, canPass: false,
+        context: { topic: 'placeTerrain', unitId: null, abilityId: null, data: { index: i, size: spec.size, owner } },
+        options: options.map((o) => ({ id: `${o.x},${o.z}`, label: `${spec.size} terrain at (${o.x}, ${o.z})`, action: optionAction(owner, `${o.x},${o.z}`) })),
+      })
+      return 'pending'
+    }
+  }
+  return 'done'
+}
+
+// ---------- the module ----------
 export const setupModule: PhaseModule = {
   name: 'setup',
 
@@ -427,130 +537,30 @@ export const setupModule: PhaseModule = {
       switch (s.step) {
         // ---- phase 'setup' ----
         case 'rollOffSides': {
-          if (sidesChosen(s)) return 'done'
+          if (sidesChosen(s)) { s.step = 'chooseSides'; continue }
+          // SPH-4.1: roll-off; the winner decides who is the attacker
           const winner = rollOff(ctx)
-          s.step = 'chooseSides'
           ctx.decide({
             kind: 'chooseOption', player: winner, window: 'deployment.unit', canPass: false,
-            context: { topic: 'chooseSide', unitId: null, abilityId: null, data: { winner } },
+            context: { topic: 'chooseAttacker', unitId: null, abilityId: null, data: { winner } },
             options: [
-              { id: 'attacker', label: 'Attacker', action: { type: 'chooseOption', player: winner, decisionId: '', optionId: 'attacker' } },
-              { id: 'defender', label: 'Defender', action: { type: 'chooseOption', player: winner, decisionId: '', optionId: 'defender' } },
+              { id: winner, label: 'I will be the attacker', action: optionAction(winner, winner) },
+              { id: otherPlayer(winner), label: 'My opponent will be the attacker', action: optionAction(winner, otherPlayer(winner)) },
             ],
           })
           return 'pending'
         }
         case 'chooseSides':
-          return sidesChosen(s) ? 'done' : 'pending'
+          return preBattle(ctx)
         // ---- phase 'deployment' ----
         case 'deploy': {
-          // Declare Battle Formations (Tyranid Patrol Squads): before any unit is set up, offer each owner the split
-          for (const owner of ['A', 'B'] as PlayerId[]) {
-            const unit = squadCandidates(s, owner)[0]
-            if (!unit) continue
-            const sizes = squadSizes(s, unit)
-            s.phaseState.marks.push(`squads:${unit.id}`)
-            if (!sizes) continue
-            ctx.decide({
-              kind: 'chooseOption', player: owner, window: 'deployment.unit', canPass: false,
-              context: { topic: 'other', unitId: unit.id, abilityId: null, data: { choice: 'patrolSquads', sizes } },
-              options: [
-                { id: 'keep', label: `Keep ${unit.name} as one unit of ${unit.models.length}`, action: { type: 'chooseOption', player: owner, decisionId: '', optionId: 'keep' } },
-                { id: 'split', label: `Split ${unit.name} into units of ${sizes.join(' and ')}`, action: { type: 'chooseOption', player: owner, decisionId: '', optionId: 'split' } },
-              ],
-            })
-            return 'pending'
-          }
-          // E3 (Leagues of Votann Toil Earns): Deploy Armies pick window, once, before the first unit is set up
-          if (ctx.once('deployArmiesStart')) {
-            ctx.services.missions.onWindow(ctx, 'deployment.unit', 'deployArmies')
-            if (s.pending) return 'pending'
-          }
           const pid = deploymentTurnPlayer(s)
-          if (pid === null) { s.step = 'rollOffFirstTurn'; continue }
+          if (pid === null) return 'done'
           const unitIds = remainingToDeploy(s, pid)
           ctx.decide({
             kind: 'deployUnit', player: pid, window: 'deployment.unit', canPass: false,
-            context: { unitIds, zone: deploymentZone(s, pid), infiltrators: unitIds.filter((id) => comboInfiltrates(s, s.units[id])), reservesAllowed: unitIds.filter((id) => comboCanDeepStrike(s, s.units[id])) },
+            context: { unitIds, zone: deploymentZone(s, pid), infiltrators: [], reservesAllowed: [] },
             constraints: emptyMoveConstraints(1e9, { region: deploymentZone(s, pid), mustEndOutsideEngagement: false }),
-          })
-          return 'pending'
-        }
-        case 'rollOffFirstTurn': {
-          if (s.setup.firstTurn !== 'rollOff') {
-            s.firstPlayer = s.setup.firstTurn
-          } else if (s.mission.data.firstTurn === 'attackerChoice') {
-            const attacker: PlayerId = s.players.A.side === 'attacker' ? 'A' : 'B'
-            const mark = s.phaseState.marks.find((m) => m.startsWith('firstTurnChoice:'))
-            if (!mark) {
-              ctx.decide({
-                kind: 'chooseOption', player: attacker, window: 'deployment.unit', canPass: false,
-                context: { topic: 'other', unitId: null, abilityId: null, data: { choice: 'firstTurn' } },
-                options: [
-                  { id: 'self', label: 'Take the first turn', action: { type: 'chooseOption', player: attacker, decisionId: '', optionId: 'self' } },
-                  { id: 'opponent', label: 'Give the first turn to the opponent', action: { type: 'chooseOption', player: attacker, decisionId: '', optionId: 'opponent' } },
-                ],
-              })
-              return 'pending'
-            }
-            const chosen = mark.slice('firstTurnChoice:'.length) as PlayerId
-            s.firstPlayer = chosen
-          } else {
-            s.firstPlayer = rollOff(ctx, 'firstTurn')
-          }
-          s.activePlayer = s.firstPlayer
-          ctx.emit({ type: 'FirstTurnChosen', first: s.firstPlayer, player: s.firstPlayer })
-          s.step = 'preBattle'
-          continue
-        }
-        case 'preBattle': {
-          // R-10.8: units with Scouts may make a pre-battle Normal move (up to their Scouts value), alternating one
-          // unit at a time from the first-turn player (CP-1.10-style alternation, MISSION-028-scouts) — not just all
-          // of the first player's Scouts units before any of the second's. Not present in current Combat Patrol
-          // rosters, so this path is exercised only by synthetic tests, but is implemented fully for spec fidelity.
-          // E1 (f): a DEDICATED TRANSPORT whose embarked units all have SCOUTS may make the Scouts move in their stead,
-          // using the smallest Scouts value among them
-          const passengerScouts = (unit: Unit): Array<import('../data/types').CoreAbility["value"]> | null => {
-            if (!s.datasheets[unit.datasheetId].keywords.includes('DEDICATED TRANSPORT')) return null
-            const pax = transportService.embarkedIn(s, unit.id)
-            if (pax.length === 0) return null
-            const vals: Array<import('../data/types').CoreAbility["value"]> = []
-            for (const id of pax) {
-              const sc = s.datasheets[s.units[id].datasheetId].coreAbilities.find((c) => c.ability === 'SCOUTS')
-              if (!sc) return null
-              vals.push(sc.value)
-            }
-            return vals
-          }
-          const scoutable = (pid: PlayerId): Unit[] => Object.values(s.units).filter((unit) => {
-            if (unit.player !== pid || unit.location !== 'board') return false
-            const ds = s.datasheets[unit.datasheetId]
-            if (passengerScouts(unit) !== null) return !s.phaseState.marks.includes(`scouted:${unit.id}`)
-            if (!ds.coreAbilities.some((c) => c.ability === 'SCOUTS')) return false
-            // an attached Leader and its bodyguard are one unit: it has Scouts only if every half does (R-10.8 / SOL-006)
-            const halves = [unit.id, unit.attachedLeaderId, unit.bodyguardUnitId].filter((h): h is string => !!h)
-            if (halves.length > 1 && !halves.every((h) => s.datasheets[s.units[h].datasheetId].coreAbilities.some((c) => c.ability === 'SCOUTS'))) return false
-            return !s.phaseState.marks.includes(`scouted:${unit.id}`)
-          })
-          const first = s.firstPlayer
-          const second = otherPlayer(first)
-          const remFirst = scoutable(first)
-          const remSecond = scoutable(second)
-          if (remFirst.length === 0 && remSecond.length === 0) return 'done'
-          const doneCount = (pid: PlayerId): number => s.phaseState.marks.filter((m) => m.startsWith(`scouted:${pid}:`)).length
-          const pid = remFirst.length === 0 ? second : remSecond.length === 0 ? first : (doneCount(first) <= doneCount(second) ? first : second)
-          const unit = (pid === first ? remFirst : remSecond)[0]
-          const ds = s.datasheets[unit.datasheetId]
-          const scouts = ds.coreAbilities.find((c) => c.ability === 'SCOUTS')
-          s.phaseState.marks.push(`scouted:${unit.id}`)
-          const paxVals = passengerScouts(unit)
-          const dist = paxVals !== null
-            ? Math.min(...paxVals.map((v) => (typeof v === 'number' ? v : 9)))
-            : typeof scouts?.value === 'number' ? scouts.value : 9
-          ctx.decide({
-            kind: 'moveUnit', player: pid, window: 'deployment.unit', canPass: true,
-            context: { unitId: unit.id, moveType: 'normal', advanceRoll: null },
-            constraints: emptyMoveConstraints(dist, { mustEndOutsideEngagement: true }),
           })
           return 'pending'
         }
@@ -561,23 +571,7 @@ export const setupModule: PhaseModule = {
   },
 
   validate(state, action, pending) {
-    if (pending.kind === 'deployUnit' && action.type === 'deployUnit') {
-      const r = resolveDeploy(state, action, pending)
-      return r.rejection
-    }
-    if (pending.kind === 'moveUnit' && action.type === 'moveUnit') {
-      const unit = state.units[action.unitId]
-      if (!unit) return { code: 'E_SCHEMA', reason: `unknown unit ${action.unitId}` }
-      const result = checkPlacements({
-        unitModels: unitModels(state, unit.id),
-        placements: action.placements,
-        constraints: pending.constraints,
-        otherFriendly: boardModelsOf(state, pending.player),
-        enemies: boardModelsOf(state, otherPlayer(pending.player)),
-        board: state.board,
-      })
-      return result.rejection
-    }
+    if (pending.kind === 'deployUnit' && action.type === 'deployUnit') return resolveDeploy(state, action, pending).rejection
     return null
   },
 
@@ -585,7 +579,7 @@ export const setupModule: PhaseModule = {
     if (pending.kind === 'deployUnit') {
       // a placement for one unit, or [] if it has no room left anywhere in the zone
       const tryUnit = (unitId: UnitId): Action[] => {
-        const models = comboModels(state, state.units[unitId])
+        const models = unitModels(state, unitId)
         const zone = pending.constraints.region ?? deploymentZone(state, pending.player)
         const mk = (placements: ModelPlacement[]): DeployUnitAction => ({ type: 'deployUnit', player: pending.player, decisionId: pending.id, unitId, placements })
         const canPlace = (m: Model, pos: Vec3, f?: number): boolean => deployTerrainBlock(state, m, pos, f ?? m.facing) === null
@@ -594,16 +588,14 @@ export const setupModule: PhaseModule = {
           const action = mk(placements)
           if (resolveDeploy(state, action, pending).rejection === null) return [action]
         }
-        // W1-G: the raster scan can wrap a unit across a row gap left by earlier drops (out of coherency) — fall back to
-        // a compact square block slid across the zone, accepting the first one the real validation accepts
-        if (models.length === 0) return comboCanDeepStrike(state, state.units[unitId]) ? [{ ...mk([]), toReserves: true }] : []
+        // the raster scan can wrap a unit across a row gap left by earlier drops (out of coherency): fall back to a compact
+        // block slid across the zone, accepting the first one the real validation accepts
+        if (models.length === 0) return []
         const rad = Math.max(...models.map((m) => Math.max(m.base.radius, m.base.radius2 ?? 0)))
         const spacing = 2 * rad + 0.2
         const minX = Math.min(...zone.map((p) => p.x)), maxX = Math.max(...zone.map((p) => p.x))
         const minZ = Math.min(...zone.map((p) => p.z)), maxZ = Math.max(...zone.map((p) => p.z))
         const facing = deployFacing(zone)
-        // M10: a square block is too deep for a 5" zone once the unit is 11 models (Overlord + 10 Warriors); widen the block
-        // (more columns, fewer rows) until the real validation accepts one
         for (let cols = Math.ceil(Math.sqrt(models.length)); cols <= models.length; cols++) {
           for (let z0 = minZ + rad + 0.1; z0 < maxZ; z0 += 1) {
             for (let x0 = minX + rad + 0.1; x0 < maxX; x0 += 1) {
@@ -615,16 +607,12 @@ export const setupModule: PhaseModule = {
         // shallow or crowded zone: grow the unit model-by-model from fine-grid starts (lines, zig-zags, diagonals)
         const chained = chainDeployPlacements(models, zone, boardModelsOf(state, pending.player), boardModelsOf(state, otherPlayer(pending.player)),
           (p) => resolveDeploy(state, mk(p), pending).rejection === null, canPlace)
-        if (chained) return [mk(chained)]
-        // truly no room on the board: a Deep Strike unit may be held in Reserves instead
-        if (comboCanDeepStrike(state, state.units[unitId])) return [{ ...mk([]), toReserves: true }]
-        return []
+        return chained ? [mk(chained)] : []
       }
-      // hardest-to-fit first (biggest base, then most models): a large army that drops its infantry first can leave a
-      // vehicle or a long oval base with no gap big enough later. Offer the first unit that actually fits.
-      const ids = pending.context.unitIds.filter((id) => state.units[id] && !(state.units[id].bodyguardUnitId && pending.context.unitIds.length > 1))
+      // hardest-to-fit first (biggest base, then most models); offer the first unit that actually fits
+      const ids = [...pending.context.unitIds]
       const size = (id: UnitId): [number, number] => {
-        const ms = comboModels(state, state.units[id])
+        const ms = unitModels(state, id)
         return [Math.max(0, ...ms.map((m) => Math.max(m.base.radius, m.base.radius2 ?? 0))), ms.length]
       }
       ids.sort((a, b) => { const [ra, na] = size(a), [rb, nb] = size(b); return rb - ra || nb - na })
@@ -634,11 +622,7 @@ export const setupModule: PhaseModule = {
       }
       return []
     }
-    if (pending.kind === 'moveUnit') {
-      // Scouts moves are optional and not exercised by current data; offer "stay put" so generic Deciders can pass
-      return pending.canPass ? [{ type: 'pass', player: pending.player, decisionId: pending.id }] : []
-    }
-    // chooseSide / attackerChoice first-turn pick: same shape as the reducer's own default (finite `options`)
+    // every other setup decision is finite: its options (and pass when allowed)
     if ('options' in pending && Array.isArray(pending.options)) {
       const out: Action[] = pending.options.map((o) => o.action)
       if (pending.canPass) out.push({ type: 'pass', player: pending.player, decisionId: pending.id })
@@ -649,58 +633,55 @@ export const setupModule: PhaseModule = {
 
   handle(ctx, action, pending) {
     const s = ctx.state
-    if (pending.kind === 'chooseOption' && pending.context.topic === 'chooseSide' && action.type === 'chooseOption') {
-      const attacker = action.optionId === 'attacker' ? pending.player : otherPlayer(pending.player)
-      assignSides(s, attacker)
-      ctx.emit({ type: 'SidesChosen', attacker, defender: otherPlayer(attacker), player: pending.player })
-      return
-    }
-    if (pending.kind === 'chooseOption' && pending.context.topic === 'other' && (pending.context.data as { choice?: string }).choice === 'firstTurn' && action.type === 'chooseOption') {
-      const chosen: PlayerId = action.optionId === 'self' ? pending.player : otherPlayer(pending.player)
-      s.phaseState.marks.push(`firstTurnChoice:${chosen}`)
-      return
-    }
-    if (pending.kind === 'chooseOption' && pending.context.topic === 'other' && (pending.context.data as { choice?: string }).choice === 'patrolSquads' && action.type === 'chooseOption') {
-      if (action.optionId === 'split' && pending.context.unitId) {
-        const sizes = ((pending.context.data as { sizes?: number[] }).sizes ?? []).map(Number)
-        const ids = splitPatrolSquad(s, pending.context.unitId, sizes)
-        for (const id of ids) s.phaseState.marks.push(`squads:${id}`)
-        ctx.emit({ type: 'AbilityTriggered', abilityId: 'tyr.a.patrol-squads', sourceUnitId: pending.context.unitId, targetUnitId: null, summary: `split into ${ids.join(', ')}`, player: pending.player })
+    if (pending.kind === 'chooseOption' && action.type === 'chooseOption') {
+      const topic = pending.context.topic
+      const choice = action.optionId
+      if (topic === 'chooseAttacker') {
+        if (choice !== 'A' && choice !== 'B') return { code: 'E_NOT_AN_OPTION', reason: 'answer with the player who will be the attacker' }
+        assignSides(s, choice)
+        ctx.emit({ type: 'SidesChosen', attacker: choice, defender: otherPlayer(choice), player: pending.player })
+        return
       }
-      return
+      if (topic === 'armyOptions') {
+        const bundle = getDataBundle()
+        const desc = bundle?.abilities[choice]
+        if (!desc) return { code: 'E_NOT_AN_OPTION', reason: `regiment ability ${choice} is not available` }
+        if (!s.abilities[choice]) s.abilities = { ...s.abilities, [choice]: { ...desc, source: 'regiment', bearerModelId: null } as RuntimeAbility } // shared static table: replace
+        s.players[pending.player].regimentAbilityId = choice
+        return
+      }
+      if (topic === 'battlefieldSide') {
+        s.mission.custom.side = choice
+        return
+      }
+      if (topic === 'deploymentMap') {
+        if (choice !== 'A' && choice !== 'B') return { code: 'E_NOT_AN_OPTION', reason: 'choose territory A or B' }
+        s.players[pending.player].territory = choice
+        s.players[otherPlayer(pending.player)].territory = choice === 'A' ? 'B' : 'A'
+        return
+      }
+      if (topic === 'placeTerrain') {
+        const data = pending.context.data as { index: number; size: TerrainSize; owner: PlayerId }
+        const [x, z] = choice.split(',').map(Number)
+        if (!Number.isFinite(x) || !Number.isFinite(z)) return { code: 'E_NOT_AN_OPTION', reason: `bad terrain position ${choice}` }
+        const piece = terrainPieceAt(data.owner, data.size, x, z)
+        const problem = terrainPlacementProblem(s, data.owner, piece)
+        if (problem) return { code: 'E_TERRITORY', reason: problem }
+        s.board = { ...s.board, pieces: { ...s.board.pieces, [piece.id]: piece } } // the board is a shared static table: replace, never mutate
+        ctx.once(`pre:terrain:${data.index}`)
+        return
+      }
     }
     if (pending.kind === 'deployUnit' && action.type === 'deployUnit') {
       const r = resolveDeploy(s, action, pending)
       if (r.rejection) return r.rejection
       const unit = s.units[action.unitId]
       markDropped(s, unit.id)
-      if (r.toReserves) {
-        ctx.emit({ type: 'UnitDeployed', unitId: unit.id, toReserves: true, player: pending.player })
-        return
-      }
       for (const p of r.resolved) setModelPos(p.model, p.to, p.facing)
-      for (const u of comboUnits(s, unit)) u.location = 'board'
+      unit.location = 'board'
       ctx.emit({ type: 'UnitDeployed', unitId: unit.id, toReserves: false, player: pending.player })
       return
     }
-    if (pending.kind === 'moveUnit' && action.type === 'moveUnit') {
-      const unit = s.units[action.unitId]
-      if (!unit) return { code: 'E_SCHEMA', reason: `unknown unit ${action.unitId}` }
-      const result = checkPlacements({
-        unitModels: unitModels(s, unit.id),
-        placements: action.placements,
-        constraints: pending.constraints,
-        otherFriendly: boardModelsOf(s, pending.player),
-        enemies: boardModelsOf(s, otherPlayer(pending.player)),
-        board: s.board,
-      })
-      if (result.rejection) return result.rejection
-      const paths: Record<string, ResolvedPlacement['path']> = {}
-      for (const p of result.resolved) { setModelPos(p.model, p.to, p.facing); paths[p.model.id] = p.path }
-      ctx.emit({ type: 'UnitMoved', unitId: unit.id, moveType: 'scouts', paths })
-      return
-    }
-    if (pending.kind === 'moveUnit' && action.type === 'pass') return
     return { code: 'E_NOT_AN_OPTION', reason: `setup: no handler for ${action.type} at step ${s.step}` }
   },
 }

@@ -8,8 +8,8 @@ export interface EffectEntry { kind: EffectIconKind; hostile: boolean; key: stri
 export interface FlagEntry { kind: TurnFlagKind; name: string; hint: string }
 
 const FLAGS: Record<TurnFlagKind, { name: string; hint: string }> = {
-  advanced: { name: 'Advanced', hint: 'Ran flat out this turn, so it cannot normally charge.' },
-  fellBack: { name: 'Fell Back', hint: 'Broke away from melee this turn, so it cannot normally shoot or charge.' },
+  advanced: { name: 'Ran', hint: 'Ran flat out this turn, so it cannot shoot or charge.' },
+  fellBack: { name: 'Retreated', hint: 'Broke away from combat this turn, so it cannot shoot or charge.' },
   charged: { name: 'Charged', hint: 'Charged into melee this turn.' },
 }
 

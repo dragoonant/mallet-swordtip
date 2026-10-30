@@ -1,6 +1,5 @@
 // Selected-unit inspector (docs/spec/50-client.md §5 "Unit card"). Selection comes from
 // src/client/interaction/UnitsLayer.tsx clicking a Figure; this file only reads state.
-import { judgementCount, judgementLine } from './judgement'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { modelStats } from '@/engine'
 import type { GameState, Model, RuntimeWeapon } from '@/engine'
@@ -258,20 +257,20 @@ const iconBox: CSSProperties = {
 }
 const statGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 10, rowGap: 1 }
 
-function apText(ap: number): string {
-  if (ap === 0) return '0 (target keeps its full armour save)'
-  return ap < 0 ? `${ap} (armour save worsened by ${-ap})` : `+${ap}`
+function rendText(rend: number): string {
+  if (rend === 0) return '0 (the target keeps its full Save)'
+  return `${rend} (the target's Save is worsened by ${rend})`
 }
 
 function statRows(w: RuntimeWeapon): [string, string][] {
   const melee = w.kind === 'melee'
   const hits = typeof w.skill === 'number' ? `hits on ${w.skill}+` : 'always hits (no roll)'
   return [
-    ['Range', melee ? 'Melee (fights in engagement range)' : `${w.range}"`],
+    ['Range', melee ? 'Melee (fights in combat range)' : `${w.range}"`],
     ['Attacks', `${w.A} per model`],
-    [melee ? 'Weapon Skill' : 'Ballistic Skill', hits],
-    ['Strength', `${w.S}`],
-    ['Armour Penetration', apText(w.AP)],
+    ['Hit', hits],
+    ['Wound', `wounds on ${w.wound}+`],
+    ['Rend', rendText(w.rend)],
     ['Damage', `${w.D} per unsaved wound`],
   ]
 }
@@ -359,8 +358,8 @@ export function UnitCard() {
   const rows = woundRows(state, models, unit.datasheetId)
   const weaponIds = Array.from(new Set(models.flatMap((m) => m.weapons)))
   const color = unit.player === 'A' ? colors.playerA : colors.playerB
-  // Distinct Move / Toughness values across the unit (a led unit can mix a leader's profile with its bodyguard's).
-  const distinctStat = (key: 'M' | 'T') =>
+  // Distinct Move / Control values across the unit (a led unit can mix a leader's profile with its bodyguard's).
+  const distinctStat = (key: 'M' | 'OC') =>
     Array.from(
       new Set(
         models.flatMap((m) => {
@@ -373,21 +372,21 @@ export function UnitCard() {
       ),
     ).sort((a, b) => a - b)
   const move = distinctStat('M')
-  const toughness = distinctStat('T')
+  const control = distinctStat('OC')
 
   if (compact && !expanded) {
     // Status dot: red = battle-shocked, amber = has taken damage, green = healthy.
     const woundsNow = rows.reduce((n, r) => n + r.count * r.wounds, 0)
     const woundsMax = rows.reduce((n, r) => n + r.count * r.max, 0)
     const dot = unit.battleShocked ? '#ff6a5f' : woundsNow < woundsMax ? '#e8c85a' : '#5fd08a'
-    const status = unit.battleShocked ? 'battle-shocked' : woundsNow < woundsMax ? 'damaged' : 'healthy'
+    const status = unit.battleShocked ? 'shaken' : woundsNow < woundsMax ? 'damaged' : 'healthy'
     return (
       <div style={chipWrap} data-testid="unit-card" data-compact="chip">
         <button type="button" style={chipMain} data-testid="unit-card-chip" aria-expanded={false} aria-label={`${unit.name}, ${models.length} of ${unit.startingStrength} models, ${status}. Open unit card`} onClick={() => setExpanded(true)}>
           <span data-testid="unit-card-status" data-status={status} style={{ width: 10, height: 10, borderRadius: '50%', background: dot, flex: '0 0 auto', boxShadow: `0 0 6px ${dot}` }} aria-hidden="true" />
           <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700, color }}>{unit.name}</span>
           <span style={{ flex: '0 0 auto', ...mutedText, whiteSpace: 'nowrap' }}>
-            {models.length}/{unit.startingStrength} · {woundsNow}/{woundsMax}W
+            {models.length}/{unit.startingStrength} · {woundsNow}/{woundsMax} Health
           </span>
         </button>
         <button type="button" style={chipClose} data-testid="unit-card-close" aria-label="Close" onClick={() => selectUnit(null)}>
@@ -445,19 +444,14 @@ export function UnitCard() {
           Move {move.map((m) => `${m}"`).join(' / ')}
         </div>
       )}
-      {toughness.length > 0 && (
-        <div style={{ fontSize: 13 }} data-testid="unit-card-toughness">
-          Toughness {toughness.join(' / ')}
+      {control.length > 0 && (
+        <div style={{ fontSize: 13 }} data-testid="unit-card-control">
+          Control {control.join(' / ')}
         </div>
       )}
       <div data-testid="unit-card-wounds">
         <WoundRows state={state} unitId={unit.id} rows={rows} />
       </div>
-      {unit.battleShocked && <div style={warn}>Battle-shocked — its objective control counts as 0</div>}
-      {(() => {
-        const line = judgementLine(judgementCount(state, unit.id))
-        return line ? <div style={warn} data-testid="unit-card-judgement">{line}</div> : null
-      })()}
 
       {weaponIds.length > 0 && (
         <>
@@ -466,7 +460,7 @@ export function UnitCard() {
             {weaponIds.map((wid) => (
               <TipItem key={wid} testId={`unit-card-weapon-${wid}`} tip={<WeaponTip state={state} wid={wid} />}>
                 {state.weapons[wid]?.name ?? wid}
-                {state.weapons[wid] && <span style={mutedText}> · Strength {state.weapons[wid].S}</span>}
+                {state.weapons[wid] && <span style={mutedText}> · Rend {state.weapons[wid].rend}</span>}
               </TipItem>
             ))}
           </ul>

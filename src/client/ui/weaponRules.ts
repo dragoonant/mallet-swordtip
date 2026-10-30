@@ -14,7 +14,13 @@ export function abilityLine(a: RuntimeWeapon['abilities'][number]): { name: stri
     case 'SUSTAINED_HITS': return { name: `Sustained Hits ${v ?? ''}`.trim(), text: `Each critical hit scores ${v ?? 'extra'} additional hit(s).` }
     case 'LETHAL_HITS': return { name: 'Lethal Hits', text: 'Each critical hit wounds automatically, skipping the wound roll.' }
     case 'DEVASTATING_WOUNDS': return { name: 'Devastating Wounds', text: 'Each critical wound deals its damage straight through: no armour or invulnerable save is allowed.' }
-    case 'ANTI': return { name: `Anti-${a.keyword ?? '?'} ${v ?? ''}+`.trim(), text: `Against ${a.keyword ?? 'the named'} targets, a wound roll of ${v ?? 'the listed number'}+ is a critical wound.` }
+    case 'ANTI': return { name: `Anti-${a.keyword === '@charged' ? 'charge' : a.keyword ?? '?'} (+1 Rend)`, text: a.keyword === '@charged' ? 'Gets +1 Rend against a target that charged this turn.' : `Gets +1 Rend against ${a.keyword ?? 'the named'} targets.` }
+    case 'COMPANION': return { name: 'Companion', text: 'An animal companion: this weapon is not used as the main attack of its bearer and is fought alongside its other weapons.' }
+    case 'SHOOT_IN_COMBAT': return { name: 'Shoot in Combat', text: 'May be fired even while the unit is in combat, but only at a unit it is in combat with.' }
+    case 'CHARGE_DAMAGE': return { name: 'Charge (+1 Damage)', text: 'Does 1 extra Damage if the bearing unit charged this turn.' }
+    case 'CRIT_2_HITS': return { name: 'Crit (2 Hits)', text: 'A critical hit counts as two hits.' }
+    case 'CRIT_AUTO_WOUND': return { name: 'Crit (Auto-wound)', text: 'A critical hit wounds automatically, skipping the wound roll.' }
+    case 'CRIT_MORTAL': return { name: 'Crit (Mortal)', text: 'A critical hit deals its Damage as mortal damage and the attack sequence ends there.' }
     case 'TWIN_LINKED': return { name: 'Twin-linked', text: 'Two barrels working together: wound rolls may be re-rolled.' }
     case 'LANCE': return { name: 'Lance', text: 'Gets +1 to wound if the bearer charged this turn.' }
     case 'MELTA': return { name: `Melta ${v ?? ''}`.trim(), text: `Within half range, each unsaved wound does ${v ?? 'extra'} more damage.` }

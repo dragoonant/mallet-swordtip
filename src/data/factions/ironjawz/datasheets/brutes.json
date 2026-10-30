@@ -1,0 +1,53 @@
+[
+  {
+    "id": "ironjawz.unit.brutes",
+    "faction": "ironjawz",
+    "name": "Brutes",
+    "keywords": [
+      "INFANTRY",
+      "BRUTE"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "IRONJAWZ"
+    ],
+    "stats": {
+      "M": 4,
+      "W": 3,
+      "Sv": 3,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "brute",
+        "name": "Brute",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "round",
+          "mm": 40
+        },
+        "weapons": {
+          "default": [
+            "ironjawz.weapon.brute-weapons"
+          ]
+        },
+        "figure": {
+          "archetype": "heavy",
+          "kit": "ork-boy"
+        }
+      }
+    ],
+    "abilities": [
+      "ironjawz.ability.you-messin"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "heavy",
+      "kit": "ork-boy"
+    },
+    "spearhead": true
+  }
+]

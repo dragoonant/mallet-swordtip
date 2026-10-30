@@ -1,29 +1,21 @@
-// Line of sight and Benefit of Cover (10-rules §3.1, §3.3). Owner: W1-B. Pure queries over state; the shooting module
-// asks `unitVisible` when targets are declared and `benefitOfCover` when an attack is allocated.
+// Line of sight, combat range visibility and terrain cover (Spearhead port, WP4: CORE-1.5, CORE-7, CORE-16.3 to 16.6,
+// SPH-5.3 to SPH-5.7). Pure queries over state.
 //
-// [interp] `fullyVisible`: "every part of B facing A is visible" (R-3.3) is modelled, per 00-arch §7, as "every one of
-// B's LoS sample points is visible from at least one of A's sample points" (models of the observed unit never block
-// each other, R-3.4).
-// [interp] Benefit of Cover's "not fully visible to every attacking model because of it [a terrain piece]" (§3.2) is
-// evaluated per piece: `pieceObstructs` re-runs the full/any-visibility test using only that one piece's geometry
-// (its walls, ruin footprint or crate volume) so cover is attributed to the specific piece that blocks the view, not
-// to "some terrain exists on the board" — an unrelated piece elsewhere never grants cover on its own.
-// [interp] Woods "a model that must look through/over the woods never sees the target fully visible": approximated as
-// "the straight line between the two models' base centres crosses a woods footprint" rather than a full search over
-// every possible sightline; only the "wholly within" half of the rule (LOS-027) is exercised by the checklist.
-import { baseEdgePoints, dist2D, EPS, pointInPolygon, whollyWithinPolygon } from './geometry'
-import { crateBlocks, ruinFootprintBlocks, segmentIntersectsPolygon2D, wallCrosses3D } from './terrain'
-import { weaponService } from './weapons'
+// [interp] True LoS (CORE-7.1): a straight line from any sample point of the observer to any sample point of the observed
+// model (base centre at heights {0.2, h/2, h} plus 4 base-edge points at h/2) that passes through no terrain wall, no solid
+// block and no model outside the observer's own unit. Any visible sliver suffices. Objective markers and tokens never block.
+// Ruin footprints do NOT block sight by themselves any more (that was a 40k rule): only walls and solid blocks do.
+// [interp] "Behind" (CORE-16.4): every straight line from any point of an attacking model's base to any point of a target
+// model's base crosses the feature's footprint, ignoring the parts of the footprint within 3" of the attacker's base.
+// [interp] Cover / Obscuring: a feature has them via the trait list on the piece ('cover', 'obscuring').
+import { baseEdgePoints, dist2D, ENGAGEMENT_H, EPS, pointInPolygon, signedDistanceToBase, whollyWithinPolygon, withinEngagementRange } from './geometry'
+import { crateBlocks, wallCrosses3D } from './terrain'
 import { leaderService } from './leaders'
-import { boardModelsOf, hasKeyword, modelStats, unitModels } from './state'
-import type { GameState, Model, ModelId, RuntimeWeapon, TerrainPiece, UnitId, Vec3 } from './types'
+import { boardModelsOf, hasKeyword, unitModels } from './state'
+import type { GameState, Model, ModelId, RuntimeWeapon, TerrainPiece, UnitId, Vec2, Vec3 } from './types'
 
-const PLUNGING_FIRE_HEIGHT = 6
-
-// a model (any unit but the observer's own) as a vertical cylinder (elliptical footprint for oval bases) from its
-// ground contact height to pos.y + height. R-3.1/R-3.3: the ray blocks whenever ANY point of the 3D segment falls
-// inside that volume — not just the point closest (in 2D) to the base centre, since height varies along the segment
-// and the horizontal-distance-within-radius test is satisfied over a whole t-interval, not a single point (LOS-004).
+// a model (any unit but the observer's own) as a vertical cylinder (elliptical footprint for oval bases) from its ground
+// contact height to pos.y + height. The ray blocks whenever ANY point of the 3D segment falls inside that volume.
 function modelBlocks(blocker: Model, p1: Vec3, p2: Vec3): boolean {
   const r1 = blocker.base.radius, r2 = blocker.base.radius2 ?? r1
   const c = Math.cos(-blocker.facing), s = Math.sin(-blocker.facing)
@@ -39,7 +31,7 @@ function modelBlocks(blocker: Model, p1: Vec3, p2: Vec3): boolean {
   const c2 = (P1.lx * P1.lx) / r1sq + (P1.lz * P1.lz) / r2sq - 1
   let t0: number, t1: number
   if (a < 1e-12) {
-    if (c2 > EPS) return false // segment does not move in xz (relative to the ellipse scale) and sits outside it
+    if (c2 > EPS) return false
     t0 = 0; t1 = 1
   } else {
     const disc = b * b - 4 * a * c2
@@ -57,18 +49,11 @@ function modelBlocks(blocker: Model, p1: Vec3, p2: Vec3): boolean {
 
 function allBoardModels(state: GameState): Model[] { return [...boardModelsOf(state, 'A'), ...boardModelsOf(state, 'B')] }
 
-// R-3.1/R-3.7: is the 3D segment p1(observer)->p2(observed) blocked by terrain, or by a model whose unit is not in
-// `excludeUnitIds` (and is not `toModelId` itself)? `excludeUnitIds` always covers the observer's own (possibly
-// attached) unit (LOS-003/LOS-003b: an attached leader is part of its bodyguard's unit and never blocks it, and vice
-// versa); callers computing full-visibility (R-3.4) also add the observed unit's own (possibly attached) halves so
-// the observed unit's models never block each other (LOS-031/LOS-031b).
-function segmentBlocked(
-  state: GameState, p1: Vec3, p2: Vec3, from: Model, toModelId: ModelId, excludeUnitIds: ReadonlySet<UnitId>,
-): boolean {
-  const targetAircraft = hasKeyword(state, state.models[toModelId]?.unitId, 'AIRCRAFT')
+// is the 3D segment p1(observer)->p2(observed) blocked by terrain, or by a model whose unit is not in `excludeUnitIds`
+// (and is not `toModelId` itself)?
+function segmentBlocked(state: GameState, p1: Vec3, p2: Vec3, toModelId: ModelId, excludeUnitIds: ReadonlySet<UnitId>): boolean {
   for (const p of Object.values(state.board.pieces)) {
     for (const w of p.walls) if (wallCrosses3D(w, p1, p2)) return true
-    if (p.kind === 'ruin' && !targetAircraft && ruinFootprintBlocks(p, p1, p2, whollyWithinPolygon(from, p.footprint))) return true
     if (p.kind === 'crate' && crateBlocks(p, p1, p2)) return true
   }
   for (const blocker of allBoardModels(state)) {
@@ -78,96 +63,100 @@ function segmentBlocked(
   return false
 }
 
-// `extraExcludeUnitIds`: additional unit ids whose models never block (fullyVisible also excludes the observed
-// unit's own (possibly attached) halves per R-3.4/LOS-031b; plain visible() passes none, per LOS-031's "visible()
-// keeps the current behaviour").
-// E-PEN2 Firing Deck: an embarked observer fires from inside its transport, whose hull never blocks it
-function transportOfObserver(state: GameState, from: Model): UnitId[] {
-  const owner = state.units[from.unitId]?.player
-  const map = owner ? (state.players[owner].secondaryState.embarked as Record<UnitId, UnitId> | undefined) : undefined
-  const t = map?.[from.unitId]
-  return t ? [t] : []
-}
-
-function anyClearPair(state: GameState, from: Model, to: Model, extraExcludeUnitIds: Iterable<UnitId> = []): boolean {
-  const exclude = new Set([...leaderService.halves(state, from.unitId), ...transportOfObserver(state, from), ...extraExcludeUnitIds])
+function anyClearPair(state: GameState, from: Model, to: Model): boolean {
+  const exclude = new Set<UnitId>(leaderService.halves(state, from.unitId))
   const fromPts = losService.samplePoints(from), toPts = losService.samplePoints(to)
-  return fromPts.some((fp) => toPts.some((tp) => !segmentBlocked(state, fp, tp, from, to.id, exclude)))
+  return fromPts.some((fp) => toPts.some((tp) => !segmentBlocked(state, fp, tp, to.id, exclude)))
 }
 
-// every one of `to`'s sample points is visible from at least one of `from`'s ([interp] above); R-3.4: neither the
-// observer's nor the observed unit's own (possibly attached) models may block this.
+// every one of `to`'s sample points is visible from at least one of `from`'s; the observed unit's own models never block
 function everyPointFullyVisible(state: GameState, from: Model, to: Model): boolean {
-  const exclude = new Set([...leaderService.halves(state, from.unitId), ...transportOfObserver(state, from), ...leaderService.halves(state, to.unitId)])
+  const exclude = new Set<UnitId>([...leaderService.halves(state, from.unitId), ...leaderService.halves(state, to.unitId)])
   const fromPts = losService.samplePoints(from), toPts = losService.samplePoints(to)
-  return toPts.every((tp) => fromPts.some((fp) => !segmentBlocked(state, fp, tp, from, to.id, exclude)))
+  return toPts.every((tp) => fromPts.some((fp) => !segmentBlocked(state, fp, tp, to.id, exclude)))
 }
 
-function inForest(state: GameState, m: Model): boolean {
-  return Object.values(state.board.pieces).some((p) => p.kind === 'forest' && whollyWithinPolygon(m, p.footprint))
+// every on-board model of a unit (both halves when attached; no attachments in Spearhead)
+function boardModelsOfUnit(state: GameState, unitId: UnitId): Model[] {
+  return leaderService.halves(state, unitId).flatMap((id) => (state.units[id]?.location === 'board' ? unitModels(state, id) : []))
 }
 
-function crossesForest(state: GameState, from: Model, to: Model): boolean {
-  return Object.values(state.board.pieces).some((p) => p.kind === 'forest' && segmentIntersectsPolygon2D(from.pos, to.pos, p.footprint))
+// ---------- terrain: behind / wholly on (CORE-16.3, CORE-16.4) ----------
+
+// the points of a base used as line end points: centre plus 4 edge points
+function basePoints(m: Model): Vec2[] {
+  return [{ x: m.pos.x, z: m.pos.z }, ...baseEdgePoints(m, 4)]
 }
 
-// R-3.2 "not fully visible... because of it [this piece]": does terrain piece `p`, considered on its own (ignoring
-// every other piece on the board and every model), block full visibility from `a` to `target`? This is what lets
-// Benefit of Cover attribute the obstruction to the one piece actually responsible (LOS-021-attrib/LOS-022-attrib/
-// LOS-023-attrib) instead of granting it because *some* terrain exists anywhere on the board.
-function pieceObstructs(state: GameState, p: TerrainPiece, a: Model, target: Model): boolean {
-  const targetAircraft = hasKeyword(state, target.unitId, 'AIRCRAFT')
-  const fromWhollyWithin = p.kind === 'ruin' && whollyWithinPolygon(a, p.footprint)
-  const blocks = (p1: Vec3, p2: Vec3): boolean => {
-    for (const w of p.walls) if (wallCrosses3D(w, p1, p2)) return true
-    if (p.kind === 'ruin' && !targetAircraft && ruinFootprintBlocks(p, p1, p2, fromWhollyWithin)) return true
-    if (p.kind === 'crate' && crateBlocks(p, p1, p2)) return true
-    return false
+// does the straight line a->t pass through the feature footprint somewhere farther than combat range from the attacker's base?
+function lineCrossesFeature(attacker: Model, a: Vec2, t: Vec2, poly: Vec2[]): boolean {
+  const len = dist2D(a, t)
+  const n = Math.max(1, Math.ceil(len / 0.2))
+  for (let k = 0; k <= n; k++) {
+    const p = { x: a.x + ((t.x - a.x) * k) / n, z: a.z + ((t.z - a.z) * k) / n }
+    if (!pointInPolygon(p, poly)) continue
+    if (signedDistanceToBase(p, attacker) > ENGAGEMENT_H + EPS) return true // parts inside the attacker's combat range are ignored
   }
-  const fromPts = losService.samplePoints(a), toPts = losService.samplePoints(target)
-  const everyPtVisible = toPts.every((tp) => fromPts.some((fp) => !blocks(fp, tp)))
-  const someClear = fromPts.some((fp) => toPts.some((tp) => !blocks(fp, tp)))
-  return !everyPtVisible || !someClear
+  return false
 }
 
-function wholeBaseWithinDistanceOfPolygon(m: Model, poly: { x: number; z: number }[], n: number): boolean {
-  const pointDist = (p: { x: number; z: number }) => {
-    if (pointInPolygon(p, poly)) return 0
-    let best = Infinity
-    for (let i = 0; i < poly.length; i++) {
-      const a = poly[i], b = poly[(i + 1) % poly.length]
-      const abx = b.x - a.x, abz = b.z - a.z
-      const l2 = abx * abx + abz * abz
-      let t = l2 === 0 ? 0 : ((p.x - a.x) * abx + (p.z - a.z) * abz) / l2
-      t = Math.max(0, Math.min(1, t))
-      best = Math.min(best, dist2D(p, { x: a.x + t * abx, z: a.z + t * abz }))
+// CORE-16.4: every straight line from any attacking model to any target model crosses the feature
+function targetBehind(attackers: Model[], targets: Model[], poly: Vec2[]): boolean {
+  if (attackers.length === 0 || targets.length === 0) return false
+  for (const a of attackers) {
+    const aPts = basePoints(a)
+    for (const t of targets) {
+      const tPts = basePoints(t)
+      for (const ap of aPts) for (const tp of tPts) if (!lineCrossesFeature(a, ap, tp, poly)) return false
     }
-    return best
   }
-  if (pointDist(m.pos) > n + EPS) return false
-  for (const e of baseEdgePoints(m)) if (pointDist(e) > n + EPS) return false
   return true
 }
 
-// every on-board model of the (possibly attached) target unit: both halves when a leader is attached (LEAD-004)
-function targetBoardModels(state: GameState, targetUnitId: UnitId): Model[] {
-  return leaderService.halves(state, targetUnitId)
-    .flatMap((id) => state.units[id]?.location === 'board' ? unitModels(state, id) : [])
+function targetWhollyOn(targets: Model[], poly: Vec2[]): boolean {
+  return targets.length > 0 && targets.every((m) => whollyWithinPolygon(m, poly))
+}
+
+function featuresWithTrait(state: GameState, trait: 'cover' | 'obscuring'): TerrainPiece[] {
+  return Object.values(state.board.pieces).filter((p) => p.traits.includes(trait))
+}
+
+function behindOrOn(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId, p: TerrainPiece): boolean {
+  const targets = boardModelsOfUnit(state, targetUnitId)
+  return targetWhollyOn(targets, p.footprint) || targetBehind(boardModelsOfUnit(state, attackerUnitId), targets, p.footprint)
 }
 
 export interface LosService {
-  // 00-arch §7: base centre at heights {0.2, height/2, height} plus 4 base-edge points at height/2
+  // base centre at heights {0.2, height/2, height} plus 4 base-edge points at height/2
   samplePoints(model: Model): Vec3[]
-  // R-3.1: any sample point of `to` visible from any sample point of `from`
+  // CORE-7.1: any sample point of `to` visible from any sample point of `from`
   visible(state: GameState, fromModelId: ModelId, toModelId: ModelId): boolean
-  // R-3.3
+  // same, for a model standing at a hypothetical position (movement path sampling): `probe` is a copy of the mover with
+  // its pos changed; its own unit never blocks
+  visibleFrom(state: GameState, probe: Model, toModelId: ModelId): boolean
   fullyVisible(state: GameState, fromModelId: ModelId, toModelId: ModelId): boolean
-  // R-3.2 / R-3.4
+  // CORE-7.3: a unit is visible to an observing model if any of its models is
   unitVisible(state: GameState, fromModelId: ModelId, targetUnitId: UnitId): boolean
   unitFullyVisible(state: GameState, fromModelId: ModelId, targetUnitId: UnitId): boolean
-  // R-3.11–R-3.14 for one allocated ranged attack (IGNORES COVER, Sv 3+ vs AP0 exception, cover-granting effects)
+  // CORE-1.5: two units of opposing armies are in combat while either is within the other's combat range (3" horizontal)
+  // AND they are visible to each other (some model of one sees some model of the other)
+  inCombat(state: GameState, unitA: UnitId, unitB: UnitId): boolean
+  // the enemy units `unitId` is in combat with
+  unitsInCombatWith(state: GameState, unitId: UnitId): UnitId[]
+  // is the unit in combat with any enemy unit
+  unitInCombat(state: GameState, unitId: UnitId): boolean
+  // CORE-16.4 behind / CORE-16.3 wholly on, for one feature (terrain piece id)
+  behind(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId, pieceId: string): boolean
+  whollyOn(state: GameState, unitId: UnitId, pieceId: string): boolean
+  // CORE-16.5 / SPH-5.4 Cover: 1 when attacks (shooting AND combat) by `attackerUnitId` against `targetUnitId` suffer -1 to
+  // hit because the target is behind or wholly on a feature with Cover, 0 otherwise. Never applies when the target charged
+  // this turn or has FLY. WP5 subtracts the returned number from the hit roll (the generic +/-1 clamp applies).
+  coverPenalty(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId): number
+  // CORE-16.6 / SPH-5.5 Obscuring: true when the target is behind or wholly on a feature with Obscuring and has no FLY, so it
+  // cannot be targeted by SHOOTING attacks (combat attacks are unaffected)
+  obscured(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId): boolean
+  // kept for the 40k call sites: Cover is a hit modifier now (coverPenalty), never a save bonus
   benefitOfCover(state: GameState, targetModelId: ModelId, attackerUnitId: UnitId, weapon: RuntimeWeapon): boolean
-  // R-3.8: Plunging Fire — attacker wholly within a ruin ≥6" up, target unit entirely at ground level
   plungingFire(state: GameState, attackerModelId: ModelId, targetUnitId: UnitId): boolean
 }
 
@@ -184,64 +173,77 @@ export const losService: LosService = {
     if (!from || !to) return false
     return anyClearPair(state, from, to)
   },
+  visibleFrom(state, probe, toModelId) {
+    const to = state.models[toModelId]
+    if (!to) return false
+    return anyClearPair(state, probe, to)
+  },
   fullyVisible(state, fromModelId, toModelId) {
     const from = state.models[fromModelId], to = state.models[toModelId]
     if (!from || !to) return false
-    if (!anyClearPair(state, from, to, leaderService.halves(state, to.unitId))) return false
-    if (!everyPointFullyVisible(state, from, to)) return false
-    const targetImmune = hasKeyword(state, to.unitId, 'AIRCRAFT') || hasKeyword(state, to.unitId, 'TOWERING')
-    if (!targetImmune && (inForest(state, to) || crossesForest(state, from, to))) return false
-    return true
+    return anyClearPair(state, from, to) && everyPointFullyVisible(state, from, to)
   },
-  // R-3.2 / LEAD-004: an attached unit is one unit — a model of either half being visible makes the unit visible
   unitVisible(state, fromModelId, targetUnitId) {
-    const models = targetBoardModels(state, targetUnitId)
-    return models.some((m) => losService.visible(state, fromModelId, m.id))
+    return boardModelsOfUnit(state, targetUnitId).some((m) => losService.visible(state, fromModelId, m.id))
   },
-  // R-3.4 / LEAD-004: every model of both halves must be fully visible
   unitFullyVisible(state, fromModelId, targetUnitId) {
-    const models = targetBoardModels(state, targetUnitId)
+    const models = boardModelsOfUnit(state, targetUnitId)
     return models.length > 0 && models.every((m) => losService.fullyVisible(state, fromModelId, m.id))
   },
-  benefitOfCover(state, targetModelId, attackerUnitId, weapon) {
-    if (weapon.kind === 'melee') return false // R-3.11: never in melee
-    if (weaponService.hasAbility(weapon, 'IGNORES_COVER')) return false
-    const target = state.models[targetModelId]
-    if (!target) return false
-    // LEAD-004/LOS-023b: an attached leader is one unit with its bodyguard — every model of both halves is an
-    // "attacking model" for R-3.14's "every model of the attacking unit must fail full visibility".
-    const attackers = leaderService.halves(state, attackerUnitId)
-      .flatMap((id) => state.units[id]?.location === 'board' ? unitModels(state, id) : [])
-    if (attackers.length === 0) return false
-    const infantry = hasKeyword(state, target.unitId, 'INFANTRY')
-    let cover = false
-    for (const p of Object.values(state.board.pieces)) {
-      // cover is granted only if THIS piece blocks the view from every attacking model (attribution, see above)
-      const obstructsForEveryAttacker = () => attackers.every((a) => pieceObstructs(state, p, a, target))
-      if (p.kind === 'crater') { if (infantry && whollyWithinPolygon(target, p.footprint)) cover = true }
-      else if (p.kind === 'barricade') { if (infantry && wholeBaseWithinDistanceOfPolygon(target, p.footprint, 3) && obstructsForEveryAttacker()) cover = true }
-      else if (p.kind === 'crate' || p.kind === 'wall') { if (obstructsForEveryAttacker()) cover = true }
-      else if (p.kind === 'ruin') { if (whollyWithinPolygon(target, p.footprint) || obstructsForEveryAttacker()) cover = true }
-      else if (p.kind === 'forest') {
-        // LOS-027c: AIRCRAFT/TOWERING targets are never "not fully visible" merely by being seen through woods;
-        // the wholly-within half of the rule still applies to them.
-        const lookThroughApplies = !hasKeyword(state, target.unitId, 'AIRCRAFT') && !hasKeyword(state, target.unitId, 'TOWERING')
-        if (whollyWithinPolygon(target, p.footprint)
-          || (lookThroughApplies && attackers.every((a) => segmentIntersectsPolygon2D(a.pos, target.pos, p.footprint)))) cover = true
+  inCombat(state, unitA, unitB) {
+    const ua = state.units[unitA], ub = state.units[unitB]
+    if (!ua || !ub || ua.player === ub.player || ua.location !== 'board' || ub.location !== 'board') return false
+    const ma = boardModelsOfUnit(state, unitA), mb = boardModelsOfUnit(state, unitB)
+    let inRange = false
+    for (const a of ma) {
+      for (const b of mb) {
+        if (!withinEngagementRange(a, b)) continue
+        inRange = true
+        if (anyClearPair(state, a, b)) return true // the closest pairs are the likeliest to see each other
       }
     }
-    if (!cover) return false
-    const sv = modelStats(state, target).Sv
-    if (weapon.AP === 0 && sv <= 3) return false // R-3.12
-    return true
+    if (!inRange) return false
+    // in range but those pairs cannot see each other: the units are still visible to each other if any other pair does
+    for (const a of ma) for (const b of mb) if (anyClearPair(state, a, b)) return true
+    return false
   },
-  plungingFire(state, attackerModelId, targetUnitId) {
-    const attacker = state.models[attackerModelId]
-    if (!attacker) return false
-    const whollyInRuin = Object.values(state.board.pieces).some((p) => p.kind === 'ruin' && whollyWithinPolygon(attacker, p.footprint))
-    if (!whollyInRuin || attacker.pos.y < PLUNGING_FIRE_HEIGHT - EPS) return false
-    // LOS-026c: "target unit entirely at ground level" covers an attached leader's models too
-    const models = targetBoardModels(state, targetUnitId)
-    return models.length > 0 && models.every((m) => Math.abs(m.pos.y) <= EPS)
+  unitsInCombatWith(state, unitId) {
+    const u = state.units[unitId]
+    if (!u || u.location !== 'board') return []
+    const out: UnitId[] = []
+    for (const e of Object.values(state.units)) {
+      if (e.player === u.player || e.location !== 'board') continue
+      if (losService.inCombat(state, unitId, e.id)) out.push(e.id)
+    }
+    return out
   },
+  unitInCombat(state, unitId) {
+    const u = state.units[unitId]
+    if (!u || u.location !== 'board') return false
+    for (const e of Object.values(state.units)) {
+      if (e.player === u.player || e.location !== 'board') continue
+      if (losService.inCombat(state, unitId, e.id)) return true
+    }
+    return false
+  },
+  behind(state, attackerUnitId, targetUnitId, pieceId) {
+    const p = state.board.pieces[pieceId]
+    if (!p) return false
+    return targetBehind(boardModelsOfUnit(state, attackerUnitId), boardModelsOfUnit(state, targetUnitId), p.footprint)
+  },
+  whollyOn(state, unitId, pieceId) {
+    const p = state.board.pieces[pieceId]
+    return !!p && targetWhollyOn(boardModelsOfUnit(state, unitId), p.footprint)
+  },
+  coverPenalty(state, attackerUnitId, targetUnitId) {
+    const target = state.units[targetUnitId]
+    if (!target || target.turn.chargedThisTurn || hasKeyword(state, targetUnitId, 'FLY')) return 0
+    return featuresWithTrait(state, 'cover').some((p) => behindOrOn(state, attackerUnitId, targetUnitId, p)) ? 1 : 0
+  },
+  obscured(state, attackerUnitId, targetUnitId) {
+    if (!state.units[targetUnitId] || hasKeyword(state, targetUnitId, 'FLY')) return false
+    return featuresWithTrait(state, 'obscuring').some((p) => behindOrOn(state, attackerUnitId, targetUnitId, p))
+  },
+  benefitOfCover: () => false,
+  plungingFire: () => false,
 }

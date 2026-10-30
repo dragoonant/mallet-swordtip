@@ -1,0 +1,17 @@
+{
+  "id": "ironjawz",
+  "name": "Ironjawz",
+  "factionKeyword": "IRONJAWZ",
+  "armyRule": "ironjawz.ability.bigmob",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#c9a227",
+    "secondary": "#3b3b3b",
+    "trim": "#8a8a8a",
+    "metal": "#707070",
+    "decal": "#e8e0c8"
+  },
+  "combatPatrols": [
+    "ironjawz.army.bigmob"
+  ]
+}

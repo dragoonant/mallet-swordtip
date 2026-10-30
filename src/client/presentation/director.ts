@@ -26,7 +26,6 @@ import { planVolleys, type StruckModel } from './volleys'
 import { audio, playEventSounds, type SoundLookup } from '../audio'
 import { colors } from '../ui/theme'
 import { dieTarget } from '../ui/eventSummary'
-import { unitToughness } from '../ui/labels'
 
 type EventOf<T extends GameEvent['type']> = Extract<GameEvent, { type: T }>
 
@@ -208,7 +207,7 @@ function groupRequest(state: GameState, group: GameEvent[]): RollRequest | null 
       const label = e.kind === 'invuln' ? 'Invulnerable save' : 'Armour save'
       return { label: attackLabel(state, e.attack, label), purpose: 'save', target, ...common, ...(note ? { note } : {}) }
     }
-    case 'FeelNoPainRolled': return { label: `${unitLabel(state, e.unitId)} — Feel No Pain`, purpose: 'fnp', target, ...common }
+    case 'FeelNoPainRolled': return { label: `${unitLabel(state, e.unitId)} — Ward`, purpose: 'fnp', target, ...common }
     case 'HazardousTested': return { label: `${unitLabel(state, e.unitId)} — Hazardous`, purpose: 'hazardous', ...common }
     default: return null
   }
@@ -224,24 +223,22 @@ function rollMath(state: GameState, e: EventOf<'SaveRolled'> | EventOf<'WoundRol
   // a positive modifier lowers the roll needed, so it reads as "+ 1 bonus" and an AP of -1 as "− 1 AP"
   const floor = e.needed - mods < 2 ? ' (a 1 always fails)' : ''
   if (e.type === 'SaveRolled') {
-    const weaponAp = state.weapons[e.attack.weaponId]?.AP ?? 0
+    const weaponAp = -(state.weapons[e.attack.weaponId]?.rend ?? 0)
     if (e.kind === 'invuln') {
-      const ignored = weaponAp !== 0 ? ` (ignores ${Math.abs(weaponAp)} AP)` : ''
+      const ignored = weaponAp !== 0 ? ` (ignores Rend ${Math.abs(weaponAp)})` : ''
       return `Invulnerable ${e.needed}+${ignored}${term(mods, mods > 0 ? 'bonus' : 'penalty')} = ${target}+ to save${floor}`
     }
     const other = mods - weaponAp
-    return `Armour ${e.needed}+${term(weaponAp, 'AP')}${term(other, other > 0 ? 'cover/bonus' : 'penalty')} = ${target}+ to save${floor}`
+    return `Armour ${e.needed}+${term(weaponAp, 'Rend')}${term(other, other > 0 ? 'cover/bonus' : 'penalty')} = ${target}+ to save${floor}`
   }
-  const S = state.weapons[e.attack.weaponId]?.S
-  const T = unitToughness(state, e.attack.targetUnitId)
-  const base = typeof S === 'number' && T !== null ? `S ${S} vs T ${T} = ${e.needed}+` : `${e.needed}+`
+  const base = `${e.needed}+`
   return mods === 0 ? `${base} to wound` : `${base},${term(mods, mods > 0 ? 'bonus' : 'penalty')} = ${target}+ to wound${floor}`
 }
 
 /** "No save possible: needs 7+ (AP -2)" — for saves the engine skipped because even a 6 couldn't make them. */
 function impossibleSaveNote(state: GameState, events: EventOf<'SaveRolled'>[]): string {
   const e = events[0]
-  const ap = e.kind === 'armour' ? state.weapons[e.attack.weaponId]?.AP ?? 0 : 0
+  const ap = e.kind === 'armour' ? -(state.weapons[e.attack.weaponId]?.rend ?? 0) : 0
   const face = e.needed - ap
   const count = events.length > 1 ? ` (${events.length} attacks)` : ''
   return face > 6 && ap !== 0
@@ -756,11 +753,11 @@ function playTargetsDeclared(e: EventOf<'TargetsDeclared'>, from: GameState, to:
 
 // Own words, matching the HUD's phase chips (src/client/ui/Hud.tsx PHASES).
 const PHASE_TITLE: Partial<Record<Phase, string>> = {
-  command: 'Command Phase',
+  command: 'Hero Phase',
   movement: 'Movement Phase',
   shooting: 'Shooting Phase',
   charge: 'Charge Phase',
-  fight: 'Fight Phase',
+  fight: 'Combat Phase',
 }
 
 /** Shows the banner for `kind` and waits out its pause (announceStore.ts). The wait is why a phase

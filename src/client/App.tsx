@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Scene } from './Scene'
 import { useGameStore } from './store/game'
 import { useUiStore } from './ui/uiStore'
-import { StartScreen, Hud, UnitCard, DiceLog, EventFeed, Toast, VpToast, PhaseBanner, EndScreen, DecisionPrompt, StratagemPanel, SettingsPanel, PainterPanel } from './ui'
+import { StartScreen, Hud, UnitCard, DiceLog, EventFeed, Toast, VpToast, PhaseBanner, EndScreen, DecisionPrompt, SettingsPanel, PainterPanel } from './ui'
 import { FigureGalleryStage } from './figures'
 import { applyPaintFromUrl } from './figures/paint'
 import type { Pose } from './figures'
@@ -209,7 +209,6 @@ export function App() {
         )}
         <EventFeed />
         <DiceTableOverlay />
-        <StratagemPanel />
         <DecisionPrompt />
         <TouchActionBar />
         <Toast />

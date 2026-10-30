@@ -1,0 +1,272 @@
+[
+  {
+    "id": "cities.ability.castelite-company",
+    "name": "Castelite Company",
+    "text": "Army marker for the Castelite Company. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "cities.ability.the-officers-order",
+    "name": "The Officer's Order",
+    "text": "At the start of each battle round, set one battle tactic card from your hand aside face-down. Using its command is free and returns the card to your hand instead of discarding it; it may still be scored as a tactic.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfRound",
+      "whose": "your"
+    },
+    "limit": "oncePerRound",
+    "code": "citiesOfficersOrder",
+    "params": {
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "cities.ability.for-sigmar-charge",
+    "name": "For Sigmar, Charge!",
+    "text": "Friendly Cavalry units that made a charge move this turn have Strike-first.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "code": "citiesForSigmarCharge",
+    "scope": {
+      "who": "self"
+    },
+    "params": {
+      "keyword": "CAVALRY",
+      "requires": "charged",
+      "grant": "strikeFirst"
+    }
+  },
+  {
+    "id": "cities.ability.ironweld-discipline",
+    "name": "Ironweld Discipline",
+    "text": "Once per turn in the enemy shooting phase, roll a dice for your Ironweld Great Cannon. On a 3+ it may use its Shoot ability as if it were your shooting phase.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "shooting",
+      "whose": "enemy"
+    },
+    "limit": "oncePerTurn",
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "code": "citiesIronweldDiscipline",
+    "params": {
+      "datasheet": "cities.unit.ironweld-great-cannon",
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "cities.ability.flask-of-lethisian-darkwater",
+    "name": "Flask of Lethisian Darkwater",
+    "text": "Once per battle, at the start of any turn, heal the bearer for D6.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfTurn",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "citiesFlask",
+    "params": {
+      "heal": "D6"
+    }
+  },
+  {
+    "id": "cities.ability.heirloom-blade",
+    "name": "Heirloom Blade",
+    "text": "The bearer's Master-forged Longsword has +1 Rend.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "effect": {
+      "when": {
+        "weaponId": "cities.weapon.master-forged-longsword"
+      },
+      "modifyStat": {
+        "stat": "AP",
+        "value": -1
+      }
+    }
+  },
+  {
+    "id": "cities.ability.brazier-of-holy-flame",
+    "name": "Brazier of Holy Flame",
+    "text": "At the end of any turn, pick a friendly Freeguild Steelhelms unit within the bearer's combat range and return up to D3 slain models to it.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "endOfTurn",
+      "whose": "any"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 3
+          }
+        }
+      }
+    ],
+    "code": "citiesBrazier",
+    "params": {
+      "datasheet": "cities.unit.freeguild-steelhelms",
+      "returnModels": "D3",
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "cities.ability.glimmering",
+    "name": "Glimmering",
+    "text": "Once in each phase, you may re-roll one hit roll, one wound roll or one save roll made for the bearer.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "citiesGlimmering",
+    "params": {
+      "perPhase": 1,
+      "rolls": [
+        "hit",
+        "wound",
+        "save"
+      ],
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "cities.ability.decisive-commander",
+    "name": "Decisive Commander",
+    "text": "In your hero phase, pick a friendly Freeguild Steelhelms unit wholly within 12\" and roll a dice. On a 2+ choose one. On Your Feet!: if the target is not in combat, return D3 slain models to it. Yield No Quarter!: the target has +3 control score until the start of your next turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 2
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "modes": [
+      {
+        "id": "on-your-feet",
+        "name": "On Your Feet!",
+        "text": "If the target is not in combat, return D3 slain models to it."
+      },
+      {
+        "id": "yield-no-quarter",
+        "name": "Yield No Quarter!",
+        "text": "The target has +3 control score until the start of your next turn."
+      }
+    ],
+    "code": "citiesDecisiveCommander",
+    "params": {
+      "datasheet": "cities.unit.freeguild-steelhelms",
+      "wholly": true,
+      "range": 12,
+      "returnModels": "D3",
+      "controlBonus": 3
+    }
+  },
+  {
+    "id": "cities.ability.consecrate-the-land",
+    "name": "Consecrate the Land",
+    "text": "In your movement phase, if this unit alone holds an objective you control, roll a dice. On a 3+ the objective becomes consecrated for you: your units contesting it have Ward (6+) until the enemy takes control of it.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "movement",
+      "whose": "your"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "code": "citiesConsecrateTheLand",
+    "params": {
+      "ward": 6,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "cities.ability.devastating-charge",
+    "name": "Devastating Charge",
+    "text": "In any charge phase, if this unit charged, pick an enemy unit in combat with it and roll a dice. On a 2+ the target suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "charge",
+      "whose": "any"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 2
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy",
+        "state": "inEngagement"
+      }
+    ],
+    "code": "citiesDevastatingCharge",
+    "params": {
+      "requires": "charged",
+      "mortal": "D3"
+    }
+  },
+  {
+    "id": "cities.ability.shot-and-shell",
+    "name": "Shot and Shell",
+    "text": "Whenever this unit shoots, choose Cannonball or Grapeshot for all its Great Cannon attacks. Cannonball cannot be chosen if the unit has used a Move ability this turn.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "code": "citiesShotAndShell",
+    "params": {
+      "profileGroup": "cities.weapon.great-cannon",
+      "blocked": "cities.weapon.great-cannon-cannonball",
+      "unless": "movedThisTurn"
+    }
+  }
+]

@@ -111,10 +111,83 @@ export function checkUnitChoices(data: unknown): string[] {
   return errors
 }
 
+/** Records by id across the whole data tree, for the cross-file checks below. */
+export interface DataIndex {
+  datasheets: Record<string, { spearhead?: boolean; composition?: { weapons?: { default?: string[]; options?: { with?: string[] }[] } }[]; abilities?: unknown[] }>
+  weapons: Record<string, { wound?: number; rend?: number }>
+  abilities: Record<string, unknown>
+  enhancements: Record<string, unknown>
+}
+
+/** Parses every data file once and indexes the array-file kinds by id. */
+export function buildDataIndex(root: string = DATA_ROOT): DataIndex {
+  const idx: DataIndex = { datasheets: {}, weapons: {}, abilities: {}, enhancements: {} }
+  for (const abs of collectJsonFiles(root)) {
+    const kind = schemaForDataPath(relative(root, abs).split('\\').join('/'))
+    const bucket = kind === 'datasheet' ? idx.datasheets : kind === 'weapon' ? idx.weapons : kind === 'ability' ? idx.abilities : kind === 'enhancement' ? idx.enhancements : null
+    if (!bucket) continue
+    try {
+      for (const item of JSON.parse(readFileSync(abs, 'utf8')) as { id: string }[]) (bucket as Record<string, unknown>)[item.id] = item
+    } catch {
+      // reported by validateDataFile
+    }
+  }
+  return idx
+}
+
+/**
+ * Spearhead army rules the JSON Schema cannot express (SPH-2.1, 2.3, 2.4, 13.7): the general is one of the units, every
+ * datasheet is a Spearhead warscroll with Wound / Rend on its weapons, and every referenced id resolves.
+ */
+export function checkSpearheadArmy(data: unknown, idx: DataIndex): string[] {
+  const d = data as {
+    mode?: string; warlord?: string; units?: { ref: string; datasheet: string; reserve?: { ability: string } }[]
+    battleTraits?: string[]; regimentAbilities?: { id: string; default: boolean }[]; enhancements?: { id: string; default: boolean }[]
+  }
+  if (d?.mode !== 'spearhead') return []
+  const errors: string[] = []
+  const units = d.units ?? []
+  const refs = units.map((u) => u.ref)
+  if (new Set(refs).size !== refs.length) errors.push('spearhead: duplicate unit refs')
+  if (!refs.includes(d.warlord ?? '')) errors.push(`spearhead: general "${d.warlord}" is not one of the units (SPH-2.1)`)
+  if ((d.regimentAbilities ?? []).length !== 2) errors.push('spearhead: exactly 2 regiment abilities (SPH-2.3)')
+  if ((d.enhancements ?? []).length !== 4) errors.push('spearhead: exactly 4 enhancements (SPH-2.4)')
+  if ((d.regimentAbilities ?? []).filter((r) => r.default).length !== 1) errors.push('spearhead: exactly one default regiment ability')
+  if ((d.enhancements ?? []).filter((e) => e.default).length !== 1) errors.push('spearhead: exactly one default enhancement')
+  const needAbility = (id: string, where: string) => { if (!(id in idx.abilities)) errors.push(`spearhead: ${where} ability "${id}" does not exist`) }
+  for (const id of d.battleTraits ?? []) needAbility(id, 'battle trait')
+  for (const r of d.regimentAbilities ?? []) needAbility(r.id, 'regiment')
+  for (const e of d.enhancements ?? []) if (!(e.id in idx.enhancements)) errors.push(`spearhead: enhancement "${e.id}" does not exist`)
+  for (const u of units) {
+    const ds = idx.datasheets[u.datasheet]
+    if (!ds) { errors.push(`spearhead: unit "${u.ref}" datasheet "${u.datasheet}" does not exist`); continue }
+    if (ds.spearhead !== true) errors.push(`spearhead: datasheet "${u.datasheet}" is not flagged spearhead (SPH-13.7)`)
+    if (u.reserve) needAbility(u.reserve.ability, `unit "${u.ref}" reserve`)
+    for (const a of ds.abilities ?? []) if (typeof a === 'string') needAbility(a, `datasheet "${u.datasheet}"`)
+    for (const c of ds.composition ?? []) {
+      const ids = [...(c.weapons?.default ?? []), ...(c.weapons?.options ?? []).flatMap((o) => o.with ?? [])]
+      for (const w of ids) {
+        const wd = idx.weapons[w]
+        if (!wd) errors.push(`spearhead: weapon "${w}" does not exist`)
+        else if (wd.wound === undefined || wd.rend === undefined) errors.push(`spearhead: weapon "${w}" needs wound and rend`)
+      }
+    }
+  }
+  return errors
+}
+
 /** Validates every JSON data file under `root` (default `src/data/`). Trivially empty when there is no data yet. */
 export function validateAllData(root: string = DATA_ROOT): FileReport[] {
   const ajv = createValidator()
-  return collectJsonFiles(root).map((abs) => validateDataFile(ajv, abs, relative(root, abs).split('\\').join('/')))
+  const idx = buildDataIndex(root)
+  const reports = collectJsonFiles(root).map((abs) => validateDataFile(ajv, abs, relative(root, abs).split('\\').join('/')))
+  for (const r of reports) {
+    if (r.schema !== 'combatPatrol' || !r.ok) continue
+    const data: unknown = JSON.parse(readFileSync(join(root, r.file), 'utf8'))
+    r.errors.push(...checkSpearheadArmy(data, idx))
+    r.ok = r.errors.length === 0
+  }
+  return reports
 }
 
 function main(): void {

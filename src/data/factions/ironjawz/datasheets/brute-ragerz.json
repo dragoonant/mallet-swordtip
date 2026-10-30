@@ -1,0 +1,54 @@
+[
+  {
+    "id": "ironjawz.unit.brute-ragerz",
+    "faction": "ironjawz",
+    "name": "Brute Ragerz",
+    "keywords": [
+      "INFANTRY",
+      "BRUTE",
+      "REINFORCEMENTS"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "IRONJAWZ"
+    ],
+    "stats": {
+      "M": 4,
+      "W": 3,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "brute-rager",
+        "name": "Brute Rager",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": {
+          "shape": "round",
+          "mm": 40
+        },
+        "weapons": {
+          "default": [
+            "ironjawz.weapon.rager-weapons"
+          ]
+        },
+        "figure": {
+          "archetype": "heavy",
+          "kit": "ork-boy"
+        }
+      }
+    ],
+    "abilities": [
+      "ironjawz.ability.unleashed-rage"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "heavy",
+      "kit": "ork-boy"
+    },
+    "spearhead": true
+  }
+]

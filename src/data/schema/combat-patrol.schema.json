@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mallet42k.dev/schemas/combat-patrol.schema.json",
-  "title": "Combat Patrol fixed force",
+  "title": "Combat Patrol fixed force / Spearhead army",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -120,6 +120,26 @@
           },
           "enhancement": {
             "$ref": "common.schema.json#/$defs/Id"
+          },
+          "reserve": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ability": {
+                "$ref": "common.schema.json#/$defs/Id"
+              }
+            },
+            "required": [
+              "ability"
+            ],
+            "description": "AoS: the unit starts in reserve and arrives through this ability (Ironjawz Ere We Go)"
+          },
+          "tokens": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "required": [
@@ -136,11 +156,28 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "refs": { "type": "array", "minItems": 2, "items": { "type": "string", "pattern": "^[a-z0-9-]+$" } },
-          "default": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "refs": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            }
+          },
+          "default": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
         },
-        "required": ["id", "refs", "default"]
+        "required": [
+          "id",
+          "refs",
+          "default"
+        ]
       }
     },
     "stratagems": {
@@ -204,6 +241,33 @@
     "warlord": {
       "type": "string",
       "pattern": "^[a-z0-9-]+$"
+    },
+    "mode": {
+      "const": "spearhead",
+      "description": "present = a Spearhead army (SPH-2): 2 regimentAbilities, 4 enhancements, warlord = the general"
+    },
+    "battleTraits": {
+      "$ref": "common.schema.json#/$defs/IdList",
+      "description": "ability ids attached to every unit of the army"
+    },
+    "regimentAbilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "default": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "default"
+        ]
+      }
     }
   },
   "required": [
@@ -215,5 +279,32 @@
     "enhancements",
     "secondaries",
     "warlord"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "battleTraits",
+          "regimentAbilities"
+        ],
+        "properties": {
+          "regimentAbilities": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "enhancements": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4
+          }
+        }
+      }
+    }
   ]
 }

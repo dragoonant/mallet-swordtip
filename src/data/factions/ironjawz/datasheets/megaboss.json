@@ -1,0 +1,53 @@
+[
+  {
+    "id": "ironjawz.unit.megaboss",
+    "faction": "ironjawz",
+    "name": "Megaboss",
+    "keywords": [
+      "HERO",
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "IRONJAWZ"
+    ],
+    "stats": {
+      "M": 4,
+      "W": 8,
+      "Sv": 3,
+      "OC": 2
+    },
+    "composition": [
+      {
+        "modelId": "megaboss",
+        "name": "Megaboss",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "round",
+          "mm": 60
+        },
+        "weapons": {
+          "default": [
+            "ironjawz.weapon.boss-choppa"
+          ]
+        },
+        "figure": {
+          "archetype": "heavy",
+          "kit": "ork-warboss"
+        }
+      }
+    ],
+    "abilities": [
+      "ironjawz.ability.get-stuck-in-ladz"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "heavy",
+      "kit": "ork-warboss"
+    },
+    "spearhead": true
+  }
+]

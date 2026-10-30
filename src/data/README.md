@@ -63,9 +63,15 @@ regardless of which file it came from; `loadBundle()` throws on a collision.
 (2020-12, `strictRequired: false`, `ajv-formats` registered). It prints one `PASS`/`FAIL` line per
 file plus the Ajv error list for failures, and exits non-zero if anything failed — including a file
 that doesn't match any convention in §1. `tests/data/validate.test.ts` runs the same checks inside
-vitest. With no data files yet, both pass trivially (0 checked, 0 failed).
+vitest. 
 
-This checks JSON Schema conformance only. Cross-file checks from `docs/spec/20-data-schema.md`
+For `combat-patrol` files with `mode: 'spearhead'` it also runs `checkSpearheadArmy` (2 regiment abilities, 4
+enhancements, the general is one of the units, only `spearhead: true` datasheets, weapons carry `wound`/`rend`, every
+referenced id exists; SPH-2.x, SPH-13.7). Mallet Swordtip ships two such armies, `cities/` and `ironjawz/`, one battleplan
+(`missions/sph-fire-and-jade-aqshy-horizontal.json`) and one layout (`terrain/sph-fire-and-jade-standard.json`); the
+Spearhead field additions are described in `docs/spec/20-data-schema.md`.
+
+Beyond that this checks JSON Schema conformance only. Cross-file checks from `docs/spec/20-data-schema.md`
 §12 (dangling id references, `code` hooks existing in the engine's hook registry, wargear/points
 consistency, geometry, etc.) are not implemented yet — that's later data-tooling work, not this
 pass.

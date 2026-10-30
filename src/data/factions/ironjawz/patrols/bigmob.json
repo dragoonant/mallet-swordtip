@@ -1,0 +1,71 @@
+{
+  "id": "ironjawz.army.bigmob",
+  "faction": "ironjawz",
+  "name": "Bigmob",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "megaboss",
+      "datasheet": "ironjawz.unit.megaboss",
+      "size": 1
+    },
+    {
+      "ref": "brute-ragerz",
+      "datasheet": "ironjawz.unit.brute-ragerz",
+      "size": 3
+    },
+    {
+      "ref": "ardboyz-1",
+      "datasheet": "ironjawz.unit.ardboyz",
+      "size": 5
+    },
+    {
+      "ref": "ardboyz-2",
+      "datasheet": "ironjawz.unit.ardboyz",
+      "size": 5
+    },
+    {
+      "ref": "brutes",
+      "datasheet": "ironjawz.unit.brutes",
+      "size": 5,
+      "reserve": {
+        "ability": "ironjawz.ability.ere-we-go-arrival"
+      }
+    }
+  ],
+  "warlord": "megaboss",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "ironjawz.ability.ere-we-go",
+    "ironjawz.ability.mighty-destroyers"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "ironjawz.ability.natural-disaster",
+      "default": true
+    },
+    {
+      "id": "ironjawz.ability.a-proper-ruckus",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "ironjawz.enhancement.amberbone-whetstone",
+      "default": false
+    },
+    {
+      "id": "ironjawz.enhancement.trophy-skulls",
+      "default": false
+    },
+    {
+      "id": "ironjawz.enhancement.armour-of-gork",
+      "default": true
+    },
+    {
+      "id": "ironjawz.enhancement.mega-bossy",
+      "default": false
+    }
+  ]
+}

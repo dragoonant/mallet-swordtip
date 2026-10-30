@@ -61,9 +61,9 @@ export const FORMATION_KEYS: Record<string, FormationKind> = {
 }
 
 const EDGE_GAP_IN = 0.1
-/** Coherency threshold is 2" edge-to-edge (COHERENCY_H); spread keeps a small margin under it so a
+/** Coherency threshold is 1/2" edge-to-edge (COHERENCY_H); spread keeps a small margin under it so a
  *  model that's nudged a little still reads as coherent. */
-const SPREAD_GAP_IN = 1.9
+const SPREAD_GAP_IN = 0.45
 export const ROTATE_STEP_RAD = (15 * Math.PI) / 180
 
 function forwardOf(facing: number): { x: number; z: number } {

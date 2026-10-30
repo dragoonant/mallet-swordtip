@@ -1,0 +1,54 @@
+[
+  {
+    "id": "cities.unit.freeguild-cavaliers",
+    "faction": "cities",
+    "name": "Freeguild Cavaliers",
+    "keywords": [
+      "CAVALRY",
+      "REINFORCEMENTS"
+    ],
+    "factionKeywords": [
+      "CITIES OF SIGMAR",
+      "ORDER"
+    ],
+    "stats": {
+      "M": 10,
+      "W": 3,
+      "Sv": 3,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "cavalier",
+        "name": "Freeguild Cavalier",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "oval",
+          "mm": 90,
+          "mm2": 52
+        },
+        "weapons": {
+          "default": [
+            "cities.weapon.cavalier-weapon",
+            "cities.weapon.warhorse-hooves"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "cities.ability.devastating-charge"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

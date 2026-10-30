@@ -6,7 +6,7 @@
 import type { DiceRoll, GameEvent, GameState, PlayerId } from '@/engine'
 import type { DataBundle } from '@/data/types'
 import { ROLL_PURPOSE_LABEL, objectiveLabel, sourceName } from './labels'
-import { diePoolName } from './fate'
+import { moveName, phaseName } from './phaseNames'
 
 export type LineKind = 'header' | 'attack' | 'event'
 
@@ -118,7 +118,7 @@ export function summariseEvents(events: readonly GameEvent[], state: GameState, 
         push(e, `Round ${e.round}`, null, 'header')
         break
       case 'PhaseStarted':
-        push(e, `${cap(e.phase)} phase — ${pname(e.player)}`, e.player, 'header')
+        push(e, `${phaseName(e.phase)} phase — ${pname(e.player)}`, e.player, 'header')
         break
       case 'UnitDeployed':
         push(e, `${unit(e.unitId)} ${e.toReserves ? 'held in reserve' : 'deployed'}`)
@@ -130,13 +130,13 @@ export function summariseEvents(events: readonly GameEvent[], state: GameState, 
         push(e, `${unit(e.unitId)} arrives from reserves`)
         break
       case 'MoveDeclared':
-        push(e, `${unit(e.unitId)} makes a ${e.moveType} move`)
+        push(e, `${unit(e.unitId)} makes a ${moveName(e.moveType).toLowerCase()}`)
         break
       case 'UnitAdvanced':
-        push(e, `${unit(e.unitId)} advances (rolled ${e.roll})`)
+        push(e, `${unit(e.unitId)} runs (rolled ${e.roll})`)
         break
       case 'UnitFellBack':
-        push(e, `${unit(e.unitId)} falls back`)
+        push(e, `${unit(e.unitId)} retreats`)
         break
       case 'DesperateEscapeRolled':
         push(e, `${unit(e.unitId)} desperate escape: rolled ${e.dice.join(', ')} — ${plural(e.casualties, 'model lost', 'models lost')}`)
@@ -204,9 +204,9 @@ export function summariseEvents(events: readonly GameEvent[], state: GameState, 
         const g = [...groupOrder].reverse().find((x) => x.targetUnitId === e.unitId)
         if (g && e.ignored) {
           g.fnpIgnored++
-          g.saveDetail.push(`FNP ${e.die} vs ${e.needed}+ ignored`)
+          g.saveDetail.push(`Ward ${e.die} vs ${e.needed}+ ignored`)
         } else if (g) {
-          g.saveDetail.push(`FNP ${e.die} vs ${e.needed}+ failed`)
+          g.saveDetail.push(`Ward ${e.die} vs ${e.needed}+ failed`)
         }
         break
       }
@@ -286,14 +286,30 @@ export function summariseEvents(events: readonly GameEvent[], state: GameState, 
         if (e.abilityId === 'transport.emergencyDisembark') push(e, `${e.summary || 'Passengers abandon the wrecked transport'} (emergency disembark)`)
         else push(e, `${e.summary || sourceName(state, bundle, e.abilityId)}`)
         break
-      case 'MiracleDieSpent':
-        push(e, `${pname(e.player)} spends a ${diePoolName(state, e.player)} die (${e.value}) — ${e.mode === 'substitute' ? 'substituted' : 'discarded'}`)
+      case 'PriorityRolled': {
+        const a = e.rolls.A
+        const b = e.rolls.B
+        const who = e.winner ? `${pname(e.winner)} wins the priority roll` : 'The priority roll is tied'
+        push(e, `Priority roll: ${pname('A')} ${a}, ${pname('B')} ${b} — ${who}; ${pname(e.firstPlayer)} takes the first turn${e.doubleTurn ? ' (a double turn)' : ''}`, null, 'header')
+        break
+      }
+      case 'FirstTurnChosen':
+        push(e, `${pname(e.first)} goes first this round`, null, 'header')
+        break
+      case 'UnderdogDetermined':
+        push(e, e.underdog ? `${pname(e.underdog)} is the underdog this round` : 'No underdog this round: the scores are level')
+        break
+      case 'InitiativeSeized':
+        push(e, `${pname(e.player)} seizes the initiative`)
+        break
+      case 'DamagePoolResolved':
+        push(e, `${unit(e.unitId)}: ${e.points} damage${e.warded > 0 ? `, ${e.warded} warded off` : ''}${e.slain > 0 ? `, ${e.slain} model${e.slain === 1 ? '' : 's'} slain` : ''}`)
         break
       case 'DiceRerolled': {
         const roll = rolls.get(e.rollId)
         const what = roll ? ROLL_PURPOSE_LABEL[roll.purpose] ?? roll.purpose : 'roll'
         const who = roll ? (unit(roll.unitId) || pname(roll.player)) : ''
-        const via = e.source === 'commandReroll' ? 'Command Re-roll' : sourceName(state, bundle, e.source)
+        const via = sourceName(state, bundle, e.source)
         push(e, `Re-roll (${via})${who ? ` — ${who}` : ''}, ${what.toLowerCase()}: ${e.before.join(', ')} → ${e.after.join(', ')}`, roll?.player ?? e.player)
         break
       }

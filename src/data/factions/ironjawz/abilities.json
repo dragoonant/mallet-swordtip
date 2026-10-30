@@ -1,0 +1,273 @@
+[
+  {
+    "id": "ironjawz.ability.bigmob",
+    "name": "Bigmob",
+    "text": "Army marker for the Ironjawz Bigmob. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "ironjawz.ability.ere-we-go",
+    "name": "'Ere We Go!",
+    "text": "The Brutes unit is not set up in the deployment phase: it starts in reserve and arrives through its own ability.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "ironjawz.ability.ere-we-go-arrival",
+    "name": "'Ere We Go!",
+    "text": "In your movement phase from battle round 3, set this unit up anywhere on the battlefield, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "movement",
+      "whose": "your"
+    },
+    "keywords": [
+      "CORE"
+    ],
+    "fromRound": 3,
+    "params": {
+      "fromRound": 3,
+      "minEnemyDistance": 6,
+      "anywhere": true
+    }
+  },
+  {
+    "id": "ironjawz.ability.mighty-destroyers",
+    "name": "Mighty Destroyers",
+    "text": "Once per turn for the army, in any hero phase, pick a friendly unit that was not set up this turn. It may move up to 3\", ending in combat if it likes. A unit that started in combat must end in combat.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "any"
+    },
+    "limit": "oncePerTurnArmy",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "code": "ironjawzMightyDestroyers",
+    "params": {
+      "distance": 3,
+      "mayEndInCombat": true,
+      "notSetUpThisTurn": true,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "ironjawz.ability.natural-disaster",
+    "name": "Natural Disaster",
+    "text": "When a friendly unit makes a charge roll whose unmodified total is 8 or more, its melee weapons have +1 Attacks for the rest of the turn.",
+    "trigger": "chargeRoll",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "duration": "untilEndOfTurn",
+    "code": "ironjawzNaturalDisaster",
+    "params": {
+      "minUnmodified": 8,
+      "extraAttacks": 1,
+      "weaponType": "melee"
+    }
+  },
+  {
+    "id": "ironjawz.ability.a-proper-ruckus",
+    "name": "A Proper Ruckus",
+    "text": "Once per battle, when you declare Mighty Destroyers, every friendly unit that was not set up this turn becomes a target of it instead of just one.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "reaction",
+      "trigger": "youDeclared",
+      "abilityId": "ironjawz.ability.mighty-destroyers"
+    },
+    "limit": "oncePerBattle",
+    "code": "ironjawzProperRuckus",
+    "params": {
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "ironjawz.ability.amberbone-whetstone",
+    "name": "Amberbone Whetstone",
+    "text": "The bearer's melee weapons have Rend 2.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "ironjawzAmberbone",
+    "params": {
+      "weaponType": "melee",
+      "setRend": 2
+    }
+  },
+  {
+    "id": "ironjawz.ability.trophy-skulls",
+    "name": "Trophy Skulls",
+    "text": "The bearer's Control characteristic is 5.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "effect": {
+      "setStat": {
+        "stat": "OC",
+        "value": 5
+      }
+    }
+  },
+  {
+    "id": "ironjawz.ability.armour-of-gork",
+    "name": "Armour of Gork",
+    "text": "The bearer has Ward (6+).",
+    "trigger": "feelNoPainRoll",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "effect": {
+      "feelNoPain": 6
+    }
+  },
+  {
+    "id": "ironjawz.ability.mega-bossy",
+    "name": "Mega-bossy",
+    "text": "If the bearer charged this turn, friendly units wholly within 12\" of it add 1 to their charge rolls for the rest of the turn.",
+    "trigger": "chargeRoll",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "friendly",
+      "within": 12
+    },
+    "duration": "untilEndOfTurn",
+    "code": "ironjawzMegaBossy",
+    "params": {
+      "requires": "bearerCharged",
+      "range": 12,
+      "wholly": true,
+      "chargeBonus": 1
+    }
+  },
+  {
+    "id": "ironjawz.ability.get-stuck-in-ladz",
+    "name": "Get Stuck In, Ladz!",
+    "text": "In your hero phase, pick this unit or a friendly Brute unit wholly within 12\" of it and roll a dice. On a 2+ the target's melee weapons have +1 Attacks until the start of your next turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 2
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "keyword": "BRUTE",
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "duration": "untilNextTurn",
+    "code": "ironjawzGetStuckIn",
+    "params": {
+      "extraAttacks": 1,
+      "weaponType": "melee",
+      "orSelf": true,
+      "wholly": true,
+      "range": 12
+    }
+  },
+  {
+    "id": "ironjawz.ability.shield-bash",
+    "name": "Shield Bash",
+    "text": "In any combat phase, pick an enemy unit within 1\" of this unit. Roll a dice for each model in this unit within 3\" of the target; each 6 inflicts 1 mortal damage on it.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 1
+          }
+        }
+      }
+    ],
+    "code": "ironjawzShieldBash",
+    "params": {
+      "targetRange": 1,
+      "modelRange": 3,
+      "successOn": 6,
+      "mortalPerSuccess": 1
+    }
+  },
+  {
+    "id": "ironjawz.ability.unleashed-rage",
+    "name": "Unleashed Rage",
+    "text": "While this unit has charged this turn, it has Strike-first.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "when": {
+        "unitCharged": true
+      },
+      "fightsFirst": true
+    }
+  },
+  {
+    "id": "ironjawz.ability.you-messin",
+    "name": "You Messin'?",
+    "text": "Enemy units with a Health characteristic of 1 or 2 cannot contest objectives while they are in combat with this unit.",
+    "trigger": "objectiveControl",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "ironjawzYouMessin",
+    "params": {
+      "maxHealth": 2,
+      "whileInCombatWithHolder": true
+    }
+  }
+]

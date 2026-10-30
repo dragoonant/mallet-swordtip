@@ -1,7 +1,7 @@
 // AI formation generators (owner: src/ai). Pure geometry: given model bases, an anchor point and a facing, lay a unit out as a
 // ranks-and-files block, phalanx, wedge, arc, staggered checkerboard or screening line instead of the engine's one-row raster.
 // Facing convention (matches engine deployFacing): forward = (cos f, sin f) in (x, z); rank 0 is the front rank. Every result is
-// checked for 2" coherency (>=2 neighbours at 7+ models) and returns null if the layout is not coherent, so callers just skip it.
+// checked for 1/2" coherency (>=2 neighbours at 7+ models) and returns null if the layout is not coherent, so callers just skip it.
 import { isCoherent, type Footprint, type ModelBase, type ModelPlacement, type ModelId } from '../engine'
 
 export type FormationShape = 'single' | 'block' | 'phalanx' | 'wedge' | 'arc' | 'checker' | 'line'
@@ -11,6 +11,8 @@ interface Local { u: number; v: number } // u = lateral (left of facing positive
 const GAP = 0.15 // base-to-base clearance inside a tight formation
 
 function radiusOf(base: ModelBase): number { return Math.max(base.radius, base.radius2 ?? 0) }
+// an oval base is `radius` long (along the facing) and `radius2` wide: ranks space by the width, rows by the length
+function lateralRadiusOf(base: ModelBase): number { return base.shape === 'oval' && base.radius2 !== undefined ? base.radius2 : base.radius }
 
 // widths[i] = number of models in rank i (front first); each rank is centred behind the previous one. With `hex`, ranks whose
 // parity matches the previous rank are shifted half a pitch so files interlock (and ranks may sit closer together)
@@ -38,22 +40,24 @@ function fillWidths(n: number, cols: number): number[] {
   return w
 }
 
-export function localLayout(shape: FormationShape, n: number, r: number): Local[] {
+export function localLayout(shape: FormationShape, n: number, r: number, rDepth = r): Local[] {
   const pitch = 2 * r + GAP
+  const depthPitch = 2 * rDepth + GAP
   if (n <= 1) return [{ u: 0, v: 0 }]
   switch (shape) {
     case 'single': return [{ u: 0, v: 0 }]
     case 'block': { // 2-3 ranks deep, columns sized to the model count
       const ranks = n >= 15 ? 3 : 2
-      return rankLayout(fillWidths(n, Math.ceil(n / ranks)), pitch, pitch)
+      return rankLayout(fillWidths(n, Math.ceil(n / ranks)), pitch, depthPitch)
     }
-    case 'phalanx': return rankLayout(fillWidths(n, Math.ceil(Math.sqrt(n))), pitch, pitch)
+    case 'phalanx': return rankLayout(fillWidths(n, Math.ceil(Math.sqrt(n))), pitch, depthPitch)
     case 'wedge': { // apex 1, then 2, 3, ... hex-packed
       const widths: number[] = []
       for (let left = n, k = 1; left > 0; left -= k, k++) widths.push(Math.min(k, left))
-      return rankLayout(widths, pitch, pitch * 0.87, true)
+      return rankLayout(widths, pitch, depthPitch * 0.87, true)
     }
-    case 'arc': { // shallow crescent (centre forward), concentric second ring behind for 11+
+    case 'arc': { // shallow crescent (centre forward), concentric second ring behind for 11+ (round spacing, ovals included)
+      const pitch = 2 * Math.max(r, rDepth) + GAP
       const rings = n > 10 ? 2 : 1
       const out: Local[] = []
       const per = fillWidths(n, Math.ceil(n / rings))
@@ -69,9 +73,9 @@ export function localLayout(shape: FormationShape, n: number, r: number): Local[
       })
       return out
     }
-    case 'checker': { // staggered ranks with ~1" gaps between neighbours in a rank, diagonals just clear
-      const c = 2 * r + 1.1
-      const rowPitch = Math.sqrt(Math.max(0.01, (2 * r + 0.15) ** 2 - (c / 2) ** 2))
+    case 'checker': { // staggered ranks with ~0.4" gaps between neighbours in a rank (coherency is 1/2"), diagonals just clear
+      const c = 2 * r + 0.4
+      const rowPitch = Math.max(Math.sqrt(Math.max(0.01, (2 * r + 0.15) ** 2 - (c / 2) ** 2)), rDepth > r ? depthPitch * 0.87 : 0)
       const ranks = n >= 12 ? 3 : 2
       return rankLayout(fillWidths(n, Math.ceil(n / ranks)), c, rowPitch, true)
     }
@@ -87,8 +91,9 @@ export function localLayout(shape: FormationShape, n: number, r: number): Local[
 export function buildFormation(shape: FormationShape, models: FormationModel[], anchor: { x: number; z: number }, facing: number): ModelPlacement[] | null {
   const n = models.length
   if (n === 0) return []
-  const r = Math.max(...models.map((m) => radiusOf(m.base)))
-  const local = localLayout(shape, n, r)
+  const rDepth = Math.max(...models.map((m) => radiusOf(m.base)))
+  const r = Math.max(...models.map((m) => lateralRadiusOf(m.base)))
+  const local = localLayout(shape, n, r, rDepth)
   const uMid = (Math.max(...local.map((p) => p.u)) + Math.min(...local.map((p) => p.u))) / 2
   const vMid = (Math.max(...local.map((p) => p.v)) + Math.min(...local.map((p) => p.v))) / 2
   const cos = Math.cos(facing), sin = Math.sin(facing)

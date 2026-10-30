@@ -1,0 +1,38 @@
+[
+  {
+    "id": "cities.enh.flask-of-lethisian-darkwater",
+    "faction": "cities",
+    "name": "Flask of Lethisian Darkwater",
+    "text": "Once per battle, heal the general for D6 at the start of any turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "cities.ability.flask-of-lethisian-darkwater"
+  },
+  {
+    "id": "cities.enh.heirloom-blade",
+    "faction": "cities",
+    "name": "Heirloom Blade",
+    "text": "The general's Master-forged Longsword has +1 Rend.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "cities.ability.heirloom-blade"
+  },
+  {
+    "id": "cities.enh.brazier-of-holy-flame",
+    "faction": "cities",
+    "name": "Brazier of Holy Flame",
+    "text": "At the end of any turn, return up to D3 slain models to a nearby Freeguild Steelhelms unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "cities.ability.brazier-of-holy-flame"
+  },
+  {
+    "id": "cities.enh.glimmering",
+    "faction": "cities",
+    "name": "Glimmering",
+    "text": "Once per phase, re-roll one hit, wound or save roll for the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "cities.ability.glimmering"
+  }
+]

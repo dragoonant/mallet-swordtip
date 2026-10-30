@@ -24,26 +24,28 @@ export const weaponService: WeaponService = {
     const a = weapon.abilities.find((x) => x.ability === ability)
     return a?.value ?? null
   },
-  // stat modifiers (onStatQuery: modifyStat/setStat) applied to the weapon's numeric stats (S/AP/range and, when A is
-  // a fixed number rather than a dice expression, A too — modifying a DiceExpr in place is out of scope [interp]) and
-  // BS/WS (skill); grantWeaponAbility effects merged in (Epic Challenge Precision, Veil of Time Sustained Hits, …).
+  // stat modifiers (onStatQuery: modifyStat/setStat) applied to the weapon's numeric stats (range, Attacks / Damage when they
+  // are flat numbers, Hit via BS/WS, Rend via the AP axis: Rend n = AP -n) and grantWeaponAbility effects merged in.
+  // CORE-12.4 Companion: a Companion weapon is unaffected by friendly characteristic changes, so it is returned as printed
+  // (negative modifiers and enemy abilities act on the rolls, not on the profile).
   effectiveWeapon(state, modelId, weaponId, attack) {
     const base = state.weapons[weaponId]
     const model = state.models[modelId]
     if (!base || !model) return base
+    if (base.abilities.some((a) => a.ability === 'COMPANION')) return base
     const abilities = hookService.weaponAbilitiesFor ? hookService.weaponAbilitiesFor(state, modelId, base, attack) : base.abilities
-    const q = (stat: 'BS' | 'WS' | 'S' | 'AP' | 'range' | 'A', v: number) =>
+    const q = (stat: 'BS' | 'WS' | 'S' | 'AP' | 'range' | 'A' | 'D', v: number) =>
       hookService.statFor ? hookService.statFor(state, { unitId: model.unitId, modelId, weapon: base, stat, attack }, v) : v
     const skillStat = base.kind === 'ranged' ? 'BS' as const : 'WS' as const
     const skill = base.skill === null ? null : q(skillStat, base.skill)
-    const S = q('S', base.S)
-    const AP = q('AP', base.AP)
     const range = q('range', base.range)
-    // A: only adjust when the base expression is a flat number (Waaagh!-style setStat/modifyStat on 'A')
+    const rend = Math.max(0, -q('AP', -base.rend))
     const parsedA = parseDiceExpr(base.A)
     const A: DiceExpr = parsedA.count === 0 ? q('A', parsedA.flat) : base.A
-    if (abilities === base.abilities && skill === base.skill && S === base.S && AP === base.AP && range === base.range && A === base.A) return base
-    return { ...base, abilities, skill, S, AP, range, A }
+    const parsedD = parseDiceExpr(base.D)
+    const D: DiceExpr = parsedD.count === 0 ? q('D', parsedD.flat) : base.D
+    if (abilities === base.abilities && skill === base.skill && range === base.range && A === base.A && D === base.D && rend === base.rend) return base
+    return { ...base, abilities, skill, range, A, D, rend }
   },
   isAvailable(state, modelId, weaponId) {
     for (const entry of sourcesFor(state)) {

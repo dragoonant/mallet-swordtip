@@ -1,0 +1,174 @@
+{
+  "id": "sph-fire-and-jade-aqshy-horizontal",
+  "name": "Fire and Jade (Aqshy, horizontal)",
+  "format": "spearhead",
+  "text": "Realm of Fire side of the Fire and Jade battlefield on the horizontal deployment map. Four rounds; at the end of your own turn score 1 VP for holding an objective, 1 more for holding two, and 1 more for holding more than your opponent.",
+  "board": {
+    "w": 30,
+    "h": 22
+  },
+  "territories": {
+    "A": [
+      {
+        "x": -15,
+        "z": -11
+      },
+      {
+        "x": 15,
+        "z": -11
+      },
+      {
+        "x": 15,
+        "z": 0
+      },
+      {
+        "x": -15,
+        "z": 0
+      }
+    ],
+    "B": [
+      {
+        "x": -15,
+        "z": 0
+      },
+      {
+        "x": 15,
+        "z": 0
+      },
+      {
+        "x": 15,
+        "z": 11
+      },
+      {
+        "x": -15,
+        "z": 11
+      }
+    ]
+  },
+  "deploymentZones": {
+    "A": [
+      {
+        "x": -15,
+        "z": -11
+      },
+      {
+        "x": 15,
+        "z": -11
+      },
+      {
+        "x": 15,
+        "z": -6
+      },
+      {
+        "x": -15,
+        "z": -6
+      }
+    ],
+    "B": [
+      {
+        "x": -15,
+        "z": 6
+      },
+      {
+        "x": 15,
+        "z": 6
+      },
+      {
+        "x": 15,
+        "z": 11
+      },
+      {
+        "x": -15,
+        "z": 11
+      }
+    ]
+  },
+  "objectives": [
+    {
+      "id": "obj-dracothion",
+      "x": 0,
+      "z": 0,
+      "radius": 3,
+      "name": "Dracothion"
+    },
+    {
+      "id": "obj-vulcatrix",
+      "x": -11,
+      "z": -7,
+      "radius": 3,
+      "name": "Vulcatrix"
+    },
+    {
+      "id": "obj-ignax",
+      "x": 10,
+      "z": -7,
+      "radius": 3,
+      "name": "Ignax"
+    },
+    {
+      "id": "obj-behemat",
+      "x": -10,
+      "z": 7,
+      "radius": 3,
+      "name": "Behemat"
+    },
+    {
+      "id": "obj-nagendra",
+      "x": 11,
+      "z": 7,
+      "radius": 3,
+      "name": "Nagendra"
+    }
+  ],
+  "objectiveRange": 0,
+  "objectiveMarkerRadius": 3,
+  "rounds": 4,
+  "firstTurn": "attackerChoice",
+  "scoring": [
+    {
+      "id": "hold-one",
+      "when": "turn.end",
+      "rounds": {
+        "from": 1,
+        "to": 4
+      },
+      "who": "active",
+      "rule": "custom",
+      "code": "sph.vp.holdOne",
+      "pointsPer": 1,
+      "cap": 1
+    },
+    {
+      "id": "hold-two",
+      "when": "turn.end",
+      "rounds": {
+        "from": 1,
+        "to": 4
+      },
+      "who": "active",
+      "rule": "custom",
+      "code": "sph.vp.holdTwo",
+      "pointsPer": 1,
+      "cap": 1
+    },
+    {
+      "id": "hold-more",
+      "when": "turn.end",
+      "rounds": {
+        "from": 1,
+        "to": 4
+      },
+      "who": "active",
+      "rule": "custom",
+      "code": "sph.vp.holdMore",
+      "pointsPer": 1,
+      "cap": 1
+    }
+  ],
+  "victory": {
+    "tie": "draw"
+  },
+  "terrainLayouts": [
+    "sph-fire-and-jade-standard"
+  ]
+}

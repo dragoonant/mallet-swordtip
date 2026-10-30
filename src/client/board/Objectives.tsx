@@ -126,7 +126,7 @@ export function Objectives() {
         return (
           <group key={objective.id} position={[objective.pos.x, 0, objective.pos.z]}>
             <ObjectiveZone zone={zoneR} color={color} owned={!!owner} contested={contested} lit={lit} hovered={hoveredObjectiveId === objective.id} />
-            <Token radius={markerRadius} color={color} />
+            <Token radius={markerRadius > 1.5 ? TOKEN_RADIUS : markerRadius} color={color} />
             <ObjectiveLabel id={objective.id} pos={[objective.pos.x, 1.7, objective.pos.z]} locked={locked} sticky={!!objective.stickyBy} a={levels.A} b={levels.B} compact={compact} />
           </group>
         )
@@ -143,6 +143,9 @@ export function Objectives() {
     </group>
   )
 }
+
+// Spearhead objectives are 3" circles (markerRadius 3) around a small 40mm token: the circle is the zone ring, not the token.
+const TOKEN_RADIUS = 0.79
 
 const OVERLAY = { transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, toneMapped: false } as const
 

@@ -174,15 +174,30 @@ export function applyReroll(rng: Rng, roll: DiceRoll, indexes: number[], modifie
   return { roll: next, before, after }
 }
 
-// success test for a per-die roll: unmodified 1 always fails, unmodified 6 always succeeds when `sixAlwaysSucceeds`
-export function dieSucceeds(unmodified: number, modified: number, target: number, sixAlwaysSucceeds = true): boolean {
+// success test for a per-die roll: an unmodified 1 always fails (CORE-2.10); AoS has no "6 always succeeds"
+// (`sixAlwaysSucceeds` is kept for the 40k call sites)
+export function dieSucceeds(unmodified: number, modified: number, target: number, sixAlwaysSucceeds = false): boolean {
   if (unmodified === 1) return false
   if (sixAlwaysSucceeds && unmodified === 6) return true
   return modified >= target
 }
 
-// R-6.12 wound roll needed for S vs T
-export function woundRollNeeded(S: number, T: number): number {
+// CORE-2.5: save modifiers — positive ones are capped at +1 in total, negative ones are not floored. Rend is NOT part of
+// this: it is subtracted from the save die outside the cap (result = die - rend + netSaveModifier).
+export function netSaveModifier(mods: number[]): number {
+  let pos = 0, neg = 0
+  for (const m of mods) { if (m > 0) pos += m; else neg += m }
+  return Math.min(1, pos) + neg
+}
+
+// CORE-2.6 / CORE-11.7: the number a save die is compared with the Save characteristic (unmodified 1 still fails)
+export function saveResult(die: number, rend: number, mods: number[] = []): number { return die - rend + netSaveModifier(mods) }
+
+// AoS: the wound roll is printed on the profile (`weapon.wound`); pass the weapon to get it, or (S, T) for the 42k formula
+export function woundRollNeeded(weaponOrS: number | { wound: number }, T?: number): number {
+  if (typeof weaponOrS === 'object') return weaponOrS.wound
+  const S = weaponOrS
+  if (T === undefined) return 4
   if (S >= 2 * T) return 2
   if (S > T) return 3
   if (S === T) return 4

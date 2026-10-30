@@ -13,10 +13,10 @@ import { canPreviewDeploy } from '../interaction/deployDrag'
 import { beginPreviewDrag, cancelOneFinger, canPreviewDrag, getGesture, groundPointAt, installTouchGestures, liftFor, type TouchGesture } from '../interaction/touchGesture'
 import { SIDE_COLOR, type DeploymentZones, type PlayerId } from './types'
 
-export const BOARD_WIDTH_IN = 44
-export const BOARD_DEPTH_IN = 30
+export const BOARD_WIDTH_IN = 30
+export const BOARD_DEPTH_IN = 22
 
-/** Board size in inches from the live game state (the mission's board); the 44x30 defaults when no game exists. */
+/** Board size in inches from the live game state (the mission's board); the 30x22 Spearhead defaults when no game exists. */
 export function useBoardSize(): { w: number; h: number } {
   const w = useGameStore((s) => s.state?.board.w ?? BOARD_WIDTH_IN)
   const h = useGameStore((s) => s.state?.board.h ?? BOARD_DEPTH_IN)
@@ -80,7 +80,7 @@ export interface BoardProps {
   onBoardPointer?: (point: { x: number; z: number }, kind: 'move' | 'down' | 'up' | 'hover' | 'leave') => void
 }
 
-/** The 44"x30" battle mat: textured ground plane and deployment-zone tint (§50-client §4). */
+/** The 30"x22" Spearhead battle mat: textured ground plane and deployment-zone tint (§50-client §4). */
 export function Board({ width: widthProp, depth: depthProp, deploymentZones, attacker = 'A', onBoardPointer }: BoardProps) {
   const size = useBoardSize()
   const width = widthProp ?? size.w

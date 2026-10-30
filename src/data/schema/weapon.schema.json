@@ -3,32 +3,165 @@
   "$id": "https://mallet42k.dev/schemas/weapon.schema.json",
   "title": "Weapon file: array of weapon profiles",
   "type": "array",
-  "items": { "$ref": "#/$defs/Weapon" },
+  "items": {
+    "$ref": "#/$defs/Weapon"
+  },
   "$defs": {
     "Weapon": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "common.schema.json#/$defs/Id" },
-        "name": { "type": "string", "maxLength": 60 },
-        "type": { "enum": ["ranged", "melee"] },
-        "range": { "type": "integer", "minimum": 0 },
-        "A": { "$ref": "common.schema.json#/$defs/DiceExpr" },
-        "skill": { "oneOf": [ { "$ref": "common.schema.json#/$defs/RollTarget" }, { "type": "null" } ] },
-        "S": { "oneOf": [ { "type": "integer", "minimum": 1 }, { "enum": ["user", "user+1", "user+2", "userx2"] } ] },
-        "AP": { "type": "integer", "maximum": 0, "minimum": -6 },
-        "D": { "$ref": "common.schema.json#/$defs/DiceExpr" },
-        "abilities": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/WeaponAbility" } },
-        "profileGroup": { "$ref": "common.schema.json#/$defs/Id" },
+        "id": {
+          "$ref": "common.schema.json#/$defs/Id"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "type": {
+          "enum": [
+            "ranged",
+            "melee"
+          ]
+        },
+        "range": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "A": {
+          "$ref": "common.schema.json#/$defs/DiceExpr"
+        },
+        "skill": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/$defs/RollTarget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "S": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "enum": [
+                "user",
+                "user+1",
+                "user+2",
+                "userx2"
+              ]
+            }
+          ]
+        },
+        "AP": {
+          "type": "integer",
+          "maximum": 0,
+          "minimum": -6
+        },
+        "D": {
+          "$ref": "common.schema.json#/$defs/DiceExpr"
+        },
+        "abilities": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/WeaponAbility"
+          }
+        },
+        "profileGroup": {
+          "$ref": "common.schema.json#/$defs/Id"
+        },
         "figure": {
-          "type": "object", "additionalProperties": false,
-          "properties": { "part": { "$ref": "common.schema.json#/$defs/Id" }, "hands": { "enum": [1, 2] } },
-          "required": ["part"]
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "part": {
+              "$ref": "common.schema.json#/$defs/Id"
+            },
+            "hands": {
+              "enum": [
+                1,
+                2
+              ]
+            }
+          },
+          "required": [
+            "part"
+          ]
+        },
+        "wound": {
+          "$ref": "common.schema.json#/$defs/RollTarget",
+          "description": "AoS Wound (N+)"
+        },
+        "rend": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6,
+          "description": "AoS Rend (positive number worsens the target save)"
         }
       },
-      "required": ["id", "name", "type", "range", "A", "skill", "S", "AP", "D", "abilities"],
+      "required": [
+        "id",
+        "name",
+        "type",
+        "range",
+        "A",
+        "skill",
+        "D",
+        "abilities"
+      ],
       "allOf": [
-        { "if": { "properties": { "type": { "const": "melee" } } }, "then": { "properties": { "range": { "type": "integer", "const": 0 } } } },
-        { "if": { "properties": { "type": { "const": "ranged" } } }, "then": { "properties": { "range": { "type": "integer", "minimum": 1 } } } }
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "melee"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "range": {
+                "type": "integer",
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ranged"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "range": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "S",
+            "AP"
+          ]
+        },
+        {
+          "required": [
+            "wound",
+            "rend"
+          ]
+        }
       ]
     }
   }

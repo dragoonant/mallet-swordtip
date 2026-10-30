@@ -11,21 +11,22 @@ import { modelsAnchor } from '../interaction/geometry'
 import { isPlacementDecision } from '../interaction/decisions'
 import { MissionPanel } from './MissionPanel'
 import { Tooltip } from './Tooltip'
-import { hasFatePool } from './fate'
 import { primaryScoringWindowHint, sourceName } from './labels'
+import { PHASE_NAME } from './phaseNames'
 import { BATTLEFIELDS } from '../board/terrainAssets'
 import { cameraNudge } from '../board/touchCamera'
 import { useFormFactor } from './formFactor'
 import { COMPACT_BAR_PX, useCompactSheets, type SheetId } from './compactSheets'
 import { buttonBase, buttonPrimary, colors, fontStack, mutedText, panel } from './theme'
 
+// PORT-0.3: the engine's 'command' phase is the Hero phase and 'fight' is the Combat phase
 const PHASES: { id: Phase; label: string }[] = [
   { id: 'deployment', label: 'Deploy' },
-  { id: 'command', label: 'Command' },
-  { id: 'movement', label: 'Movement' },
-  { id: 'shooting', label: 'Shooting' },
-  { id: 'charge', label: 'Charge' },
-  { id: 'fight', label: 'Fight' },
+  { id: 'command', label: PHASE_NAME.command },
+  { id: 'movement', label: PHASE_NAME.movement },
+  { id: 'shooting', label: PHASE_NAME.shooting },
+  { id: 'charge', label: PHASE_NAME.charge },
+  { id: 'fight', label: PHASE_NAME.fight },
 ]
 
 // A single CSS-grid row across the top of the screen — three columns (`auto 1fr auto`) so the left
@@ -482,7 +483,7 @@ export function Hud() {
         <div style={centerColumn}>
           <div style={topBar} data-testid="phase-tracker">
             <span data-testid="hud-round" style={{ fontWeight: 700 }}>
-              Round {state.round}
+              Round {state.round}/{state.mission.data.rounds}
             </span>
             <span style={{ display: 'flex', gap: 6 }}>
               {PHASES.map((p) => (
@@ -519,101 +520,6 @@ export function Hud() {
   )
 }
 
-/** True when the player's army has Acts of Faith: Adepta Sororitas patrol, or any of their units carries the
- *  ability or the faction keyword. Not inferred from `player.miracle`, which the engine initialises for everyone. */
-function hasActsOfFaith(state: GameState, id: PlayerId): boolean {
-  if (state.players[id].faction === 'adepta-sororitas') return true
-  const isAof = (s: string) => /acts[-_ ]?of[-_ ]?faith/i.test(s)
-  return Object.values(state.units).some((u) => {
-    if (u.player !== id) return false
-    const ds = state.datasheets[u.datasheetId]
-    if (!ds) return false
-    return (
-      ds.abilities.some((ab) => {
-        const rt = state.abilities[ab] as ({ code?: string; name?: string } | undefined)
-        return isAof(String(ab)) || (rt != null && (isAof(rt.code ?? '') || isAof(rt.name ?? '')))
-      }) ||
-      [...ds.factionKeywords, ...ds.keywords].some((k) => String(k).toUpperCase() === 'ADEPTA SORORITAS')
-    )
-  })
-}
-
-/** Adepta Sororitas' pool of Miracle dice (their Acts of Faith rule): a row of small pips showing each saved
- *  die's fixed value. Renders nothing for an army without the rule. */
-function MiracleDice({ dice: diceIn, id, enabled, fate }: { dice: number[] | undefined; id: PlayerId; enabled: boolean; fate?: boolean }) {
-  if (!enabled) return null
-  const dice = diceIn ?? []
-  return (
-    <Tooltip title={fate ? 'Fate dice' : 'Miracle dice'} body={fate ? 'Spend one in place of a die of a roll (Strands of Fate).' : 'Spend one in place of a roll (Acts of Faith).'} placement="bottom"><div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }} data-testid={`hud-miracle-${id}`}>
-      <span>{fate ? 'Fate' : 'Miracle'}</span>
-      {dice.length === 0 && <span style={mutedText}>none</span>}
-      {dice.map((v, i) => (
-        <span
-          key={i}
-          style={{ minWidth: 18, height: 18, lineHeight: '18px', textAlign: 'center', borderRadius: 4, background: '#f2efe6', color: '#1c1c22', fontWeight: 700, fontSize: 12 }}
-        >
-          {v}
-        </span>
-      ))}
-    </div></Tooltip>
-  )
-}
-
-/** True when any of the player's units carries Drukhari Power from Pain (matched by ability code, so it follows the data). */
-function hasPowerFromPain(state: GameState, id: PlayerId): boolean {
-  return Object.values(state.units).some((u) => {
-    if (u.player !== id) return false
-    const ds = state.datasheets[u.datasheetId]
-    return !!ds && ds.abilities.some((ab) => (state.abilities[ab] as { code?: string } | undefined)?.code === 'powerFromPain')
-  })
-}
-
-/** Drukhari Pain tokens (Power from Pain): a row of small pips, one per saved token. Renders nothing for other armies. */
-function PainTokens({ state, id }: { state: GameState; id: PlayerId }) {
-  if (!hasPowerFromPain(state, id)) return null
-  const raw = state.players[id].secondaryState?.painTokens
-  const n = typeof raw === 'number' && raw > 0 ? raw : 0
-  return (
-    <Tooltip title="Pain tokens" body="Spend one at the start of a phase to Empower a unit: it may re-roll Advance, Charge and (in Shooting or Fight) hit rolls that phase. You gain one at the start of the battle, whenever an enemy unit is destroyed, and whenever an enemy unit fails a Battle-shock test." placement="bottom"><div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }} data-testid={`hud-pain-${id}`}>
-      <span>Pain</span>
-      {n === 0 && <span style={mutedText}>none</span>}
-      {n > 0 && n <= 8 && Array.from({ length: n }, (_, i) => (
-        <span key={i} style={{ width: 10, height: 10, borderRadius: 5, background: '#3fe0c0', boxShadow: '0 0 4px #3fe0c0' }} />
-      ))}
-      {n > 8 && <span style={{ fontWeight: 700 }}>{n}</span>}
-    </div></Tooltip>
-  )
-}
-
-/** True when any of the player's units carries a Cabal of Sorcerers ability (matched by ability code, so it follows the data). */
-function hasCabal(state: GameState, id: PlayerId): boolean {
-  return Object.values(state.units).some((u) => {
-    if (u.player !== id) return false
-    const ds = state.datasheets[u.datasheetId]
-    return !!ds && ds.abilities.some((ab) => {
-      const code = (state.abilities[ab] as { code?: string } | undefined)?.code
-      return code === 'cabalOfSorcerers' || code === 'cabalRituals'
-    })
-  })
-}
-
-/** Thousand Sons Cabal pool: Psykers fill it at the end of your Command phase, Rituals spend it. Renders nothing for other armies. */
-function CabalPool({ state, id }: { state: GameState; id: PlayerId }) {
-  if (!hasCabal(state, id)) return null
-  const raw = state.players[id].secondaryState?.cabalPoints
-  const n = typeof raw === 'number' && raw > 0 ? raw : 0
-  return (
-    <Tooltip title="Cabal pool" body="Your Psykers add points at the end of your Command phase, and the pool empties at the start of your next one. At the start of any phase, spend points on a Ritual: Weaver of Fates (2) re-rolls a failed save near your Psyker, Echoes from the Warp (6) makes one Stratagem free for a unit." placement="bottom"><div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }} data-testid={`hud-cabal-${id}`}>
-      <span>Cabal</span>
-      {n === 0 && <span style={mutedText}>empty</span>}
-      {n > 0 && n <= 10 && Array.from({ length: n }, (_, i) => (
-        <span key={i} style={{ width: 10, height: 10, borderRadius: 2, transform: 'rotate(45deg)', background: '#5ad1e6', boxShadow: '0 0 4px #5ad1e6' }} />
-      ))}
-      {n > 10 && <span style={{ fontWeight: 700 }}>{n}</span>}
-    </div></Tooltip>
-  )
-}
-
 function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
   const bundle = useGameStore((s) => s.bundle)
   const [open, setOpen] = useState(false)
@@ -627,12 +533,9 @@ function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
       <div style={{ color, fontWeight: 700, fontSize: 13 }}>
         {p.name} ({id})
       </div>
-      <div style={{ fontSize: 13 }} data-testid={`hud-cp-${id}`}>
-        CP {p.cp}
-      </div>
-      <MiracleDice dice={(p as { miracle?: { dice?: number[] } }).miracle?.dice} id={id} enabled={hasActsOfFaith(state, id) || hasFatePool(state, id)} fate={hasFatePool(state, id) && !hasActsOfFaith(state, id)} />
-      <PainTokens state={state} id={id} />
-      <CabalPool state={state} id={id} />
+      {state.underdog === id && (
+        <div style={{ fontSize: 12, color: colors.muted }} data-testid={`hud-underdog-${id}`}>Underdog</div>
+      )}
       <button style={vpButton} data-testid={`hud-vp-${id}`} onClick={() => setOpen((v) => !v)}>
         VP {p.vp} {scored.length > 0 ? (open ? '▲' : '▼') : ''}
       </button>
@@ -815,13 +718,13 @@ function CompactBadge({ id, state, open, onToggle }: { id: PlayerId; state: Game
       <button
         style={{ ...cBadgeBtn, borderColor: active ? color : colors.border }}
         aria-expanded={open}
-        aria-label={`${p.name} (${id}): ${p.cp} CP, ${p.vp} VP`}
+        aria-label={`${p.name} (${id}): ${p.vp} VP${state.underdog === id ? ', underdog' : ''}`}
         data-testid={`hud-badge-${id}`}
         onClick={onToggle}
       >
         <span style={{ ...cBadgeName, color }}>{p.name}</span>
         <span style={cBadgeNums}>
-          <span data-testid={`hud-cp-${id}`}>CP {p.cp}</span> · <span data-testid={`hud-vp-${id}`}>VP {p.vp}</span>
+          <span data-testid={`hud-vp-${id}`}>VP {p.vp}</span>{state.underdog === id ? ' · underdog' : ''}
         </span>
       </button>
       {open && (
@@ -829,9 +732,6 @@ function CompactBadge({ id, state, open, onToggle }: { id: PlayerId; state: Game
           <div style={{ color, fontWeight: 700, fontSize: 13 }}>
             {p.name} ({id})
           </div>
-          <MiracleDice dice={(p as { miracle?: { dice?: number[] } }).miracle?.dice} id={id} enabled={hasActsOfFaith(state, id) || hasFatePool(state, id)} fate={hasFatePool(state, id) && !hasActsOfFaith(state, id)} />
-          <PainTokens state={state} id={id} />
-          <CabalPool state={state} id={id} />
           <div style={{ ...vpBreakdown, width: 'auto', maxHeight: 'none', marginTop: 0 }} data-testid={`hud-vp-breakdown-${id}`}>
             {scored.length === 0 && <div style={mutedText}>No VP scored yet.</div>}
             {scored.map((row, i) => (
@@ -866,7 +766,6 @@ function CompactHud({ state, passAction, thinking, dispatch }: { state: GameStat
 
   const phaseLabel = PHASES.find((p) => p.id === state.phase)?.label ?? String(state.phase)
   const activeColor = state.activePlayer === 'A' ? colors.playerA : colors.playerB
-  const stratPlayer = pending?.player ?? state.activePlayer
 
   const toggleDrawer = (id: SheetId) => {
     setMenuOpen(false)
@@ -896,16 +795,13 @@ function CompactHud({ state, passAction, thinking, dispatch }: { state: GameStat
           <CompactBadge id="A" state={state} open={badgeOpen === 'A'} onToggle={() => { setMenuOpen(false); closeSheet(); setBadgeOpen((v) => (v === 'A' ? null : 'A')) }} />
           <CompactBadge id="B" state={state} open={badgeOpen === 'B'} onToggle={() => { setMenuOpen(false); closeSheet(); setBadgeOpen((v) => (v === 'B' ? null : 'B')) }} />
           <div style={cPhaseBox} data-testid="phase-tracker">
-            <span data-testid="hud-round" style={{ fontWeight: 700 }}>R{state.round}</span>
+            <span data-testid="hud-round" style={{ fontWeight: 700 }}>R{state.round}/{state.mission.data.rounds}</span>
             <span data-testid={`phase-chip-${state.phase}`} style={chipActive}>{phaseLabel}</span>
             <span style={{ color: activeColor, fontWeight: 700 }} aria-label={`Active player ${state.activePlayer}${thinking ? ', thinking' : ''}`}>
               {state.activePlayer}{thinking ? '…' : ''}
             </span>
           </div>
           <span style={{ flex: '1 1 0', minWidth: 0 }} />
-          <button style={sheet === 'stratagems' ? { ...cBtn, background: colors.accent, color: colors.accentText, border: `1px solid ${colors.accent}` } : cBtn} data-testid="btn-stratagems" aria-pressed={sheet === 'stratagems'} onClick={() => toggleDrawer('stratagems')}>
-            Strat
-          </button>
           <button style={cBtnPrimary} data-testid="btn-end-phase" disabled={!passAction} onClick={() => passAction && dispatch(passAction)}>
             End phase
           </button>

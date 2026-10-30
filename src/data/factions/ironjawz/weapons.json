@@ -1,0 +1,56 @@
+[
+  {
+    "id": "ironjawz.weapon.boss-choppa",
+    "name": "Boss-choppa",
+    "type": "melee",
+    "range": 0,
+    "A": 8,
+    "skill": 4,
+    "wound": 2,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "ironjawz.weapon.choppa-or-stikka",
+    "name": "Choppa or Stikka",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "ANTI",
+        "keyword": "@charged",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "ironjawz.weapon.rager-weapons",
+    "name": "Rager Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 2,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "ironjawz.weapon.brute-weapons",
+    "name": "Brute Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  }
+]

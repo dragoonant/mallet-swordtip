@@ -205,6 +205,15 @@ const KNOWN_KIT: Record<string, KitId> = {
   'bt.primaris-crusader-squad': 'bt-initiate-rifle',
   'bt.marshal-siguard': 'bt-siguard',
   'bt.impulsor': 'bt-impulsor',
+  // Spearhead placeholders until the real figures land (13-port-plan §4.3): nearest existing 42k kit per warscroll.
+  'cities.unit.freeguild-cavalier-marshal': 'cdm-bloodcrusher',
+  'cities.unit.freeguild-steelhelms': 'am-guardsman',
+  'cities.unit.freeguild-cavaliers': 'cdm-bloodcrusher',
+  'cities.unit.ironweld-great-cannon': 'am-field-gun',
+  'ironjawz.unit.megaboss': 'ork-warboss',
+  'ironjawz.unit.brute-ragerz': 'ork-deff-dread',
+  'ironjawz.unit.ardboyz': 'ork-boy',
+  'ironjawz.unit.brutes': 'ork-warboss',
 }
 
 /** Models of a mixed unit that look different from the rest of it (a flamer sister is not a rifle sister), keyed
@@ -633,6 +642,13 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   'da.bladeguard-veteran-squad': 1.2,
   'adm.kataphron-destroyers': 1.45,
   'ork.squighog-boyz': 1.7,
+  // Spearhead: Ironjawz heavies stand tall; the cavalry kits are mounted, the great cannon a squat artillery piece.
+  'ironjawz.unit.megaboss': 1.9,
+  'ironjawz.unit.brute-ragerz': 1.8,
+  'ironjawz.unit.brutes': 1.6,
+  'ironjawz.unit.ardboyz': 1.2,
+  'cities.unit.freeguild-cavaliers': 1.9,
+  'cities.unit.freeguild-cavalier-marshal': 2.0,
   // Space Wolves: the Invictor Tactical Warsuit is a tall bipedal walker on a 90mm base.
   'sw.invictor-tactical-warsuit': 2.4,
   'sw.battle-leader-thoryk': 1.2,

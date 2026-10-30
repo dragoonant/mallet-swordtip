@@ -10,7 +10,7 @@ import { usePresentationSettings } from './presentation/settings'
 import { useDisplayState } from './presentation/presentedStore'
 import { useGameStore } from './store/game'
 import { useUiStore } from './ui/uiStore'
-import { computeBoardClickDraft, CultAmbushMarkers, UnitStatusIcons, DeathGhosts, MovePreviewOverlay, PlacementOverlay, resolveMeasureLine, UnitLabels, UnitsLayer, useBoardClick } from './interaction'
+import { computeBoardClickDraft, UnitStatusIcons, DeathGhosts, MovePreviewOverlay, PlacementOverlay, resolveMeasureLine, UnitLabels, UnitsLayer, useBoardClick } from './interaction'
 import { isClampedMovePending } from './interaction/moveClamp'
 import { commitStagedDraft } from './interaction/commitDraft'
 import { COMMIT_CLICK_RADIUS_IN, useMoveKeys } from './interaction/moveHover'
@@ -114,12 +114,12 @@ export function Scene() {
 
   const terrainPieces = Object.values(state.board.pieces) as TerrainPieceData[]
   const zones = state.mission.data.deploymentZones
-  const attacker = state.players.B.side === 'attacker' ? 'B' : 'A'
+  // zones are keyed by territory (SPH-1.4); the player holding territory A is the one tinted in zone A's colour
+  const attacker = state.players.A.territory === 'A' ? 'A' : 'B'
   // Seat the camera on the local player's side (the human vs the bot; seat A in hot-seat): behind their
   // zone when zones face each other across the long edges, otherwise with their zone on the left.
   const viewer = botSeat === 'A' ? 'B' : 'A'
-  const viewerSide = state.players[viewer].side
-  const c = viewerSide ? zoneCentroid(zones[viewerSide === 'attacker' ? 'A' : 'B']) : null
+  const c = zoneCentroid(zones[state.players[viewer].territory])
   const viewFromFar = !!c && (Math.abs(c.z) > Math.abs(c.x) ? c.z < 0 : c.x > 0)
 
   return (
@@ -148,7 +148,6 @@ export function Scene() {
       <Terrain pieces={terrainPieces} seed={state.seed} />
       <Objectives />
 
-      <CultAmbushMarkers />
       <UnitsLayer />
       <UnitLabels />
       <UnitStatusIcons />
