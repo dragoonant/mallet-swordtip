@@ -13,11 +13,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "sim": "tsx tools/sim.ts",
-    "bench:ai": "tsx tools/ai-bench.ts",
-    "spike:incursion": "tsx tools/spike-incursion.ts",
-    "validate:data": "tsx tools/validate-data.ts",
-    "balance:report": "tsx tools/balance-report.ts",
-    "probe:deploy": "tsx tools/deploy-probe.ts"
+    "validate:data": "tsx tools/validate-data.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",

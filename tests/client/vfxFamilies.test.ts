@@ -12,7 +12,7 @@ const ranged = Object.entries(bundle.weapons).filter(([, w]) => w.type === 'rang
 
 describe('vfx weapon families', () => {
   it('every ranged weapon in the data maps to a family, by keyword rather than a fallback', () => {
-    expect(ranged.length).toBeGreaterThan(50)
+    expect(ranged.length).toBeGreaterThan(0)
     const fallbacks = ranged.map(([id, w]) => ({ id, ...classifyVfxFamily(id, w, '') })).filter((c) => c.via !== 'keyword').map((c) => `${c.id} -> ${c.family}`)
     expect(fallbacks).toEqual([])
     for (const [id, w] of ranged) expect(VFX_FAMILIES, id).toContain(vfxFamily(id, w, ''))

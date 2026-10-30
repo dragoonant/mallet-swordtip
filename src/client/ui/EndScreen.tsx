@@ -191,10 +191,8 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
       <thead>
         <tr>
           <th style={thRound}>Round</th>
-          <th style={th}>A primary</th>
-          <th style={th}>A secondary</th>
-          <th style={th}>B primary</th>
-          <th style={th}>B secondary</th>
+          <th style={th}>A VP</th>
+          <th style={th}>B VP</th>
         </tr>
       </thead>
       <tbody>
@@ -204,10 +202,8 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
           return (
             <tr key={round}>
               <td style={tdRound}>{round}</td>
-              <td style={td}>{a.primary}</td>
-              <td style={td}>{a.secondary}</td>
-              <td style={td}>{b.primary}</td>
-              <td style={td}>{b.secondary}</td>
+              <td style={td}>{a.primary + a.secondary}</td>
+              <td style={td}>{b.primary + b.secondary}</td>
             </tr>
           )
         })}

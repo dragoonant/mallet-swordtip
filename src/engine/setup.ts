@@ -224,7 +224,8 @@ export function autoDeployPlacements(
   const placedHere: Footprint[] = []
   const out: ModelPlacement[] = []
   for (const m of models) {
-    const step = Math.max(0.5, m.base.radius * 2 + 0.1)
+    // an oval is much longer than it is wide: a fine x step keeps the next one within coherency of the last (the overlap test skips taken spots)
+    const step = m.base.radius2 !== undefined ? 0.25 : Math.max(0.5, m.base.radius * 2 + 0.1)
     let found: { x: number; z: number; facing: number } | null = null
     // Rules Commentary "Deploying Units": a base too big for the zone goes touching the battlefield edge instead
     if (opts.board && isOversizeForZone(m.base, zone)) {

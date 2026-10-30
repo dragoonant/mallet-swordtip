@@ -11,6 +11,13 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
 - Live: https://dragoonant.github.io/mallet-swordtip/ (the 42k game, renamed, until F4).
 - JSON schema `$id`s still read `https://mallet42k.dev/...` — internal identifiers, left alone.
 
+## F2 wave 3 (2026-10-29): engine port is playable
+- The 40k factions, missions, terrain, tests and tools are deleted. `npm run typecheck`, `npm test`, `npm run validate:data`
+  are green. `npm run sim -- --games 100 --seed 1` (random bots; add `--ai` for the utility AI) plays Cities of Sigmar vs
+  Ironjawz to the end of round 4 with no invariant violations.
+- Hotseat and vs-bot Playwright playthroughs: `PW_PORT=4417 npx playwright test tests/e2e/spearhead-hotseat.spec.ts --project=chromium`
+  (about 3 minutes; screenshots land in `e2e-out/`).
+
 ## Next: F1 Spearhead spec
 - Source the rules: GW's free AoS core rules PDF and the Spearhead rules/battlepack pages
   (Wahapedia `aos4` blocks WebFetch with 403 — use the browser). Save PDFs to `docs/sources/`

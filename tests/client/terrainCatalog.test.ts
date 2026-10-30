@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { TerrainPieceData } from '@/data/types'
-import cp01 from '@/data/terrain/cp-01.json'
+import cp01 from '@/data/terrain/sph-fire-and-jade-standard.json'
 import { fittedScale, polygonBounds, simpleTurns } from '@/client/board/ruinFit'
 import { panelFittedSize, planPillars, planWallPanels, slabPool, wallBoxes, wallLength, wallThickness } from '@/client/board/ruinKit'
 import { RUIN_KIT_DEPTH_PAD, RUIN_KIT_WALL_SLUGS, TERRAIN_CATALOG, glbVisualHeight } from '@/client/board/terrainCatalog'

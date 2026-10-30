@@ -11,6 +11,7 @@ async function main(): Promise<void> {
   const games = Number(arg('games', '10'))
   const seed = arg('seed', '1')
   const verbose = process.argv.includes('--verbose')
+  const ai = process.argv.includes('--ai') // both seats played by the utility AI instead of random legal moves
   const bundle = await loadBundle()
   const started = Date.now()
   const wins: Record<string, number> = {}
@@ -20,7 +21,7 @@ async function main(): Promise<void> {
     const t0 = Date.now()
     let run
     try {
-      run = runGame(bundle, seed, g, DATA_VERSION)
+      run = await runGame(bundle, seed, g, DATA_VERSION, ai)
     } catch (err) {
       const v = (err as { violations?: Violation[] }).violations ?? [{ seed: `sim-${seed}-${g}`, actionIndex: -1, message: (err as Error).message }]
       violations.push(...v)
@@ -32,7 +33,7 @@ async function main(): Promise<void> {
     if (run.winner === 'draw') draws++
     else if (run.winner) wins[run.factions[run.winner]] = (wins[run.factions[run.winner]] ?? 0) + 1
     if (verbose) {
-      console.log(`game ${g} ${run.setup.missionId} A=${run.factions.A} B=${run.factions.B}: ${run.winner ?? 'unfinished'} (${run.reason}) VP ${run.vp.A}-${run.vp.B}, rounds ${run.rounds}, actions ${run.actions.length}, ${Date.now() - t0}ms${run.violations.length ? `, ${run.violations.length} violation(s)` : ''}`)
+      console.log(`game ${g} A=${run.factions.A} B=${run.factions.B}: ${run.winner ?? 'unfinished'} (${run.reason}) VP ${run.vp.A}-${run.vp.B}, rounds ${run.rounds}, actions ${run.actions.length}, ${Date.now() - t0}ms${run.violations.length ? `, ${run.violations.length} violation(s)` : ''}`)
     }
   }
   console.log(`sim: ${games} games, seed ${seed}, ${((Date.now() - started) / 1000).toFixed(1)}s`)
