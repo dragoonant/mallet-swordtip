@@ -10,24 +10,32 @@ import zlib
 import soundfile as sf
 import torch
 
-from common import AG, MG, MUSIC, SFX, aos_items, id_dir
+from common import ALT, AG, MG, MUSIC, SFX, aos_items, id_dir
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ids", default="")
 ap.add_argument("--takes", type=int, default=0, help="override takes per engine")
 ap.add_argument("--force", action="store_true")
+ap.add_argument("--alt", action="store_true", help="second-pass prompts from common.ALT -> <engine>-alt-<n>.wav")
 ap.add_argument("--only", choices=["sfx", "music"], default=None)
 args = ap.parse_args()
 want = set(filter(None, args.ids.split(",")))
 manifest = {i["id"]: i for i in aos_items()}
 
 jobs = []  # (engine, id, prompt, duration, takes)
-for iid, c in SFX.items():
+if args.alt:
+    for iid, a in ALT.items():
+        if want and iid not in want:
+            continue
+        for eng, key in ((AG, "ag"), (MG, "mg")):
+            if key in a:
+                jobs.append((eng, iid, a[key], SFX[iid]["dur"], args.takes or 6))
+for iid, c in ([] if args.alt else SFX.items()):
     if args.only == "music" or (want and iid not in want):
         continue
     for eng in c.get("engines", [AG]):
         jobs.append((eng, iid, c["mp"] if eng == MG else c["p"], c["dur"], args.takes or 4))
-for iid, c in MUSIC.items():
+for iid, c in ([] if args.alt else MUSIC.items()):
     if args.only == "sfx" or (want and iid not in want):
         continue
     dur = c.get("dur") or manifest[iid]["lengthMs"] / 1000 + 1.0
@@ -43,11 +51,12 @@ for engine in (AG, MG):
              else MusicGen.get_pretrained("facebook/musicgen-stereo-medium", device="cuda"))
     for _, iid, prompt, dur, takes in todo:
         d = id_dir(iid)
-        outs = [d / f"{engine}-{n + 1}.wav" for n in range(takes)]
+        tag = f"{engine}-alt" if args.alt else engine
+        outs = [d / f"{tag}-{n + 1}.wav" for n in range(takes)]
         if not args.force and all(o.exists() for o in outs):
             print("skip", iid, engine, flush=True)
             continue
-        torch.manual_seed(zlib.crc32(f"{iid}-{engine}".encode()))
+        torch.manual_seed(zlib.crc32(f"{iid}-{tag}".encode()))
         model.set_generation_params(duration=dur, use_sampling=True, top_k=250,
                                     cfg_coef=3.5 if engine == AG else 3.0)
         print("gen", engine, iid, f"{dur:.1f}s x{takes}", flush=True)

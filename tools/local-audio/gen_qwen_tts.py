@@ -2,9 +2,9 @@
 
 Run with the qwen-tts venv's python:
   python gen_qwen_tts.py voices            # TTS candidates for the 7 voice-like sfx ids
-  python gen_qwen_tts.py narrator          # all aos-narr-* lines (designed voice, plus a cloned-reference variant)
+  python gen_qwen_tts.py narrator          # all aos-narr-* lines (one designed reference voice, cloned per line)
   python gen_qwen_tts.py narrator --ids aos-narr-victory
-Takes land in <OUT>/<id>/qwen-<n>.wav (voices) and qwen-design-<n>.wav / qwen-clone-<n>.wav (narrator).
+Takes land in <OUT>/<id>/qwen-<n>.wav (voices) and qwen-clone-<n>.wav (narrator).
 """
 import argparse
 import os
@@ -54,30 +54,35 @@ if args.mode == "voices":
                 sf.write(str(out), np.asarray(wavs[0], dtype=np.float32), sr)
                 print("wrote", out.name, iid, repr(line), f"{len(wavs[0]) / sr:.2f}s", flush=True)
 else:
+    # One designed voice for every line: VoiceDesign makes several reference clips of the same sentence, the
+    # deepest clearly-voiced one becomes the reference, and the Base model clones it for each line, so the
+    # timbre is identical across all aos-narr-* items (VoiceDesign alone invents a new voice per call).
+    import librosa
     items = {k: v for k, v in NARRATOR.items() if not want or k in want}
-    design = load("Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign")
     ref_dir = OUT / "_narrator"
     ref_dir.mkdir(parents=True, exist_ok=True)
-    # 1. one-line-at-a-time designed voice, same instruct + fixed seeds
-    for iid, line in items.items():
-        d = id_dir(iid)
-        for n in range(1, args.takes + 1):
-            out = d / f"qwen-design-{n}.wav"
-            if out.exists() and not args.force:
-                continue
-            seed_for(f"{iid}-design-{n}")
-            wavs, sr = design.generate_voice_design(text=line, instruct=NARRATOR_INSTRUCT, language="English")
-            sf.write(str(out), np.asarray(wavs[0], dtype=np.float32), sr)
-            print("wrote", out.name, repr(line), f"{len(wavs[0]) / sr:.2f}s", flush=True)
-    # 2. cloned-reference variant for a tighter, consistent timbre across all lines
     ref_text = "The banners are raised and the drums are beating. Let no enemy leave this field alive."
     ref_wav = ref_dir / "ref.wav"
     if not ref_wav.exists() or args.force:
-        seed_for("narrator-ref")
-        wavs, sr = design.generate_voice_design(text=ref_text, instruct=NARRATOR_INSTRUCT, language="English")
-        sf.write(str(ref_wav), np.asarray(wavs[0], dtype=np.float32), sr)
-    del design
-    torch.cuda.empty_cache()
+        design = load("Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign")
+        best = None
+        for k in range(1, 9):
+            seed_for(f"narrator-ref-{k}")
+            wavs, sr = design.generate_voice_design(text=ref_text, instruct=NARRATOR_INSTRUCT, language="English")
+            w = np.asarray(wavs[0], dtype=np.float32)
+            sf.write(str(ref_dir / f"ref-{k}.wav"), w, sr)
+            y = librosa.resample(w, orig_sr=sr, target_sr=16000)
+            f0, voiced, _ = librosa.pyin(y, fmin=60, fmax=400, sr=16000)
+            med = float(np.nanmedian(f0[voiced])) if voiced.any() else 999.0
+            ok = voiced.mean() > 0.5 and 3.0 < len(w) / sr < 9.0
+            print("ref", k, f"f0 {med:.0f} Hz voiced {voiced.mean():.2f} dur {len(w) / sr:.1f}s", flush=True)
+            if ok and (best is None or med < best[0]):
+                best = (med, k)
+        print("reference take", best, flush=True)
+        import shutil
+        shutil.copy(ref_dir / f"ref-{best[1]}.wav", ref_wav)
+        del design
+        torch.cuda.empty_cache()
     base = load("Qwen/Qwen3-TTS-12Hz-1.7B-Base")
     prompt = base.create_voice_clone_prompt(ref_audio=str(ref_wav), ref_text=ref_text)
     for iid, line in items.items():

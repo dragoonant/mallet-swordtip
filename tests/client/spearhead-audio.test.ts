@@ -4,7 +4,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { loadBundle } from '../../src/data'
-import { AOS_AVAILABLE, AOS_FALLBACK, AOS_MUSIC_IDS, AOS_SFX_IDS, soundFile, soundTrim } from '../../src/client/audio/aos'
+import { AOS_AVAILABLE, AOS_FALLBACK, NARR_ALIAS, AOS_MUSIC_IDS, AOS_SFX_IDS, soundFile, soundTrim } from '../../src/client/audio/aos'
 import { PRELOAD_IDS, STREAMED_SOUNDS, channelFor, audioUrl } from '../../src/client/audio/manifest'
 import { aosWeaponSound, soundsForEvent, type SoundLookup } from '../../src/client/audio/eventSounds'
 import { classifyVfxFamily, vfxFamily } from '../../src/client/weaponFlavour'
@@ -29,13 +29,18 @@ describe('AUDIO-AOS Spearhead sound set', () => {
   })
 
   it('AUDIO-AOS-002 AOS_AVAILABLE lists exactly the aos mp3s on disk', () => {
-    const generated = [...onDisk].filter((f) => f.startsWith('aos-')).sort()
+    const generated = [...onDisk].filter((f) => f.startsWith('aos-') && !f.startsWith('aos-narr-')).sort()
     // When this fails after generating the set: add the missing ids to AOS_AVAILABLE in src/client/audio/aos.ts.
     expect([...AOS_AVAILABLE].sort()).toEqual(generated)
   })
 
+  it('AUDIO-AOS-004 old narrator ids play the Spearhead narrator lines that exist on disk', () => {
+    for (const [from, to] of Object.entries(NARR_ALIAS)) expect(onDisk.has(to), `${from} -> ${to}`).toBe(true)
+    expect(soundFile('narr-fight-phase')).toBe('aos-narr-combat-phase')
+  })
+
   it('AUDIO-AOS-003 a fallback borrows its trim, a generated file plays as made', () => {
-    expect(soundTrim('aos-cannon-fire')).toBe(AOS_FALLBACK['aos-cannon-fire'].volume ?? 1)
+    expect(soundTrim('aos-cannon-fire')).toBe(AOS_AVAILABLE.has('aos-cannon-fire') ? 1 : AOS_FALLBACK['aos-cannon-fire'].volume ?? 1)
     expect(soundTrim('wpn-choppa')).toBe(1)
     expect(soundFile('wpn-choppa')).toBe('wpn-choppa')
     expect(audioUrl('aos-victory')).toMatch(/audio\/(aos-victory|victory-fanfare)\.mp3$/)

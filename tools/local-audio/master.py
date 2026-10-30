@@ -118,7 +118,7 @@ def metrics(x, sr):
     clip = float((np.abs(x) > 0.99).mean())
     db, _ = frame_db(mono, sr)
     active = float((db > db.max() - 35).mean()) if len(db) else 0.0
-    t = trim(x, sr)
+    t = trim(x, sr, lead_db=-36, tail_db=-45)
     return dict(peak=round(pk, 3), clip=round(clip, 5), active=round(active, 3), content_s=round(len(t) / sr, 2),
                 dur_s=round(len(x) / sr, 2), rms=round(float(np.sqrt((mono ** 2).mean())), 4))
 
@@ -161,14 +161,14 @@ def clap_score(path, text):
 
 def candidates(iid):
     d = id_dir(iid)
-    return sorted(w for w in d.glob("*.wav"))
+    return sorted(w for w in d.glob("*.wav") if not w.name.startswith("_"))
 
 
 def do_score():
     allscores = json.loads(SCORES.read_text()) if SCORES.exists() else {}
     for iid in ids:
         text = prompt_for(iid)
-        res = allscores.get(iid, {})
+        res = {}
         for w in candidates(iid):
             x, sr = read(w)
             r = metrics(x, sr)
@@ -183,11 +183,15 @@ def do_score():
     SCORES.write_text(json.dumps(allscores, indent=1))
 
 
-def ok(r, kind, loop):
-    if r["peak"] < 0.03 or r["clip"] > 0.003:
+def ok(r, kind, loop, iid=""):
+    lo_peak, lo_rms = (0.25, 0.02) if kind == "sfx" else (0.08, 0.01)
+    if r["peak"] < lo_peak or r["rms"] < lo_rms or r["clip"] > 0.003:
         return False
     if kind == "sfx" and r["content_s"] < (0.3 if not loop else 1.5):
         return False
+    if iid in SFX and "engines" in SFX[iid]:  # horn / fanfares / drumroll / victory / defeat must actually last
+        if r["content_s"] < 0.7 * manifest[iid].get("durationSeconds", 2):
+            return False
     if kind == "music" and r["content_s"] < r["dur_s"] * 0.6:
         return False
     return True
@@ -204,7 +208,11 @@ def choose(iid):
     sc = json.loads(SCORES.read_text())[iid]
     kind = manifest[iid]["kind"]
     loop = bool(manifest[iid].get("loop")) or MUSIC.get(iid, {}).get("loop", False)
-    pool = {k: v for k, v in sc.items() if ok(v, kind, loop)}
+    pool = {k: v for k, v in sc.items() if ok(v, kind, loop, iid)}
+    if kind == "sfx" and not loop and iid not in MUSIC:  # TTS speaks long sentences; sfx must stay short
+        base = manifest[iid].get("durationSeconds", 2)
+        cap = (SFX[iid]["dur"] if "engines" in SFX.get(iid, {}) else max(base * 2.2, 1.6)) * 1.3
+        pool = {k: v for k, v in pool.items() if v["content_s"] <= cap}
     if kind == "voice" and args.narr_variant:
         pool = {k: v for k, v in pool.items() if f"-{args.narr_variant}-" in k}
     flag = None
@@ -240,7 +248,8 @@ def master(iid, take):
     # sfx / voice -> mono
     x = x.mean(1, keepdims=True)
     loop = bool(manifest[iid].get("loop"))
-    x = trim(x, sr, lead_db=-45, tail_db=-46 if kind == "sfx" else -40)
+    tonal = iid in SFX and "engines" in SFX[iid]
+    x = trim(x, sr, lead_db=-36, tail_db=(-45 if tonal else -34) if kind == "sfx" else -36)
     if loop:
         x = loop_xfade(x, int(0.15 * sr))
     else:

@@ -96,8 +96,8 @@ TTS_CLAP = {  # what CLAP scores TTS takes against (same as the sfx prompt unles
 }
 
 # Narrator lines (new manifest items, kind "voice"), one consistent fierce voice via Qwen3-TTS VoiceDesign.
-NARRATOR_INSTRUCT = ("A fierce, powerful middle-aged male war-narrator with a deep, resonant, gravelly voice, "
-                     "speaking each short line slowly and forcefully with grim dramatic intensity, like an epic fantasy game announcer.")
+NARRATOR_INSTRUCT = ("A fierce, powerful male war-narrator with a very deep, low, resonant bass voice and a gravelly edge, "
+                     "speaking slowly and forcefully with grim dramatic intensity, like an epic fantasy game announcer.")
 NARRATOR = {
     "aos-narr-battle-round-one": "Battle round one.",
     "aos-narr-battle-round-two": "Battle round two.",
@@ -114,6 +114,9 @@ NARRATOR = {
     "aos-narr-twist-revealed": "Twist revealed.",
     "aos-narr-victory": "Victory!",
     "aos-narr-defeat": "Defeat.",
+    "aos-narr-objective-taken": "Objective taken.",
+    "aos-narr-unit-destroyed": "Unit destroyed.",
+    "aos-narr-your-turn": "Your turn.",
 }
 
 MUSIC = {  # music: id -> params (dur from the manifest lengthMs when absent)
@@ -121,3 +124,17 @@ MUSIC = {  # music: id -> params (dur from the manifest lengthMs when absent)
 }
 for _i in ["iron-vanguard", "the-long-march", "gate-of-ash", "banner-and-blade", "last-stand", "cold-hearth"]:
     MUSIC[f"aos-stinger-{_i}"] = dict(takes=3, lufs=-16.0, fade=1.5, loop=False)
+
+# Second-pass prompts for ids whose first-pass takes scored poorly with CLAP. `python gen_audiocraft.py --alt`
+# generates extra takes named audiogen-alt-<n> / musicgen-alt-<n> that join the pick pool.
+ALT = {
+    "aos-orruk-stomp": dict(ag="a loud heavy thud of one giant footstep, a low rumble and a metallic clank"),
+    "aos-fist-smash": dict(ag="a loud heavy punch smashing into metal armour, a deep crunch and a thud"),
+    "aos-cannonball-impact": dict(ag="a heavy stone and wood crash, timber splintering and rubble falling"),
+    "aos-horse-charge": dict(ag="a herd of horses galloping, loud thundering hooves approaching and a horse neighing"),
+    "aos-armoured-march": dict(ag="many soldiers marching with rhythmic stomping footsteps and clanking metal armour"),
+    "aos-battle-tactic-scored": dict(ag="a short bright brass fanfare with trumpets, ending in a cymbal crash",
+                                     mg="Short triumphant brass fanfare, trumpets and a cymbal crash, heroic and punchy"),
+    "aos-objective-captured": dict(ag="a short bright trumpet fanfare, three rising notes",
+                                   mg="Two trumpets play a short bright rising fanfare, regal and clean"),
+}

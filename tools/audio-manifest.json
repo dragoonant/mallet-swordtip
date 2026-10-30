@@ -1151,6 +1151,96 @@
       "kind": "music",
       "prompt": "Short sombre dark fantasy stinger. A single solo cello and distant muffled war drum, a lone French horn playing a slow sorrowful melody in a minor key over low strings, a sense of loss after battle, long soft fade-out. Melancholy, dignified",
       "lengthMs": 14000
+    },
+    {
+      "id": "aos-narr-battle-round-one",
+      "kind": "voice",
+      "text": "Battle round one."
+    },
+    {
+      "id": "aos-narr-battle-round-two",
+      "kind": "voice",
+      "text": "Battle round two."
+    },
+    {
+      "id": "aos-narr-battle-round-three",
+      "kind": "voice",
+      "text": "Battle round three."
+    },
+    {
+      "id": "aos-narr-battle-round-four",
+      "kind": "voice",
+      "text": "Battle round four."
+    },
+    {
+      "id": "aos-narr-roll-for-priority",
+      "kind": "voice",
+      "text": "Roll for priority."
+    },
+    {
+      "id": "aos-narr-hero-phase",
+      "kind": "voice",
+      "text": "Hero phase."
+    },
+    {
+      "id": "aos-narr-movement-phase",
+      "kind": "voice",
+      "text": "Movement phase."
+    },
+    {
+      "id": "aos-narr-shooting-phase",
+      "kind": "voice",
+      "text": "Shooting phase."
+    },
+    {
+      "id": "aos-narr-charge-phase",
+      "kind": "voice",
+      "text": "Charge phase."
+    },
+    {
+      "id": "aos-narr-combat-phase",
+      "kind": "voice",
+      "text": "Combat phase."
+    },
+    {
+      "id": "aos-narr-end-of-turn",
+      "kind": "voice",
+      "text": "End of turn."
+    },
+    {
+      "id": "aos-narr-battle-tactic-complete",
+      "kind": "voice",
+      "text": "Battle tactic complete."
+    },
+    {
+      "id": "aos-narr-twist-revealed",
+      "kind": "voice",
+      "text": "Twist revealed."
+    },
+    {
+      "id": "aos-narr-victory",
+      "kind": "voice",
+      "text": "Victory!"
+    },
+    {
+      "id": "aos-narr-defeat",
+      "kind": "voice",
+      "text": "Defeat."
+    },
+    {
+      "id": "aos-narr-objective-taken",
+      "kind": "voice",
+      "text": "Objective taken."
+    },
+    {
+      "id": "aos-narr-unit-destroyed",
+      "kind": "voice",
+      "text": "Unit destroyed."
+    },
+    {
+      "id": "aos-narr-your-turn",
+      "kind": "voice",
+      "text": "Your turn."
     }
   ]
 }

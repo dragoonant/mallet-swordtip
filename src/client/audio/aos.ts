@@ -83,7 +83,54 @@ export const AOS_FALLBACK: Record<AosSoundId, AosFallback> = {
 }
 
 /** The `aos-` ids whose own mp3 is in public/audio. Add an id here once its file is generated. */
-export const AOS_AVAILABLE: ReadonlySet<AosSoundId> = new Set<AosSoundId>([])
+export const AOS_AVAILABLE: ReadonlySet<AosSoundId> = new Set<AosSoundId>([
+  'aos-ambient-bed',
+  'aos-armour-hit',
+  'aos-armoured-march',
+  'aos-battle-tactic-scored',
+  'aos-cannon-fire',
+  'aos-cannonball-impact',
+  'aos-choppa-hit',
+  'aos-defeat',
+  'aos-fist-smash',
+  'aos-halberd-strike',
+  'aos-horse-charge',
+  'aos-horse-gallop',
+  'aos-human-battle-cry',
+  'aos-human-death-1',
+  'aos-human-death-2',
+  'aos-lance-charge-impact',
+  'aos-marshal-command',
+  'aos-miss-whoosh',
+  'aos-objective-captured',
+  'aos-orruk-death-1',
+  'aos-orruk-death-2',
+  'aos-orruk-roar',
+  'aos-orruk-stomp',
+  'aos-priority-drumroll',
+  'aos-round-start-war-horn',
+  'aos-shield-bash',
+  'aos-stinger-banner-and-blade',
+  'aos-stinger-cold-hearth',
+  'aos-stinger-gate-of-ash',
+  'aos-stinger-iron-vanguard',
+  'aos-stinger-last-stand',
+  'aos-stinger-the-long-march',
+  'aos-sword-clash',
+  'aos-victory',
+])
+
+/** Inherited 42k narrator ids that now play the Spearhead narrator (public/audio/aos-narr-*.mp3, one voice). */
+export const NARR_ALIAS: Readonly<Record<string, string>> = {
+  'narr-battle-round-one': 'aos-narr-battle-round-one',
+  'narr-movement-phase': 'aos-narr-movement-phase',
+  'narr-shooting-phase': 'aos-narr-shooting-phase',
+  'narr-charge': 'aos-narr-charge-phase',
+  'narr-fight-phase': 'aos-narr-combat-phase',
+  'narr-command-phase': 'aos-narr-hero-phase',
+  'narr-victory': 'aos-narr-victory',
+  'narr-defeat': 'aos-narr-defeat',
+}
 
 export function isAosId(id: string): id is AosSoundId {
   return id in AOS_FALLBACK
@@ -91,7 +138,7 @@ export function isAosId(id: string): id is AosSoundId {
 
 /** The file (no extension) that actually plays for `id`: its own aos file when generated, else the mapped 42k file. */
 export function soundFile(id: string): string {
-  if (!isAosId(id)) return id
+  if (!isAosId(id)) return NARR_ALIAS[id] ?? id
   return AOS_AVAILABLE.has(id) ? id : AOS_FALLBACK[id].id
 }
 
