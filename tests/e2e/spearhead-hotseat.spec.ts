@@ -128,7 +128,7 @@ async function handlePlay(page: Page, s: Snap, cam: Cam, turn: TurnState): Promi
   }
 }
 
-async function playGame(page: Page, opts: { opponent: 'hotseat' | 'bot'; prefix: string; stopAtRound?: number }): Promise<void> {
+async function playGame(page: Page, opts: { opponent: 'hotseat' | 'bot'; prefix: string; stopAtRound?: number; human?: 'cities' | 'ironjawz' }): Promise<void> {
   mkdirSync(OUT, { recursive: true })
   await page.setViewportSize({ width: W, height: H })
   const consoleErrors: string[] = []
@@ -138,9 +138,11 @@ async function playGame(page: Page, opts: { opponent: 'hotseat' | 'bot'; prefix:
 
   await page.goto('/')
   await expect(page.getByTestId('start-game')).toBeVisible()
-  await page.getByTestId('setup-army-A-cities').click()
+  const human = opts.human ?? 'cities'
+  const other = human === 'cities' ? 'ironjawz' : 'cities'
+  await page.getByTestId(`setup-army-A-${human}`).click()
   await page.getByRole('button', { name: opts.opponent === 'hotseat' ? /^Hotseat/ : /^Bot$/ }).click()
-  await page.getByTestId('setup-army-B-ironjawz').click()
+  await page.getByTestId(`setup-army-B-${other}`).click()
   await page.getByTestId('setup-seed').fill('swordtip-hotseat-1')
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${OUT}/${opts.prefix}-01-start-screen.png` })
@@ -159,6 +161,7 @@ async function playGame(page: Page, opts: { opponent: 'hotseat' | 'bot'; prefix:
   let turn: TurnState = { key: '', usedMove: false, usedShot: false }
   let reachedEnd = false
   let deployCount = 0
+  const qaSeen = new Set<string>()
 
   while (Date.now() - start < GAME_BUDGET_MS) {
     const s = await snap(page)
@@ -178,6 +181,10 @@ async function playGame(page: Page, opts: { opponent: 'hotseat' | 'bot'; prefix:
       else { m.stuck.push(`decision ${s.pending.id} (${s.pending.kind}, ${s.pending.player}) no progress for ${STALL_LIMIT_MS}ms, prompt hidden`); break }
     }
 
+    if (process.env.QA_SHOTS && s.pending.player === s.humanSeat) {
+      const key = `${s.pending.kind}-${s.phase}-${s.pending.context?.topic ?? ''}`
+      if (!qaSeen.has(key) && qaSeen.size < 40) { qaSeen.add(key); mkdirSync(`${OUT}/qa`, { recursive: true }); await shot(page, `qa/${opts.prefix}-r${s.round}-${key}`) }
+    }
     if (s.pending.kind === 'deployUnit') {
       deployCount++
       if (!m.deployShot && deployCount === 2) { m.deployShot = true; shots.push(await shot(page, `${opts.prefix}-02-deployment`)) }
@@ -226,7 +233,12 @@ test('hotseat: Cities of Sigmar vs Ironjawz plays deployment to the end screen i
   await playGame(page, { opponent: 'hotseat', prefix: 'hotseat' })
 })
 
-test('bot: Cities of Sigmar vs the Ironjawz bot deploys and plays on into round 2', async ({ page }) => {
-  test.setTimeout(8 * 60_000)
-  await playGame(page, { opponent: 'bot', prefix: 'bot', stopAtRound: 2 })
+test('bot: Ironjawz (seat A) vs the Cities bot plays to the end screen', async ({ page }) => {
+  test.setTimeout(GAME_BUDGET_MS + 120_000)
+  await playGame(page, { opponent: 'bot', prefix: 'botjawz', human: 'ironjawz' })
+})
+
+test('bot: Cities of Sigmar vs the Ironjawz bot plays to the end screen', async ({ page }) => {
+  test.setTimeout(GAME_BUDGET_MS + 120_000)
+  await playGame(page, { opponent: 'bot', prefix: 'bot' })
 })

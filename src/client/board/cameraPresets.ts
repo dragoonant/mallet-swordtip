@@ -10,6 +10,14 @@ export interface CameraPose {
 
 /** World units are inches, y up. `board.h` is the z-depth. `sideA` is +1 when the viewer's home edge is +z,
  *  -1 when it is -z: the edge presets look from behind that side so the viewer's army is in the foreground. */
+/** The Spearhead board (30x22) is smaller than the 40k one these poses were tuned for: pull the edge views in so it fills the screen. */
+const EDGE_ZOOM = 0.88
+/** `down` slides the whole view toward the viewer's edge so the far edge of the board clears the HUD strip. */
+function tighten(p: CameraPose, down: number): CameraPose {
+  const [px, py, pz] = p.position, [tx, ty, tz] = p.target
+  return { position: [tx + (px - tx) * EDGE_ZOOM, ty + (py - ty) * EDGE_ZOOM, tz + (pz - tz) * EDGE_ZOOM + down], target: [tx, ty, tz + down] }
+}
+
 export function cameraPose(
   preset: CameraPresetId,
   board: { w: number; h: number },
@@ -21,9 +29,9 @@ export function cameraPose(
     case 'top':
       return { position: [0, span * 1.45, span * 0.12 * sideA], target: [0, 0, 0] }
     case 'edgeA':
-      return { position: [0, span * 1.4, span * 0.88 * sideA], target: [0, 0, span * 0.16 * sideA] }
+      return tighten({ position: [0, span * 1.4, span * 0.88 * sideA], target: [0, 0, span * 0.16 * sideA] }, -span * 0.05 * sideA)
     case 'edgeB':
-      return { position: [0, span * 1.4, -span * 0.88 * sideA], target: [0, 0, -span * 0.16 * sideA] }
+      return tighten({ position: [0, span * 1.4, -span * 0.88 * sideA], target: [0, 0, -span * 0.16 * sideA] }, span * 0.05 * sideA)
     default: {
       const f = focus ?? { x: 0, z: 0 }
       return { position: [f.x, span * 0.5, f.z + span * 0.45], target: [f.x, 0, f.z] }

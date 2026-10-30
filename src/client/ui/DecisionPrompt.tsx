@@ -832,6 +832,7 @@ function describeAction(a: Action, state: GameState): string {
     case 'consolidate': {
       const verb = { moveUnit: 'Move', chargeMove: 'Charge move', pileIn: 'Pile in', consolidate: 'Consolidate' }[a.type]
       const summary = placementSummary(state, a.unitId, a.placements)
+      if (/^0\.0"/.test(summary)) return a.type === 'moveUnit' ? 'Stay where it is' : `${verb}: stay in place`
       return summary ? `${verb} ${summary}` : verb
     }
     case 'allocateAttack': {
@@ -1662,8 +1663,7 @@ function DecisionPromptBody() {
         <div style={infoBlock} data-testid="charge-move-context">
           <div style={{ color: colors.text, fontWeight: 600 }}>Charge roll: {pending.context.roll}&quot;</div>
           <div>
-            Move each model up to {pending.context.roll}&quot;, ending within 1&quot; of{' '}
-            {pending.context.targetUnitIds.map((u) => state.units[u]?.name ?? u).join(' and ')}.
+            Move each model up to {pending.context.roll}&quot;. The unit has to finish within ½&quot; of an enemy unit, or the charge fails.
           </div>
         </div>
       )}

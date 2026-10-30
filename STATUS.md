@@ -1,6 +1,6 @@
 # Status
 
-> **Mallet Swordtip note (2026-10-29):** everything below describes the code inherited from Mallet 42k. See `PLAN.md` for the Spearhead port.
+> **Mallet Swordtip note (2026-10-30):** the Spearhead port is playable end to end (Cities of Sigmar vs Ironjawz on Fire and Jade, Aqshy side; battle tactic and twist cards; bot or hotseat; desktop and phone). `HANDOFF.md` has the current state and next steps. Everything below describes the code inherited from Mallet 42k and is stale where it mentions Combat Patrol, stratagems or 40k factions.
 
 Maintained by agents as work lands. Orient from this file instead of exploring the codebase.
 

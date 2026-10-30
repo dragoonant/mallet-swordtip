@@ -178,10 +178,10 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
       </p>
       <div style={compact ? vpRowCompact : vpRow}>
         <span style={{ color: colors.playerA }} data-testid="end-vp-A">
-          A — {result.vp.A} VP
+          {state.players.A.name} — {result.vp.A} VP
         </span>
         <span style={{ color: colors.playerB }} data-testid="end-vp-B">
-          B — {result.vp.B} VP
+          {state.players.B.name} — {result.vp.B} VP
         </span>
       </div>
     </>
@@ -192,8 +192,8 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
       <thead>
         <tr>
           <th style={thRound}>Round</th>
-          <th style={th}>A VP</th>
-          <th style={th}>B VP</th>
+          <th style={th}>{state.players.A.name} VP</th>
+          <th style={th}>{state.players.B.name} VP</th>
         </tr>
       </thead>
       <tbody>
@@ -222,8 +222,8 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
         <thead>
           <tr>
             <th style={thRound}>From</th>
-            <th style={th}>A</th>
-            <th style={th}>B</th>
+            <th style={th}>{state.players.A.name}</th>
+            <th style={th}>{state.players.B.name}</th>
           </tr>
         </thead>
         <tbody>
@@ -234,8 +234,8 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
       </table>
       {(scoredNames('A') || scoredNames('B')) && (
         <div style={{ ...mutedText, fontSize: 11.5, textAlign: 'left' }} data-testid="end-tactics">
-          {scoredNames('A') && <div><span style={{ color: colors.playerA }}>A</span> completed: {scoredNames('A')}</div>}
-          {scoredNames('B') && <div><span style={{ color: colors.playerB }}>B</span> completed: {scoredNames('B')}</div>}
+          {scoredNames('A') && <div><span style={{ color: colors.playerA }}>{state.players.A.name}</span> completed: {scoredNames('A')}</div>}
+          {scoredNames('B') && <div><span style={{ color: colors.playerB }}>{state.players.B.name}</span> completed: {scoredNames('B')}</div>}
         </div>
       )}
     </>

@@ -5,7 +5,7 @@
 //
 // The hand shown is the human's against the bot; in hotseat it is the hand of whoever is being asked (else the active
 // player). The opponent's hand is never shown, only its size.
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Action, GameState, PendingDecision, PlayerId } from '@/engine'
 import { tacticMet } from '@/engine/cards'
@@ -267,8 +267,10 @@ export function CardHand() {
 
   // a decision about the cards opens the viewer on its own once, so the choice is made looking at the cards
   const cardPrompt = !!live && live.player === viewer && live.kind === 'chooseOption' && ['scoreTactics', 'discardTactics'].includes(live.context.topic)
+  const autoOpened = useRef(false)
   useEffect(() => {
-    if (cardPrompt && compact) { setFocus(null); setOpen(true) }
+    if (cardPrompt && compact) { setFocus(null); setOpen(true); autoOpened.current = true }
+    else if (!cardPrompt && autoOpened.current) { autoOpened.current = false; setOpen(false) } // the choice was made elsewhere: do not leave the viewer covering the next prompt
   }, [cardPrompt, compact, live?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!state || !state.cards || state.phase === 'setup' || state.phase === 'ended') return null

@@ -60,7 +60,7 @@ const layoutCss = `
   background: url(${TITLE_BG}) center / cover no-repeat; filter: blur(18px) brightness(0.45); }
 .ss-overlay::after { content: ''; position: fixed; inset: 0; pointer-events: none;
   background: url(${TITLE_BG}) center 30% / cover no-repeat; }
-.ss-scrim { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: rgba(4, 4, 8, 0.55);
+.ss-scrim { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: rgba(4, 4, 8, 0.72);
   opacity: 0; transition: opacity 900ms ease; }
 .ss-card { position: relative; z-index: 2; width: 1180px; max-width: calc(100% - 32px); box-sizing: border-box;
   max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px - var(--safe-top, 0px) - var(--safe-bottom, 0px)); opacity: 0; visibility: hidden; transform: translateY(14px);

@@ -1,7 +1,7 @@
 {
   "name": "Mallet Swordtip",
   "short_name": "Mallet Swordtip",
-  "description": "SD Assault: Galaxy in Conflict - a 3D Combat Patrol tabletop battle in the browser.",
+  "description": "A 3D Spearhead tabletop battle in the browser: Cities of Sigmar against the Ironjawz.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",

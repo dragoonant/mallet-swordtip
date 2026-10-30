@@ -461,6 +461,17 @@ export function Hud() {
   const [missionOpen, setMissionOpen] = useState(false)
   const { compact } = useFormFactor()
   useToolShortcuts()
+  // Publish where the phase strip ends (it wraps to two lines on narrower screens) so the formation bar can sit under it.
+  useEffect(() => {
+    if (compact) return
+    const el = document.querySelector('[data-testid="phase-tracker"]')
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const set = () => document.documentElement.style.setProperty('--hud-bottom', `${Math.round(el.getBoundingClientRect().bottom)}px`)
+    set()
+    const ro = new ResizeObserver(set)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [compact, !!state])
 
   if (!state) return null
   // Same gate as DecisionPrompt: no passing on a decision whose dice are still being shown.
@@ -473,7 +484,7 @@ export function Hud() {
   // the hint peeking out from behind its edges instead of being fully hidden. Same "is the picker
   // showing" condition FormationPicker.tsx itself uses (isDeploy || isMove), so the two never disagree.
   const pickerOpen = !!pending && pending.player !== botSeat && ((pending.kind === 'deployUnit' && !!deployTargetUnitId) || isPlacementDecision(pending))
-  const activeTitle = `Active: ${state.activePlayer}${state.activePlayer === state.firstPlayer ? ' (went first)' : ''}${thinking ? ' — thinking…' : ''}`
+  const activeTitle = `Active: ${state.players[state.activePlayer].name}${state.activePlayer === state.firstPlayer ? ' (went first)' : ''}${thinking ? ' — thinking…' : ''}`
 
   return (
     <>
@@ -494,8 +505,7 @@ export function Hud() {
               ))}
             </span>
             <Tooltip title="Active player" body={activeTitle}><span style={mutedText}>
-              Active: {state.activePlayer}
-              {thinking ? '…' : ''}
+              <span style={{ color: state.activePlayer === 'A' ? colors.playerA : colors.playerB, fontWeight: 700 }}>● {state.players[state.activePlayer].name.split(' ')[0]}{thinking ? '…' : ''}</span>
             </span></Tooltip>
             <button style={buttonBase} data-testid="btn-mission" onClick={() => setMissionOpen((v) => !v)}>
               Mission
@@ -528,7 +538,7 @@ function TacticsLine({ id, state }: { id: PlayerId; state: GameState }) {
   const split = vpSplit(state, id)
   return (
     <div style={{ fontSize: 11.5, color: colors.muted }} data-testid={`hud-tactics-${id}`}>
-      Tactics {piles.scored.length} scored · {piles.hand.length} held{split.twists > 0 ? ` · twists +${split.twists}` : ''}
+      Tactics {piles.scored.length} scored · {piles.hand.length} held{split.twists > 0 ? ` · +${split.twists} twist` : ''}
     </div>
   )
 }

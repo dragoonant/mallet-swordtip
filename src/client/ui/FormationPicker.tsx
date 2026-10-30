@@ -23,7 +23,7 @@ const wrap = {
   ...panel,
   position: 'absolute' as const,
   left: '50%',
-  top: 78,
+  top: 'calc(var(--hud-bottom, 72px) + 6px)',
   transform: 'translateX(-50%)',
   padding: '6px 10px',
   display: 'flex',
