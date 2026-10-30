@@ -32,6 +32,15 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 | `fyr-hearthguard` | Hearthguard Berzerkers | 32 | 1.2 | GLB done, checked |
 | `fyr-vulkite` | Vulkite Berzerkers | 32 | 1.15 | GLB done, checked |
 | `fyr-vulkite-karl` | Vulkite Berzerkers (unit leader look) | 32 | 1.2 | GLB done, checked |
+| `kru-killaboss-gnashtoof` | Killaboss on Great Gnashtoof | 90×52 oval | 2.3 | GLB done, checked (yaw 90) |
+| `kru-murknob` | Murknob with Belcha-banna | 40 | 1.8 | GLB done, checked |
+| `kru-boltboy` | Man-skewer Boltboyz | 32 | 1.4 | GLB done, checked |
+| `kru-gutrippa` | Gutrippaz | 32 | 1.4 | GLB done, checked |
+| `glo-snarlboss` | Snarlboss | 75×42 oval | 1.85 | GLB done, checked (yaw 90) |
+| `glo-wolfgit-bow` | Wolfgit Retinue (archer) | 60×35 oval | 1.5 | GLB done, checked (yaw 90) |
+| `glo-wolfgit-stikka` | Wolfgit Retinue (spear) | 60×35 oval | 1.5 | GLB done, checked (yaw -90) |
+| `glo-snarlpack-cavalry` | Snarlpack Cavalry | 75×42 oval | 1.75 | GLB done, checked (yaw 90; lances overhang the base) |
+| `glo-sunsteala-wheela` | Sunsteala Wheelas | 120×92 oval | 2.2 | GLB done, checked (yaw 90, `fit` 116) |
 
 The GLBs are not wired into the game yet. The client's figure slug list needs these slugs before they show up.
 
@@ -65,6 +74,22 @@ colours or quartering only.
 - Rejects for these two armies: `darkoath-warqueen-c1` (a realistic dwarf-like miniature, about 3.5 heads tall, and
   an edit did not fix the proportions) and `fyr-vulkite-c1` (mid-leap on a clear acrylic flight stand, feet off
   the base).
+- Kruleboyz: sallow yellow-green orruks with long ears and tusked underbites, swamp-brown leathers, rust-iron
+  plates, bone trophies and murky teal wraps. `kru-gutrippa` (the base figure) wears a narrow rust-iron helm and
+  carries a hooked hacka and a round crimson-and-mustard shield with a crude three-claw scratch. `kru-boltboy` has a
+  pointed iron cap and aims a barbed crossbow with green-dripping bolts. `kru-murknob` wears a horned half-helm and
+  carries a cleaver and a crooked banner pole topped by a fuming swamp-beast skull over a brown rag.
+  `kru-killaboss-gnashtoof` is a warlord in a tall spiked crown-helm with a jagged spear and bone cape, riding a
+  chunky purple-grey swamp hound with a huge fanged head. `kru-gutrippa-boss` and `kru-killbow` were not made.
+- Gloomspite Gitz: bright green goblins with huge black-hooded heads, rust-red saddle cloths and rags, chunky
+  big-headed grey-white wolves, dull iron and pale-yellow glowing shards. `glo-wolfgit-bow` (the base figure) draws a
+  crooked bow; `glo-wolfgit-stikka` wears a red bandana mask and jabs a barbed spear. `glo-snarlboss` has a feathered
+  red hat over the hood, a glowing jagged sword and a red shield with our bitten-sun disc. `glo-snarlpack-cavalry`
+  carries two goblins with long hooked lances, one with a red pennant and one with a glowing shard tip.
+  `glo-sunsteala-wheela` is a wicker cart with spiked wheels, a glowing lamp pole and red rag banners, pulled by two
+  wolves and crewed by an archer and a spearman. No moon or GW faction icons.
+- Rejects for these two armies: `glo-wolfgit-bow-c1` (the goblin was true MGSD but the wolf had near-realistic
+  proportions; an edit gave it a bigger round head and stubbier legs).
 
 ## Pipeline notes
 
@@ -75,6 +100,11 @@ colours or quartering only.
 - `darkoath-fellrider` (60×35 oval) needed `yaw` 0, not 90: with 90 the pony stood across the oval. Darkoath and
   Fyreslayers used `swordtip_b3_picks.json`; their sheets are `sheets/contact-darkoath.png` and
   `sheets/contact-fyreslayers.png`.
+
+- Kruleboyz and Gloomspite used `swordtip_b4_picks.json` and `swordtip_b5_picks.json`. Every mount and the
+  Wheela faced sideways in its concept, so each needed `yaw` 90 (or -90 for `glo-wolfgit-stikka`, which faced the
+  other way). The Wheela got `height` 2.2 and `fit` 116 so the cart and wolves fill the 120×92 base. Sheets:
+  `sheets/contact-kruleboyz.png` and `sheets/contact-gloomspite.png`.
 
 ## Terrain
 
