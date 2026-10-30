@@ -28,6 +28,7 @@ import type { EngineCodeHook } from '../code-hooks'
 import type { DiceExpr } from '../../data/types'
 import type { GameState, PlayerId, UnitId } from '../types'
 import { keywordsOf, modelStats, unitModels } from '../state'
+import { whollyWithinOf, type Footprint } from '../geometry'
 import { rollSum } from '../dice'
 import { effectService } from '../effects'
 import { losService } from '../los'
@@ -385,6 +386,41 @@ export function kharadronModeBonus(state: GameState, code: string, unitId: UnitI
   const theirs = enemiesInCombat(state, unitId).reduce((n, id) => n + woundsLeft(state, id), 0)
   const leave = theirs > woundsLeft(state, unitId)
   return stay ? (leave ? -1 : 1) : (leave ? 0.5 : -1)
+}
+
+// Ply the Skies, AI side (src/ai/utility.ts): the ride is only offered while a Company stands wholly within 3" of a Frigate that
+// declares a move, so the bot sets the Companies up beside the Frigate, moves the Frigate first and moves it whenever it carries one.
+const frigateOf = (state: GameState, player: PlayerId): UnitId | null =>
+  Object.values(state.units).find((u) => u.player === player && u.location === 'board' && isFrigate(state, u.id))?.id ?? null
+
+// riders the Frigate could take if it declared a move now (none once it has carried someone this phase)
+function plyRiders(state: GameState, player: PlayerId): UnitId[] {
+  const f = frigateOf(state, player)
+  if (!f || !codeAbilityId(state, CODE_PLY) || state.phaseState.marks.includes(plyMark(f))) return []
+  return passengers(state, f).filter((id) => isCompany(state, id, null))
+}
+
+// deployment: a Company wholly within the ride range of the Frigate (models as they would be placed) gains this much; null = no opinion
+export function kharadronDeployBonus(state: GameState, player: PlayerId, unitId: UnitId, feet: Footprint[]): number | null {
+  if (!isCompany(state, unitId, null) || !codeAbilityId(state, CODE_PLY)) return null
+  const f = frigateOf(state, player)
+  if (!f || feet.length === 0) return null
+  const frig = liveModels(state, f)
+  const range = plyRange(state)
+  const inside = feet.filter((m) => frig.some((r) => whollyWithinOf(m, r, range))).length
+  // every model counts toward the pull, the whole unit inside is what makes the ride legal
+  return inside === feet.length ? 20 : (inside / feet.length) * 6
+}
+
+// movement: a Frigate with a rider beside it moves (Normal Move or Run) rather than standing still, and goes first
+export function kharadronMoveBonus(state: GameState, player: PlayerId, unitId: UnitId, moveType: string): number | null {
+  if (!isFrigate(state, unitId) || plyRiders(state, player).length === 0) return null
+  return moveType === 'normal' ? 5 : moveType === 'advance' ? 3 : 0
+}
+
+export function kharadronActivationBonus(state: GameState, player: PlayerId, unitId: UnitId): number | null {
+  if (!isFrigate(state, unitId) || state.phase !== 'movement' || plyRiders(state, player).length === 0) return null
+  return 1000
 }
 
 export const kharadronHooks: Record<string, EngineCodeHook> = {

@@ -290,7 +290,8 @@ def do_apply():
               + (f"  [{flag}]" if flag else ""), flush=True)
 
 
-if args.cmd == "score":
-    do_score()
-else:
-    do_apply()
+if __name__ == "__main__":
+    if args.cmd == "score":
+        do_score()
+    else:
+        do_apply()

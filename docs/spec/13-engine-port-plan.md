@@ -296,6 +296,19 @@ Contract edits (all additive): `types.ts` `MoveConstraints` `+ mustEndCloserToEd
 | Charge placement: shortest approaches (exact ½" reach), rings with rotations for ovals, per-model fits with ½" grid paths round blockers that never climb; oval bases end against walls by their real outline (`canEndAt`) | `phases/charge.ts`, `terrain.ts` | F7 AI finding |
 | Move candidates: up to 9 varied intents (each of 3 objectives, stopping on it; toward / away from the nearest enemy; toward the nearest friend; both sides; compass) | `phases/movement.ts` | F7 AI finding |
 
+### 3.10 F10 engine fixes (additive; no frozen contract file changed)
+
+Non-frozen: `AbilityWindow` `+ 'chargeStart'` (display window `charge.start`); `EngineCodeHook` `+ startOfPhase?: Phase`;
+descriptor `params.window: 'phaseStart'`; `moveUnitCandidatesFor` exported with a `reform` flag; `setup.ts` `+ baseReach`.
+
+| Mechanism | Where | For |
+|---|---|---|
+| Deployment search: the compact block and the model-by-model chain now try ovals at the zone facing and turned a quarter, and space neighbours by the real oval rims (not the long radius), so big ovals pack on their narrow side; `suggestDeployment()` with no unit picks the biggest unit that still fits | `setup.ts` | F10 sim stall (Gloomspite on the 30x5 strip) |
+| Stranded units (RULING): when none of the waiting units has any legal spot, they are removed from play (`UnitDestroyed`, kind `other`, no hooks, no kill credit) and deployment moves on; the game never waits on a `deployUnit` nobody can answer | `setup.ts` | F10 human hang |
+| Damage pools keyed by target unit and kind: crit-mortal / ability mortal damage and normal damage never share a pool, so the ward, `DamageApplied.mortal` and the slain-by kind always match the damage (a unit with both resolves two pools, active player's units first, in opening order) | `attack.ts` | F10 |
+| Re-formed candidates (`phases/reform.ts`): line (zig-zag for 7+), line turned side-on (a column), block, wedge, arc around an anchor; slots to the nearest models; one-bend routes; the caller validates. Movement adds them when no candidate uses 60% of the allowance; charge adds them when no slide or per-model fit lands. Humans see them as suggested moves; the AI's private `src/ai/moves.ts` extras can now lean on the engine list | `phases/reform.ts`, `phases/movement.ts`, `phases/charge.ts` | F10 |
+| Start-of-charge-phase window: `runWindow('chargeStart')` before the first charge pick (marked `ch:startDone`); offers descriptors with `params.window: 'phaseStart'` on a charge-phase timing, or any ability whose code hook names `startOfPhase: 'charge'` (Champion of Raids; its data still says the movement phase) | `phases/charge.ts`, `abilities.ts`, `code-hooks.ts`, `factions/slaves.ts` | STD-ENH-3 |
+
 ## 4. Client impact
 
 ### 4.1 Counts

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { existsSync, readFileSync } from 'node:fs'
-import { glbSlugFor, ENABLED_GLB_SLUGS, DECLARED_GLB_SLUGS, GLB_SLUG_BY_MODEL } from '../../src/client/figures/glbModels'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { glbSlugFor, ENABLED_GLB_SLUGS, DECLARED_GLB_SLUGS, GLB_SLUG_BY_MODEL, GLB_FIGURE_ADJUST } from '../../src/client/figures/glbModels'
+import { SOURCE_HUES } from '../../src/client/figures/glbPaint'
 import { aosModelFor } from '../../src/client/board/terrainCatalog'
 import { BATTLEFIELDS } from '../../src/client/board/terrainAssets'
 
@@ -76,6 +77,37 @@ describe('Spearhead figures and board', () => {
     for (const slug of DECLARED_GLB_SLUGS) expect([...MODELS, ...NEW_MODELS].some((m) => m[2] === slug), `${slug} is declared but no model uses it`).toBe(true)
     // every datasheet model of the four new armies is mapped (nothing falls through to a 42k look by accident)
     for (const [ds, model] of NEW_MODELS) expect(GLB_SLUG_BY_MODEL[`${ds}/${model}`]).toBeDefined()
+  })
+
+  it('FIG-AOS-006 every model of every Spearhead army, read from the datasheets, draws its GLB (no procedural stand-in is left)', () => {
+    const armies = readdirSync('src/data/factions')
+    let checked = 0
+    for (const army of armies) {
+      const dir = `src/data/factions/${army}/datasheets`
+      if (!existsSync(dir)) continue
+      for (const file of readdirSync(dir)) {
+        for (const ds of JSON.parse(readFileSync(`${dir}/${file}`, 'utf8')) as Array<{ id: string; spearhead?: boolean; composition: Array<{ modelId: string }> }>) {
+          if (!ds.spearhead) continue
+          for (const c of ds.composition) {
+            const slug = glbSlugFor(ds.id, c.modelId)
+            expect(slug, `${ds.id}/${c.modelId} has no GLB`).toBeDefined()
+            expect(existsSync(`public/assets/models/${slug}.glb`), `${slug}.glb`).toBe(true)
+            checked++
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThanOrEqual(MODELS.length + NEW_MODELS.length)
+  })
+
+  it('FIG-AOS-007 the army painter has measured source hues for the six armies with their own bands, and every figure fix names a declared slug', () => {
+    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron']) {
+      const h = SOURCE_HUES[army]
+      expect(h, army).toBeDefined()
+      expect(h.major ?? h.minor, army).toBeTruthy()
+      for (const c of [h.major, h.minor]) if (c) expect(c).toMatch(/^#[0-9a-f]{6}$/)
+    }
+    for (const slug of Object.keys(GLB_FIGURE_ADJUST)) expect(DECLARED_GLB_SLUGS, slug).toContain(slug)
   })
 
   it('FIG-AOS-002 the Spearhead terrain pieces use the aos GLBs, 40k ids keep their look', () => {

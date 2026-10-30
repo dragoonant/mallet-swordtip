@@ -25,6 +25,7 @@ import { settleY, terrainService } from '../terrain'
 import { notImplementedHandle, type AdvanceResult, type EngineContext, type PhaseModule } from '../modules'
 import { boardUnitsOf, datasheetOf, enemyModelsOnBoard, hasKeyword, setModelPos, unitModels, unitModelsForCoherency } from '../state'
 import { optionActions, translatePlacements } from './legal'
+import { reformChargeCandidates } from './reform'
 import type { Action, ModelPlacement } from '../actions'
 import {
   EngineInvariantError,
@@ -280,6 +281,13 @@ export function legalChargeMoves(state: GameState, unitId: UnitId, roll: number,
     if (checks >= MAX_CHECKS || fits >= 60) break
     fits++
     if (offer(fitChargeAround(env, sp.m, sp.to, sp.facing))) return out
+  }
+  // 3. (F10) nothing landed: re-form the whole unit facing one of the nearest enemy models, its front just inside ½" (phases/reform.ts),
+  // so a line of big ovals hemmed in by terrain or friends still gets a charge the human can take, not only the AI
+  if (out.length === 0) {
+    const reachable = nearestEnemies.map((x) => x.e)
+    out.push(...reformChargeCandidates(state, unitId, geo.models, reachable, roll,
+      (p) => chargeMoveRejection(state, unitId, roll, p.map(settled)) === null, limit, coherency).map((p) => p.map(settled)))
   }
   return out
 }
@@ -622,6 +630,11 @@ export const chargeModule: PhaseModule = {
   },
   advance(ctx): AdvanceResult {
     const s = ctx.state
+    // F10: the start-of-charge-phase ability window (Champion of Raids), before any unit is picked; runWindow remembers a passed window
+    if (!s.phaseState.charge && !ctx.marked('ch:startDone')) {
+      for (const p of ctx.order.active()) if (ctx.services.abilities.runWindow(ctx, 'chargeStart', p)) return 'pending'
+      ctx.once('ch:startDone')
+    }
     for (;;) {
       if (s.phaseState.charge) {
         if (driveCharge(ctx) === 'pending') return 'pending'

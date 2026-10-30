@@ -15,6 +15,7 @@
 // kept as inert stubs so 40k-era importers (faction files, shooting.ts, fight.ts) keep compiling until WP8 deletes them.
 import { commandWindow, rallyAfterRetreat, retreatDamageWaived } from '../cards'
 import { centroid, filterValid, formationPlacements, optionActions, repairCoherency, translatePlacements, unitVector } from './legal'
+import { reformMoveCandidates } from './reform'
 import { rollSum } from '../dice'
 import { RUN_REROLL_BELOW, applyAbilityRerolls } from '../rerolls'
 import {
@@ -481,7 +482,8 @@ function doAbilities(ctx: EngineContext): 'pending' | 'done' {
 // toward the nearest friendly unit; both sides at right angles to the nearest objective; then the compass), each as far as it
 // legally goes (full, 60%, 30%); then staying put and the coherency repairs / formations fill any room left.
 const MOVE_CANDIDATES = 9
-function moveUnitCandidatesFor(state: GameState, unitId: UnitId, moveType: MoveType, player: PlayerId, decisionId: string): Action[] {
+// `reform` false leaves out the re-formed moves (tests compare the two lists)
+export function moveUnitCandidatesFor(state: GameState, unitId: UnitId, moveType: MoveType, player: PlayerId, decisionId: string, reform = true): Action[] {
   const unit = state.units[unitId]
   if (!unit) return []
   const models = unitModelsForCoherency(state, unitId)
@@ -547,7 +549,16 @@ function moveUnitCandidatesFor(state: GameState, unitId: UnitId, moveType: MoveT
       if (frac === 0) break
     }
   }
-  return [...picked, ...filterValid(candidates, (a) => (a.type === 'moveUnit' ? moveRejection(state, unitId, moveType, a.placements) : null), Math.max(1, MOVE_CANDIDATES + 1 - picked.length))]
+  const list = [...picked, ...filterValid(candidates, (a) => (a.type === 'moveUnit' ? moveRejection(state, unitId, moveType, a.placements) : null), Math.max(1, MOVE_CANDIDATES + 1 - picked.length))]
+  // F10: a boxed-in unit (shoulder to shoulder, big ovals against terrain or friends) gets re-formed moves when no slide takes it
+  // at least 60% of its allowance, so a human sees the same options the AI used to build for itself (phases/reform.ts)
+  const shift = (a: Action): number => (a.type === 'moveUnit' ? Math.max(0, ...a.placements.map((p) => { const m = state.models[p.modelId]; return m ? Math.hypot(p.pos.x - m.pos.x, p.pos.z - m.pos.z) : 0 })) : 0)
+  if (reform && allow >= 1 && !list.some((a) => shift(a) >= allow * 0.6)) {
+    const reformed = reformMoveCandidates(state, unitId, models, allowOf, moveType === 'fallBack',
+      (p) => moveRejection(state, unitId, moveType, p) === null, 4, datasheetOf(state, unitId).coherencyRange ?? 0.5)
+    list.push(...reformed.map(mk))
+  }
+  return list
 }
 
 function arrivalCandidates(state: GameState, pending: Extract<PendingDecision, { kind: 'deployUnit' }>): Action[] {

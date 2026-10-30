@@ -153,7 +153,8 @@ const raidsActivate: ActivatedAbilityHook = {
   },
 }
 // `hooks` keeps the granted re-roll to charge rolls (hooks-impl keyApplies)
-const slavesChampionOfRaids: EngineCodeHook = { name: CODE_RAIDS, kind: 'ability', hook: 'onChargeRoll', hooks: ['onChargeRoll'], run: noop, activate: raidsActivate }
+// `startOfPhase` offers it as the charge phase opens ("your Charge phase"), not at the end of the movement phase (F10)
+const slavesChampionOfRaids: EngineCodeHook = { name: CODE_RAIDS, kind: 'ability', hook: 'onChargeRoll', hooks: ['onChargeRoll'], run: noop, activate: raidsActivate, startOfPhase: 'charge' }
 
 // ---------- STD-ENH-4 Fell Ritualist ----------
 // passive marker: cards.ts asks every source on the board for extraTacticDraw after the draw step (the general must be on the table)

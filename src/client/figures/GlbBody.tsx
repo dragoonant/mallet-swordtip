@@ -40,6 +40,16 @@ export function fitGlbToBase(object: Object3D, slug: string | undefined, radiusX
   }
 }
 
+/** Height of a GLB figure above the ground (its own `figure` node, base disc excluded), in inches: what the unit-card glow
+ *  wraps. The procedural stand-in's height (data.ts HEIGHT_BY_DATASHEET) is a different, shorter kit, so it is not used for a GLB. */
+export function glbFigureHeight(object: Object3D): number | undefined {
+  const figure = object.getObjectByName('figure')
+  if (!figure) return undefined
+  object.updateWorldMatrix(true, true)
+  const box = new Box3().setFromObject(figure)
+  return box.isEmpty() ? undefined : box.max.y
+}
+
 export function GlbBody({ object, slug, radiusX, radiusZ, pose, seed, faction, paint }: { object: Object3D; slug?: string; radiusX: number; radiusZ: number; pose: Pose; seed: number; faction: string; paint?: ArmyPaint }) {
   const bodyRef = useRef<Group>(null!)
   const fade = useMaterialFader(bodyRef)

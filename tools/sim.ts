@@ -1,4 +1,4 @@
-// Headless simulator CLI: `npm run sim -- --games N --seed S`
+// Headless simulator CLI: `npm run sim -- --games N --seed S [--from N]`
 import { DATA_VERSION, loadBundle } from '../src/data/index'
 import { realmFromArgv, runGame, type Violation } from './sim-core'
 
@@ -9,6 +9,8 @@ function arg(name: string, fallback: string): string {
 
 async function main(): Promise<void> {
   const games = Number(arg('games', '10'))
+  // --from N: start at game index N (game N..N+games-1), so several processes can split one long run
+  const from = Number(arg('from', '0'))
   const seed = arg('seed', '1')
   const verbose = process.argv.includes('--verbose')
   const ai = process.argv.includes('--ai') // both seats played by the utility AI instead of random legal moves
@@ -21,7 +23,7 @@ async function main(): Promise<void> {
   const wins: Record<string, number> = {}
   let draws = 0, rounds = 0, actions = 0
   const violations: Violation[] = []
-  for (let g = 0; g < games; g++) {
+  for (let g = from; g < from + games; g++) {
     const t0 = Date.now()
     let run
     try {
@@ -40,7 +42,7 @@ async function main(): Promise<void> {
       console.log(`game ${g} A=${run.factions.A} B=${run.factions.B}: ${run.winner ?? 'unfinished'} (${run.reason}) VP ${run.vp.A}-${run.vp.B}, rounds ${run.rounds}, actions ${run.actions.length}, ${Date.now() - t0}ms${run.violations.length ? `, ${run.violations.length} violation(s)` : ''}`)
     }
   }
-  console.log(`sim: ${games} games, seed ${seed}, realm ${realm}, ${((Date.now() - started) / 1000).toFixed(1)}s`)
+  console.log(`sim: ${games} games (from ${from}), seed ${seed}, realm ${realm}, ${((Date.now() - started) / 1000).toFixed(1)}s`)
   console.log(`wins: ${Object.entries(wins).map(([f, n]) => `${f} ${n}`).join(', ') || 'none'}; draws: ${draws}`)
   console.log(`mean rounds: ${(rounds / Math.max(games, 1)).toFixed(2)}; mean actions/game: ${(actions / Math.max(games, 1)).toFixed(1)}`)
   console.log(`violations: ${violations.length}`)

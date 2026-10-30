@@ -12,7 +12,7 @@ import { resolveBase, resolveFigureKit, resolvePaintColors, useDataBundle } from
 import { SwarmBody } from './SwarmBody'
 import { BODY_KIND, BIPED_CONFIG, VEHICLE_CONFIG, ARTILLERY_CONFIG, HOUND_CONFIG } from './kitConfigs'
 import { BaseDisc, BASE_THICKNESS } from './BaseDisc'
-import { GlbBody } from './GlbBody'
+import { GlbBody, glbFigureHeight } from './GlbBody'
 import { GlowAura } from './GlowAura'
 import { glbSlugFor } from './glbModels'
 import { useGlbInstance } from './glbLoader'
@@ -102,6 +102,7 @@ export const Figure = memo(function Figure({
   const bundle = useDataBundle()
   const glbSlug = glbSlugFor(datasheetId, modelId, variantKey)
   const glb = useGlbInstance(glbSlug)
+  const glbHeight = useMemo(() => (glb ? glbFigureHeight(glb) : undefined), [glb])
   const seedRef = useRef(Math.random() * 100)
   const groupRef = useRef<Group>(null!)
   const easedPos = useRef({ x: position[0], y: position[1], z: position[2] })
@@ -190,7 +191,7 @@ export const Figure = memo(function Figure({
   return (
     <group ref={groupRef} onClick={onClick}>
       <BaseDisc radiusX={base.radiusX} radiusZ={base.radiusZ} colors={colors} selected={selected} highlighted={highlighted} hovered={hovered} glbBody={!!glb} baseStyle={baseStyle} />
-      {glowing && <GlowAura height={base.height} radius={Math.max(base.radiusX, base.radiusZ)} />}
+      {glowing && <GlowAura height={glbHeight ?? base.height} radius={Math.max(base.radiusX, base.radiusZ)} />}
       {glb && <GlbBody object={glb} slug={glbSlug} radiusX={base.radiusX} radiusZ={base.radiusZ} pose={pose} seed={seedRef.current} faction={faction} paint={paint} />}
       {!glb && <group position={[0, BASE_THICKNESS, 0]} scale={[base.height, base.height, base.height]}>
         {bodyKind === 'swarm' ? (

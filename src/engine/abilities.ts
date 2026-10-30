@@ -32,10 +32,13 @@ import type { AbilityId, DiceRoll, GameState, Phase, PlayerId, RuntimeAbility, U
 // descriptors { trigger 'youDeclared', abilityId 'core.move' } and movement-phase descriptors with params.window 'moveDeclared'),
 // 'moveEnded' (that unit's move is over: offers no abilities, it only asks queued steps such as an anchored set-up), and
 // 'attackDeclared' (runReactionWindow: reaction descriptors { trigger 'youDeclared', keyword 'ATTACK' }).
+// F10 start-of-phase windows: 'chargeStart' (the charge phase opens, before any unit is picked to charge): phase descriptors with
+// params.window 'phaseStart', or any activated ability whose code hook names startOfPhase (Champion of Raids).
 export type AbilityWindow =
   | 'hero' | 'movement' | 'shooting' | 'charge' | 'fight'
   | 'startOfTurn' | 'endOfTurn' | 'startOfRound' | 'endOfRound' | 'deployment'
   | 'moveDeclared' | 'moveEnded' | 'attackDeclared'
+  | 'chargeStart'
 
 // what a reaction window reacts to (F8, LRL-BT-3 Gale Force)
 export interface ReactionTrigger { kind: 'youDeclaredAttack'; unitId: UnitId; phase: 'shooting' | 'fight' }
@@ -61,13 +64,13 @@ export interface AbilityService {
   readonly handler: DecisionHandler
 }
 
-const PHASE_OF_WINDOW: Partial<Record<AbilityWindow, Phase>> = { hero: 'command', movement: 'movement', shooting: 'shooting', charge: 'charge', fight: 'fight', moveDeclared: 'movement' }
+const PHASE_OF_WINDOW: Partial<Record<AbilityWindow, Phase>> = { hero: 'command', movement: 'movement', shooting: 'shooting', charge: 'charge', fight: 'fight', moveDeclared: 'movement', chargeStart: 'charge' }
 
 // the TimingWindowId shown on the decisions (display only)
 const DISPLAY_WINDOW: Record<AbilityWindow, TimingWindowId> = {
   hero: 'command.end', movement: 'movement.end', shooting: 'shooting.attacksResolved', charge: 'charge.moveEnded', fight: 'fight.attacksResolved',
   startOfTurn: 'turn.start', endOfTurn: 'turn.end.abilities', startOfRound: 'round.start', endOfRound: 'round.end', deployment: 'deployment.unit',
-  moveDeclared: 'movement.start', moveEnded: 'movement.unitMoved', attackDeclared: 'shooting.targetsDeclared',
+  moveDeclared: 'movement.start', moveEnded: 'movement.unitMoved', attackDeclared: 'shooting.targetsDeclared', chargeStart: 'charge.start',
 }
 
 // ---------- candidates and gates ----------
@@ -128,6 +131,14 @@ function timingMatches(state: GameState, ab: RuntimeAbility, player: PlayerId, w
     return false
   }
   if (window === 'attackDeclared') return false
+  // start-of-phase abilities (F10): only their own phase's start window offers them, and that window offers nothing else
+  const startPhase = codeHookFor(ab.code)?.startOfPhase ?? (t.kind === 'phase' && ab.params?.window === 'phaseStart' ? t.phase : null)
+  const START_OF: Partial<Record<AbilityWindow, Phase>> = { chargeStart: 'charge' }
+  if ((START_OF[window] ?? null) !== startPhase) return false
+  if (startPhase) {
+    const own = player === state.activePlayer
+    return t.kind !== 'phase' || t.whose === 'any' || (t.whose === 'your' ? own : !own)
+  }
   // a movement-phase ability with params.window 'moveDeclared' is offered when a unit declares its move, not at the phase's end
   const atDeclare = ab.params?.window === 'moveDeclared'
   if ((window === 'moveDeclared') !== atDeclare) return false

@@ -436,11 +436,15 @@ describe('STD-ENH-3 Champion of Raids', () => {
     expect(targets.every((id) => whollyWithinUnit(s, id, 'A:warqueen', 12))).toBe(true)
   })
 
-  it('STD-ENH-3 offered just before the charge phase (end of your movement phase), not after the charges are over', () => {
+  it('STD-ENH-3 offered as your charge phase opens (the start-of-charge window, F10), not at the end of the movement phase nor after the charges', () => {
     const s = championGame()
-    expect(usableIds(s, 'A', 'movement')).toContain(CHAMPION_AB)
+    expect(usableIds(s, 'A', 'movement')).not.toContain(CHAMPION_AB)
     s.phase = 'charge'
+    expect(usableIds(s, 'A', 'chargeStart')).toContain(CHAMPION_AB)
     expect(usableIds(s, 'A', 'charge')).not.toContain(CHAMPION_AB)
+    // "your" charge phase: never in the opponent's
+    s.activePlayer = 'B'
+    expect(usableIds(s, 'A', 'chargeStart')).not.toContain(CHAMPION_AB)
   })
 
   it('STD-ENH-3 the target re-rolls a short charge roll for the rest of the turn (and a good roll is never re-rolled)', () => {
@@ -449,7 +453,8 @@ describe('STD-ENH-3 Champion of Raids', () => {
     const data = { chargingUnitId: 'A:marauders', targetUnitIds: [] }
     const short = ctx.roll({ purpose: 'charge', player: 'A', sides: 6, count: 2, mode: 'sum', unitId: 'A:marauders' })
     expect(applyAbilityRerolls(ctx, 'onChargeRoll', data, short, 8)).toBe(short) // not granted yet
-    useOnce(ctx, 'movement', 'A', CHAMPION_AB, { target: 'A:marauders' })
+    s.phase = 'charge'
+    useOnce(ctx, 'chargeStart', 'A', CHAMPION_AB, { target: 'A:marauders' })
     const redone = applyAbilityRerolls(ctx, 'onChargeRoll', data, short, 8)
     expect(redone).not.toBe(short)
     expect(redone.dice).toEqual([6, 5])

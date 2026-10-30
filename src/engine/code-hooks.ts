@@ -23,7 +23,7 @@ import { kruleboyzHooks } from './factions/kruleboyz'
 import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
   ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, Model, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
-  RuntimeAbility, RuntimeStratagem, RuntimeWeapon, Unit, UnitId, Vec2, WeaponId, EdgeRef,
+  RuntimeAbility, RuntimeStratagem, RuntimeWeapon, Unit, UnitId, Vec2, WeaponId, EdgeRef, Phase,
 } from './types'
 import type { DestroyedBy } from './attack'
 
@@ -145,6 +145,9 @@ export interface EngineCodeHook extends CodeHook {
   // LRL-RA-2 Roaring Headwind: every model of `unitId` must end any Move ability closer to this battlefield edge than it
   // started (MoveConstraints.mustEndCloserToEdge; movement.ts, charge.ts, aos-moves.ts slides/retreats). null = no opinion
   moveEdgeConstraint?(state: GameState, entry: HookSourceEntry, unitId: UnitId): EdgeRef | null
+  // F10: an activated ability offered at the start of this phase (abilities.ts start-of-phase windows, e.g. 'chargeStart') instead
+  // of where its data timing puts it (STD-ENH-3 Champion of Raids: "your Charge phase", whose data names the movement phase's end)
+  startOfPhase?: Phase
 }
 
 // a battlefield edge: axis 'z' sign -1 = the edge at z = -h/2, axis 'x' sign 1 = the edge at x = +w/2 (types.ts EdgeRef)

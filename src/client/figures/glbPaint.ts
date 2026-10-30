@@ -7,7 +7,7 @@ import { CircleGeometry, Color, Mesh, MeshStandardMaterial, type Material, type 
 import { resolveBaseStyle, canonFaction, type ArmyPaint } from './paint'
 
 /** The hues each faction's baked textures are mostly painted in (null = nothing to remap, e.g. black or bare metal armour). */
-const SOURCE_HUES: Record<string, { major: string | null; minor: string | null }> = {
+export const SOURCE_HUES: Record<string, { major: string | null; minor: string | null }> = {
   sm: { major: '#1b3a6b', minor: '#c9a227' },
   ork: { major: '#4b6b2f', minor: '#8b2e2e' },
   necrons: { major: null, minor: '#39ff6a' },
@@ -34,14 +34,20 @@ const SOURCE_HUES: Record<string, { major: string | null; minor: string | null }
   // Fyreslayers: burnished bronze-gold armour as the major, flame-orange hair, beards and ruddy skin as the minor (they share a hue band, so a repaint moves them together).
   slaves: { major: '#642620', minor: '#9b8061' },
   fyreslayers: { major: '#c58d3b', minor: '#ac5222' },
-  // Kruleboyz: sallow green skin as the major, crimson shields and rags as the minor (mustard, bone and rust iron are left to the metals/trim rule).
-  // Gloomspite: bright green grot skin as the major, rust-red shields, pennants and saddle cloths as the minor (charcoal cloaks, grey wolves and the yellow glow stay).
-  // Lumineth: sky-blue and teal cloth as the major, lilac-pink ribbons and plumes as the minor (ivory and silver have no hue to move).
-  // Kharadron: crimson plates as the major, burnished copper and brass as the minor (ivory and the green aether glow stay).
-  kruleboyz: { major: '#7d8a3a', minor: '#b9322e' },
-  gloomspite: { major: '#4f8a2c', minor: '#a8452c' },
-  lumineth: { major: '#2f7088', minor: '#c08ab8' },
-  kharadron: { major: '#a42532', minor: '#b9783a' },
+  // The four F8 armies' hues are measured from the baked textures (linear-space HSV, mean S/V of the texels around each hue, the same
+  // gate the shader uses), not guessed. Ours came out of the paint stage warmer and duller than the concept art, so the tidy "green
+  // skin" / "crimson plate" of the design notes is not what is in the texture:
+  // Kruleboyz: skin (it baked yellow-olive, hue 47) as the major, the red shields and rags (hue 357) as the minor; the swamp-brown
+  // leather and rust iron (hue 25, 70% of the texels) sits between the two bands and is left alone.
+  // Gloomspite: green goblin skin (hue 83) as the major, rust-red cloths and shields (hue 3) as the minor; wolves, black hoods and the
+  // pale glow have no hue to move.
+  // Lumineth: sky-blue and teal cloth, crystals and shields (hue 188) as the major, lilac ribbons and plumes (hue 312) as the minor;
+  // the ivory and pale-gold armour (hue 30-45) is the neutral base.
+  // Kharadron: deep-crimson trim (hue 358) as the major, brass and cream plate (hue 32, 60% of the texels) as the minor.
+  kruleboyz: { major: '#948a5f', minor: '#664d4f' },
+  gloomspite: { major: '#626d4d', minor: '#5e3937' },
+  lumineth: { major: '#8ab0b5', minor: '#caa7c3' },
+  kharadron: { major: '#6a4b4c', minor: '#988365' },
   // Black plate has no hue to remap; the bone-coloured tabards/trim are the only repaintable colour.
   'black-templars': { major: null, minor: '#e6dfc8' },
 }

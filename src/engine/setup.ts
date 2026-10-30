@@ -13,7 +13,7 @@ import type { EngineContext, PhaseModule } from './modules'
 import { otherPlayer } from './modules'
 import { getDataBundle } from './reducer'
 import { deployTerrainBlock } from './terrain'
-import { assignSides, boardModelsOf, deploymentZone, hasDeepStrike, setModelPos, territoryOf, unitModels } from './state'
+import { assignSides, boardModelsOf, deploymentZone, hasDeepStrike, removeModel, setModelPos, territoryOf, unitModels } from './state'
 import type { TerrainTrait } from '../data/types'
 import type { Action, DeployUnitAction, ModelPlacement } from './actions'
 import type {
@@ -335,51 +335,68 @@ function touchingPlacements(
   return null
 }
 
+// distance from a base's centre to its rim along the world direction `angle` (an oval's long radius lies along its facing)
+export function baseReach(base: Model['base'], facing: number, angle: number): number {
+  if (base.radius2 === undefined) return base.radius
+  const phi = angle - facing
+  const c = Math.cos(phi) / base.radius, s = Math.sin(phi) / base.radius2
+  return 1 / Math.sqrt(c * c + s * s)
+}
+// half the base's extent along the world x and z axes at `facing`
+function baseExtent(base: Model['base'], facing: number): { x: number; z: number } {
+  const a = base.radius, b = base.radius2 ?? base.radius
+  const c = Math.cos(facing), s = Math.sin(facing)
+  return { x: Math.hypot(a * c, b * s), z: Math.hypot(a * s, b * c) }
+}
+
 // last-resort placement search for crowded or shallow zones: start each model chain at a fine grid spot, then grow the unit
-// outward from already-placed models (rings of candidate spots a hair apart), so lines, zig-zags and diagonals are all reachable.
+// outward from already-placed models (rings of candidate spots a hair apart, measured to the real oval rims), so lines,
+// zig-zags and diagonals are all reachable. Ovals are tried at the zone facing and turned a quarter (the whole unit one way).
 // Returns the first chain the caller's check accepts (the caller runs the real validation: coherency, overlaps, region).
 export function chainDeployPlacements(
   models: Model[], zone: Polygon, otherFriendly: Model[], enemies: Model[], accept: (p: ModelPlacement[]) => boolean,
   canPlace?: (model: Model, pos: Vec3, facing?: number) => boolean,
 ): ModelPlacement[] | null {
   if (models.length === 0) return null
-  const facing = deployFacing(zone)
+  const base = deployFacing(zone)
+  const facings = models.some((m) => m.base.radius2 !== undefined) ? [base, base + Math.PI / 2] : [base]
   const xs = zone.map((p) => p.x), zs = zone.map((p) => p.z)
   const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs)
   const blockers: Footprint[] = [...otherFriendly, ...enemies]
   const free = (c: Footprint, mine: Footprint[], m: Model): boolean =>
     whollyWithinPolygon(c, zone) && !mine.some((o) => basesOverlap(c, o)) && !blockers.some((o) => basesOverlap(c, o))
     && (!canPlace || canPlace(m, c.pos, c.facing))
-  const rOf = (m: Model): number => Math.max(m.base.radius, m.base.radius2 ?? 0)
   const angles: number[] = []
   for (let a = 0; a < 360; a += 10) angles.push((a * Math.PI) / 180)
-  for (let z = minZ; z <= maxZ + 1e-9; z += 0.5) {
-    for (let x = minX; x <= maxX + 1e-9; x += 0.5) {
-      const first: Footprint = { pos: { x, y: 0, z }, facing, base: models[0].base }
-      if (!free(first, [], models[0])) continue
-      const mine: Footprint[] = [first]
-      let ok = true
-      for (let i = 1; i < models.length && ok; i++) {
-        let placed: Footprint | null = null
-        // prefer the latest-placed models as anchors so the unit snakes along the zone
-        for (let k = mine.length - 1; k >= 0 && !placed; k--) {
-          const anchor = mine[k]
-          const anchorR = Math.max(anchor.base.radius, anchor.base.radius2 ?? 0)
-          for (const extra of [0.05, 0.5, 1.2]) {
-            const dist = anchorR + rOf(models[i]) + extra
-            for (const a of angles) {
-              const cand: Footprint = { pos: { x: anchor.pos.x + Math.cos(a) * dist, y: 0, z: anchor.pos.z + Math.sin(a) * dist }, facing, base: models[i].base }
-              if (free(cand, mine, models[i])) { placed = cand; break }
+  for (const facing of facings) {
+    // a cheap pre-filter: the starting spot must at least hold the first model
+    for (let z = minZ; z <= maxZ + 1e-9; z += 0.5) {
+      for (let x = minX; x <= maxX + 1e-9; x += 0.5) {
+        const first: Footprint = { pos: { x, y: 0, z }, facing, base: models[0].base }
+        if (!free(first, [], models[0])) continue
+        const mine: Footprint[] = [first]
+        let ok = true
+        for (let i = 1; i < models.length && ok; i++) {
+          let placed: Footprint | null = null
+          // prefer the latest-placed models as anchors so the unit snakes along the zone
+          for (let k = mine.length - 1; k >= 0 && !placed; k--) {
+            const anchor = mine[k]
+            for (const extra of [0.05, 0.3]) {
+              for (const a of angles) {
+                const dist = baseReach(anchor.base, anchor.facing, a) + baseReach(models[i].base, facing, a) + extra
+                const cand: Footprint = { pos: { x: anchor.pos.x + Math.cos(a) * dist, y: 0, z: anchor.pos.z + Math.sin(a) * dist }, facing, base: models[i].base }
+                if (free(cand, mine, models[i])) { placed = cand; break }
+              }
+              if (placed) break
             }
-            if (placed) break
           }
+          if (!placed) ok = false
+          else mine.push(placed)
         }
-        if (!placed) ok = false
-        else mine.push(placed)
+        if (!ok) continue
+        const out = mine.map((f, i) => ({ modelId: models[i].id, pos: f.pos, facing }))
+        if (accept(out)) return out
       }
-      if (!ok) continue
-      const out = mine.map((f, i) => ({ modelId: models[i].id, pos: f.pos, facing }))
-      if (accept(out)) return out
     }
   }
   return null
@@ -559,16 +576,24 @@ function compactPlacement(
   const canPlace = (m: Model, pos: Vec3, f?: number): boolean => deployTerrainBlock(state, m, pos, f ?? m.facing) === null
   const raster = autoDeployPlacements(models, zone, friendly, enemies, { canPlace, board: state.board })
   if (raster && accept(raster)) return raster
-  const rad = Math.max(...models.map((m) => Math.max(m.base.radius, m.base.radius2 ?? 0)))
-  const spacing = 2 * rad + 0.2
   const minX = Math.min(...zone.map((p) => p.x)), maxX = Math.max(...zone.map((p) => p.x))
   const minZ = Math.min(...zone.map((p) => p.z)), maxZ = Math.max(...zone.map((p) => p.z))
-  const facing = deployFacing(zone)
-  for (let cols = Math.ceil(Math.sqrt(models.length)); cols <= models.length; cols++) {
-    for (let z0 = minZ + rad + 0.1; z0 < maxZ; z0 += 1) {
-      for (let x0 = minX + rad + 0.1; x0 < maxX; x0 += 1) {
-        const block = models.map((m, i) => ({ modelId: m.id, pos: { x: x0 + (i % cols) * spacing, y: 0, z: z0 + Math.floor(i / cols) * spacing }, facing }))
-        if (accept(block)) return block
+  const base = deployFacing(zone)
+  // a compact block at the zone facing, then (ovals) turned a quarter: rows and columns spaced by the real base extents along
+  // each axis, a hair apart, so a turned oval packs on its narrow side (a 5" deep strip takes ovals lengthways or broadside)
+  const facings = models.some((m) => m.base.radius2 !== undefined) ? [base, base + Math.PI / 2] : [base]
+  const blockers: Footprint[] = [...friendly, ...enemies]
+  for (const facing of facings) {
+    const ex = Math.max(...models.map((m) => baseExtent(m.base, facing).x)), ez = Math.max(...models.map((m) => baseExtent(m.base, facing).z))
+    const sx = 2 * ex + 0.1, sz = 2 * ez + 0.1
+    for (let cols = Math.ceil(Math.sqrt(models.length)); cols <= models.length; cols++) {
+      for (let z0 = minZ + ez + 0.05; z0 < maxZ; z0 += 0.5) {
+        for (let x0 = minX + ex + 0.05; x0 < maxX; x0 += 0.5) {
+          const block = models.map((m, i) => ({ modelId: m.id, pos: { x: x0 + (i % cols) * sx, y: 0, z: z0 + Math.floor(i / cols) * sz }, facing }))
+          // cheap geometry pre-filter before the full validation
+          if (!block.every((b, i) => { const fp: Footprint = { pos: b.pos, facing, base: models[i].base }; return whollyWithinPolygon(fp, zone) && !blockers.some((o) => basesOverlap(fp, o)) })) continue
+          if (accept(block)) return block
+        }
       }
     }
   }
@@ -593,7 +618,8 @@ export function suggestDeployment(state: GameState, unitId?: UnitId): DeploySugg
   const player = unitId ? state.units[unitId]?.player ?? null : deploymentTurnPlayer(state)
   if (!player) return null
   const waiting = remainingToDeploy(state, player)
-  const first = unitId ?? biggestFirst(state, waiting)[0]
+  // no unit named: the biggest one that still has a legal spot (a boxed-out big base must not hide the others)
+  const first = unitId ?? biggestFirst(state, waiting).find((id) => deployablePlacement(state, player, id) !== null)
   if (!first || !waiting.includes(first)) return null
   const zone = deploymentZone(state, player)
   const constraints = emptyMoveConstraints(1e9, { region: zone, mustEndOutsideEngagement: false })
@@ -611,6 +637,23 @@ export function suggestDeployment(state: GameState, unitId?: UnitId): DeploySugg
     }
   }
   return firstPlacement ? { unitId: first, placements: firstPlacement, fitsAll, order } : null
+}
+
+// the first legal spot for `unitId` in its owner's deployment area as things stand, or null when it has none
+function deployablePlacement(state: GameState, player: PlayerId, unitId: UnitId): ModelPlacement[] | null {
+  const zone = deploymentZone(state, player)
+  const constraints = emptyMoveConstraints(1e9, { region: zone, mustEndOutsideEngagement: false })
+  return compactPlacement(state, player, unitId, zone, [], (p) => resolveDeployCore(state, player, unitId, p, constraints, []).rejection === null)
+}
+
+// a unit that cannot be set up anywhere: its models leave play (no hooks, no kill credit) and it counts as destroyed
+function strandUnit(ctx: EngineContext, unitId: UnitId): void {
+  const s = ctx.state
+  const unit = s.units[unitId]
+  markDropped(s, unitId)
+  for (const id of [...unit.models]) removeModel(s, id)
+  unit.location = 'destroyed'
+  ctx.emit({ type: 'UnitDestroyed', unitId, byPlayer: null, byUnitId: null, byModelId: null, kind: 'other', player: unit.player })
 }
 
 // ---------- the module ----------
@@ -647,6 +690,12 @@ export const setupModule: PhaseModule = {
           const pid = deploymentTurnPlayer(s)
           if (pid === null) return 'done'
           const unitIds = remainingToDeploy(s, pid)
+          // fallback (RULING): when none of the waiting units has any legal spot left (a crowded 30x5 strip), they cannot be set
+          // up and are removed from play, so the game never waits on a deployment nobody can make
+          if (!unitIds.some((id) => deployablePlacement(s, pid, id) !== null)) {
+            for (const id of unitIds) strandUnit(ctx, id)
+            continue
+          }
           ctx.decide({
             kind: 'deployUnit', player: pid, window: 'deployment.unit', canPass: false,
             context: { unitIds, zone: deploymentZone(s, pid), infiltrators: [], reservesAllowed: [] },

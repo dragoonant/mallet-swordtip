@@ -306,20 +306,24 @@ function applyDamageMods(d: number, m: { delta: number; halve: boolean; reductio
 }
 
 // ---------- pools ----------
-interface Pool { points: number; by: DestroyedBy; source: AttackRollContext | { abilityId: string }; mortal: boolean; attackerUnitId: UnitId | null }
+interface Pool { unitId: UnitId; points: number; by: DestroyedBy; source: AttackRollContext | { abilityId: string }; mortal: boolean; attackerUnitId: UnitId | null }
+// one pool per target unit and damage kind: mortal damage (crit-mortal hits, abilities) never shares a pool with normal damage,
+// so wards that care about the kind, DamageApplied.mortal and the slain-by kind all see the right one (F10)
+type Pools = Map<string, Pool>
 
-function addToPool(pools: Map<UnitId, Pool>, unitId: UnitId, points: number, by: DestroyedBy, source: Pool['source'], mortal: boolean, attackerUnitId: UnitId | null): void {
+function addToPool(pools: Pools, unitId: UnitId, points: number, by: DestroyedBy, source: Pool['source'], mortal: boolean, attackerUnitId: UnitId | null): void {
   if (points <= 0) return
-  const p = pools.get(unitId)
+  const key = `${unitId}|${mortal ? 'mortal' : 'normal'}`
+  const p = pools.get(key)
   if (p) p.points += points
-  else pools.set(unitId, { points, by, source, mortal, attackerUnitId })
+  else pools.set(key, { unitId, points, by, source, mortal, attackerUnitId })
 }
 
 // ---------- resolving the declared attacks ----------
 interface Entry { modelId: ModelId; n: number }
 interface Batch { targetUnitId: UnitId; weaponId: WeaponId; entries: Entry[] }
 
-function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: UnitId, batch: Batch, pools: Map<UnitId, Pool>): void {
+function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: UnitId, batch: Batch, pools: Pools): void {
   const s = ctx.state
   const attacker = s.units[attackerUnitId]
   const target = s.units[batch.targetUnitId]
@@ -633,11 +637,11 @@ function destroyUnitTail(ctx: EngineContext, unit: Unit, by: DestroyedBy): void 
   ms.unitDestroyed?.(ctx, { unitId: unit.id, byPlayer: by.player, byUnitId: by.unitId, byModelId: by.modelId, kind: by.kind, rangedAttack: by.kind === 'ranged' })
 }
 
-function resolvePools(ctx: EngineContext, pools: Map<UnitId, Pool>): void {
+function resolvePools(ctx: EngineContext, pools: Pools): void {
   const s = ctx.state
-  // CORE-13.1: the active player's units first
-  const ids = [...pools.keys()].sort((a, b) => Number(s.units[a].player !== s.activePlayer) - Number(s.units[b].player !== s.activePlayer))
-  for (const id of ids) resolvePool(ctx, id, pools.get(id) as Pool)
+  // CORE-13.1: the active player's units first (a stable sort: otherwise in the order the pools were opened)
+  const list = [...pools.values()].sort((a, b) => Number(s.units[a.unitId].player !== s.activePlayer) - Number(s.units[b.unitId].player !== s.activePlayer))
+  for (const pool of list) resolvePool(ctx, pool.unitId, pool)
 }
 
 // ---------- service ----------
@@ -669,7 +673,7 @@ export const attackService: AttackService = {
     const s = ctx.state
     const a = s.phaseState.attack
     if (!a) return 'done'
-    const pools = new Map<UnitId, Pool>()
+    const pools: Pools = new Map()
     const live = a.targets.filter((t) => s.units[t.targetUnitId]?.location === 'board')
     if (live.length > 0) {
       const batches = buildBatches(ctx, a.kind, a.attackerUnitId, live)
@@ -696,7 +700,7 @@ export const attackService: AttackService = {
     const a = ctx.state.phaseState.attack
     if (a) { a.mortalQueue.push({ targetUnitId, count, source, lostOnDeath, ...(by ? { by } : {}) }); return }
     // no sequence running: the mortal damage is its own tiny ability (pool + ward + allocation) and resolves now
-    const pools = new Map<UnitId, Pool>()
+    const pools: Pools = new Map()
     const dby: DestroyedBy = by ? { player: by.player, unitId: by.unitId, modelId: by.modelId, kind: 'mortal', ...(by.psychic ? { psychic: true } : {}) } : { player: null, unitId: null, modelId: null, kind: 'mortal' }
     addToPool(pools, targetUnitId, count, dby, { abilityId: source.split('#')[0] }, true, by?.unitId ?? null)
     resolvePools(ctx, pools)

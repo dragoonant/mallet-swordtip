@@ -320,7 +320,10 @@ interface FigureGalleryProps {
 }
 
 function entriesFor(faction?: string): GalleryEntry[] {
-  return faction ? GALLERY_ENTRIES.filter((e) => e.faction === faction) : GALLERY_ENTRIES
+  if (!faction) return GALLERY_ENTRIES
+  // `faction=cities,kruleboyz` shows several armies in one row (scale comparison between armies)
+  const wanted = faction.split(',')
+  return GALLERY_ENTRIES.filter((e) => wanted.includes(e.faction))
 }
 
 /** Row x-positions spaced by each entry's own base half-width (plus a fixed clearance) rather than a
@@ -379,8 +382,21 @@ export function FigureGalleryStage({ pose = 'idle', faction }: FigureGalleryProp
   const halfHFov = Math.atan(Math.tan(halfVFov) * ASSUMED_ASPECT)
   const distance = rowFitWidth / 2 / Math.tan(halfHFov)
   const height = TARGET_Y + distance * Math.tan((ELEVATION_DEG * Math.PI) / 180)
+  // QA views: `&elev=<deg above the row>` (89 = straight down, for facing and footprint) and `&az=<deg round the row>`
+  // (90 = along the row from the right); same orbit radius as the default shot.
+  const q = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search)
+  const elev = q.has('elev') ? Math.min(89, Math.max(0, Number(q.get('elev')) || 0)) : undefined
+  const az = ((Number(q.get('az')) || 0) * Math.PI) / 180
+  const radius = Math.hypot(distance, height - TARGET_Y)
+  const camPos: [number, number, number] =
+    elev === undefined && az === 0
+      ? [0, height, distance]
+      : (() => {
+          const e = ((elev ?? ELEVATION_DEG) * Math.PI) / 180
+          return [radius * Math.cos(e) * Math.sin(az), TARGET_Y + radius * Math.sin(e), radius * Math.cos(e) * Math.cos(az)]
+        })()
   return (
-    <Canvas camera={{ position: [0, height, distance], fov: FOV_DEG, near: 0.1, far: 200 }} style={{ position: 'absolute', inset: 0 }}>
+    <Canvas camera={{ position: camPos, fov: FOV_DEG, near: 0.1, far: 200 }} style={{ position: 'absolute', inset: 0 }}>
       <color attach="background" args={['#0a0a10']} />
       <hemisphereLight intensity={1.0} groundColor="#2a2a34" />
       <directionalLight position={[6, 8, 4]} intensity={1.2} />

@@ -203,15 +203,9 @@ Diameter ≈ **6"** (radius 3") on both sides, measured, not stated — flagged 
 | `obj.behemat` | Behemat | −10 | 7 | B |
 | `obj.nagendra` | Nagendra | 11 | 7 | B |
 
-**Ghyran side** (measured from a cropped image — **low confidence**, re-measure before shipping):
-
-| Objective id | Godbeast | x | z |
-|---|---|---|---|
-| `obj.dracothion` | Dracothion | 0 | 0 |
-| `obj.vulcatrix` | Vulcatrix | −7 | −7 |
-| `obj.nagendra` | Nagendra | 7 | 7 |
-| `obj.behemat` | Behemat | −13 | 0 |
-| `obj.ignax` | Ignax | 13 | 0 |
+**Ghyran side**: the current, measured positions are in `docs/spec/15-fire-and-jade-ghyran.md` §15.3 (the data in
+`src/data/missions/sph-fire-and-jade-ghyran-*.json` follows that file). The low-confidence table that used to sit here is retired;
+15.3 is the only source for the Ghyran objectives.
 
 Godbeast-to-position mapping is read from the emblems on the map art (centre = Dracothion is confirmed by
 the book's battle walkthrough; the rest by emblem shape).
@@ -316,7 +310,7 @@ Validation: exactly 2 regiment abilities and 4 enhancements; `general` names a u
 |---|---|---|
 | 1 | City of Ash realm battlefield content is absent from sources (§15). | Play on Fire and Jade. |
 | 2 | Fire and Jade card lists absent (only cropped fragments in the core book). | Resolved: 14-fire-and-jade-cards.md; data in `src/data/cards/fire-and-jade.json`, engine `src/engine/cards.ts` (F4). |
-| 3 | Objective circle diameter not stated; measured ≈ 6". Ghyran positions are low-confidence. | radius 3; Aqshy as §14.3. |
+| 3 | Objective circle diameter not stated; measured ≈ 6". Ghyran positions re-measured in 15-fire-and-jade-ghyran.md §15.3. | radius 3; Aqshy as §14.3, Ghyran as 15.3. |
 | 4 | Terrain footprints/heights not in sources. | §5 defaults. |
 | 5 | Seizing player: may they still discard tactics when they cannot draw? Source only removes the draw. | Allow discard. |
 | 6 | Scored tactic card fate isn't stated (only "discard" for commands). | Move to a public scored pile; never reshuffled. |

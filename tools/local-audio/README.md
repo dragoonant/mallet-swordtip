@@ -81,3 +81,21 @@ so its prompts are short positive descriptions (the manifest prompts were writte
 - **CLAP** (`laion/larger_clap_general`): used only for scoring takes.
 
 Credits line shown on `public/sounds-aos.html`.
+
+## Redo pass (weakest sounds)
+
+`redo_config.py` lists, per weak id, a reference CLAP prompt, several concrete AudioGen/MusicGen prompts (`groups`),
+procedural layers (`synth`: a sub thump, a string twang, a wind bed) and which groups to mix (`layers`). Voice ids also get
+Qwen3-TTS barks. Flow (each with the right venv):
+
+```
+python gen_redo.py                      # audiocraft venv: redo-<group>-<n>.wav + redo-synth-*.wav
+python gen_redo_voice.py --takes 3      # qwen venv: redo-qwen-<line>-<take>.wav
+python redo_pick.py layer               # layer-<a>+<b>-<align|oSECONDS>-<n>.wav mixes
+python redo_pick.py score               # raw CLAP + sanity for every redo/layer take, plus the current public mp3
+python redo_mastered.py --top 12        # master + 128k mp3 round trip, CLAP vs the pre-redo mp3 (fair comparison)
+python redo_pick.py apply id=take.wav   # master one take over public/audio/<id>.mp3
+```
+
+CLAP scores differ between raw takes and shipped mp3s (fades, trim, limiter, codec), so only compare like with like.
+Speech-looking takes were checked with Whisper-small to make sure shouts stay wordless.

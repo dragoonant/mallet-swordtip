@@ -1392,7 +1392,7 @@
     {
       "id": "aos-kharadron-war-cry",
       "kind": "sfx",
-      "prompt": "A crew of gruff deep-voiced sky-sailors shouts a loud hearty wordless cheer, no words, no music",
+      "prompt": "A single gruff deep-voiced duardin sky-sailor barks a short loud wordless shout, no words, no cheering crowd, no music",
       "durationSeconds": 1.6,
       "promptInfluence": 0.55
     },
