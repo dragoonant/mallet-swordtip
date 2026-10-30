@@ -42,6 +42,13 @@ const barTrack: CSSProperties = {
   overflow: 'hidden',
 }
 
+// a twist reveal carries the card's whole text: keep it to a readable column, with a warm glow
+const twistWrap: CSSProperties = {
+  maxWidth: 'min(520px, calc(100vw - 32px))',
+  background: 'linear-gradient(165deg, rgba(90,36,14,0.92) 0%, rgba(14,15,22,0.92) 70%)',
+  boxShadow: '0 10px 40px rgba(0,0,0,0.55), 0 0 28px rgba(255,122,60,0.35)',
+}
+
 // Compact: a slim banner under the top bar, so the board and the bottom sheet stay visible.
 const wrapCompact: CSSProperties = { ...wrap, top: 52, minWidth: 0, maxWidth: 'calc(100% - 220px)', padding: '8px 18px 8px' }
 const titleCompact: CSSProperties = { ...titleStyle, fontSize: 18 }
@@ -65,11 +72,12 @@ export function PhaseBanner() {
   }, [id])
 
   if (!current) return null
-  const accent = current.player === 'A' ? colors.playerA : colors.playerB
+  const twist = current.kind === 'twist'
+  const accent = twist ? '#ff9a4a' : current.player === 'A' ? colors.playerA : colors.playerB
 
   return (
     <div
-      style={{ ...(compact ? wrapCompact : wrap), borderColor: accent }}
+      style={{ ...(compact ? wrapCompact : wrap), borderColor: accent, ...(twist ? twistWrap : {}) }}
       data-testid="phase-banner"
       // Per-announcement, so an e2e run can tell "this pause ended" from "the next one took over the
       // banner straight away" — back-to-back announcements are exactly the case this feature exists for.
@@ -80,7 +88,7 @@ export function PhaseBanner() {
       onClick={skipAnnouncement}
     >
       <div style={{ ...(compact ? titleCompact : titleStyle), color: accent }}>{current.title}</div>
-      <div style={compact ? subtitleCompact : subtitleStyle}>{current.subtitle}</div>
+      <div style={{ ...(compact ? subtitleCompact : subtitleStyle), ...(twist ? { color: colors.text, lineHeight: 1.4 } : {}) }}>{current.subtitle}</div>
       <div style={compact ? hintCompact : hintStyle}>{compact ? 'Tap anywhere to continue' : 'Click anywhere to continue'}</div>
       <div style={compact ? barTrackCompact : barTrack}>
         <div

@@ -132,6 +132,11 @@ const CHOOSE_OPTION_INFO: Partial<Record<ChooseOptionTopic, { title: string; hin
   abilityMode: { title: 'Choose an effect', hint: 'This ability has more than one effect. Pick one.' },
   pileInTarget: { title: 'Choose where to pile in', hint: 'Pick the enemy unit this unit moves toward when it piles in (up to 3").' },
   contestedObjective: { title: 'Which objective does this unit contest?', hint: 'The unit touches more than one objective circle. It counts toward one of them.' },
+  // Spearhead cards (src/engine/cards.ts)
+  twistPick: { title: 'Twist: make your choice', hint: "This round's twist asks you to choose. The choice lasts until the end of the battle round." },
+  discardTactics: { title: 'Discard battle tactics?', hint: 'Discard any cards you do not want, one at a time, then keep the rest. You draw back up to three afterwards.' },
+  scoreTactics: { title: 'Battle tactic complete!', hint: 'You met the condition on these cards this turn. Score each one for 1 VP (it goes to your scored pile).' },
+  tacticCommand: { title: 'Play a command?', hint: "Spend a battle tactic card for its command. The card is discarded and can no longer be scored. Pass to keep your cards." },
 }
 
 const GLIMPSE_INFO = {
@@ -729,6 +734,11 @@ export function chooseOptionInfoFor(
       ? 'Your Warlord is on the battlefield: searching now gains 1 CP.'
       : 'Your Warlord is NOT on the battlefield: searching now gains nothing and still uses up the marker. You probably want to pass.'
     return { title: info.title, hint: `${status} ${info.hint}` }
+  }
+  // twist picks name their card, and say what kind of thing is being picked
+  if (context.topic === 'twistPick' && typeof context.data?.label === 'string') {
+    const kind = context.data.kind === 'objective' ? 'Pick an objective' : context.data.kind === 'friendlyUnit' ? 'Pick one of your units' : context.data.kind === 'enemyUnit' ? 'Pick an enemy unit' : 'Pick an effect'
+    return { title: `Twist · ${context.data.label}`, hint: `${kind}. The choice lasts until the end of the battle round. Open the twist card (bottom left) to read it in full.` }
   }
   return CHOOSE_OPTION_INFO[context.topic]
 }

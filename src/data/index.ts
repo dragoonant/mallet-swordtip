@@ -10,6 +10,7 @@
 // `loadBundle()` is the lazy, memoized entry point: nothing is read until first called.
 import type {
   AbilityDescriptor,
+  CardDeckData,
   CombatPatrolData,
   DataBundle,
   DatasheetData,
@@ -36,6 +37,7 @@ function loadViaGlob(): Record<string, unknown> | null {
       ...import.meta.glob('./core/*.json', { eager: true, import: 'default' }),
       ...import.meta.glob('./missions/*.json', { eager: true, import: 'default' }),
       ...import.meta.glob('./terrain/*.json', { eager: true, import: 'default' }),
+      ...import.meta.glob('./cards/*.json', { eager: true, import: 'default' }),
       ...import.meta.glob('./factions/*/*.json', { eager: true, import: 'default' }),
       ...import.meta.glob('./factions/*/datasheets/*.json', { eager: true, import: 'default' }),
       ...import.meta.glob('./factions/*/patrols/*.json', { eager: true, import: 'default' }),
@@ -82,6 +84,7 @@ function emptyBundle(): DataBundle {
     patrols: {},
     missions: {},
     terrainLayouts: {},
+    cardDecks: {},
   }
 }
 
@@ -120,6 +123,8 @@ function putSingle(bundle: DataBundle, kind: DataKind, item: { id: Id }, source:
       return put(bundle.missions, item as MissionData, source)
     case 'terrainLayout':
       return put(bundle.terrainLayouts, item as TerrainLayoutData, source)
+    case 'cardDeck':
+      return put(bundle.cardDecks as Record<Id, CardDeckData>, item as CardDeckData, source)
     default:
       throw new Error(`putSingle: "${kind}" is not a single-object kind`)
   }

@@ -11,6 +11,10 @@ import {
 } from './modules'
 import type { AbilityWindow } from './abilities'
 import { restoreRng, type Rng } from './rng'
+import {
+  CARD_TOPICS, cardHandler, cardsRoundEnd, cardsRoundStart, cardsTurnStart, expireCardFlags, reactionWindow, redactCards,
+  scoreTacticsStep, trackCardEvent, twistAfterScoring, twistTurnScoring,
+} from './cards'
 import { cloneForStep, createGameState, emptyPhaseState, emptyTurnState, hashState } from './state'
 import {
   EngineInvariantError,
@@ -72,7 +76,9 @@ function makeContext(draft: GameState, rng: Rng, modules: ModuleTable, rt: StepR
     services,
     emit(e) {
       const { player, ...rest } = e
-      rt.events.push({ ...(rest as object), ...envelope(player) } as GameEvent)
+      const ev = { ...(rest as object), ...envelope(player) } as GameEvent
+      rt.events.push(ev)
+      trackCardEvent(s, ev as { type: string; unitId?: string })
     },
     roll(spec) {
       const id = `r:${++s.rollCounter}`
@@ -132,6 +138,8 @@ function makeContext(draft: GameState, rng: Rng, modules: ModuleTable, rt: StepR
         services.hooks.onWindow(ctx, id, key, trigger)
       }
       if (s.pending) return true
+      // battle tactic Reaction commands (SPH-10.5) come before stratagem windows; re-entrant through their own marks
+      for (const player of order) if (reactionWindow(ctx, id, player, key, trigger)) return true
       for (const player of order) {
         if (s.phaseState.windowsOpened.some((w) => w.window === id && w.player === player && w.key === key)) continue
         s.phaseState.windowsOpened.push({ window: id, player, key })
@@ -374,6 +382,7 @@ function ownerOf(state: GameState, pending: PendingDecision, modules: ModuleTabl
     case 'chooseOption': {
       const topic = pending.context.topic
       if (topic === 'firstTurn' || topic === 'priorityChoice') return core.turnOrder
+      if (CARD_TOPICS.has(topic)) return cardHandler
       const h = modules.topics[topic]
       if (h) return h
       break
@@ -415,6 +424,7 @@ function finishPhaseBody(ctx: EngineContext, modules: ModuleTable, mod: PhaseMod
   if (isBattlePhase(s.phase)) {
     modules.services.hooks.run(ctx, 'onPhaseEnd', {})
     modules.services.effects.expire(ctx, 'phaseEnd', null)
+    expireCardFlags(s, 'phase')
   }
   ctx.emit({ type: 'PhaseEnded' })
   s.step = 'none'
@@ -449,6 +459,7 @@ function startTurn(ctx: EngineContext, modules: ModuleTable, player: PlayerId): 
   if (ctx.once('turnStarted')) {
     s.activePlayer = player
     for (const u of Object.values(s.units)) u.turn = emptyTurnState()
+    cardsTurnStart(s)
     ctx.emit({ type: 'TurnStarted' })
     modules.services.effects.expire(ctx, 'nextOwnTurn', player)
     modules.services.hooks.run(ctx, 'onTurnStart', {})
@@ -460,7 +471,7 @@ function startTurn(ctx: EngineContext, modules: ModuleTable, player: PlayerId): 
 }
 
 // SPH-8.2 start of battle round: ① first turn (round 1: attacker's choice; later: priority roll) ② underdog ③ twist
-// (empty-deck guard, CARD-005) ④ battle tactics (P2, no cards) ⑤ round.start window + Start of Battle Round abilities,
+// (empty-deck guard, CARD-005) and its picks ④ battle tactics (cards.ts) ⑤ round.start window + Start of Battle Round abilities,
 // then (round 1 only) objective control (CORE-4.13, SPH-6.4), then the first turn
 function startRoundChain(ctx: EngineContext, modules: ModuleTable): void {
   const s = ctx.state
@@ -495,15 +506,8 @@ function startRoundChain(ctx: EngineContext, modules: ModuleTable): void {
     s.underdog = A.vp < B.vp ? 'A' : B.vp < A.vp ? 'B' : null
     ctx.emit({ type: 'UnderdogDetermined', underdog: s.underdog, player: s.firstPlayer })
   }
-  // ③ twist (SPH-9.1/9.4): one card from the deck; an empty deck draws nothing (CARD-005)
-  if (ctx.once(`twist:${s.round}`)) {
-    const next = s.twist.deck.length > 0 ? s.twist.deck[0] : null
-    if (next !== null) {
-      s.twist = { deck: s.twist.deck.slice(1), current: next, drawn: [...s.twist.drawn, next] }
-    } else {
-      s.twist = { ...s.twist, current: null }
-    }
-  }
+  // ③ twist (SPH-9.1/9.4): one card from the deck (an empty deck draws nothing, CARD-005) and its picks; ④ battle tactics
+  if (cardsRoundStart(ctx)) return
   // ⑤ Start of Battle Round (first-turn player first, CORE-4.12)
   if (ctx.window('round.start', `${s.round}`, ctx.order.first())) return
   if (abilityWindows(ctx, modules, 'startOfRound', ctx.order.first(), `round:${s.round}`)) return
@@ -523,10 +527,16 @@ function endTurnChain(ctx: EngineContext, modules: ModuleTable): boolean {
   if (s.pending) return true
   if (ctx.window('turn.end.control', 'turn', ctx.order.active())) return true
   if (ctx.window('turn.end.scoring', 'turn', ctx.order.active())) return true
+  // twist VP, then the active player's battle tactics (SPH-10.3)
+  if (ctx.once('turnEnd:twistVp')) twistTurnScoring(ctx)
+  if (scoreTacticsStep(ctx)) return true
   if (ctx.window('turn.end.afterScoring', 'turn', ctx.order.active())) return true
+  if (ctx.once('turnEnd:twistAfter')) twistAfterScoring(ctx)
+  if (s.pending) return true
   if (ctx.once('turnEnd')) {
     services.hooks.run(ctx, 'onTurnEnd', {})
     services.effects.expire(ctx, 'turnEnd', s.activePlayer)
+    expireCardFlags(s, 'turn')
   }
   return !!s.pending
 }
@@ -555,6 +565,7 @@ function transition(ctx: EngineContext, modules: ModuleTable): void {
   if (abilityWindows(ctx, modules, 'endOfRound', roundOrder, `round:${s.round}`)) return
   if (ctx.once('roundEnd')) {
     services.effects.expire(ctx, 'roundEnd', null)
+    cardsRoundEnd(ctx)
     ctx.emit({ type: 'RoundEnded' })
   }
   if (s.pending) return
@@ -671,9 +682,11 @@ export function createEngine(modules: ModuleTable): EngineApi {
     const opp = otherPlayer(player)
     const inDeployment = state.phase === 'setup' || state.phase === 'deployment'
     const oppSetup = state.setup.players[opp]
-    const redacted = inDeployment
+    const base = inDeployment
       ? { ...state, setup: { ...state.setup, players: { ...state.setup.players, [opp]: { ...oppSetup, reserves: [] } } } }
       : state
+    // SPH-3.5 / SPH-10.7: the opponent's battle tactic hand and every deck order stay hidden
+    const redacted = redactCards(base, player)
     return { player, state: redacted, hidden: { opponentReserveCount: inDeployment ? (oppSetup.reserves ?? []).length : 0 }, lastRejection: null }
   }
 

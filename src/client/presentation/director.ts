@@ -6,6 +6,7 @@
 //
 // Mount once via <PresentationDirector/> (Director.tsx) — nothing here is a React component, so it
 // can run its subscription/queue entirely outside the render cycle.
+import { anyCardName, twistCard } from '../ui/cardInfo'
 import type { GameEvent, GameState, Phase, PlayerId } from '@/engine'
 import { unitModels } from '@/engine'
 import type { DataBundle, WeaponData } from '@/data/types'
@@ -815,6 +816,13 @@ async function playEvent(
       if (!title) return
       const who = to.players[event.turn]?.name ?? ''
       await announce('phase', title, who ? `Round ${event.round} · ${who}` : `Round ${event.round}`, event.turn)
+      return
+    }
+
+    // Spearhead twist reveal (SPH-9.1): a longer beat with the card's own words, so both players read it
+    case 'TwistDrawn': {
+      const card = twistCard(bundle, event.cardId)
+      await announce('twist', `Twist: ${card?.name ?? anyCardName(bundle, event.cardId)}`, card?.text ?? '', event.player)
       return
     }
 

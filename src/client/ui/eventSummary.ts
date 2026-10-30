@@ -3,6 +3,7 @@
 // with per-step numbers available as `detail`. Everything is derived from the events passed in, so
 // feeding only the already-presented events keeps lines in sync with the animation (a group's totals
 // simply grow as more of its dice are presented).
+import { anyCardName } from './cardInfo'
 import type { DiceRoll, GameEvent, GameState, PlayerId } from '@/engine'
 import type { DataBundle } from '@/data/types'
 import { ROLL_PURPOSE_LABEL, objectiveLabel, sourceName } from './labels'
@@ -325,6 +326,27 @@ export function summariseEvents(events: readonly GameEvent[], state: GameState, 
         break
       case 'VpScored':
         push(e, `${pname(e.player)} ${e.amount >= 0 ? "+" : ""}${e.amount} VP — ${sourceName(state, bundle, e.source)} (total ${e.total})`)
+        break
+      // Spearhead cards: twists and battle tactics (the hand itself stays hidden; only counts and public plays show)
+      case 'TwistDrawn':
+        push(e, `Twist for round ${e.drawRound}: ${anyCardName(bundle, e.cardId)}`, null, 'header')
+        break
+      case 'TwistPicked': {
+        const what = e.objectiveId ? (state.objectives[e.objectiveId]?.name ?? e.objectiveId) : e.unitId ? unit(e.unitId) : e.mode ?? ''
+        push(e, `${pname(e.player)} picks ${what} for ${anyCardName(bundle, e.cardId)}`)
+        break
+      }
+      case 'TacticsDrawn':
+        push(e, `${pname(e.player)} draws ${e.count} battle tactic${e.count === 1 ? '' : 's'}`)
+        break
+      case 'TacticDiscarded':
+        push(e, `${pname(e.player)} discards ${anyCardName(bundle, e.cardId)}`)
+        break
+      case 'TacticScored':
+        push(e, `${pname(e.player)} completes the battle tactic ${anyCardName(bundle, e.cardId)}`)
+        break
+      case 'TacticCommandUsed':
+        push(e, `${pname(e.player)} plays a command — ${e.summary}`)
         break
       case 'GameEnded':
         push(e, `Battle ends — ${e.result.winner === 'draw' ? 'a draw' : `${pname(e.result.winner)} wins`}`, null, 'header')

@@ -2,6 +2,7 @@
 // VP/CP event sources, secondary/stratagem ids) into text a player can read without cross-referencing
 // the JSON. Pure lookups over DataBundle/GameState — no engine/scoring logic duplicated here beyond a
 // generic id-to-title-case fallback for whatever id we don't have a curated name for.
+import { anyCardName, isCardId } from './cardInfo'
 import type { DiceRoll, GameEvent, GameState, MoveType, PlayerId, RollPurpose, RuntimeWeapon } from '@/engine'
 import { horizontalGap, modelStats } from '@/engine'
 // Deep import: the charge module owns this geometry and the engine barrel is a frozen contract.
@@ -35,6 +36,7 @@ export function objectiveLabel(id: string): string {
  *  secondary's own scoring rule, a stratagem, or an ability — so every one of those is checked. */
 export function sourceName(state: GameState, bundle: DataBundle | null, source: string): string {
   if (source === 'commandPhase') return 'Hero phase'
+  if (isCardId(source)) return anyCardName(bundle, source)
   const strat = state.stratagems[source]
   if (strat) return strat.name
   const ability = state.abilities[source]

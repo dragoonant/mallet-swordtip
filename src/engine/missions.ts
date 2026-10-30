@@ -35,7 +35,7 @@ const DEFAULT_RULES: ScoringRule[] = ['sph.vp.holdOne', 'sph.vp.holdTwo', 'sph.v
   id: code, when: 'turn.end', rounds: { from: 1, to: 4 }, who: 'active', rule: 'custom', code, pointsPer: 1, cap: 1,
 }))
 
-function awardVp(ctx: EngineContext, pid: PlayerId, amount: number, source: string): void {
+export function awardVp(ctx: EngineContext, pid: PlayerId, amount: number, source: string): void {
   if (amount <= 0) return
   const p = ctx.state.players[pid]
   p.vp += amount

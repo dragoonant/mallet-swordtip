@@ -27,6 +27,15 @@ export interface UnderdogDetermined extends EventBase { type: 'UnderdogDetermine
 // SPH-8.5: envelope `player` = the player who seized the initiative
 export interface InitiativeSeized extends EventBase { type: 'InitiativeSeized' }
 
+// Spearhead cards (SPH-9.4, SPH-10.7). TacticsDrawn carries a count only (the cards stay hidden from the opponent);
+// discards and scored tactics are public. TwistPicked reports what a twist's picker chose (objectives / units / an effect).
+export interface TwistDrawn extends EventBase { type: 'TwistDrawn'; cardId: Id; drawRound: number }
+export interface TwistPicked extends EventBase { type: 'TwistPicked'; cardId: Id; objectiveId: ObjectiveId | null; unitId: UnitId | null; mode: string | null }
+export interface TacticsDrawn extends EventBase { type: 'TacticsDrawn'; count: number }
+export interface TacticDiscarded extends EventBase { type: 'TacticDiscarded'; cardId: Id }
+export interface TacticScored extends EventBase { type: 'TacticScored'; cardId: Id; vp: number }
+export interface TacticCommandUsed extends EventBase { type: 'TacticCommandUsed'; cardId: Id; unitId: UnitId | null; summary: string }
+
 // command
 export interface CpChanged extends EventBase { type: 'CpChanged'; delta: number; total: number; source: string }
 export interface BattleShockTested extends EventBase { type: 'BattleShockTested'; unitId: UnitId; roll: number; ld: number; passed: boolean }
@@ -123,6 +132,7 @@ export interface DecisionRequested extends EventBase { type: 'DecisionRequested'
 export type GameEvent =
   | GameCreated | RoundStarted | RoundEnded | TurnStarted | PhaseStarted | PhaseEnded | GameEnded | SidesChosen | FirstTurnChosen | UnitDeployed
   | PriorityRolled | UnderdogDetermined | InitiativeSeized | DamagePoolResolved | UnitReplaced
+  | TwistDrawn | TwistPicked | TacticsDrawn | TacticDiscarded | TacticScored | TacticCommandUsed
   | CpChanged | BattleShockTested | BattleShocked | BattleShockRecovered | OathTargetChosen | WaaaghCalled
   | MoveDeclared | UnitMoved | UnitAdvanced | UnitFellBack | UnitRemainedStationary | DesperateEscapeRolled | ReinforcementsArrived | UnitRemovedFromBattlefield | UnitLostInReserves | CoherencyCulled
   | AttackSequenceStarted | TargetsDeclared | HitRolled | WoundRolled | AttackAllocated | SaveRolled | DamageApplied | FeelNoPainRolled

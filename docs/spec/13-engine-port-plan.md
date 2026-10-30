@@ -228,10 +228,20 @@ P0 file `src/data/terrain/sph-fire-and-jade-standard.json` = SPH-14.4 layout. La
 5×3 footprint, two 4"-tall walls, `traits: ['cover','obscuring','unstable']`, no floors. Small *Ravaged Shrine* →
 `kind: 'crate'`, 3×2, height 2, `traits: ['cover','unstable']`. Board `{ w: 30, h: 22 }`. No new `TerrainKind`.
 
-### 3.7 Twist and battle tactic cards (P2, blocked on source)
+### 3.7 Twist and battle tactic cards (F4, shipped)
 
-New bucket `DataBundle.cards?: Record<Id, TwistCardData | TacticCardData>` with the SPH-16.2/16.3 shapes, files under
-`src/data/spearhead/cards/`, schema `card.schema.json`. Nothing ships today: no card list is in our sources.
+Bucket `DataBundle.cardDecks?: Record<RbfId, CardDeckData>` (`src/data/types.ts`): one file per realm battlefield under
+`src/data/cards/` (`fire-and-jade.json`: 12 twists, 6 per side, and the 12 battle tactics), schema
+`card-deck.schema.json`. Text is our own words; the engine implements each card by id in `src/engine/cards.ts` (a test,
+CARD-018, keeps names in step). Card effects in force live in `GameState.cards.flags` and are read through
+`src/engine/cardFlags.ts` by attack.ts (hit / wound / save / rend / ward / Charge damage), objectives.ts (Ring of Fire),
+hooks-impl `statFor` (Move halved, Control bonus), charge.ts (one fewer die) and movement.ts (Retreat damage waived).
+Decision topics `twistPick`, `discardTactics`, `scoreTactics`, `tacticCommand` are answered by `cards.ts`
+(`cardHandler`, routed in reducer `ownerOf`). Commands are offered by `commandWindow` (Hero / Movement / Charge / Combat
+phases) and `reactionWindow` (from `ctx.window`: targets declared, charge and retreat rolls). Counter-Charge reuses the
+charge module's drive loop (`ChargeState.heroic = true`). Deviations kept on purpose: tactics are scored through a
+decision (the owner may decline); "Any ... phase" commands may be used in either turn; Raze counts a unit with any model in
+enemy territory within 3" of a long edge; Redeploy offers short slides that do not end in combat (the path is not tested).
 
 ## 4. Client impact
 

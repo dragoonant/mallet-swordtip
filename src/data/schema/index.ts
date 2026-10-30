@@ -9,9 +9,10 @@ import faction from './faction.schema.json'
 import combatPatrol from './combat-patrol.schema.json'
 import mission from './mission.schema.json'
 import terrainLayout from './terrain-layout.schema.json'
+import cardDeck from './card-deck.schema.json'
 
 export const schemas = {
-  common, ability, weapon, datasheet, stratagem, enhancement, faction, combatPatrol, mission, terrainLayout,
+  common, ability, weapon, datasheet, stratagem, enhancement, faction, combatPatrol, mission, terrainLayout, cardDeck,
 } as const
 
 export type SchemaName = keyof typeof schemas

@@ -523,6 +523,8 @@ function scoreDeclareCharge(state: GameState, player: PlayerId, pending: Pending
   return best
 }
 
+const CARD_TOPICS: ReadonlySet<string> = new Set(['twistPick', 'discardTactics', 'scoreTactics', 'tacticCommand'])
+
 const DECLINE = /^(pass|decline|skip|none|no|keep|cancel)\b/i
 
 function scoreChooseOption(state: GameState, player: PlayerId, pending: PendingDecision, action: Action): number {
@@ -581,6 +583,14 @@ function scoreAction(state: GameState, player: PlayerId, pending: PendingDecisio
     case 'reactionWindow':
     case 'commandReroll': return action.type === 'pass' ? 1 : -1
     case 'chooseOption':
+      // Spearhead cards: every option carries hint.value (what it is worth now, in VP-ish units); passing is worth a hair
+      // above 0, so a discard, a command or an optional pick has to be worth something to beat keeping things as they are
+      if (CARD_TOPICS.has(pending.context.topic)) {
+        if (action.type === 'pass') return 0.01
+        const opt = pending.options.find((o) => action.type === 'chooseOption' && o.id === action.optionId)
+        const v = (opt?.hint as { value?: unknown } | undefined)?.value
+        return typeof v === 'number' ? v : 0
+      }
       // backing out of a target / mode pick just re-opens the same ability prompt, so it never beats picking something
       if (action.type === 'pass') return pending.context.topic === 'abilityTarget' || pending.context.topic === 'abilityMode' || pending.context.topic === 'pileInTarget' ? -5 : -1
       return scoreChooseOption(state, player, pending, action)

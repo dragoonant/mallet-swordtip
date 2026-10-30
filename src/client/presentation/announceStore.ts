@@ -16,7 +16,7 @@ import { create } from 'zustand'
 import type { PlayerId } from '@/engine'
 import type { AnimSpeed } from './settings'
 
-export type AnnouncementKind = 'phase' | 'turn'
+export type AnnouncementKind = 'phase' | 'turn' | 'twist'
 
 export interface Announcement {
   /** Monotonic per-announcement id — the banner keys its countdown animation off this. */
@@ -40,7 +40,7 @@ export const useAnnouncementStore = create<AnnouncementState>(() => ({ current: 
 
 /** Pause lengths at 'normal' speed, in ms. A phase gets the full "and now, the shooting phase" beat;
  *  a turn hand-over is a shorter one because it is immediately followed by the command phase's. */
-const HOLD_MS: Record<AnnouncementKind, number> = { phase: 2400, turn: 1600 }
+const HOLD_MS: Record<AnnouncementKind, number> = { phase: 2400, turn: 1600, twist: 4200 }
 
 /** Speed-scaled length of an announcement pause — 'instant' means no pause at all (and no banner),
  *  matching how director.ts's own EVENT_GAP_MS table treats that setting. */

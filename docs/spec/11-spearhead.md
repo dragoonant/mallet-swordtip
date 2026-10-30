@@ -315,7 +315,7 @@ Validation: exactly 2 regiment abilities and 4 enhancements; `general` names a u
 | # | Item | Default until resolved |
 |---|---|---|
 | 1 | City of Ash realm battlefield content is absent from sources (§15). | Play on Fire and Jade. |
-| 2 | Fire and Jade card lists absent (only cropped fragments in the core book). | Twist/tactic system ships with an empty-deck guard; data stage must source the cards. |
+| 2 | Fire and Jade card lists absent (only cropped fragments in the core book). | Resolved: 14-fire-and-jade-cards.md; data in `src/data/cards/fire-and-jade.json`, engine `src/engine/cards.ts` (F4). |
 | 3 | Objective circle diameter not stated; measured ≈ 6". Ghyran positions are low-confidence. | radius 3; Aqshy as §14.3. |
 | 4 | Terrain footprints/heights not in sources. | §5 defaults. |
 | 5 | Seizing player: may they still discard tactics when they cannot draw? Source only removes the draw. | Allow discard. |

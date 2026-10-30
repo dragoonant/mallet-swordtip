@@ -2,6 +2,7 @@
 // uses their "Your / Any Hero Phase" abilities first, then the opponent uses "Enemy / Any Hero Phase" ones. The
 // abilities service owns the decisions (topics abilityUse / abilityTarget / abilityMode).
 import { notImplementedHandle, type PhaseModule } from '../modules'
+import { commandWindow } from '../cards'
 
 export const commandModule: PhaseModule = {
   name: 'command',
@@ -13,10 +14,13 @@ export const commandModule: PhaseModule = {
     const abilities = ctx.services.abilities
     if (s.step === 'activeAbilities') {
       if (abilities.runWindow(ctx, 'hero', s.activePlayer)) return 'pending'
+      // battle tactic commands (SPH-3.4) after the player's own abilities
+      if (commandWindow(ctx, 'hero', s.activePlayer)) return 'pending'
       s.step = 'opponentAbilities'
     }
     if (s.step === 'opponentAbilities') {
       if (abilities.runWindow(ctx, 'hero', ctx.opponentOf(s.activePlayer))) return 'pending'
+      if (commandWindow(ctx, 'hero', ctx.opponentOf(s.activePlayer))) return 'pending'
     }
     return 'done'
   },

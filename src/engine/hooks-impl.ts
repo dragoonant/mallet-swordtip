@@ -21,6 +21,7 @@ import {
   type HookRegistry, type HookResult, type HookResultFor, type RollContext,
 } from './hooks'
 import { leaderService } from './leaders'
+import { cardStatChange } from './cardFlags'
 import type { DecisionHandler, EngineContext, WindowTrigger } from './modules'
 import { keywordsOf, modelKeywordsOf, modelStats, mortalCredit, unitModels } from './state'
 import type { ActiveEffect, DiceRoll, GameState, ModelId, PlayerId, RuntimeAbility, RuntimeWeapon, Unit, UnitId } from './types'
@@ -736,6 +737,10 @@ export const hookService: HookService & HookQueries = {
         else delta += r.delta
       }
     }
+    // cards: Grasping Vines halves Move, Inspiring Presence adds to Control
+    const card = cardStatChange(state, q.unitId, q.stat)
+    if (card.halve) halve = true
+    delta += card.delta
     // C6: halving (rounded up) comes before additive deltas; a capped modifier never takes the stat past its cap
     let v = set ?? base
     if (halve) v = Math.ceil(v / 2)

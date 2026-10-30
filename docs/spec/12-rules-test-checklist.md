@@ -393,6 +393,16 @@ effects; when a Fire and Jade card's command matches one, its test reuses the ro
 | CARD-015 | SPH-10.6 | | tactic deck exhausted · draw step → stops without error |
 | CARD-016 | SPH-10.7 | | opponent's `TacticsDrawn` in `view` · → count only, no card ids |
 | CARD-017 | SPH-3.5 | | tactic discarded · → visible to the opponent in `view` |
+| CARD-018 | 14-cards §1 | | card data · → 12 twists (6 per side) and 12 tactics, every id implemented by the engine with the same name |
+| CARD-019 | 14-cards §4 | | turn log with kills / fights · → War of Attrition, Do Not Waver, Cut Off the Head judged from it |
+| CARD-020 | 14-cards §4 | | objectives flipped this turn · → Attack on Two Fronts / Take Without Warning use the turn-start snapshot |
+| CARD-021 | 14-cards §4 | | Inspiring Presence used · → the Hero's Control rises by the roll for the turn |
+| CARD-022 | 14-cards §2 | | Ring of Fire on an objective · → nobody controls it; units on it take D3 mortal damage after scoring |
+| CARD-023 | 14-cards §2 | | Reclaim / Mount the Attack · → extra VP at the end of the active player's turn |
+| CARD-024 | 14-cards §2 | | Bloodmarked unit destroyed this round · → the opposing player scores 1 VP at round end; flags lapse |
+| CARD-025 | 14-cards §2 | | Wreathed in Smoke objective · → attacks on units on it hit only on an unmodified 6 |
+| CARD-026 | 14-cards §3 | | Grasping Vines / Eroding Miasma · → Move halved; no ward rolls |
+| CARD-027 | SPH-9.3 | | twist with a pick · → `twistPick` decision for the picker; the choice becomes a round-long flag |
 
 ## SIM — headless simulator invariants
 

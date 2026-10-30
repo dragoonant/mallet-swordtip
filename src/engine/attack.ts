@@ -19,6 +19,7 @@ import type { AttackRollContext } from './events'
 import { coherencyGroups, distance, ENGAGEMENT_H, EPS, horizontalGap, isCoherent } from './geometry'
 import type { AttackContext, RollModifierResult } from './hooks'
 import { hookService } from './hooks-impl'
+import { cardChargeDamage, cardHitRule, cardIgnoresRend, cardSaveModifier, cardWard, cardWoundModifier } from './cardFlags'
 import { losService } from './los'
 import type { AdvanceResult, DecisionHandler, EngineContext } from './modules'
 import { datasheetOf, keywordsOf, modelStats, recordModelAttacked, removeModel, unitModels } from './state'
@@ -212,6 +213,8 @@ interface StageParams {
   statics: RollModifier[]
   rend: number
   companion: boolean
+  // Wreathed in Smoke / Go to Ground (cards): only an unmodified 6 succeeds
+  onlySix?: boolean
   unitId: UnitId
   targetUnitId: UnitId
   weaponId: WeaponId
@@ -255,7 +258,7 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
       const sum = [...p.statics.map((m) => m.value), ...ent.mods].reduce((a, b) => a + b, 0)
       final = u + (ent.ignore ? 0 : clampHitWoundModifier(sum))
     }
-    const success = !ent.autoFail && u !== 1 && (ent.autoPass || final >= p.needed)
+    const success = !ent.autoFail && u !== 1 && (p.onlySix ? u === 6 : (ent.autoPass || final >= p.needed))
     return { u, final, success, critical: !isSave && p.purpose === 'hit' && success && (u === 6 || u >= ent.crit), rr: ent.rr }
   }
   const spec = {
@@ -289,7 +292,9 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
 // ---------- the damage of one successful attack ----------
 function damageOf(ctx: EngineContext, w: RuntimeWeapon, actx: AttackContext, ownerPlayer: PlayerId, mods: { delta: number; halve: boolean; reduction: number; set: number | null }): number {
   const { total } = ctx.rollExpr(w.D, { purpose: 'damage', player: ownerPlayer, unitId: actx.attackerUnitId, modelId: actx.attackerModelId, weaponId: w.id, targetUnitId: actx.targetUnitId })
-  return applyDamageMods(total + (hasAb(w, 'CHARGE_DAMAGE') && actx.charged ? 1 : 0), mods)
+  // Mount the Attack's spearhead: its melee weapons have Charge (+1 Damage) this round (no stacking with the weapon's own)
+  const chargeBonus = hasAb(w, 'CHARGE_DAMAGE') || (w.kind === 'melee' && cardChargeDamage(ctx.state, actx.attackerUnitId))
+  return applyDamageMods(total + (chargeBonus && actx.charged ? 1 : 0), mods)
 }
 function applyDamageMods(d: number, m: { delta: number; halve: boolean; reduction: number; set: number | null }): number {
   let v = m.set ?? d
@@ -335,17 +340,19 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   const targetPlayer = target.player
   const rctx = rollCtx(actx)
   const by: DestroyedBy = { player: attackerPlayer, unitId: attackerUnitId, modelId: lead, kind }
-  const rend = Math.max(0, ew.rend + antiBonus(s, ew, batch.targetUnitId))
+  const rend = cardIgnoresRend(s, batch.targetUnitId) ? 0 : Math.max(0, ew.rend + antiBonus(s, ew, batch.targetUnitId))
 
   // 1. hit
   const hitMods: RollModifier[] = []
   if (cover) hitMods.push({ source: 'cover', value: -1 })
   if (kind === 'ranged' && guardedHero(s, batch.targetUnitId)) hitMods.push({ source: 'guardedHero', value: -1 })
+  const cardHit = cardHitRule(s, attackerUnitId, batch.targetUnitId, kind)
+  if (cardHit.modifier) hitMods.push({ source: 'card', value: cardHit.modifier })
   let hitOuts: DieOut[]
   if (ew.skill === null) {
     hitOuts = Array.from({ length: total }, () => ({ u: 0, final: 0, success: true, critical: false }))
   } else {
-    const st = runStage(ctx, { hook: 'onHitRoll', purpose: 'hit', count: total, actx, attackerPlayer, roller: attackerPlayer, needed: ew.skill, statics: hitMods, rend: 0, companion, unitId: attackerUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: lead })
+    const st = runStage(ctx, { hook: 'onHitRoll', purpose: 'hit', count: total, actx, attackerPlayer, roller: attackerPlayer, needed: ew.skill, statics: hitMods, rend: 0, companion, unitId: attackerUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: lead, onlySix: cardHit.onlySix })
     hitOuts = st.outs
     st.outs.forEach((o, i) => ctx.emit({ type: 'HitRolled', attack: rctx, die: o.u, final: o.final, hit: o.success, critical: o.critical, extraHits: o.critical && hasAb(ew, 'CRIT_2_HITS') ? 1 : 0, auto: false, rollId: st.roll.id, dieIndex: i, player: attackerPlayer }))
   }
@@ -367,7 +374,8 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   // 2. wound
   let wounds = autoWounds
   if (needWound > 0) {
-    const st = runStage(ctx, { hook: 'onWoundRoll', purpose: 'wound', count: needWound, actx, attackerPlayer, roller: attackerPlayer, needed: ew.wound, statics: [], rend: 0, companion, unitId: attackerUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: lead })
+    const woundCard = cardWoundModifier(s, attackerPlayer, batch.targetUnitId)
+    const st = runStage(ctx, { hook: 'onWoundRoll', purpose: 'wound', count: needWound, actx, attackerPlayer, roller: attackerPlayer, needed: ew.wound, statics: woundCard ? [{ source: 'card', value: woundCard }] : [], rend: 0, companion, unitId: attackerUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: lead })
     st.outs.forEach((o, i) => ctx.emit({ type: 'WoundRolled', attack: rctx, die: o.u, final: o.final, needed: ew.wound, wounded: o.success, critical: false, auto: false, rollId: st.roll.id, dieIndex: i, player: attackerPlayer }))
     wounds += st.outs.filter((o) => o.success).length
   }
@@ -378,7 +386,8 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   let unsaved = wounds
   if (!stats.noSave) {
     const sv = clampStat('Sv', hookService.statFor ? hookService.statFor(s, { unitId: batch.targetUnitId, modelId: rep.id, weapon: null, stat: 'Sv', attack: actx }, stats.Sv) : stats.Sv)
-    const st = runStage(ctx, { hook: 'onSaveRoll', purpose: 'save', count: wounds, actx, attackerPlayer, roller: targetPlayer, needed: sv, statics: [], rend, companion: false, unitId: batch.targetUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: rep.id })
+    const saveCard = cardSaveModifier(s, batch.targetUnitId)
+    const st = runStage(ctx, { hook: 'onSaveRoll', purpose: 'save', count: wounds, actx, attackerPlayer, roller: targetPlayer, needed: sv, statics: saveCard ? [{ source: 'card', value: saveCard }] : [], rend, companion: false, unitId: batch.targetUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: rep.id })
     st.outs.forEach((o, i) => ctx.emit({ type: 'SaveRolled', attack: rctx, modelId: rep.id, kind: 'armour', die: o.u, final: o.final, needed: sv, saved: o.success, rollId: st.roll.id, dieIndex: i, player: targetPlayer }))
     unsaved = st.outs.filter((o) => !o.success).length
   }
@@ -443,8 +452,8 @@ function wardThreshold(ctx: EngineContext, unitId: UnitId, rep: Model, mortal: b
     if (r.result.feelNoPain !== undefined) best = best === null ? r.result.feelNoPain : Math.min(best, r.result.feelNoPain)
     if (r.result.modifier) modifier += r.result.modifier
   }
-  if (best === null) return null
-  return { needed: best, modifier: Math.max(-1, Math.min(1, modifier)) }
+  // cards: Eroding Miasma / Fight to the Last / Shield of Thorns
+  return cardWard(s, unitId, best === null ? null : { needed: best, modifier: Math.max(-1, Math.min(1, modifier)) })
 }
 
 // the model that takes the next damage point: the damaged model first, then the model farthest from the attacker

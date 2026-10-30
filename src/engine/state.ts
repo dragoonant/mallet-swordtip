@@ -9,6 +9,7 @@ import { mmToInch, OBJECTIVE_MARKER_RADIUS, transformPolygon } from './geometry'
 import { hookService } from './hooks-impl'
 import { otherPlayer, type EngineContext } from './modules'
 import { createRng } from './rng'
+import { initialCardsState } from './cards'
 import { transportService } from './transports'
 import {
   EngineInvariantError,
@@ -83,6 +84,9 @@ export function cloneForStep(state: GameState): GameState {
     objectives: structuredClone(state.objectives),
     mission: { ...state.mission, scored: [...state.mission.scored], custom: structuredClone(state.mission.custom) },
     phaseState: structuredClone(state.phaseState),
+    twist: structuredClone(state.twist),
+    priority: structuredClone(state.priority),
+    ...(state.cards ? { cards: structuredClone(state.cards) } : {}),
     pending: state.pending ? structuredClone(state.pending) : null,
     result: state.result ? { ...state.result, vp: { ...state.result.vp } } : null,
     log: state.log,
@@ -705,6 +709,7 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
     twist: { deck: [], current: null, drawn: [] },
     underdog: null,
     priority: { rolls: null, seized: null, doubleTurn: false },
+    cards: initialCardsState(bundle),
   }
   // reserves (CP-1.9 / C1): Deep Strike (datasheet, pairing, or hook-granted) is the only route
   for (const pid of ['A', 'B'] as PlayerId[]) {

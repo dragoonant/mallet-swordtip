@@ -5,6 +5,7 @@ import type { GameState, PlayerId } from '@/engine'
 import { useGameStore } from '../store/game'
 import { useDisplayState } from '../presentation/presentedStore'
 import { secondaryScoringIds } from './labels'
+import { anyCardName, vpSplit } from './cardInfo'
 import { buttonBase, buttonPrimary, colors, fontStack, mutedText, panel } from './theme'
 import { useFormFactor } from './formFactor'
 
@@ -211,6 +212,35 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
     </table>
   )
 
+  // Where the points came from: objectives, battle tactics (with the cards completed) and twists
+  const splitA = vpSplit(state, 'A')
+  const splitB = vpSplit(state, 'B')
+  const scoredNames = (p: PlayerId): string => (state.cards?.tactics[p].scored ?? []).map((id) => anyCardName(bundle, id)).join(', ')
+  const sourcesTable = state.cards ? (
+    <>
+      <table style={compact ? tableCompact : table} data-testid="end-vp-sources">
+        <thead>
+          <tr>
+            <th style={thRound}>From</th>
+            <th style={th}>A</th>
+            <th style={th}>B</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style={tdRound}>Objectives</td><td style={td}>{splitA.objectives}</td><td style={td}>{splitB.objectives}</td></tr>
+          <tr><td style={tdRound}>Battle tactics</td><td style={td}>{splitA.tactics}</td><td style={td}>{splitB.tactics}</td></tr>
+          <tr><td style={tdRound}>Twists</td><td style={td}>{splitA.twists}</td><td style={td}>{splitB.twists}</td></tr>
+        </tbody>
+      </table>
+      {(scoredNames('A') || scoredNames('B')) && (
+        <div style={{ ...mutedText, fontSize: 11.5, textAlign: 'left' }} data-testid="end-tactics">
+          {scoredNames('A') && <div><span style={{ color: colors.playerA }}>A</span> completed: {scoredNames('A')}</div>}
+          {scoredNames('B') && <div><span style={{ color: colors.playerB }}>B</span> completed: {scoredNames('B')}</div>}
+        </div>
+      )}
+    </>
+  ) : null
+
   const playAgain = (
     <button style={compact ? playAgainCompact : buttonPrimary} onClick={onPlayAgain}>
       Play again
@@ -228,12 +258,13 @@ export function EndScreen({ onPlayAgain }: { onPlayAgain: () => void }) {
               {summary}
               {playAgain}
             </div>
-            <div style={colRight}>{vpTable}</div>
+            <div style={colRight}>{vpTable}{sourcesTable}</div>
           </>
         ) : (
           <>
             {summary}
             {vpTable}
+            {sourcesTable}
             {playAgain}
           </>
         )}

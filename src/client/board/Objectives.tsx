@@ -26,7 +26,15 @@ const BEACON_H = 5
 const GHOST_MS = 1400
 
 // Floating id + OC readout. Compact: counter-scaled so zooming the phone camera in never balloons it (labelScale.ts).
-function ObjectiveLabel({ id, pos, locked, sticky, a, b, compact }: { id: string; pos: [number, number, number]; locked: boolean; sticky: boolean; a: number; b: number; compact: boolean }) {
+// twist marks on an objective (Ring of Fire, Wreathed in Smoke, Reclaim, Lifespring): colour + short word under the readout
+const TWIST_TAG: Partial<Record<string, { word: string; color: string }>> = {
+  ringOfFire: { word: 'Ring of Fire', color: '#ff7a3c' },
+  wreathed: { word: 'Smoke', color: '#b9b4c8' },
+  reclaim: { word: 'Reclaim', color: '#f5d95a' },
+  lifespring: { word: 'Lifespring', color: '#3fcf8e' },
+}
+
+function ObjectiveLabel({ id, pos, locked, sticky, a, b, compact, tags = [] }: { id: string; pos: [number, number, number]; locked: boolean; sticky: boolean; a: number; b: number; compact: boolean; tags?: string[] }) {
   const clamp = useRef<HTMLDivElement>(null)
   useLabelClamp(clamp, pos, true, compact ? { origin: '50% 50%', widthFrac: COMPACT_LABEL_WIDTH_FRAC } : { origin: '50% 50%', min: 0, max: DESKTOP_LABEL_MAX })
   useHudCull(clamp, compact)
@@ -47,6 +55,9 @@ function ObjectiveLabel({ id, pos, locked, sticky, a, b, compact }: { id: string
             <span style={{ color: colors.muted }}> : </span>
             <span style={{ color: colors.playerB }}>B {b}</span>
           </div>
+          {tags.map((t) => TWIST_TAG[t] && (
+            <div key={t} style={{ fontWeight: 700, fontSize: compact ? 10 : 11, color: TWIST_TAG[t]!.color }} data-testid={`objective-twist-${id}-${t}`}>{TWIST_TAG[t]!.word}</div>
+          ))}
         </div>
       </div>
     </Html>
@@ -127,7 +138,8 @@ export function Objectives() {
           <group key={objective.id} position={[objective.pos.x, 0, objective.pos.z]}>
             <ObjectiveZone zone={zoneR} color={color} owned={!!owner} contested={contested} lit={lit} hovered={hoveredObjectiveId === objective.id} />
             <Token radius={markerRadius > 1.5 ? TOKEN_RADIUS : markerRadius} color={color} />
-            <ObjectiveLabel id={objective.id} pos={[objective.pos.x, 1.7, objective.pos.z]} locked={locked} sticky={!!objective.stickyBy} a={levels.A} b={levels.B} compact={compact} />
+            <ObjectiveLabel id={objective.id} pos={[objective.pos.x, 1.7, objective.pos.z]} locked={locked} sticky={!!objective.stickyBy} a={levels.A} b={levels.B} compact={compact}
+              tags={[...new Set((state.cards?.flags ?? []).filter((f) => f.objectiveId === objective.id).map((f) => f.kind as string))]} />
           </group>
         )
       })}

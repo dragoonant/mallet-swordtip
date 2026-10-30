@@ -11,6 +11,15 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
 - Live: https://dragoonant.github.io/mallet-swordtip/ (the 42k game, renamed, until F4).
 - JSON schema `$id`s still read `https://mallet42k.dev/...` — internal identifiers, left alone.
 
+## F4 cards (2026-10-29): twist and battle tactic cards
+- Data `src/data/cards/fire-and-jade.json` (own words, schema `card-deck.schema.json`); engine `src/engine/cards.ts`
+  (flow) + `src/engine/cardFlags.ts` (effect queries); client `src/client/ui/CardHand.tsx` (hand fan, twist chip, card
+  viewer; a "Cards" pill on phones), twist reveal banner, HUD tactics line, end-screen VP sources. Tests
+  `tests/engine/cards.test.ts` (CARD-001..027). AI plays cards by `hint.value` (tactic odds vs command worth).
+- `npx tsx tools/card-stats.ts [--random] [--games N]`: card usage and VP split over simulated games.
+- Screenshot spec: `PW_BASE_URL=http://localhost:4417/mallet-swordtip/ npx playwright test tests/e2e/cards-shots.spec.ts --project=chromium` (needs `npx vite --port 4417`).
+- Only the Aqshy side is playable (no Ghyran battleplan file), so Ghyran twists are data + engine only.
+
 ## F2 wave 3 (2026-10-29): engine port is playable
 - The 40k factions, missions, terrain, tests and tools are deleted. `npm run typecheck`, `npm test`, `npm run validate:data`
   are green. `npm run sim -- --games 100 --seed 1` (random bots; add `--ai` for the utility AI) plays Cities of Sigmar vs

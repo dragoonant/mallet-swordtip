@@ -14,6 +14,7 @@
 //
 // The pile-in planner is deliberately simple (each model walks straight at the nearest target model, closest model first);
 // anything cleverer is the player's own placement, validated by `pileInRejection`.
+import { commandWindow } from '../cards'
 import type { Action, ModelPlacement, WeaponTarget } from '../actions'
 import { attackService, enemyUnitsInCombat, isInCombat, rollAttackCount } from '../attack'
 import {
@@ -466,10 +467,12 @@ export const fightModule: PhaseModule = {
       // CORE-10.1: Combat Phase abilities that are not Fight abilities, active player then opponent, before the first pick
       if (!ctx.marked('fi:ab:active')) {
         if (ctx.services.abilities.runWindow(ctx, 'fight', s.activePlayer, 'fight:active')) return 'pending'
+        if (commandWindow(ctx, 'fight', s.activePlayer, 'fight:active')) return 'pending'
         ctx.once('fi:ab:active')
       }
       if (!ctx.marked('fi:ab:enemy')) {
         if (ctx.services.abilities.runWindow(ctx, 'fight', otherPlayer(s.activePlayer), 'fight:enemy')) return 'pending'
+        if (commandWindow(ctx, 'fight', otherPlayer(s.activePlayer), 'fight:enemy')) return 'pending'
         ctx.once('fi:ab:enemy')
       }
       if (fight.currentUnitId) {

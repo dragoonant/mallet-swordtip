@@ -10,6 +10,7 @@ import { useUiStore } from './uiStore'
 import { modelsAnchor } from '../interaction/geometry'
 import { isPlacementDecision } from '../interaction/decisions'
 import { MissionPanel } from './MissionPanel'
+import { vpSplit } from './cardInfo'
 import { Tooltip } from './Tooltip'
 import { primaryScoringWindowHint, sourceName } from './labels'
 import { PHASE_NAME } from './phaseNames'
@@ -520,6 +521,18 @@ export function Hud() {
   )
 }
 
+/** Battle tactics at a glance (SPH-10): tactics scored, cards in hand (the count only: hands are secret). */
+function TacticsLine({ id, state }: { id: PlayerId; state: GameState }) {
+  const piles = state.cards?.tactics[id]
+  if (!piles || (piles.hand.length === 0 && piles.scored.length === 0 && piles.deck.length === 0)) return null
+  const split = vpSplit(state, id)
+  return (
+    <div style={{ fontSize: 11.5, color: colors.muted }} data-testid={`hud-tactics-${id}`}>
+      Tactics {piles.scored.length} scored · {piles.hand.length} held{split.twists > 0 ? ` · twists +${split.twists}` : ''}
+    </div>
+  )
+}
+
 function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
   const bundle = useGameStore((s) => s.bundle)
   const [open, setOpen] = useState(false)
@@ -536,6 +549,7 @@ function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
       {state.underdog === id && (
         <div style={{ fontSize: 12, color: colors.muted }} data-testid={`hud-underdog-${id}`}>Underdog</div>
       )}
+      <TacticsLine id={id} state={state} />
       <button style={vpButton} data-testid={`hud-vp-${id}`} onClick={() => setOpen((v) => !v)}>
         VP {p.vp} {scored.length > 0 ? (open ? '▲' : '▼') : ''}
       </button>
@@ -732,6 +746,7 @@ function CompactBadge({ id, state, open, onToggle }: { id: PlayerId; state: Game
           <div style={{ color, fontWeight: 700, fontSize: 13 }}>
             {p.name} ({id})
           </div>
+          <TacticsLine id={id} state={state} />
           <div style={{ ...vpBreakdown, width: 'auto', maxHeight: 'none', marginTop: 0 }} data-testid={`hud-vp-breakdown-${id}`}>
             {scored.length === 0 && <div style={mutedText}>No VP scored yet.</div>}
             {scored.map((row, i) => (

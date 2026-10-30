@@ -550,6 +550,12 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
     case 'CpChanged':
       return event.delta > 0 ? [{ id: 'cp-gained-click' }] : []
 
+    // Spearhead cards: a twist is revealed with the war horn, a card command with the marshal's shout
+    case 'TwistDrawn':
+      return [{ id: 'aos-round-start-war-horn', opts: { volume: 0.6 } }]
+    case 'TacticCommandUsed':
+      return [{ id: 'stratagem-whoosh', opts: { volume: 0.5 } }, { id: 'aos-marshal-command', opts: { volume: 0.8 } }]
+
     case 'StratagemUsed':
       // A command ability: the marshal bellows the order (the 42k "Stratagem!" line is not Spearhead's word for it).
       return [{ id: 'stratagem-whoosh', opts: { volume: 0.5 } }, { id: 'aos-marshal-command', opts: { volume: 0.8 } }]

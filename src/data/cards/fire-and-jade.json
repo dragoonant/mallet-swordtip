@@ -1,0 +1,192 @@
+{
+  "id": "rbf.fire-and-jade",
+  "name": "Fire and Jade",
+  "sides": [
+    { "id": "aqshy", "name": "Aqshy, the Realm of Fire" },
+    { "id": "ghyran", "name": "Ghyran, the Realm of Life" }
+  ],
+  "twists": [
+    {
+      "id": "card.twist.ring-of-fire",
+      "side": "aqshy",
+      "name": "Ring of Fire",
+      "picker": "underdogElseRollOff",
+      "duration": "round",
+      "text": "The underdog (or the roll-off winner) names one objective. Until the round ends nobody controls it and nobody can contest or take it. At the end of every turn this round, after scoring, each unit standing on it takes D3 mortal damage.",
+      "flavour": "The ground splits and a wall of flame wraps the shrine."
+    },
+    {
+      "id": "card.twist.let-the-blood-flow",
+      "side": "aqshy",
+      "name": "Let the Blood Flow",
+      "picker": "underdog",
+      "duration": "round",
+      "text": "This round, at the end of each of your turns, score 1 extra VP for every enemy unit destroyed during that turn. If there is an underdog, they pick one of their units to be frenzied: it adds 1 to the hit rolls of its melee attacks this round.",
+      "flavour": "The heat drives every warrior towards slaughter."
+    },
+    {
+      "id": "card.twist.bloodmarked",
+      "side": "aqshy",
+      "name": "Bloodmarked",
+      "picker": "underdogElseEach",
+      "duration": "round",
+      "text": "The underdog marks one unit in each army; with no underdog, each player marks one enemy unit (first-turn player first). At the end of the round, each player scores 1 VP if a marked unit from the opposing army was destroyed this round.",
+      "flavour": "Prey is chosen. The hunt is on."
+    },
+    {
+      "id": "card.twist.reclaim-aqshy",
+      "side": "aqshy",
+      "name": "Reclaim Aqshy",
+      "picker": "underdogElseEach",
+      "duration": "round",
+      "text": "The underdog names two different objectives; with no underdog, each player names one (first-turn player first, never the same one). This round, at the end of each of your turns, score 1 extra VP for each named objective you control.",
+      "flavour": "Old fire-altars wake, hungry for a master."
+    },
+    {
+      "id": "card.twist.mount-the-attack",
+      "side": "aqshy",
+      "name": "Mount the Attack",
+      "picker": "underdog",
+      "duration": "round",
+      "text": "This round, at the end of each of your turns, score 1 extra VP for each objective you control that your opponent held when that turn began. If there is an underdog, they pick one of their units as the spearhead: its melee weapons gain Charge (+1 Damage) this round.",
+      "flavour": "Strike now, while the embers still glow."
+    },
+    {
+      "id": "card.twist.wreathed-in-smoke",
+      "side": "aqshy",
+      "name": "Wreathed in Smoke",
+      "picker": "underdogElseRollOff",
+      "duration": "round",
+      "text": "The underdog (or the roll-off winner) names one objective. Until the round ends, attacks aimed at a unit standing on that objective only hit on an unmodified 6.",
+      "flavour": "Choking ash rolls across the field."
+    },
+    {
+      "id": "card.twist.reclaim-ghyran",
+      "side": "ghyran",
+      "name": "Reclaim Ghyran",
+      "picker": "underdogElseEach",
+      "duration": "round",
+      "text": "The underdog names two different objectives; with no underdog, each player names one (first-turn player first, never the same one). This round, at the end of each of your turns, score 1 extra VP for each named objective you control.",
+      "flavour": "Sacred groves call for new keepers."
+    },
+    {
+      "id": "card.twist.alarielles-blessing",
+      "side": "ghyran",
+      "name": "Alarielle's Blessing",
+      "picker": "underdogElseRollOff",
+      "duration": "round",
+      "text": "The underdog (or the roll-off winner) chooses one gift for their own army. Shield of Thorns: one unit gets Ward (6+) this round, or adds 1 to its ward rolls if it already has a ward. Rain of Jade: up to three different units each Heal (D3) right away.",
+      "flavour": "The Everqueen smiles on the bold."
+    },
+    {
+      "id": "card.twist.take-the-land",
+      "side": "ghyran",
+      "name": "Take the Land",
+      "picker": "underdog",
+      "duration": "round",
+      "text": "This round, at the end of each of your turns, score 1 extra VP if more of your models than enemy models are contesting the large terrain feature in enemy territory. The underdog, if any, adds 1 to wound rolls for attacks against units contesting any large terrain feature.",
+      "flavour": "Plant your banner on their ground."
+    },
+    {
+      "id": "card.twist.grasping-vines",
+      "side": "ghyran",
+      "name": "Grasping Vines",
+      "picker": "underdogElseRollOff",
+      "duration": "round",
+      "text": "The underdog (or the roll-off winner) picks one enemy unit. It is ensnared until the round ends: its Move is halved and it rolls one fewer dice for charge rolls.",
+      "flavour": "Roots coil around boots and hooves alike."
+    },
+    {
+      "id": "card.twist.the-grandfathers-blessing",
+      "side": "ghyran",
+      "name": "The Grandfather's Blessing",
+      "picker": "underdogElseRollOff",
+      "duration": "round",
+      "text": "The underdog (or the roll-off winner) picks one curse and one enemy unit. Nurgle's Rot: that unit subtracts 1 from its save rolls this round. Eroding Miasma: that unit cannot make ward rolls this round.",
+      "flavour": "Something rotten blooms beneath the jade."
+    },
+    {
+      "id": "card.twist.lifespring",
+      "side": "ghyran",
+      "name": "Lifespring",
+      "picker": "underdogElseRollOff",
+      "duration": "round",
+      "text": "The underdog (or the roll-off winner) names one objective as the lifespring. This round, at the end of each of your turns, score 1 extra VP if you control it. After scoring at the end of every turn, each unit standing on it heals 1.",
+      "flavour": "Clear water bubbles up from the stones."
+    }
+  ],
+  "tactics": [
+    {
+      "id": "card.tactic.war-of-attrition",
+      "name": "War of Attrition",
+      "tactic": { "text": "At least one enemy unit was destroyed this turn, and more enemy units than friendly units were destroyed this turn.", "vp": 1 },
+      "command": { "name": "Stand Guard", "timing": "Enemy Hero phase", "text": "Pick one of your units. It has Strike-first for the rest of the turn." }
+    },
+    {
+      "id": "card.tactic.raid",
+      "name": "Raid",
+      "tactic": { "text": "At least one of your units is wholly inside enemy territory and is not in combat.", "vp": 1 },
+      "command": { "name": "Steel Defence", "timing": "Reaction: an enemy unit attacks one of yours", "text": "The targeted unit ignores Rend on attacks aimed at it for the rest of the phase." }
+    },
+    {
+      "id": "card.tactic.take-the-flanks",
+      "name": "Take the Flanks",
+      "tactic": { "text": "You have a unit within 3\" of each short battlefield edge (two different units, one per edge).", "vp": 1 },
+      "command": { "name": "Redeploy", "timing": "Enemy Movement phase", "text": "Pick one of your units that is not in combat. It moves up to D6\" and cannot end the move in combat." }
+    },
+    {
+      "id": "card.tactic.take-without-warning",
+      "name": "Take Without Warning",
+      "tactic": { "text": "You took control of an objective this turn that your opponent held when the turn began, and no unit on that objective used a Fight ability this turn.", "vp": 1 },
+      "command": { "name": "Fight to the Last", "timing": "Reaction: an enemy unit attacks one of yours", "text": "The targeted unit has Ward (5+) for the rest of the phase." }
+    },
+    {
+      "id": "card.tactic.hold-ground",
+      "name": "Hold Ground",
+      "tactic": { "text": "More of your models than enemy models are contesting the large terrain feature in your own territory.", "vp": 1 },
+      "command": { "name": "Rise to the Challenge", "timing": "Any Combat phase", "text": "Pick one of your Heroes. It heals D6." }
+    },
+    {
+      "id": "card.tactic.cut-off-the-head",
+      "name": "Cut Off the Head",
+      "tactic": { "text": "The enemy general was slain this turn, or it fell earlier and at least one more enemy unit was destroyed this turn.", "vp": 1 },
+      "command": { "name": "Counter-Charge", "timing": "Enemy Charge phase", "text": "Pick one of your units that is not in combat. It may make a charge as if it were your own charge phase." }
+    },
+    {
+      "id": "card.tactic.the-ignax-dais",
+      "name": "The Ignax Dais",
+      "tactic": { "text": "You control the Ignax objective.", "vp": 1 },
+      "command": { "name": "Forward to Victory", "timing": "Reaction: you roll for a charge", "text": "Re-roll the charge roll you just made." }
+    },
+    {
+      "id": "card.tactic.the-behemat-dais",
+      "name": "The Behemat Dais",
+      "tactic": { "text": "You control the Behemat objective.", "vp": 1 },
+      "command": { "name": "Scroll of Arcane Bolt", "timing": "Any Hero phase", "text": "Pick one of your Heroes and an enemy unit within 12\" of it that it can see. Roll a dice: on 2+, that enemy unit takes D3 mortal damage." }
+    },
+    {
+      "id": "card.tactic.the-dracothion-dais",
+      "name": "The Dracothion Dais",
+      "tactic": { "text": "You control the Dracothion objective.", "vp": 1 },
+      "command": { "name": "Go to Ground", "timing": "Reaction: an enemy unit shoots one of yours", "text": "For the rest of the phase, attacks only hit the targeted unit on an unmodified 6. It has Strike-last for the rest of the turn." }
+    },
+    {
+      "id": "card.tactic.raze",
+      "name": "Raze",
+      "tactic": { "text": "One of your units has a model in enemy territory within 3\" of a long battlefield edge.", "vp": 1 },
+      "command": { "name": "Inspiring Presence", "timing": "Any Hero phase", "text": "Pick one of your Heroes and roll a dice. Add the result to its Control for the rest of the turn." }
+    },
+    {
+      "id": "card.tactic.attack-on-two-fronts",
+      "name": "Attack on Two Fronts",
+      "tactic": { "text": "You control two or more objectives that your opponent held when this turn began.", "vp": 1 },
+      "command": { "name": "Call Reinforcements", "timing": "Any Movement phase", "text": "Pick one of your destroyed Infantry or Cavalry units that began the battle with 5 or more models and was never replaced. Set up D3 of its models anywhere more than 6\" from every enemy unit." }
+    },
+    {
+      "id": "card.tactic.do-not-waver",
+      "name": "Do Not Waver",
+      "tactic": { "text": "At least one of your units used a Fight ability this turn and none of your units was destroyed this turn.", "vp": 1 },
+      "command": { "name": "Fall Back and Rally", "timing": "Reaction: one of your units retreats", "text": "The retreating unit takes no mortal damage for retreating. When the move is done, roll a dice for each of its slain models: on 5+ that model returns." }
+    }
+  ]
+}

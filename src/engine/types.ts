@@ -537,6 +537,8 @@ export type ChooseOptionTopic =
   // (core handler in reducer.ts); abilityUse / abilityTarget / abilityMode: abilities.ts; the last three are P1/P2
   | 'chooseAttacker' | 'armyOptions' | 'battlefieldSide' | 'deploymentMap' | 'placeTerrain' | 'firstTurn' | 'priorityChoice'
   | 'abilityUse' | 'abilityTarget' | 'abilityMode' | 'pileInTarget' | 'contestedObjective' | 'discardTactics' | 'scoreTactics'
+  // Spearhead cards (SPH-3, SPH-9, SPH-10; src/engine/cards.ts): a twist's pick, and a battle tactic card's command
+  | 'twistPick' | 'tacticCommand'
 export interface ChooseOptionDecision extends DecisionBase {
   kind: 'chooseOption'
   // rerollOffer: data = { rollId, dieIndexes: number[], needed?, purpose?, key? } (R-6.24); options = reroll / keep; the
@@ -676,6 +678,68 @@ export interface GameState {
   underdog: PlayerId | null
   // SPH-8.3 / CORE-4.9 / SPH-8.5 for the current round: priority roll (null in round 1), who seized, double turn
   priority: { rolls: Record<PlayerId, number> | null; seized: PlayerId | null; doubleTurn: boolean }
+  // Spearhead deck (SPH-3, SPH-9, SPH-10, 14-fire-and-jade-cards): battle tactic hands, twist picks and the card effects in
+  // force. Optional so hand-built test states stay valid; src/engine/cards.ts creates it on first use.
+  cards?: CardsState
+}
+
+// ---------- Spearhead cards (src/engine/cards.ts) ----------
+// one player's battle tactic cards (SPH-10.7): deck order hidden, hand hidden from the opponent, discard and scored piles public
+export interface TacticPiles { deck: Id[]; hand: Id[]; discard: Id[]; scored: Id[] }
+
+// what a twist pick or a card command left on the table. `until`: when it lapses (end of the phase, turn or battle round)
+export type CardFlagKind =
+  | 'ringOfFire' | 'wreathed' | 'reclaim' | 'lifespring' | 'frenzy' | 'spearhead' | 'bloodmarked' | 'ensnared'
+  | 'shieldOfThorns' | 'saveMinus' | 'noWard' | 'takeTheLand'
+  | 'steelDefence' | 'fightToTheLast' | 'goToGround' | 'inspiring' | 'rally'
+export interface CardFlag {
+  kind: CardFlagKind
+  source: Id
+  // who picked it / who benefits
+  player: PlayerId
+  unitId: UnitId | null
+  objectiveId: ObjectiveId | null
+  value: number
+  until: 'phase' | 'turn' | 'round'
+  round: number
+}
+
+// one choice a twist asks for (SPH-9.3); `tag` groups picks that must differ (Reclaim's two objectives, Rain of Jade's units)
+export interface TwistPick {
+  cardId: Id
+  player: PlayerId
+  kind: 'objective' | 'friendlyUnit' | 'enemyUnit' | 'mode'
+  flag: CardFlagKind | null
+  optional: boolean
+  tag: string
+  modes?: { id: string; label: string }[]
+  // ids already taken by earlier picks of the same twist (they must differ)
+  exclude?: string[]
+}
+
+// a card command that needs one more answer after it resolved: a short move (Redeploy) or a set-up spot (Call Reinforcements)
+export type CardFollowUp =
+  | { kind: 'slide'; cardId: Id; player: PlayerId; unitId: UnitId; max: number }
+  | { kind: 'place'; cardId: Id; player: PlayerId; unitId: UnitId }
+
+export interface CardsState {
+  // card ids from the data bundle's deck (twists per battlefield side, the battle tactic list each player gets a copy of)
+  pool: { twists: Record<string, Id[]>; tactics: Id[] }
+  shuffled: boolean
+  tactics: Record<PlayerId, TacticPiles>
+  flags: CardFlag[]
+  picks: TwistPick[]
+  // last round each player finished the discard step / the draw step (SPH-10.2)
+  discardDone: Record<PlayerId, number>
+  drawRound: Record<PlayerId, number>
+  // "round:player" of the turn whose tactic scoring the active player closed
+  scoreDone: string
+  // this turn: units destroyed, units that used a Fight ability (war of attrition, do not waver, take without warning)
+  turnLog: { destroyed: UnitId[]; fought: UnitId[] }
+  roundDestroyed: UnitId[]
+  // SPH-14 Cut Off the Head: when each player's general was slain
+  generalSlain: Record<PlayerId, { round: number; turn: PlayerId } | null>
+  followUp: CardFollowUp | null
 }
 
 // what a Decider sees: redacted state plus the last rejection of its own action

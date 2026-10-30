@@ -436,6 +436,35 @@ export interface TerrainPieceData {
 export interface TerrainLayoutData { id: Id; name?: string; board: { w: number; h: number }; pieces: TerrainPieceData[] }
 
 // assembled by src/data/index.ts; duplicate ids / dangling refs throw at load
+// Spearhead deck of one realm battlefield (11-spearhead §16.2/16.3, 14-fire-and-jade-cards). Text is our own words; the
+// engine implements each card by id (src/engine/cards.ts) and a test keeps the two lists in step.
+export type TwistPicker = 'underdog' | 'rollOffWinner' | 'underdogElseRollOff' | 'underdogElseEach' | 'none'
+export interface TwistCardData {
+  id: Id
+  side: string
+  name: string
+  picker: TwistPicker
+  duration: 'round' | 'battle' | 'immediate'
+  text: string
+  flavour?: string
+}
+export interface TacticCardData {
+  id: Id
+  name: string
+  // condition checked at the end of the owner's turn (SPH-10.3)
+  tactic: { text: string; vp: number }
+  // the one-shot command half (SPH-3.4); `timing` is display text ("Enemy Hero phase", "Reaction: ...")
+  command: { name: string; timing: string; text: string }
+  flavour?: string
+}
+export interface CardDeckData {
+  id: Id
+  name: string
+  sides: { id: string; name: string }[]
+  twists: TwistCardData[]
+  tactics: TacticCardData[]
+}
+
 export interface DataBundle {
   version: string
   factions: Record<Id, FactionData>
@@ -447,4 +476,6 @@ export interface DataBundle {
   patrols: Record<Id, CombatPatrolData>
   missions: Record<Id, MissionData>
   terrainLayouts: Record<Id, TerrainLayoutData>
+  // Spearhead card decks by realm battlefield id; absent in hand-built test bundles (no cards are then dealt)
+  cardDecks?: Record<Id, CardDeckData>
 }

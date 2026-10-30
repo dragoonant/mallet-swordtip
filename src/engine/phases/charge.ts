@@ -16,6 +16,8 @@ import {
   type Footprint, type ResolvedPlacement,
 } from '../geometry'
 import { hookService } from '../hooks-impl'
+import { cardChargeDice } from '../cardFlags'
+import { commandWindow } from '../cards'
 import { leaderService } from '../leaders'
 import { losService } from '../los'
 import { settleY, terrainService } from '../terrain'
@@ -57,7 +59,7 @@ function enemyWithinReach(state: GameState, unitId: UnitId): boolean {
   return false
 }
 
-function canDeclareCharge(state: GameState, unitId: UnitId): boolean {
+export function canDeclareCharge(state: GameState, unitId: UnitId): boolean {
   const u = state.units[unitId]
   if (!u || u.location !== 'board') return false
   if (losService.unitInCombat(state, unitId)) return false
@@ -269,7 +271,8 @@ function driveCharge(ctx: EngineContext): 'pending' | 'progress' {
 
   s.step = 'roll'
   if (charge.roll === null) {
-    const roll = ctx.rollOnce(`charge:${unitId}`, { purpose: 'charge', player: unit.player, sides: 6, count: 2, mode: 'sum', unitId })
+    // Grasping Vines (cards): an ensnared unit rolls one fewer dice
+    const roll = ctx.rollOnce(`charge:${unitId}`, { purpose: 'charge', player: unit.player, sides: 6, count: cardChargeDice(s, unitId), mode: 'sum', unitId })
     if (roll === null) return 'pending'
     const raw = rollSum(roll)
     const total = Math.max(0, raw + chargeRollModifier(ctx, charge, roll))
@@ -350,6 +353,9 @@ export const chargeModule: PhaseModule = {
       }
       const r = doSelect(ctx)
       if (r === 'pending') return 'pending'
+      // Counter-Charge (battle tactic command, Enemy Charge phase): the opponent may start a charge of their own
+      if (commandWindow(ctx, 'charge', ctx.opponentOf(s.activePlayer), 'charge:counter')) return 'pending'
+      if (s.phaseState.charge) continue
       break
     }
     s.step = 'abilities'

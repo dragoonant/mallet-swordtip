@@ -6,6 +6,7 @@
 // The core calls evaluateControl('turnStart') once at the start of round 1 and ('turnEnd') once per turn (SPH-6.4).
 import { OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE, dist2D, withinObjectiveRange } from './geometry'
 import { hookService } from './hooks-impl'
+import { objectiveDisabled } from './cardFlags'
 import type { EngineContext } from './modules'
 import { boardUnitsOf, modelStats, unitModels } from './state'
 import type { GameState, Model, ModelId, Objective, ObjectiveId, PlayerId, UnitId } from './types'
@@ -32,8 +33,9 @@ function contestingModels(state: GameState, unitId: UnitId, obj: Objective): Mod
   return unitModels(state, unitId).filter((m) => !m.pendingRemoval && withinObjectiveRange(m, obj, 0, range, radius))
 }
 
+// Ring of Fire (14-cards §2): a disabled objective is out of play for the round — nobody contests, gains or holds it
 function liveObjectives(state: GameState): Objective[] {
-  return (Object.values(state.objectives) as Objective[]).filter((o) => !o.removed)
+  return (Object.values(state.objectives) as Objective[]).filter((o) => !o.removed && !objectiveDisabled(state, o.id))
 }
 
 interface Contest { unitId: UnitId; player: PlayerId; models: Model[] }
@@ -80,7 +82,7 @@ const stateOnlyCtx = (state: GameState): EngineContext => ({ state } as unknown 
 export const objectiveService: ObjectiveService = {
   modelsInRange(state, objectiveId, player) {
     const obj = state.objectives[objectiveId]
-    if (!obj || obj.removed) return []
+    if (!obj || obj.removed || objectiveDisabled(state, objectiveId)) return []
     const out: ModelId[] = []
     for (const unit of boardUnitsOf(state, player)) {
       if (!hookService.contestAllowed(state, unit.id)) continue
@@ -90,7 +92,7 @@ export const objectiveService: ObjectiveService = {
   },
   levelOfControl(state, objectiveId, ctx) {
     const obj = state.objectives[objectiveId]
-    if (!obj || obj.removed) return { A: 0, B: 0 }
+    if (!obj || obj.removed || objectiveDisabled(state, objectiveId)) return { A: 0, B: 0 }
     const contests = contestPlan(state).get(objectiveId) ?? []
     return levelsFor(state, ctx ?? stateOnlyCtx(state), obj, contests)
   },

@@ -13,6 +13,7 @@
 //
 // The 40k reactive machinery (Overwatch, surge moves, transports, teleports, Desperate Escape) is gone. A few exports are
 // kept as inert stubs so 40k-era importers (faction files, shooting.ts, fight.ts) keep compiling until WP8 deletes them.
+import { commandWindow, rallyAfterRetreat, retreatDamageWaived } from '../cards'
 import { centroid, filterValid, formationPlacements, optionActions, repairCoherency, translatePlacements, unitVector } from './legal'
 import { rollSum } from '../dice'
 import {
@@ -293,7 +294,8 @@ function doDeclare(ctx: EngineContext): 'pending' | 'move' | 'select' {
       if (roll === null) return 'pending'
       ctx.once(`mv:retreatRolled:${unitId}`)
       ctx.emit({ type: 'UnitFellBack', unitId, player: unit.player })
-      const damage = rollSum(roll)
+      // Fall Back and Rally (battle tactic command): the retreat costs no mortal damage
+      const damage = retreatDamageWaived(s, unitId) ? 0 : rollSum(roll)
       if (damage > 0) attackService.queueMortalWounds(ctx, unitId, damage, 'retreat', false)
     }
     if (drainAttack(ctx) === 'pending') return 'pending'
@@ -336,6 +338,7 @@ function doMove(ctx: EngineContext): 'pending' | 'select' {
     paths: Object.fromEntries(result.resolved.filter((r) => r.distance > EPS && s.models[r.model.id]).map((r) => [r.model.id, r.path])),
     player: unit.player,
   })
+  if (moveType === 'fallBack') rallyAfterRetreat(ctx, unitId)
   finishUnit(s, unitId, leaderService.halves(s, unitId))
   return 'select'
 }
@@ -422,7 +425,11 @@ function doReinforcements(ctx: EngineContext): 'pending' | 'abilities' {
 }
 
 function doAbilities(ctx: EngineContext): 'pending' | 'done' {
-  for (const p of ctx.order.active()) if (ctx.services.abilities.runWindow(ctx, 'movement', p)) return 'pending'
+  for (const p of ctx.order.active()) {
+    if (ctx.services.abilities.runWindow(ctx, 'movement', p)) return 'pending'
+    // battle tactic commands (Redeploy, Call Reinforcements)
+    if (commandWindow(ctx, 'movement', p)) return 'pending'
+  }
   return 'done'
 }
 

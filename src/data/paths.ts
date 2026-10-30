@@ -23,6 +23,7 @@ export function schemaForDataPath(relPath: string): DataKind | null {
   }
 
   if (parts[0] === 'missions' && parts.length === 2) return 'mission'
+  if (parts[0] === 'cards' && parts.length === 2) return 'cardDeck'
   if (parts[0] === 'terrain' && parts.length === 2) return 'terrainLayout'
 
   if (parts[0] === 'factions') {
@@ -58,4 +59,5 @@ export const SINGLE_OBJECT_KINDS: ReadonlySet<DataKind> = new Set([
   'combatPatrol',
   'mission',
   'terrainLayout',
+  'cardDeck',
 ])
