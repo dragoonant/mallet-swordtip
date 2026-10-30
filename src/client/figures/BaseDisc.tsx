@@ -2,7 +2,7 @@
 // root, never baked into the figure body, and are the only client-only geometry here — the
 // engine only ever sees the base's mm/shape via Model.base, never these meshes.
 import { GCylinder, StdMat } from './shared'
-import { BufferGeometry, DoubleSide, Float32BufferAttribute, type Mesh, type MeshBasicMaterial } from 'three'
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, type Group, type MeshBasicMaterial } from 'three'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import type { PaintColors } from './types'
@@ -15,8 +15,9 @@ export const BASE_THICKNESS = 0.12
 export const RIM_WIDTH = 0.07
 const RIM_GAP = 0.025
 
-/** A flat elliptical band just outside the base edge with a constant width (a scaled RingGeometry would be wider on big bases). */
-function ThinRim({ radiusX, radiusZ, color }: { radiusX: number; radiusZ: number; color: string }) {
+/** A flat elliptical band `gap` outside the base edge and `width` wide, both in world inches. It is built from the
+ *  base's own radii rather than a scaled RingGeometry, so the line is as thin on the 120x92mm cannon oval as on a 25mm round. */
+function useBandGeometry(radiusX: number, radiusZ: number, gap: number, width: number): BufferGeometry {
   const geometry = useMemo(() => {
     const SEGMENTS = 64
     const pos: number[] = []
@@ -24,7 +25,7 @@ function ThinRim({ radiusX, radiusZ, color }: { radiusX: number; radiusZ: number
     for (let i = 0; i < SEGMENTS; i++) {
       const a = (i / SEGMENTS) * Math.PI * 2
       const c = Math.cos(a), sn = Math.sin(a)
-      pos.push(c * (radiusX + RIM_GAP), 0, sn * (radiusZ + RIM_GAP), c * (radiusX + RIM_GAP + RIM_WIDTH), 0, sn * (radiusZ + RIM_GAP + RIM_WIDTH))
+      pos.push(c * (radiusX + gap), 0, sn * (radiusZ + gap), c * (radiusX + gap + width), 0, sn * (radiusZ + gap + width))
       const j = (i + 1) % SEGMENTS
       idx.push(i * 2, i * 2 + 1, j * 2, i * 2 + 1, j * 2 + 1, j * 2)
     }
@@ -32,33 +33,50 @@ function ThinRim({ radiusX, radiusZ, color }: { radiusX: number; radiusZ: number
     g.setAttribute('position', new Float32BufferAttribute(pos, 3))
     g.setIndex(idx)
     return g
-  }, [radiusX, radiusZ])
+  }, [radiusX, radiusZ, gap, width])
   useEffect(() => () => geometry.dispose(), [geometry])
+  return geometry
+}
+
+function Band({ radiusX, radiusZ, gap, width, color, opacity = 1, y }: { radiusX: number; radiusZ: number; gap: number; width: number; color: string; opacity?: number; y: number }) {
+  const geometry = useBandGeometry(radiusX, radiusZ, gap, width)
   return (
-    <mesh position={[0, 0.004, 0]} geometry={geometry}>
-      <meshBasicMaterial color={color} side={DoubleSide} />
+    <mesh position={[0, y, 0]} geometry={geometry}>
+      <meshBasicMaterial color={color} transparent={opacity < 1} opacity={opacity} side={DoubleSide} />
     </mesh>
   )
 }
 
+/** The team rim of a GLB figure's own base. */
+function ThinRim({ radiusX, radiusZ, color }: { radiusX: number; radiusZ: number; color: string }) {
+  return <Band radiusX={radiusX} radiusZ={radiusZ} gap={RIM_GAP} width={RIM_WIDTH} color={color} y={0.004} />
+}
+
+/** Fixed world-inch line widths for the state rings (clickable amber, selected cyan, hover white): the same hairline
+ *  on every base, never a share of its size. Each sits in its own lane outside the team rim so they can show together. */
+export const RING_WIDTH = { highlight: 0.05, select: 0.06, hover: 0.07 } as const
+export const RING_GAP = { highlight: 0.05, select: 0.12, hover: 0.21 } as const
+
 /** Prompt-hover ring: wide, white and pulsing, so it can't be mistaken for the amber "clickable" ring
  *  or the cyan selection ring — this is the one that answers "which unit is this button?". The demand
  *  frameloop only renders on invalidate, so the pulse asks for the next frame itself. */
-function HoverRing() {
-  const mesh = useRef<Mesh>(null!)
+function HoverRing({ radiusX, radiusZ }: { radiusX: number; radiusZ: number }) {
+  const group = useRef<Group>(null!)
+  const material = useRef<MeshBasicMaterial>(null!)
   useFrame((state) => {
-    const m = mesh.current
-    if (!m) return
     const k = 0.5 + 0.5 * Math.sin(state.clock.elapsedTime * 7)
-    m.scale.setScalar(1 + 0.06 * k)
-    ;(m.material as MeshBasicMaterial).opacity = 0.7 + 0.3 * k
+    // Pulse by opacity and a hair of scale, never by growing the band: the line stays the same thin width.
+    if (group.current) group.current.scale.setScalar(1 + 0.02 * k)
+    if (material.current) material.current.opacity = 0.7 + 0.3 * k
     state.invalidate()
   })
+  const geometry = useBandGeometry(radiusX, radiusZ, RING_GAP.hover, RING_WIDTH.hover)
   return (
-    <mesh ref={mesh} position={[0, 0.014, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
-      <ringGeometry args={[1.66, 2.04, 40]} />
-      <meshBasicMaterial color="#ffffff" transparent opacity={0.9} side={DoubleSide} depthTest={false} toneMapped={false} />
-    </mesh>
+    <group ref={group} position={[0, 0.014, 0]}>
+      <mesh geometry={geometry} renderOrder={2}>
+        <meshBasicMaterial ref={material} color="#ffffff" transparent opacity={0.9} side={DoubleSide} depthTest={false} toneMapped={false} />
+      </mesh>
+    </group>
   )
 }
 
@@ -99,21 +117,10 @@ export function BaseDisc({
           </mesh>
         </>
       )}
-
-      {highlighted && (
-        <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.18, 1.34, 32]} />
-          <meshBasicMaterial color="#ffcc33" transparent opacity={0.85} side={DoubleSide} />
-        </mesh>
-      )}
-      {hovered && <HoverRing />}
-      {selected && (
-        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.4, 1.62, 32]} />
-          <meshBasicMaterial color="#48e0ff" transparent opacity={0.95} side={DoubleSide} />
-        </mesh>
-      )}
     </group>
+    {highlighted && <Band radiusX={radiusX} radiusZ={radiusZ} gap={RING_GAP.highlight} width={RING_WIDTH.highlight} color="#ffcc33" opacity={0.85} y={0.008} />}
+    {hovered && <HoverRing radiusX={radiusX} radiusZ={radiusZ} />}
+    {selected && <Band radiusX={radiusX} radiusZ={radiusZ} gap={RING_GAP.select} width={RING_WIDTH.select} color="#48e0ff" opacity={0.95} y={0.01} />}
     </>
   )
 }

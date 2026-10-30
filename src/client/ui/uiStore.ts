@@ -112,6 +112,10 @@ interface UiState {
   /** Objective a chooseOption/stratagem prompt option is naming — highlighted on the board while its
    *  button is hovered (src/client/ui/DecisionPrompt.tsx, src/client/board/Objectives.tsx). */
   hoveredObjectiveId: string | null
+  /** Board spots a prompt offers as options (a redeploy's `at:<x>:<z>` choices), all drawn faintly while the prompt is open. */
+  candidateSpots: readonly { id: string; x: number; z: number }[]
+  /** The spot whose option button is hovered or armed: drawn bright (src/client/interaction/SpotMarkers.tsx). */
+  hoveredSpotId: string | null
   /** Models whose unit / model row is hovered in the unit card — they glow on the board. */
   glowModelIds: readonly string[]
   /** For `deployUnit`: which of context.unitIds the player is currently placing (palette selection). */
@@ -177,6 +181,8 @@ interface UiState {
   hoverUnit(ids: string | readonly string[] | null): void
   hoverModel(id: string | null): void
   hoverObjective(id: string | null): void
+  setCandidateSpots(spots: readonly { id: string; x: number; z: number }[]): void
+  hoverSpot(id: string | null): void
   glowModels(ids: readonly string[]): void
   setDeployTarget(id: string | null): void
   setDraft(draft: PlacementDraft | null): void
@@ -223,6 +229,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   hoveredUnitIds: [],
   hoveredModelId: null,
   hoveredObjectiveId: null,
+  candidateSpots: [],
+  hoveredSpotId: null,
   glowModelIds: [],
   deployTargetUnitId: null,
   autoDeployFor: null,
@@ -264,6 +272,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
   hoverModel: (id) => set({ hoveredModelId: id }),
   hoverObjective: (id) => set({ hoveredObjectiveId: id }),
+  setCandidateSpots: (spots) => set({ candidateSpots: spots, hoveredSpotId: null }),
+  hoverSpot: (id) => set({ hoveredSpotId: id }),
   glowModels: (ids) => set({ glowModelIds: ids }),
   setDeployTarget: (id) => set({ deployTargetUnitId: id, draft: null, deployPreview: null }),
   setDraft: (draft) => set(draft ? { draft, deployPreview: null } : { draft }),
@@ -305,7 +315,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   startNudge: (n) => set({ nudge: n }),
   clearNudge: () => set({ nudge: null }),
   resetForDecision: () =>
-    set({ deployTargetUnitId: null, draft: null, previewDraft: null, movePreview: null, deployPreview: null, hoveredUnitId: null, hoveredUnitIds: [], hoveredModelId: null, hoveredObjectiveId: null, nudge: null, shootStage: null }),
+    set({ deployTargetUnitId: null, draft: null, previewDraft: null, movePreview: null, deployPreview: null, hoveredUnitId: null, hoveredUnitIds: [], hoveredModelId: null, hoveredObjectiveId: null, candidateSpots: [], hoveredSpotId: null, nudge: null, shootStage: null }),
   resetAll: () => {
     // New game keeps the chosen battlefield (default Aqshy Scorchlands; the HUD button cycles it, ?board= forces one).
     const battlefieldIndex = get().battlefieldIndex
@@ -316,6 +326,8 @@ export const useUiStore = create<UiState>((set, get) => ({
       hoveredUnitIds: [],
       hoveredModelId: null,
       hoveredObjectiveId: null,
+      candidateSpots: [],
+      hoveredSpotId: null,
       glowModelIds: [],
       deployTargetUnitId: null,
       autoDeployFor: null,

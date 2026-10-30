@@ -195,13 +195,14 @@ function buildSetup(bundle: DataBundle, opts: NewGameOptions): GameSetup {
   const terrainLayoutId = mission.terrainLayouts.find((l) => l.includes('standard')) ?? mission.terrainLayouts[0]
   if (!terrainLayoutId) throw new Error(`newGame: mission "${missionId}" lists no terrain layouts`)
   const opponentFaction = opts.opponentFaction ?? defaultOpponentFaction(bundle, opts.playerFaction)
+  const seatA = buildPlayerSetup(bundle, opts.playerFaction, opts.patrolId, opts.regimentAbilityId, opts.enhancementId)
+  const seatB = buildPlayerSetup(bundle, opponentFaction, opts.opponentPatrolId, opts.opponentRegimentAbilityId, opts.opponentEnhancementId)
+  // A mirror match would show one name twice (HUD, end screen, banners): the second seat is "... II" so every line says who it means.
+  if (seatA.name === seatB.name) seatB.name = `${seatB.name} II`
   return {
     missionId,
     terrainLayoutId,
-    players: {
-      A: buildPlayerSetup(bundle, opts.playerFaction, opts.patrolId, opts.regimentAbilityId, opts.enhancementId),
-      B: buildPlayerSetup(bundle, opponentFaction, opts.opponentPatrolId, opts.opponentRegimentAbilityId, opts.opponentEnhancementId),
-    },
+    players: { A: seatA, B: seatB },
     sides: 'rollOff',
     firstTurn: 'rollOff',
     dataVersion: bundle.version,

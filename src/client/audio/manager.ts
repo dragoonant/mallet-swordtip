@@ -38,6 +38,8 @@ const DUCK_RAMP_S = 1.5
 // Also floor how often the *same* id can (re)start, independent of concurrency, so a same-frame
 // burst can't spike the mix.
 const MIN_RETRIGGER_MS: Record<SoundChannel, number> = { sfx: 30, voice: 120, music: 0 }
+/** Narrator lines waiting behind the one that is speaking; past this the oldest is dropped so a backlog never goes stale. */
+const VOICE_QUEUE_MAX = 3
 const DEFAULT_JITTER_CENTS: Record<SoundChannel, number> = { sfx: 25, voice: 0, music: 0 }
 
 interface ThrottleState {
@@ -69,6 +71,10 @@ export class AudioManager {
   /** One decode per file: an `aos-` id and the 42k sound it borrows (or two aos ids sharing one) decode once. */
   private byUrl = new Map<string, Promise<AudioBuffer | null>>()
   private throttle = new Map<SoundId, ThrottleState>()
+  /** Narrator lines never talk over each other: one plays at a time and the next waits its turn (a short queue, oldest dropped). */
+  private voiceEndsAt = 0
+  private voiceSource: AudioBufferSourceNode | null = null
+  private voiceQueue: { id: SoundId; buffer: AudioBuffer; opts: PlayOptions }[] = []
 
   private unlocked = false
   private unlockListenersAttached = false
@@ -251,7 +257,17 @@ export class AudioManager {
     const destination = this.channelGains[channel]
     if (!destination) return
 
+    if (channel === 'voice') {
+      if (this.ctx.currentTime < this.voiceEndsAt) {
+        this.voiceQueue.push({ id, buffer, opts })
+        if (this.voiceQueue.length > VOICE_QUEUE_MAX) this.voiceQueue.shift()
+        return
+      }
+      this.voiceEndsAt = this.ctx.currentTime + buffer.duration
+    }
+
     const source = this.ctx.createBufferSource()
+    if (channel === 'voice') this.voiceSource = source
     source.buffer = buffer
     const jitter = opts.detuneJitter ?? DEFAULT_JITTER_CENTS[channel]
     if (jitter) source.detune.value = (Math.random() * 2 - 1) * jitter
@@ -267,8 +283,18 @@ export class AudioManager {
       state.active = Math.max(0, state.active - 1)
       source.disconnect()
       gain.disconnect()
+      if (channel === 'voice' && this.voiceSource === source) this.nextVoice()
     }
     source.start()
+  }
+
+  /** A narrator line just finished: start the next one that was waiting, if any. */
+  private nextVoice(): void {
+    this.voiceEndsAt = 0
+    const next = this.voiceQueue.shift()
+    if (!next) return
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    this.playBuffer(next.id, 'voice', next.buffer, next.opts, this.throttle.get(next.id) ?? { active: 0, lastStart: 0 }, now)
   }
 
   // ---------- ambient music loop ----------

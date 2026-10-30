@@ -122,9 +122,9 @@ describe('AUDIO-AOS event mapping', () => {
   it('AUDIO-AOS-022 charge, round start, priority, objectives, victory points and the end of the game', () => {
     expect(ids(ev({ type: 'ChargeDeclared', unitId: 'cit1', targetUnitIds: [] }))).toEqual(['aos-horse-charge', 'aos-human-battle-cry'])
     expect(ids(ev({ type: 'ChargeDeclared', unitId: 'orc1', targetUnitIds: [] }))).toEqual(['aos-orruk-stomp', 'aos-orruk-roar'])
-    expect(ids(ev({ type: 'RoundStarted', round: 2 }))).toEqual(['aos-round-start-war-horn'])
+    expect(ids(ev({ type: 'RoundStarted', round: 2 }))).toEqual(['narr-battle-round-two', 'aos-round-start-war-horn'])
     expect(ids(ev({ type: 'RoundStarted', round: 1 }))).toContain('aos-round-start-war-horn')
-    expect(ids(ev({ type: 'PriorityRolled' }))).toEqual(['aos-priority-drumroll'])
+    expect(ids(ev({ type: 'PriorityRolled' }))).toEqual(['narr-roll-for-priority', 'aos-priority-drumroll'])
     expect(ids(ev({ type: 'ObjectiveControlChanged', objectiveId: 'o1', from: null, to: 'A' }))).toContain('aos-objective-captured')
     expect(ids(ev({ type: 'ObjectiveControlChanged', objectiveId: 'o1', from: 'A', to: null }))).toEqual([])
     expect(ids(ev({ type: 'VpScored', amount: 2, total: 2, source: 'tactic' }))).toEqual(['aos-battle-tactic-scored'])

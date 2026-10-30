@@ -1,23 +1,26 @@
 // Balance diagnostics: AI-vs-AI games (the sim setups, utility AI both seats), per-game means of damage dealt / taken per
 // unit, attacks, charges (declared, rolled, completed, offered moves), moves, abilities, card commands, VP sources and
-// objective control at the end of each round. Usage: npx tsx tools/balance-stats.ts [games] [seed] [-v]
+// objective control at the end of each round. Usage: npx tsx tools/balance-stats.ts [games] [seed] [-v] [--armies a,b]
 import { DATA_VERSION, loadBundle } from '../src/data/index'
 import { makeSimSetup } from './sim-core'
 import { UtilityDecider } from '../src/ai/utility'
 import { createGame, legalActions, step, view } from '../src/engine'
 
-const games = Number(process.argv[2] ?? 10)
-const seedBase = process.argv[3] ?? '7'
+const pos = process.argv.slice(2).filter((a, i, all) => !a.startsWith('-') && all[i - 1] !== '--armies')
+const games = Number(pos[0] ?? 10)
+const seedBase = pos[1] ?? '7'
 const verbose = process.argv.includes('-v')
+const ai = process.argv.indexOf('--armies')
+const only = ai >= 0 ? (process.argv[ai + 1] ?? '').split(',').map((x) => x.trim()).filter(Boolean) : undefined
 const stats: Record<string, Record<string, number>> = {}
 const bump = (k1: string, k2: string, n = 1) => { (stats[k1] ??= {}); stats[k1][k2] = (stats[k1][k2] ?? 0) + n }
 
 async function main() {
   const bundle = await loadBundle()
-  let cw = 0, iw = 0, dr = 0
+  const wins: Record<string, number> = {}
   for (let g = 0; g < games; g++) {
     const seed = `sim-${seedBase}-${g}`
-    const setup = makeSimSetup(bundle, g, DATA_VERSION)
+    const setup = makeSimSetup(bundle, g, DATA_VERSION, only)
     const bots = { A: new UtilityDecider('normal', `${seed}:A`), B: new UtilityDecider('normal', `${seed}:B`) }
     let r = createGame(setup, seed, bundle)
     let n = 0
@@ -61,10 +64,10 @@ async function main() {
     const s = r.state
     const w = s.result?.winner
     const wf = w && w !== 'draw' ? fac(w) : 'draw'
-    if (wf === 'cities') cw++; else if (wf === 'ironjawz') iw++; else dr++
+    wins[wf] = (wins[wf] ?? 0) + 1
     if (verbose) console.log(`g${g} ${fac('A')} v ${fac('B')} -> ${wf} VP ${s.players.A.vp}-${s.players.B.vp} first=${fac(s.firstPlayer ?? 'A')}`)
   }
-  console.log(`cities ${cw} ironjawz ${iw} draw ${dr}`)
+  console.log(Object.entries(wins).map(([f, n]) => `${f} ${n}`).join(', '))
   for (const [k, v] of Object.entries(stats)) {
     console.log(`== ${k}`)
     for (const [k2, n] of Object.entries(v).sort()) console.log(`  ${k2}: ${+(n / games).toFixed(2)}`)

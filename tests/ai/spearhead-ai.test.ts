@@ -89,3 +89,46 @@ describe('spearhead AI heuristics', () => {
     expect((b as { optionId: string }).optionId).toBe('fx.a.chaos-regiment-1')
   })
 })
+
+describe('spearhead AI ability timing', () => {
+  const opt = (player: PlayerId, id: string, unitId?: string): DecisionOption => ({ id, label: id, action: { type: 'chooseOption', player, decisionId: 'd3', optionId: id }, ...(unitId ? { hint: { unitId } } : {}) })
+  const place = (s: ReturnType<typeof deployedState>, unitId: string, at: { x: number; z: number }) => {
+    s.units[unitId].models.forEach((id, i) => { s.models[id].pos = { x: at.x + i * 1.5, y: 0, z: at.z } })
+  }
+
+  it('saves a once-per-battle Ward until the units around its bearer are about to fight', async () => {
+    const s = deployedState()
+    s.abilities = { ...s.abilities, 'fx.plant': { ...s.abilities['fx.a.order-rule'], id: 'fx.plant', code: 'fyreslayersPlantTheIcon' } }
+    const boss = unitOf(s, 'A', 'fx.boss')
+    const options = [opt('A', 'pass'), opt('A', `fx.plant#${boss.id}`, boss.id)]
+    const pending: PendingDecision = {
+      kind: 'chooseOption', id: 'd3', player: 'A', window: 'command.start', canPass: true,
+      context: { topic: 'abilityUse', unitId: null, abilityId: null, data: {} }, options,
+    }
+    const bot = new UtilityDecider('normal', 'seed')
+    // the enemy is a whole board away: keep it for later
+    const early = await bot.decide(view(s, 'A'), pending, options.map((o) => o.action))
+    expect((early as { optionId: string }).optionId).toBe('pass')
+    // the enemy's turn, an enemy unit within charge reach of the bearer and the unit beside it: now it pays
+    s.activePlayer = 'B'
+    place(s, unitOf(s, 'B', 'fx.brute').id, { x: -13, z: -2 })
+    const late = await bot.decide(view(s, 'A'), pending, options.map((o) => o.action))
+    expect((late as { optionId: string }).optionId).toBe(`fx.plant#${boss.id}`)
+  })
+
+  it('gives a charge re-roll to the unit that has a charge to make, not to the biggest unit', async () => {
+    const s = deployedState()
+    s.phase = 'charge'
+    s.abilities = { ...s.abilities, 'fx.raids': { ...s.abilities['fx.a.order-rule'], id: 'fx.raids', code: 'slavesChampionOfRaids' } }
+    const guard = unitOf(s, 'A', 'fx.guard')
+    const knight = unitOf(s, 'A', 'fx.knight')
+    place(s, unitOf(s, 'B', 'fx.hawk').id, { x: 8.5, z: -2 })
+    const options = [opt('A', guard.id, guard.id), opt('A', knight.id, knight.id)]
+    const pending: PendingDecision = {
+      kind: 'chooseOption', id: 'd3', player: 'A', window: 'charge.start', canPass: true,
+      context: { topic: 'abilityTarget', unitId: null, abilityId: 'fx.raids', data: {} }, options,
+    }
+    const a = await new UtilityDecider('normal', 'seed').decide(view(s, 'A'), pending, options.map((o) => o.action))
+    expect((a as { optionId: string }).optionId).toBe(knight.id)
+  })
+})

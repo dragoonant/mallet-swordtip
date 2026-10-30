@@ -72,3 +72,8 @@ export const FLAG_LABEL: Record<CardFlagKind, string> = {
   inspiring: 'Inspiring Presence',
   rally: 'Rallying',
 }
+
+/** A seat's name for a tight spot: the army's first word, keeping the " II" the second seat of a mirror match carries. */
+export function shortSeatName(name: string): string {
+  return name.split(' ')[0] + (/ II$/.test(name) ? ' II' : '')
+}

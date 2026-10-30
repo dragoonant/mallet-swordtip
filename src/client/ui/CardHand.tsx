@@ -42,6 +42,10 @@ function actionsForCard(pending: PendingDecision | null, cardId: string): CardAc
   } else if (topic === 'discardTactics') {
     const o = pending.options.find((x) => x.id === `discard:${cardId}`)
     if (o) out.push({ label: 'Discard', action: o.action, primary: false })
+  } else if (topic === 'bottomTactic') {
+    // after an extra draw: the card goes back under the deck, unseen
+    const o = pending.options.find((x) => x.id === `bottom:${cardId}`)
+    if (o) out.push({ label: 'Put on the bottom of the deck', action: o.action, primary: false })
   }
   return out
 }
@@ -266,7 +270,7 @@ export function CardHand() {
   const playable = useMemo(() => new Set(hand.filter((id) => actionsForCard(live && live.player === viewer ? live : null, id).length > 0)), [hand, live, viewer])
 
   // a decision about the cards opens the viewer on its own once, so the choice is made looking at the cards
-  const cardPrompt = !!live && live.player === viewer && live.kind === 'chooseOption' && ['scoreTactics', 'discardTactics'].includes(live.context.topic)
+  const cardPrompt = !!live && live.player === viewer && live.kind === 'chooseOption' && ['scoreTactics', 'discardTactics', 'bottomTactic'].includes(live.context.topic)
   const autoOpened = useRef(false)
   useEffect(() => {
     if (cardPrompt && compact) { setFocus(null); setOpen(true); autoOpened.current = true }

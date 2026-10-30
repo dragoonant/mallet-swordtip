@@ -16,7 +16,7 @@ import type { PlayerId, Phase } from '../../engine/types'
 import type { WeaponData } from '../../data/types'
 import { weaponFlavour, type WeaponFlavour } from '../weaponFlavour'
 import type { AudioManager, PlayOptions } from './manager'
-import { SFX_IDS, type SfxId, type SoundId, type VoiceId } from './manifest'
+import { SFX_IDS, channelFor, type SfxId, type SoundId, type VoiceId } from './manifest'
 import type { AosSfxId } from './aos'
 
 export interface EventSound {
@@ -27,8 +27,16 @@ export interface EventSound {
 // Spearhead calls them the Hero, Movement, Shooting, Charge and Combat phases (the HUD banner says so), so the narrator
 // only speaks the two lines that match; the Combat phase is opened by the army's marshal instead of a "Fight phase" line.
 const PHASE_VOICE_LINE: Partial<Record<Phase, VoiceId>> = {
+  command: 'narr-command-phase', // the Hero phase
   movement: 'narr-movement-phase',
   charge: 'narr-charge',
+}
+
+const ROUND_VOICE_LINE: Record<number, VoiceId> = {
+  1: 'narr-battle-round-one',
+  2: 'narr-battle-round-two',
+  3: 'narr-battle-round-three',
+  4: 'narr-battle-round-four',
 }
 
 /** The per-weapon SFX for each flavour, with a playback trim where the asset itself is much louder
@@ -487,14 +495,17 @@ function deathSound(faction: string, modelId = ''): EventSound {
 /** Sounds to play for one engine event. `perspective` (the human seat) is optional — omit it to get
  *  every sound regardless of whose turn it is; pass it to also get "your turn"/victory-or-defeat
  *  lines correct for that seat. `lookup` is what makes firing sounds weapon-accurate. */
-export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?: SoundLookup): EventSound[] {
+export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?: SoundLookup, upcoming?: readonly GameEvent[]): EventSound[] {
   switch (event.type) {
-    case 'RoundStarted':
-      return event.round === 1 ? [{ id: 'narr-battle-round-one' }, { id: 'aos-round-start-war-horn', opts: { volume: 0.8 } }] : [{ id: 'aos-round-start-war-horn' }]
+    case 'RoundStarted': {
+      const line = ROUND_VOICE_LINE[event.round]
+      const horn = { id: 'aos-round-start-war-horn' as const, opts: event.round === 1 ? { volume: 0.8 } : undefined }
+      return line ? [{ id: line }, horn] : [horn]
+    }
 
     // Rounds 2+ roll for priority (reducer.ts); the drums build to the result the dice tray then shows.
     case 'PriorityRolled':
-      return [{ id: 'aos-priority-drumroll' }]
+      return [{ id: 'narr-roll-for-priority' }, { id: 'aos-priority-drumroll' }]
 
     case 'InitiativeSeized':
       return [{ id: 'aos-marshal-command' }]
@@ -510,6 +521,12 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
       if (line) return [{ id: line }]
       return event.phase === 'fight' ? [{ id: 'aos-marshal-command', opts: { volume: 0.7 } }] : []
     }
+
+    // The Combat phase closing is the end of the turn (Spearhead has no turn-end event; scoring follows). The narrator
+    // says so only when no other voice line comes straight after it, so it never talks over "your turn" or a round call.
+    case 'PhaseEnded':
+      if (event.phase !== 'fight' || !upcoming) return []
+      return upcoming.some((e) => soundsForEvent(e, perspective, lookup).some((s) => channelFor(s.id) === 'voice')) ? [] : [{ id: 'narr-end-of-turn' }]
 
     case 'DiceRolled':
       return [{ id: 'dice-rattle' }, { id: 'dice-land', opts: { volume: 0.8 } }]
@@ -574,7 +591,10 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
 
     // Spearhead cards: a twist is revealed with the war horn, a card command with the marshal's shout
     case 'TwistDrawn':
-      return [{ id: 'aos-round-start-war-horn', opts: { volume: 0.6 } }]
+      return [{ id: 'narr-twist-revealed' }, { id: 'aos-round-start-war-horn', opts: { volume: 0.6 } }]
+    // The narrator calls out only the listening player's own tactic (the opponent's score still shows as VP).
+    case 'TacticScored':
+      return perspective && event.player === perspective ? [{ id: 'narr-battle-tactic-complete' }] : []
     case 'TacticCommandUsed':
       return [{ id: 'stratagem-whoosh', opts: { volume: 0.5 } }, { id: 'aos-marshal-command', opts: { volume: 0.8 } }]
 
@@ -606,9 +626,11 @@ export function missWhooshFor(rolls: readonly GameEvent[]): EventSound[] {
 
 /** Plays every sound mapped from a batch of events (e.g. the events a single step() call returned)
  *  through the given AudioManager. */
-export function playEventSounds(audio: AudioManager, events: readonly GameEvent[], perspective?: PlayerId, lookup?: SoundLookup): void {
-  for (const event of events) {
-    for (const sound of soundsForEvent(event, perspective, lookup)) audio.play(sound.id, sound.opts)
+export function playEventSounds(audio: AudioManager, events: readonly GameEvent[], perspective?: PlayerId, lookup?: SoundLookup, upcoming?: readonly GameEvent[]): void {
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i]
+    // Events later in the same batch are what an "end of turn" line looks ahead at.
+    for (const sound of soundsForEvent(event, perspective, lookup, upcoming ?? events.slice(i + 1))) audio.play(sound.id, sound.opts)
   }
 }
 

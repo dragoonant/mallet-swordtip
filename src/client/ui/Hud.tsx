@@ -10,7 +10,7 @@ import { useUiStore } from './uiStore'
 import { modelsAnchor } from '../interaction/geometry'
 import { usesFormationShape } from '../interaction/decisions'
 import { MissionPanel } from './MissionPanel'
-import { vpSplit } from './cardInfo'
+import { shortSeatName, vpSplit } from './cardInfo'
 import { Tooltip } from './Tooltip'
 import { primaryScoringWindowHint, sourceName } from './labels'
 import { PHASE_NAME } from './phaseNames'
@@ -506,7 +506,7 @@ export function Hud() {
               ))}
             </span>
             <Tooltip title="Active player" body={activeTitle}><span style={mutedText}>
-              <span style={{ color: state.activePlayer === 'A' ? colors.playerA : colors.playerB, fontWeight: 700 }}>● {state.players[state.activePlayer].name.split(' ')[0]}{thinking ? '…' : ''}</span>
+              <span style={{ color: state.activePlayer === 'A' ? colors.playerA : colors.playerB, fontWeight: 700 }}>● {shortSeatName(state.players[state.activePlayer].name)}{thinking ? '…' : ''}</span>
             </span></Tooltip>
             <button style={buttonBase} data-testid="btn-mission" onClick={() => setMissionOpen((v) => !v)}>
               Mission

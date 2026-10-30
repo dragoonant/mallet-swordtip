@@ -793,6 +793,7 @@ async function playEvent(
   announcedPhases: Set<Phase>,
   lookup: SoundLookup,
   sounds = true,
+  upcoming: readonly GameEvent[] = [],
 ): Promise<void> {
   const settings = usePresentationSettings.getState()
   const cues = useCueStore.getState()
@@ -810,7 +811,7 @@ async function playEvent(
   // (dice rattle, hit/save clanks, deaths, charge rumble, objective/VP/CP/stratagem/battle-shock
   // stings, phase/turn narrator lines, victory/defeat) — one call here covers all of it.
   // Grouped roll events are silenced here: playBatch plays one sound for the whole window.
-  if (sounds) playEventSounds(audio, [event], humanSeat, lookup)
+  if (sounds) playEventSounds(audio, [event], humanSeat, lookup, upcoming)
 
   switch (event.type) {
     // The two narrated beats (see `announce`). PhaseStarted only reaches here when it is the round's
@@ -987,7 +988,7 @@ async function playBatchBody(from: GameState, to: GameState, events: GameEvent[]
         const req = usePresentationSettings.getState().diceOn ? groupRequest(to, group) : null
         if (req) await whilePlaying(() => playRoll(req))
       }
-      if (!deferred) await playEvent(event, from, to, bundle, humanSeat, announcedPhases, lookup, key === null)
+      if (!deferred) await playEvent(event, from, to, bundle, humanSeat, announcedPhases, lookup, key === null, event.type === 'PhaseEnded' ? events.slice(i + 1) : [])
       if (heldVolley && event.type === 'AttackSequenceEnded') {
         await fireHeldVolley(to, bundle, humanSeat, lookup)
         heldVolley = null

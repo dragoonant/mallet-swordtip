@@ -125,6 +125,8 @@ const CHOOSE_OPTION_INFO: Partial<Record<ChooseOptionTopic, { title: string; hin
   twistPick: { title: 'Twist: make your choice', hint: "This round's twist asks you to choose. The choice lasts until the end of the battle round." },
   discardTactics: { title: 'Discard battle tactics?', hint: 'Discard any cards you do not want, one at a time, then keep the rest. You draw back up to three afterwards.' },
   scoreTactics: { title: 'Battle tactic complete!', hint: 'You met the condition on these cards this turn. Score each one for 1 VP (it goes to your scored pile).' },
+  extraTactic: { title: 'Draw extra battle tactics?', hint: 'Your general lets you look deeper into the deck: draw the extra cards now, then put the same number back under the deck. Pass to keep the hand you have.' },
+  bottomTactic: { title: 'Put a battle tactic back', hint: 'Choose a card from your hand to tuck under the deck (it can come round again much later). Pick on the cards at the left, or use the buttons.' },
   tacticCommand: { title: 'Play a command?', hint: "Spend a battle tactic card for its command. The card is discarded and can no longer be scored. Pass to keep your cards." },
 }
 
@@ -146,7 +148,31 @@ export function chooseOptionInfoFor(
     const kind = context.data.kind === 'objective' ? 'Pick an objective' : context.data.kind === 'friendlyUnit' ? 'Pick one of your units' : context.data.kind === 'enemyUnit' ? 'Pick an enemy unit' : 'Pick an effect'
     return { title: `Twist · ${context.data.label}`, hint: `${kind}. The choice lasts until the end of the battle round. Open the twist card (bottom left) to read it in full.` }
   }
+  if (context.topic === 'extraTactic' && typeof context.data?.count === 'number') {
+    const n = context.data.count
+    return {
+      title: `Draw ${n} extra battle tactic ${n === 1 ? 'card' : 'cards'}?`,
+      hint: `Your general lets you look deeper into the deck: draw ${n === 1 ? 'one more card' : `${n} more cards`} now, then put ${n === 1 ? 'one card' : `${n} cards`} back under the deck. Pass to keep the hand you have.`,
+    }
+  }
+  // A unit lifted off the board by an ability (Magmic Tunnels) is set up again: the spots are board positions, shown on hover
+  if (context.topic === 'abilityMode' && context.data?.redeploy === true) {
+    const uname = context.unitId && state ? groupLabel(state, context.unitId) : undefined
+    return {
+      title: `Set up ${uname ?? 'the unit'} again`,
+      hint: `The unit was lifted off the battlefield. Pick the spot where it stands again; the candidate spots are ringed on the board, and the one you point at lights up. Pass to put it back where it was.`,
+    }
+  }
   return CHOOSE_OPTION_INFO[context.topic]
+}
+
+/** Pass buttons whose engine word reads as giving something up. */
+function passLabelFor(pending: PendingDecision): string {
+  if (pending.kind === 'chooseOption') {
+    if (pending.context.topic === 'extraTactic') return 'Keep my hand'
+    if (pending.context.topic === 'abilityMode' && pending.context.data?.redeploy === true) return 'Leave it where it was'
+  }
+  return PASS_LABEL[pending.kind] ?? 'Pass'
 }
 
 /** "Pass" is the engine's word for declining, but for some prompts it reads as giving something up
@@ -303,7 +329,15 @@ function helpForAction(state: GameState, action: Action | undefined): PromptHelp
  *  "when I hover over the button it should light up the appropriate figure on the game board").
  *  Every option that names a unit gets one: where it names two (attacker and target) the target wins,
  *  because the acting unit is already the one the player is looking at. */
-type HoverTarget = { kind: 'unit'; ids: string[] } | { kind: 'model'; id: string } | { kind: 'objective'; id: string }
+type HoverTarget = { kind: 'unit'; ids: string[] } | { kind: 'model'; id: string } | { kind: 'objective'; id: string } | { kind: 'spot'; id: string; unitId: string | null }
+
+/** The board position a redeploy option (`at:<x>:<z>`) names, else null. */
+export function spotOfOption(optionId: string): { x: number; z: number } | null {
+  const m = /^at:(-?\d+(?:\.\d+)?):(-?\d+(?:\.\d+)?)$/.exec(optionId)
+  return m ? { x: Number(m[1]), z: Number(m[2]) } : null
+}
+
+const isRedeploy = (pending: PendingDecision): boolean => pending.kind === 'chooseOption' && pending.context.topic === 'abilityMode' && pending.context.data?.redeploy === true
 
 const unitsOf = (ids: readonly string[]): HoverTarget | null => (ids.length > 0 ? { kind: 'unit', ids: [...new Set(ids)] } : null)
 
@@ -340,6 +374,8 @@ function hoverTargetFor(state: GameState, pending: PendingDecision, action: Acti
       // model; objective prompts name an objective. A pick between
       // weapons or ability modes has no board object of its own, so it lights the unit it is about.
       if (pending.kind !== 'chooseOption' || pending.context.topic === 'rerollOffer') return null
+      // A redeploy spot: the position itself lights up on the board, and so does the unit that is being set up
+      if (isRedeploy(pending) && spotOfOption(optionId)) return { kind: 'spot', id: optionId, unitId: pending.context.unitId ?? null }
       if (state.units[optionId]) return { kind: 'unit', ids: [optionId] }
       if (state.models[optionId]) return { kind: 'model', id: optionId }
       if (state.objectives[optionId]) return { kind: 'objective', id: optionId }
@@ -561,10 +597,22 @@ function DecisionPromptBody() {
   const hoverModel = useUiStore((s) => s.hoverModel)
   const hoverObjective = useUiStore((s) => s.hoverObjective)
   const shootStage = useUiStore((s) => s.shootStage)
+  const hoverSpot = useUiStore((s) => s.hoverSpot)
+  const setCandidateSpots = useUiStore((s) => s.setCandidateSpots)
   const clearBoardHover = () => {
     hoverUnit(null)
     hoverModel(null)
     hoverObjective(null)
+    hoverSpot(null)
+  }
+  const applyBoardHover = (target: HoverTarget | null) => {
+    if (target?.kind === 'unit') hoverUnit(target.ids)
+    if (target?.kind === 'model') hoverModel(target.id)
+    if (target?.kind === 'objective') hoverObjective(target.id)
+    if (target?.kind === 'spot') {
+      hoverSpot(target.id)
+      if (target.unitId) hoverUnit(target.unitId)
+    }
   }
   const { compact } = useFormFactor()
   const formationKind = useUiStore((s) => s.formationKind)
@@ -606,6 +654,15 @@ function DecisionPromptBody() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { resetForDecision(); cancelHelp(); setArmedId(null) }, [pending?.id])
+
+  // A redeploy offers board spots: ring every candidate while the human's prompt is open (see SpotMarkers), nothing otherwise.
+  useEffect(() => {
+    const spots = pending && pending.player !== botSeat && caughtUp && isRedeploy(pending) && pending.kind === 'chooseOption'
+      ? pending.options.flatMap((o) => { const at = spotOfOption(o.id); return at ? [{ id: o.id, ...at }] : [] })
+      : []
+    setCandidateSpots(spots)
+    return () => setCandidateSpots([])
+  }, [pending?.id, botSeat, caughtUp]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // A mid-game disembark names exactly one unit: pre-select it so the very next board click places it.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -816,9 +873,7 @@ function DecisionPromptBody() {
     setArmedId(id)
     if (hasHelp) setHelpFor(id)
     if (withPlacements) setPreviewDraft({ decisionId: pending.id, unitId: withPlacements.unitId, anchor: { x: 0, z: 0 }, placements: withPlacements.placements })
-    if (hoverTarget?.kind === 'unit') hoverUnit(hoverTarget.ids)
-    if (hoverTarget?.kind === 'model') hoverModel(hoverTarget.id)
-    if (hoverTarget?.kind === 'objective') hoverObjective(hoverTarget.id)
+    applyBoardHover(hoverTarget)
   }
 
   const bodyTop = (
@@ -1064,9 +1119,7 @@ function DecisionPromptBody() {
                   if (compact) return // touch: the first tap arms the choice instead (see onClick)
                   if (hasHelp) scheduleHelp(it.id)
                   if (withPlacements) setPreviewDraft({ decisionId: pending.id, unitId: withPlacements.unitId, anchor: { x: 0, z: 0 }, placements: withPlacements.placements })
-                  if (hoverTarget?.kind === 'unit') hoverUnit(hoverTarget.ids)
-                  if (hoverTarget?.kind === 'model') hoverModel(hoverTarget.id)
-                  if (hoverTarget?.kind === 'objective') hoverObjective(hoverTarget.id)
+                  applyBoardHover(hoverTarget)
                 }}
                 onMouseLeave={() => {
                   if (compact) return
@@ -1115,7 +1168,7 @@ function DecisionPromptBody() {
     ) : null
     const passBtn = showPass && passAction ? (
       <button style={touchBtn(buttonBase)} data-testid="btn-pass" onClick={() => dispatch(passAction)}>
-        {PASS_LABEL[pending.kind] ?? 'Pass'}
+        {passLabelFor(pending)}
       </button>
     ) : null
     // Confirm / Cancel for a staged move live in TouchActionBar (bottom centre); the sheet lifts clear of it.
@@ -1217,7 +1270,7 @@ function DecisionPromptBody() {
         )}
         {passAction && !weaponPanelOpen && (
           <button style={buttonBase} data-testid="btn-pass" onClick={() => dispatch(passAction)}>
-            {PASS_LABEL[pending.kind] ?? 'Pass'}
+            {passLabelFor(pending)}
           </button>
         )}
       </div>

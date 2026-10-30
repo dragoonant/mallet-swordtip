@@ -134,6 +134,13 @@ export type VoiceId =
   | 'narr-victory'
   | 'narr-defeat'
   | 'narr-your-turn'
+  | 'narr-battle-round-two'
+  | 'narr-battle-round-three'
+  | 'narr-battle-round-four'
+  | 'narr-roll-for-priority'
+  | 'narr-end-of-turn'
+  | 'narr-battle-tactic-complete'
+  | 'narr-twist-revealed'
 
 export type StingerId =
   | 'stinger-cathedral-hymn'
@@ -187,6 +194,13 @@ export const VOICE_IDS: readonly VoiceId[] = [
   'narr-victory',
   'narr-defeat',
   'narr-your-turn',
+  'narr-battle-round-two',
+  'narr-battle-round-three',
+  'narr-battle-round-four',
+  'narr-roll-for-priority',
+  'narr-end-of-turn',
+  'narr-battle-tactic-complete',
+  'narr-twist-revealed',
 ]
 
 export const SFX_IDS: readonly SfxId[] = [
