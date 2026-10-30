@@ -446,7 +446,12 @@ export interface MoveConstraints {
   coherency: boolean
   // Cult Ambush (GEN-2.3): at least one placed model's base must touch (edge distance <= 0.05") this circle
   mustTouch?: { pos: Vec3; radius: number } | null
+  // LRL-RA-2 (Roaring Headwind, F8): every moved model must end closer to this battlefield edge than it started (centre to edge line)
+  mustEndCloserToEdge?: EdgeRef | null
 }
+
+// a battlefield edge (F8): axis 'z' sign -1 = the edge at z = -h/2, axis 'x' sign 1 = the edge at x = +w/2
+export interface EdgeRef { axis: 'x' | 'z'; sign: -1 | 1 }
 
 export interface DecisionBase {
   id: DecisionId

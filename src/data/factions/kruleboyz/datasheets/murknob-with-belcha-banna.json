@@ -1,0 +1,53 @@
+[
+  {
+    "id": "kruleboyz.unit.murknob-with-belcha-banna",
+    "faction": "kruleboyz",
+    "name": "Murknob with Belcha-banna",
+    "keywords": [
+      "HERO",
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "KRULEBOYZ"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 6,
+      "Sv": 4,
+      "OC": 5
+    },
+    "composition": [
+      {
+        "modelId": "murknob",
+        "name": "Murknob with Belcha-banna",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "round",
+          "mm": 40
+        },
+        "weapons": {
+          "default": [
+            "kruleboyz.weapon.murknob-cleaver"
+          ]
+        },
+        "figure": {
+          "archetype": "heavy",
+          "kit": "ork-warboss"
+        }
+      }
+    ],
+    "abilities": [
+      "kruleboyz.ability.breath-of-the-mire-drakes"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "heavy",
+      "kit": "ork-warboss"
+    },
+    "spearhead": true
+  }
+]

@@ -2,11 +2,16 @@
 // procedural figure. Key = `<datasheet id>/<datasheet modelId>` (Model.datasheetModelId in the engine
 // state, composition[].modelId in the datasheet JSON). Value = slug = GLB file name without ".glb".
 //
-// TO ENABLE A MODEL: drop <slug>.glb into public/assets/models/ and add the slug to ENABLED_GLB_SLUGS.
-// Nothing else changes. Slugs not listed there are never requested (no 404) and keep the procedural figure;
-// a listed slug whose file is missing or broken settles as "failed" once (glbLoader.ts) and the procedural
-// figure stays. tests/client/spearhead-figures.test.ts checks every enabled slug exists on disk.
-export const ENABLED_GLB_SLUGS: readonly string[] = [
+// TO ENABLE A MODEL: drop <slug>.glb into public/assets/models/ and add the slug to DECLARED_GLB_SLUGS (and the
+// model to GLB_SLUG_BY_MODEL). A declared slug whose file is not there yet is simply not enabled: it is never
+// requested (no 404, no console noise) and its model keeps the procedural figure, and it switches on by itself the
+// next build or dev-server start after the file lands. ENABLED_GLB_SLUGS is DECLARED_GLB_SLUGS filtered by what is
+// on disk (the build-time file list below; the glob only reads the names, it bundles nothing).
+// tests/client/spearhead-figures.test.ts checks every declared slug has a model that uses it.
+const GLB_FILES = import.meta.glob('/public/assets/models/*.glb', { query: '?url', import: 'default', eager: true })
+const ON_DISK: ReadonlySet<string> = new Set(Object.keys(GLB_FILES).map((p) => p.slice(p.lastIndexOf('/') + 1, -'.glb'.length)))
+
+export const DECLARED_GLB_SLUGS: readonly string[] = [
   // Cities of Sigmar: Castelite Company.
   'cavalier-marshal',
   'freeguild-steelhelm',
@@ -27,7 +32,36 @@ export const ENABLED_GLB_SLUGS: readonly string[] = [
   'fyr-battlesmith',
   'fyr-hearthguard',
   'fyr-vulkite',
+  // Kruleboyz: Swampskulka Gang. (kru-gutrippa-boss is an optional leader look no warscroll model uses.)
+  'kru-killaboss-gnashtoof',
+  'kru-murknob',
+  'kru-boltboy',
+  'kru-gutrippa',
+  'kru-killbow',
+  // Gloomspite Gitz: Snarlpack Huntaz.
+  'glo-snarlboss',
+  'glo-wolfgit-bow',
+  'glo-wolfgit-stikka',
+  'glo-snarlpack-cavalry',
+  'glo-sunsteala-wheela',
+  // Lumineth Realm-lords: Hurakan Vanguard. (lrl-warden-banner is an optional standard look no warscroll model uses.)
+  'lrl-windmage',
+  'lrl-windcharger',
+  'lrl-spirit-of-the-wind',
+  'lrl-warden',
+  // Kharadron Overlords: Skyhammer Task Force.
+  'ko-admiral',
+  'ko-arkanaut',
+  'ko-arkanaut-skypike',
+  'ko-arkanaut-volley',
+  'ko-arkanaut-skyhook',
+  'ko-skywarden',
+  'ko-skywarden-volley',
+  'ko-frigate',
 ]
+
+/** The declared slugs whose file exists: the only ones the game ever requests. */
+export const ENABLED_GLB_SLUGS: readonly string[] = DECLARED_GLB_SLUGS.filter((s) => ON_DISK.has(s))
 
 export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   // Cities of Sigmar.
@@ -50,6 +84,33 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'fyreslayers.unit.battlesmith/battlesmith': 'fyr-battlesmith',
   'fyreslayers.unit.hearthguard-berzerkers/hearthguard': 'fyr-hearthguard',
   'fyreslayers.unit.vulkite-berzerkers/vulkite': 'fyr-vulkite',
+  // Kruleboyz. Gutrippaz and Boltboyz are one sculpt each.
+  'kruleboyz.unit.killaboss-on-great-gnashtoof/killaboss': 'kru-killaboss-gnashtoof',
+  'kruleboyz.unit.murknob-with-belcha-banna/murknob': 'kru-murknob',
+  'kruleboyz.unit.man-skewer-boltboyz/boltboy': 'kru-boltboy',
+  'kruleboyz.unit.gutrippaz/gutrippa': 'kru-gutrippa',
+  'kruleboyz.unit.beast-skewer-killbow/killbow': 'kru-killbow',
+  // Gloomspite Gitz. The Wolfgit Retinue's archer and spear rider are separate models: their weapons differ.
+  'gloomspite.unit.snarlboss/snarlboss': 'glo-snarlboss',
+  'gloomspite.unit.wolfgit-retinue/wolfgit-bow': 'glo-wolfgit-bow',
+  'gloomspite.unit.wolfgit-retinue/wolfgit-stikka': 'glo-wolfgit-stikka',
+  'gloomspite.unit.snarlpack-cavalry/snarlpack-cavalry': 'glo-snarlpack-cavalry',
+  'gloomspite.unit.sunsteala-wheelas/sunsteala-wheela': 'glo-sunsteala-wheela',
+  // Lumineth Realm-lords.
+  'lumineth.unit.hurakan-windmage/windmage': 'lrl-windmage',
+  'lumineth.unit.hurakan-windchargers/windcharger': 'lrl-windcharger',
+  'lumineth.unit.hurakan-spirit-of-the-wind/spirit': 'lrl-spirit-of-the-wind',
+  'lumineth.unit.vanari-auralan-wardens/warden': 'lrl-warden',
+  // Kharadron Overlords. Every special-weapon Arkanaut is its own model; the second Company's rank-and-file share the first's sculpt.
+  'kharadron.unit.arkanaut-admiral/admiral': 'ko-admiral',
+  'kharadron.unit.arkanaut-company/arkanaut': 'ko-arkanaut',
+  'kharadron.unit.arkanaut-company/arkanaut-skypike': 'ko-arkanaut-skypike',
+  'kharadron.unit.arkanaut-company-gunners/arkanaut': 'ko-arkanaut',
+  'kharadron.unit.arkanaut-company-gunners/arkanaut-volley': 'ko-arkanaut-volley',
+  'kharadron.unit.arkanaut-company-gunners/arkanaut-skyhook': 'ko-arkanaut-skyhook',
+  'kharadron.unit.skywardens/skywarden': 'ko-skywarden',
+  'kharadron.unit.skywardens/skywarden-volley': 'ko-skywarden-volley',
+  'kharadron.unit.arkanaut-frigate/frigate': 'ko-frigate',
 }
 
 /** Render-time corrections for GLBs whose baked `figure` node came out of the pipeline at the wrong size or facing.

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "kharadron.enh.masterwrought-armour",
+    "faction": "kharadron",
+    "name": "Masterwrought Armour",
+    "text": "The general has Ward (6+).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kharadron.ability.masterwrought-armour"
+  },
+  {
+    "id": "kharadron.enh.flask-of-vintage-gorogna",
+    "faction": "kharadron",
+    "name": "Flask of Vintage Gorogna",
+    "text": "Once per battle, in any hero phase, heal the general for D6.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kharadron.ability.flask-of-vintage-gorogna"
+  },
+  {
+    "id": "kharadron.enh.no-reward-without-risk",
+    "faction": "kharadron",
+    "name": "There's No Reward Without Risk",
+    "text": "Once per battle, when a unit wholly within 12\" of the general is declared to charge, you can re-roll its charge roll.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kharadron.ability.no-reward-without-risk"
+  },
+  {
+    "id": "kharadron.enh.leave-no-duardin-behind",
+    "faction": "kharadron",
+    "name": "Leave No Duardin Behind",
+    "text": "Once per battle, in your hero phase, pick an Arkanaut Company wholly within 12\" of the general and roll a dice for each of its slain models. Each 4+ returns one slain model.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kharadron.ability.leave-no-duardin-behind"
+  }
+]

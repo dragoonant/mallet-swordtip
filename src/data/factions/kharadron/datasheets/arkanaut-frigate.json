@@ -1,0 +1,42 @@
+[
+  {
+    "id": "kharadron.unit.arkanaut-frigate",
+    "faction": "kharadron",
+    "name": "Arkanaut Frigate",
+    "keywords": ["WAR MACHINE", "FLY"],
+    "factionKeywords": ["ORDER", "KHARADRON OVERLORDS"],
+    "stats": { "M": 12, "W": 15, "Sv": 3, "OC": 5 },
+    "composition": [
+      {
+        "modelId": "frigate",
+        "name": "Arkanaut Frigate",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "oval", "mm": 120, "mm2": 92 },
+        "weapons": {
+          "default": [
+            "kharadron.weapon.heavy-skyhook",
+            "kharadron.weapon.aethershot-carbines",
+            "kharadron.weapon.crews-boarding-weapons"
+          ]
+        },
+        "figure": { "archetype": "vehicle", "kit": "generic-vehicle" }
+      }
+    ],
+    "abilities": [
+      "kharadron.ability.battle-damaged",
+      "kharadron.ability.bomb-racks"
+    ],
+    "coreAbilities": [],
+    "damaged": {
+      "threshold": 5,
+      "effect": {
+        "when": { "weaponId": "kharadron.weapon.heavy-skyhook" },
+        "setStat": { "stat": "A", "value": 1 }
+      }
+    },
+    "figure": { "archetype": "vehicle", "kit": "generic-vehicle" },
+    "spearhead": true
+  }
+]

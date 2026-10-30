@@ -7,7 +7,7 @@
 //    `profileGroup` may fire per model (CITIES-AB-4).
 //  - Guarded Hero (CORE-14.2) and Obscuring (CORE-16.6) can make a unit an illegal target (`targetLegality`).
 import type { Action, WeaponTarget } from '../actions'
-import { attackService, enemyUnitsInCombat, guardedHero, isInCombat, obscuredFrom, unitDistance } from '../attack'
+import { attackService, drainAfterFightMortal, enemyUnitsInCombat, guardedHero, isInCombat, obscuredFrom, unitDistance } from '../attack'
 import { distance, EPS } from '../geometry'
 import { hookService } from '../hooks-impl'
 import { losService } from '../los'
@@ -71,12 +71,18 @@ export function targetLegality(state: GameState, firingUnitId: UnitId, firingMod
   const details = { modelId: firingModelId, weaponId: weapon.id, targetUnitId }
   if (!attackerModel || targetModels.length === 0) return { code: 'E_INVALID_TARGET', reason: `${targetUnitId} is not on the board`, details }
   if (target.player === state.units[firingUnitId]?.player) return { code: 'E_INVALID_TARGET', reason: 'cannot shoot a friendly unit', details }
-  // CORE-8.2: the same model must be within Range and see the target
-  const inRange = (tm: Model): boolean => distance(attackerModel, tm) <= weapon.range + EPS
-  if (!targetModels.some(inRange)) return { code: 'E_NOT_IN_RANGE', reason: `${targetUnitId} is out of ${weapon.id}'s range`, details }
-  if (!targetModels.some((tm) => inRange(tm) && losService.visible(state, firingModelId, tm.id))) {
+  // CORE-8.2: the same model must be within Range and see the target. LRL-ENH Curved Shots (F8): range and visibility may
+  // instead be measured from an extra origin point a code hook gives the model (EngineCodeHook.extraShootingOrigins)
+  const origins: Model[] = [attackerModel, ...hookService.extraShootingOriginsFor(state, firingModelId).map((p) => ({ ...attackerModel, pos: { x: p.x, y: 0, z: p.z } }))]
+  const inRangeOf = (o: Model, tm: Model): boolean => distance(o, tm) <= weapon.range + EPS
+  if (!origins.some((o) => targetModels.some((tm) => inRangeOf(o, tm)))) return { code: 'E_NOT_IN_RANGE', reason: `${targetUnitId} is out of ${weapon.id}'s range`, details }
+  const seenFrom = (o: Model, tm: Model): boolean => o === attackerModel ? losService.visible(state, firingModelId, tm.id) : losService.visibleFrom(state, o, tm.id)
+  if (!origins.some((o) => targetModels.some((tm) => inRangeOf(o, tm) && seenFrom(o, tm)))) {
     return { code: 'E_NO_LOS', reason: `${firingModelId} has no line of sight to ${targetUnitId}`, details }
   }
+  // GLO-ENH Sunsteala Shard (F8): an ability can forbid this target (EngineCodeHook.forbidsShootingTarget)
+  const forbiddenBy = hookService.shootingTargetForbiddenBy(state, firingUnitId, targetUnitId)
+  if (forbiddenBy) return { code: 'E_INVALID_TARGET', reason: `${targetUnitId} cannot be targeted: ${forbiddenBy}`, details }
   // CORE-8.3 / 11.2 / 12.8: in combat -> Shoot in Combat weapons only, at units it is in combat with
   if (isInCombat(state, firingUnitId)) {
     if (!hasAb(weapon, 'SHOOT_IN_COMBAT')) return { code: 'E_IN_COMBAT', reason: `${weapon.id} cannot be used while the unit is in combat`, details }
@@ -185,11 +191,18 @@ function doResolve(ctx: EngineContext): 'pending' | 'selectUnit' {
   const s = ctx.state
   const unitId = readMark(s, 'sh:resolveUnit')
   if (!unitId) return 'selectUnit'
+  // LRL-BT-3 Gale Force (F8): reactions to declaring a Shoot attack, the shooting player only, before any dice
+  if (ctx.services.abilities.runReactionWindow?.(ctx, s.units[unitId]?.player ?? s.activePlayer, { kind: 'youDeclaredAttack', unitId, phase: 'shooting' }, `sh:${unitId}`)) return 'pending'
   // CORE-3.2: the active player is always offered first
   if (ctx.window('shooting.targetsDeclared', unitId, ctx.order.active(), { unitId })) return 'pending'
   if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
   if (ctx.window('shooting.attacksResolved', unitId, ctx.order.active(), { unitId })) return 'pending'
   if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
+  // GLO-RA-2 Frazzleboom (F8): mortal damage a death trigger held during the attacks resolves once the shooting is over
+  drainAfterFightMortal(ctx)
+  // F8: both players' Shooting Phase abilities between activations (Hurricane Winds after this unit's shots, active player
+  // first; Sunsteala Shard for the opponent)
+  for (const p of ctx.order.active()) if (ctx.services.abilities.runWindow(ctx, 'shooting', p, `shooting:after:${unitId}`)) return 'pending'
   writeMark(s, 'sh:resolveUnit', null)
   return 'selectUnit'
 }
@@ -229,6 +242,8 @@ export const shootingModule: PhaseModule = {
       // CORE-3.13: abilities of the active player's Shooting Phase first
       if (!ctx.marked('sh:ab:active')) {
         if (ctx.services.abilities.runWindow(ctx, 'shooting', s.activePlayer, 'shooting:active')) return 'pending'
+        // F8: the opponent's Shooting Phase abilities are also offered before the first shot (GLO-ENH Sunsteala Shard)
+        if (ctx.services.abilities.runWindow(ctx, 'shooting', otherPlayer(s.activePlayer), 'shooting:enemy:start')) return 'pending'
         ctx.once('sh:ab:active')
       }
       if (s.step === 'selectUnit') {

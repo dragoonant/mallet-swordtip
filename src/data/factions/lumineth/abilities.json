@@ -1,0 +1,291 @@
+[
+  {
+    "id": "lumineth.ability.hurakan-vanguard",
+    "name": "Hurakan Vanguard",
+    "text": "Army marker for the Hurakan Vanguard. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "lumineth.ability.storm-brewing",
+    "name": "Storm Brewing",
+    "text": "At the start of the battle, pick one battlefield edge: it is your leeward edge. Each time one of your Ride the Hurricane abilities finishes, your leeward edge moves on to the next edge clockwise. If you never pick, the long edge behind your opponent's territory is used.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfRound",
+      "whose": "your"
+    },
+    "limit": "oncePerBattle",
+    "code": "luminethStormBrewing",
+    "params": {
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "lumineth.ability.pulled-by-the-winds",
+    "name": "Pulled by the Winds",
+    "text": "Ride the Hurricane. Once per turn, in any movement phase, pick a friendly unit that is not in combat and roll a dice. It may move up to that many inches, and must end the move closer to your leeward edge. It may cross enemy combat ranges on the way but may not end the move in combat. This is not a Normal Move, Run or Retreat.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "movement",
+      "whose": "any"
+    },
+    "limit": "oncePerTurnArmy",
+    "keywords": [
+      "MOVE"
+    ],
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "code": "luminethPulledByTheWinds",
+    "params": {
+      "rideTheHurricane": true,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "lumineth.ability.gale-force",
+    "name": "Gale Force",
+    "text": "Ride the Hurricane. Once per turn, when you declare a Shoot or Fight ability for a friendly unit, that unit adds 1 to the hit rolls of its attacks against targets that are closer to your leeward edge than it is (measured to the edge as it stood when this was used).",
+    "trigger": "activated",
+    "timing": {
+      "kind": "reaction",
+      "trigger": "youDeclared",
+      "keyword": "ATTACK"
+    },
+    "limit": "oncePerTurnArmy",
+    "duration": "untilEndOfPhase",
+    "code": "luminethGaleForce",
+    "params": {
+      "rideTheHurricane": true,
+      "hitBonus": 1,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "lumineth.ability.lifted-debris",
+    "name": "Lifted Debris",
+    "text": "Ride the Hurricane. In your hero phase, pick an enemy unit that is closer to your leeward edge than the large terrain feature in your territory, then roll a dice for each battle round that has begun (the current round number). Each 3+ inflicts 1 mortal damage on the target. No range or visibility is needed.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "limit": "oncePerTurnArmy",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "code": "luminethLiftedDebris",
+    "params": {
+      "rideTheHurricane": true,
+      "succeedOn": 3,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "lumineth.ability.roaring-headwind",
+    "name": "Roaring Headwind",
+    "text": "Once per battle, in the enemy hero phase, pick an enemy unit. For the rest of the turn, every time it makes a Move (Normal Move, Run, Retreat, Charge or any other ability with the Move keyword) it must end that move closer to your leeward edge. Pile-in is not a Move.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "enemy"
+    },
+    "limit": "oncePerBattle",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "luminethRoaringHeadwind",
+    "params": {
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "lumineth.ability.scattered-to-the-winds",
+    "name": "Scattered to the Winds",
+    "text": "Each enemy unit within 6\" of the bearer has its control score reduced by 1 for each of your Ride the Hurricane abilities used this battle round, by either player's turn. A unit's control score never drops below 1.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "luminethScatteredToTheWinds",
+    "params": {
+      "range": 6
+    }
+  },
+  {
+    "id": "lumineth.ability.wind-whisperer",
+    "name": "Wind Whisperer",
+    "text": "Once per battle, in any hero phase, pick a battlefield edge: it becomes your leeward edge. This is not a Ride the Hurricane ability, so the edge does not turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "luminethWindWhisperer",
+    "params": {
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "lumineth.ability.temple-guardians",
+    "name": "Temple Guardians",
+    "text": "While another friendly Infantry unit is within 3\" of the bearer, the bearer and every friendly Infantry unit within 3\" of the bearer have Ward (5+).",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "luminethTempleGuardians",
+    "params": {
+      "range": 3,
+      "ward": 5
+    }
+  },
+  {
+    "id": "lumineth.ability.curved-shots",
+    "name": "Curved Shots",
+    "text": "The range and visibility of the bearer's shooting attacks may be measured from any point on your leeward edge as well as from the bearer.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "luminethCurvedShots",
+    "params": {
+      "spacing": 1
+    }
+  },
+  {
+    "id": "lumineth.ability.guide-the-gusts",
+    "name": "Guide the Gusts",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 12\" of this unit (it may pick itself). If the spell is cast, until the end of the turn that unit can Retreat and still Shoot and Charge later in the turn, and Retreating costs it no mortal damage.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "keywords": [
+      "SPELL"
+    ],
+    "castingValue": 6,
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "luminethGuideTheGusts",
+    "params": {
+      "range": 12,
+      "wholly": true,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "lumineth.ability.eye-of-the-storm",
+    "name": "Eye of the Storm",
+    "text": "Subtract 1 from hit rolls for attacks that target friendly units while those units are wholly within 6\" of this unit, itself included.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "luminethEyeOfTheStorm",
+    "params": {
+      "range": 6,
+      "modifier": -1
+    }
+  },
+  {
+    "id": "lumineth.ability.hurricane-winds",
+    "name": "Hurricane Winds",
+    "text": "In any shooting phase, pick an enemy unit that had damage allocated to it this turn by this unit's shooting attacks, then roll a dice. On a 3+, the target fights last for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "shooting",
+      "whose": "any"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "luminethHurricaneWinds",
+    "params": {
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "lumineth.ability.leap-into-the-storm",
+    "name": "Leap into the Storm",
+    "text": "Ride the Hurricane. At the end of your turn, if this unit is not in combat, you may take it off the battlefield and set it up again wholly within 3\" of your leeward edge and more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "endOfTurn",
+      "whose": "your"
+    },
+    "code": "luminethLeapIntoTheStorm",
+    "params": {
+      "rideTheHurricane": true,
+      "depth": 3,
+      "minEnemyDistance": 6,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "lumineth.ability.wall-of-blades",
+    "name": "Wall of Blades",
+    "text": "In any combat phase, if this unit did not charge this turn and is in combat with an enemy unit that did, roll a dice, adding 1 if that charging unit is Cavalry. On a 3+, this unit fights first for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "code": "luminethWallOfBlades",
+    "params": {
+      "succeedOn": 3,
+      "cavalryBonus": 1,
+      "priority": "P1"
+    }
+  }
+]

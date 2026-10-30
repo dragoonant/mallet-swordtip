@@ -1,0 +1,54 @@
+[
+  {
+    "id": "lumineth.unit.hurakan-windchargers",
+    "faction": "lumineth",
+    "name": "Hurakan Windchargers",
+    "keywords": [
+      "CAVALRY"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "LUMINETH REALM-LORDS"
+    ],
+    "stats": {
+      "M": 14,
+      "W": 3,
+      "Sv": 4,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "windcharger",
+        "name": "Hurakan Windcharger",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "oval",
+          "mm": 60,
+          "mm2": 35
+        },
+        "weapons": {
+          "default": [
+            "lumineth.weapon.windcharger-bow",
+            "lumineth.weapon.windcharger-blade",
+            "lumineth.weapon.treerunners-claws"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "lumineth.ability.leap-into-the-storm"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

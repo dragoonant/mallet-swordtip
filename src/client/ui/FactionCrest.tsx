@@ -1,11 +1,13 @@
 // Original faction crests (drawn here, not taken from anyone's artwork): Cities of Sigmar are a stylised
 // tower with a crossed halberd, Ironjawz a tusked iron jaw under a bolted helm, Slaves to Darkness a horned helm over a
-// snapped chain, Fyreslayers a flame-crested duardin helm over crossed axes. One 64x64 viewBox each, drawn with
+// snapped chain, Fyreslayers a flame-crested duardin helm over crossed axes, Kruleboyz a crude crimson-and-mustard shield with a
+// three-claw scratch, Gloomspite Gitz a sun disc with a jagged bite out of it, Lumineth a three-curl wind swirl, Kharadron a cog
+// inside a cloud. One 64x64 viewBox each, drawn with
 // currentColor plus a handful of fixed accents so a crest reads on dark panels and on a bright active tile.
 import type { CSSProperties } from 'react'
 
 /** Faction ids the game ships a crest for; anything else gets a plain shield with the initial. */
-export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers'
+export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron'
 
 function CitiesCrest() {
   return (
@@ -97,6 +99,79 @@ function FyreslayersCrest() {
   )
 }
 
+function KruleboyzCrest() {
+  // Kruleboyz: a lopsided, hastily hammered shield painted crimson with a mustard rim and band, and three claw gashes scraped
+  // across it in mustard. Heavy shapes only, so it still reads as a scratched shield at 24px.
+  return (
+    <g>
+      <path d="M9 9 L33 6 L55 10 L57 33 Q54 51 31 60 Q9 51 7 32 Z" fill="#a7282a" stroke="#d4a62a" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M11 13 L33 10 L53 14 L54 21 L33 18 L10 21 Z" fill="#d4a62a" />
+      <g fill="#f0cf63">
+        <path d="M14 26 L21 24 L30 54 L27 55 L24 44 L22 45 Z" />
+        <path d="M26 24 L33 23 L40 55 L37 56 L34 45 L32 46 Z" />
+        <path d="M38 24 L45 25 L49 52 L46 52 L44 43 L41 44 Z" />
+      </g>
+    </g>
+  )
+}
+
+function GloomspiteCrest() {
+  // Gloomspite Gitz: a stolen sun, rays all round and a jagged bite torn out of its upper right, a spark of pale light left in the gap.
+  return (
+    <g>
+      <mask id="crest-gz-bite" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+        <rect width="64" height="64" fill="#fff" />
+        <path d="M64 2 L47 8 L50 14 L41 18 L47 24 L38 30 L46 33 L43 40 L64 40 Z" fill="#000" />
+      </mask>
+      <g mask="url(#crest-gz-bite)">
+        <circle cx="32" cy="32" r="17" fill="currentColor" />
+        <g fill="currentColor">
+          <path d="M32 2 L37 12 H27 Z" />
+          <path d="M32 62 L37 52 H27 Z" />
+          <path d="M2 32 L12 27 V37 Z" />
+          <path d="M62 32 L52 27 V37 Z" />
+          <path d="M11 11 L21 15 L15 21 Z" />
+          <path d="M53 53 L43 49 L49 43 Z" />
+          <path d="M11 53 L15 43 L21 49 Z" />
+          <path d="M53 11 L49 21 L43 15 Z" />
+        </g>
+        <circle cx="26" cy="28" r="2.6" fill="#0f1119" opacity="0.55" />
+        <circle cx="33" cy="40" r="3.4" fill="#0f1119" opacity="0.45" />
+      </g>
+      <path d="M52 22 L56 28 L52 34 L48 28 Z" fill="#f0e08a" />
+    </g>
+  )
+}
+
+function LuminethCrest() {
+  // Lumineth Realm-lords: three curls of wind chasing round a still centre, one arm turned 120 degrees from the next.
+  return (
+    <g fill="none" stroke="currentColor" strokeWidth="4.2" strokeLinecap="round" strokeLinejoin="round">
+      {[0, 120, 240].map((a) => (
+        <path key={a} transform={`rotate(${a} 32 32)`} d="M32 32 C32 22 36 12 45 12 C53 12 55 22 49 26 C45 29 41 26 43 22" />
+      ))}
+      <circle cx="32" cy="32" r="3.2" fill="currentColor" stroke="none" />
+    </g>
+  )
+}
+
+function KharadronCrest() {
+  // Kharadron Overlords: a toothed brass cog riding inside a puffy cloud (an airship-port badge).
+  const teeth = [0, 45, 90, 135, 180, 225, 270, 315]
+  return (
+    <g>
+      <path d="M15 52 Q4 52 4 41 Q4 31 14 30 Q15 17 28 17 Q35 8 44 15 Q50 18 51 24 Q61 25 61 38 Q61 52 49 52 Z" fill="#0f1119" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+      <g transform="translate(32 35)" fill="currentColor">
+        {teeth.map((a) => (
+          <rect key={a} x="-3.2" y="-13.5" width="6.4" height="7" rx="1" transform={`rotate(${a})`} />
+        ))}
+        <circle r="9.6" />
+        <circle r="3.8" fill="#0f1119" />
+      </g>
+    </g>
+  )
+}
+
 function FallbackCrest({ initial }: { initial: string }) {
   return (
     <g>
@@ -117,7 +192,7 @@ export function FactionCrest({ faction, name, size = 48, style }: { faction: str
       data-testid={`faction-crest-${faction}`}
       style={{ display: 'block', flex: 'none', ...style }}
     >
-      {faction === 'cities' ? <CitiesCrest /> : faction === 'ironjawz' ? <IronjawzCrest /> : faction === 'slaves' ? <SlavesCrest /> : faction === 'fyreslayers' ? <FyreslayersCrest /> : <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />}
+      {faction === 'cities' ? <CitiesCrest /> : faction === 'ironjawz' ? <IronjawzCrest /> : faction === 'slaves' ? <SlavesCrest /> : faction === 'fyreslayers' ? <FyreslayersCrest /> : faction === 'kruleboyz' ? <KruleboyzCrest /> : faction === 'gloomspite' ? <GloomspiteCrest /> : faction === 'lumineth' ? <LuminethCrest /> : faction === 'kharadron' ? <KharadronCrest /> : <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />}
     </svg>
   )
 }

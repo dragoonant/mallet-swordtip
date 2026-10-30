@@ -1,0 +1,111 @@
+[
+  {
+    "id": "lumineth.weapon.windblast-vortex",
+    "name": "Windblast Vortex",
+    "type": "ranged",
+    "range": 12,
+    "A": 1,
+    "skill": 2,
+    "wound": 3,
+    "rend": 2,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "lumineth.weapon.aspiragillum",
+    "name": "Aspiragillum",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "lumineth.weapon.bow-of-the-winds-vengeance",
+    "name": "Bow of the Wind's Vengeance",
+    "type": "ranged",
+    "range": 15,
+    "A": 4,
+    "skill": 2,
+    "wound": 3,
+    "rend": 2,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "lumineth.weapon.swirling-shards",
+    "name": "Swirling Shards",
+    "type": "melee",
+    "range": 0,
+    "A": 6,
+    "skill": 2,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "lumineth.weapon.windcharger-bow",
+    "name": "Windcharger Bow",
+    "type": "ranged",
+    "range": 12,
+    "A": 3,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "lumineth.weapon.windcharger-blade",
+    "name": "Windcharger Blade",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "lumineth.weapon.treerunners-claws",
+    "name": "Treerunner's Claws",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 5,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "COMPANION"
+      }
+    ]
+  },
+  {
+    "id": "lumineth.weapon.warden-pike-and-blade",
+    "name": "Warden Pike and Blade",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "ANTI",
+        "keyword": "@charged",
+        "value": 1
+      },
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  }
+]

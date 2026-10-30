@@ -1,0 +1,55 @@
+[
+  {
+    "id": "lumineth.unit.hurakan-spirit-of-the-wind",
+    "faction": "lumineth",
+    "name": "Hurakan Spirit of the Wind",
+    "keywords": [
+      "MONSTER",
+      "FLY"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "LUMINETH REALM-LORDS"
+    ],
+    "stats": {
+      "M": 18,
+      "W": 8,
+      "Sv": 4,
+      "OC": 5,
+      "ward": 5
+    },
+    "composition": [
+      {
+        "modelId": "spirit",
+        "name": "Hurakan Spirit of the Wind",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "round",
+          "mm": 60
+        },
+        "weapons": {
+          "default": [
+            "lumineth.weapon.bow-of-the-winds-vengeance",
+            "lumineth.weapon.swirling-shards"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "lumineth.ability.eye-of-the-storm",
+      "lumineth.ability.hurricane-winds"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

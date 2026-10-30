@@ -1,0 +1,17 @@
+{
+  "id": "kruleboyz",
+  "name": "Kruleboyz",
+  "factionKeyword": "KRULEBOYZ",
+  "armyRule": "kruleboyz.ability.swampskulka-gang",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#7d8a3a",
+    "secondary": "#3b2f22",
+    "trim": "#c9a227",
+    "metal": "#5a4a3a",
+    "decal": "#b9322e"
+  },
+  "combatPatrols": [
+    "kruleboyz.army.swampskulka-gang"
+  ]
+}

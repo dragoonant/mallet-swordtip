@@ -258,7 +258,8 @@ function razeModel(s: GameState, m: Model, p: PlayerId): boolean {
   return nearLong && pointInPolygon({ x: m.pos.x, z: m.pos.z }, territoryOf(s, otherPlayer(p)))
 }
 
-function largeFeatureIn(s: GameState, territoryOwner: PlayerId) {
+// exported for LRL-RA-1 Lifted Debris (F8)
+export function largeFeatureIn(s: GameState, territoryOwner: PlayerId) {
   const poly = territoryOf(s, territoryOwner)
   return Object.values(s.board.pieces).find((p) => isLargeFeature(p) && pointInPolygon(p.pos, poly)) ?? null
 }

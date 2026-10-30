@@ -222,11 +222,34 @@ const KNOWN_KIT: Record<string, KitId> = {
   'fyreslayers.unit.battlesmith': 'lov-kahl',
   'fyreslayers.unit.hearthguard-berzerkers': 'lov-beserk',
   'fyreslayers.unit.vulkite-berzerkers': 'lov-beserk',
+  // Kruleboyz, Gloomspite, Lumineth and Kharadron: the same idea, nearest existing 42k kit per warscroll, shown only until the GLB loads.
+  'kruleboyz.unit.killaboss-on-great-gnashtoof': 'cdm-bloodcrusher',
+  'kruleboyz.unit.murknob-with-belcha-banna': 'ork-warboss',
+  'kruleboyz.unit.man-skewer-boltboyz': 'ork-boy',
+  'kruleboyz.unit.gutrippaz': 'ork-boy',
+  'kruleboyz.unit.beast-skewer-killbow': 'am-field-gun',
+  'gloomspite.unit.snarlboss': 'cdm-bloodcrusher',
+  'gloomspite.unit.wolfgit-retinue': 'cdm-flesh-hound',
+  'gloomspite.unit.snarlpack-cavalry': 'cdm-bloodcrusher',
+  'gloomspite.unit.sunsteala-wheelas': 'am-field-gun',
+  'lumineth.unit.hurakan-windmage': 'ael-farseer',
+  'lumineth.unit.hurakan-windchargers': 'ael-windrider-catapult',
+  'lumineth.unit.hurakan-spirit-of-the-wind': 'ael-wraithlord',
+  'lumineth.unit.vanari-auralan-wardens': 'ael-guardian',
+  'kharadron.unit.arkanaut-admiral': 'lov-kahl',
+  'kharadron.unit.arkanaut-company': 'lov-hearthkyn',
+  'kharadron.unit.arkanaut-company-gunners': 'lov-hearthkyn',
+  'kharadron.unit.skywardens': 'lov-hearthkyn',
+  'kharadron.unit.arkanaut-frigate': 'tau-devilfish',
 }
 
 /** Models of a mixed unit that look different from the rest of it (a flamer sister is not a rifle sister), keyed
  *  `<datasheet id>/<datasheet modelId>`. A model not listed here takes its datasheet's kit above. */
 const KNOWN_KIT_BY_MODEL: Record<string, KitId> = {
+  // Kharadron special-weapon Arkanauts are their own models (their guns differ in the rules), so their stand-ins differ too.
+  'kharadron.unit.arkanaut-company-gunners/arkanaut-volley': 'lov-hearthkyn-magna',
+  'kharadron.unit.arkanaut-company-gunners/arkanaut-skyhook': 'lov-hearthkyn-hylas',
+  'kharadron.unit.skywardens/skywarden-volley': 'lov-hearthkyn-magna',
   'da.intercessor-squad/sergeant': 'da-sergeant',
   'da.intercessor-squad/intercessor': 'da-intercessor',
   'da.chaplain-mordekai/mordekai': 'da-chaplain',
@@ -663,6 +686,28 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   'fyreslayers.unit.battlesmith': 1.0,
   'fyreslayers.unit.hearthguard-berzerkers': 1.0,
   'fyreslayers.unit.vulkite-berzerkers': 0.95,
+  // Kruleboyz: lanky orruks a touch taller than a footsoldier, the Murknob a head above them, the Gnashtoof rider on a 90x52mm oval, the Killbow a chunky bolt-thrower.
+  'kruleboyz.unit.gutrippaz': 1.15,
+  'kruleboyz.unit.man-skewer-boltboyz': 1.15,
+  'kruleboyz.unit.murknob-with-belcha-banna': 1.5,
+  'kruleboyz.unit.killaboss-on-great-gnashtoof': 1.9,
+  'kruleboyz.unit.beast-skewer-killbow': 1.5,
+  // Gloomspite: wolf riders on 60x35 and 75x42mm ovals, the Wheelas a wicker war-cart on a 120x92mm oval.
+  'gloomspite.unit.snarlboss': 1.6,
+  'gloomspite.unit.wolfgit-retinue': 1.4,
+  'gloomspite.unit.snarlpack-cavalry': 1.6,
+  'gloomspite.unit.sunsteala-wheelas': 1.7,
+  // Lumineth: wind-mage on a cloud spirit, treerunner riders on 60x35mm ovals, the Spirit a 60mm whirlwind, Wardens in a firm pike stance.
+  'lumineth.unit.hurakan-windmage': 1.5,
+  'lumineth.unit.hurakan-windchargers': 1.5,
+  'lumineth.unit.hurakan-spirit-of-the-wind': 1.9,
+  'lumineth.unit.vanari-auralan-wardens': 1.2,
+  // Kharadron: stocky duardin (like the Fyreslayers), flyers on a stem, the Frigate a fat airship on a 120x92mm oval.
+  'kharadron.unit.arkanaut-admiral': 1.05,
+  'kharadron.unit.arkanaut-company': 0.95,
+  'kharadron.unit.arkanaut-company-gunners': 0.95,
+  'kharadron.unit.skywardens': 1.0,
+  'kharadron.unit.arkanaut-frigate': 2.4,
   // Space Wolves: the Invictor Tactical Warsuit is a tall bipedal walker on a 90mm base.
   'sw.invictor-tactical-warsuit': 2.4,
   'sw.battle-leader-thoryk': 1.2,

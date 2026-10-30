@@ -19,16 +19,26 @@ import { parseDiceExpr, rollSum } from './dice'
 import { codeHookFor } from './hooks-impl'
 import type { DecisionHandler, EngineContext } from './modules'
 import type { ActivatedAbilityHook } from './hooks'
-import { applySlide, parseAt, parseSlide, readMoveQueue, readPlaceRequest, slideOptions, writeMoveQueue, writePlaceRequest } from './factions/aos-moves'
+import { applyRetreat, applySlide, parseAt, parseSlide, readMoveQueue, readPlaceRequest, retreatOptions, slideOptions, writeMoveQueue, writePlaceRequest } from './factions/aos-moves'
 import { CFR_ID, SYNTHETIC_ABILITIES, discardReplacement, placeReplacement, replaceableUnits, replacementOptions } from './factions/spearhead-core'
-import { applyRedeploy, readRedeploy, redeployOptions, writeRedeploy } from './redeploy'
+import { applyRedeploy, fallbackRedeploy, readRedeploy, redeployable, redeployOptions, redeployShapeOf, writeRedeploy } from './redeploy'
+import { readDeclaredAttack, writeDeclaredAttack } from './declared'
+import { canCast, castingRoll, type CastResult } from './magic'
 import type { TimingWindowId } from '../data/types'
 import type { AbilityId, DiceRoll, GameState, Phase, PlayerId, RuntimeAbility, UnitId } from './types'
 
 // where an activated ability may be used. Phase windows use the AoS names ('hero' = Phase 'command', 'fight' = Combat).
+// F8 windows: 'moveDeclared' (a movement-phase unit has declared its move, before the Run / Retreat roll and the move: reaction
+// descriptors { trigger 'youDeclared', abilityId 'core.move' } and movement-phase descriptors with params.window 'moveDeclared'),
+// 'moveEnded' (that unit's move is over: offers no abilities, it only asks queued steps such as an anchored set-up), and
+// 'attackDeclared' (runReactionWindow: reaction descriptors { trigger 'youDeclared', keyword 'ATTACK' }).
 export type AbilityWindow =
   | 'hero' | 'movement' | 'shooting' | 'charge' | 'fight'
   | 'startOfTurn' | 'endOfTurn' | 'startOfRound' | 'endOfRound' | 'deployment'
+  | 'moveDeclared' | 'moveEnded' | 'attackDeclared'
+
+// what a reaction window reacts to (F8, LRL-BT-3 Gale Force)
+export interface ReactionTrigger { kind: 'youDeclaredAttack'; unitId: UnitId; phase: 'shooting' | 'fight' }
 
 export interface UsableAbility {
   abilityId: AbilityId
@@ -44,16 +54,20 @@ export interface AbilityService {
   // answered decision with the same arguments; `key` distinguishes occurrences inside one phase (default: the window).
   // Returns true when a decision is now pending (the caller returns 'pending' / stops), false when the window is done.
   runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, key?: string): boolean
+  // F8: offers `player` their 'attackDeclared' reactions after they declared a Shoot / Fight attack (readDeclaredAttack tells the
+  // hook which unit). Same contract as runWindow. Optional so test doubles of the service stay valid.
+  runReactionWindow?(ctx: EngineContext, player: PlayerId, trigger: ReactionTrigger, key: string): boolean
   // answers chooseOption topics 'abilityUse' / 'abilityTarget' / 'abilityMode' (routed by DEFAULT_MODULES.topics)
   readonly handler: DecisionHandler
 }
 
-const PHASE_OF_WINDOW: Partial<Record<AbilityWindow, Phase>> = { hero: 'command', movement: 'movement', shooting: 'shooting', charge: 'charge', fight: 'fight' }
+const PHASE_OF_WINDOW: Partial<Record<AbilityWindow, Phase>> = { hero: 'command', movement: 'movement', shooting: 'shooting', charge: 'charge', fight: 'fight', moveDeclared: 'movement' }
 
 // the TimingWindowId shown on the decisions (display only)
 const DISPLAY_WINDOW: Record<AbilityWindow, TimingWindowId> = {
   hero: 'command.end', movement: 'movement.end', shooting: 'shooting.attacksResolved', charge: 'charge.moveEnded', fight: 'fight.attacksResolved',
   startOfTurn: 'turn.start', endOfTurn: 'turn.end.abilities', startOfRound: 'round.start', endOfRound: 'round.end', deployment: 'deployment.unit',
+  moveDeclared: 'movement.start', moveEnded: 'movement.unitMoved', attackDeclared: 'shooting.targetsDeclared',
 }
 
 // ---------- candidates and gates ----------
@@ -104,7 +118,19 @@ function candidates(state: GameState, player: PlayerId): Candidate[] {
 
 function timingMatches(state: GameState, ab: RuntimeAbility, player: PlayerId, window: AbilityWindow): boolean {
   const t = ab.timing
-  if (!t || t.kind === 'passive' || t.kind === 'reaction') return false
+  if (!t || t.kind === 'passive') return false
+  // F8 reaction windows: only the declaring player's runWindow call reaches them, so "your" is implied
+  if (window === 'moveEnded') return false
+  if (t.kind === 'reaction') {
+    if (t.trigger !== 'youDeclared') return false
+    if (window === 'moveDeclared') return t.abilityId === 'core.move'
+    if (window === 'attackDeclared') return t.keyword === 'ATTACK'
+    return false
+  }
+  if (window === 'attackDeclared') return false
+  // a movement-phase ability with params.window 'moveDeclared' is offered when a unit declares its move, not at the phase's end
+  const atDeclare = ab.params?.window === 'moveDeclared'
+  if ((window === 'moveDeclared') !== atDeclare) return false
   if (t.kind === 'phase') {
     if (PHASE_OF_WINDOW[window] !== t.phase) return false
   } else if (t.kind !== window) return false
@@ -145,6 +171,8 @@ function usableFor(state: GameState, player: PlayerId, window: AbilityWindow): C
     const hook = activateOf(ab)
     if (!hook) continue
     if (!limitOk(state, player, ab, unitId)) continue
+    // CORE-15 (F8): a spell needs a caster with casting power left this phase
+    if (ab.castingValue !== undefined && (!unitId || !canCast(state, unitId))) continue
     if (!hook.canUse(state, unitId, { abilityId: ab.id, unitId, player })) continue
     if (hook.targets && hook.targets(state, unitId, player).length === 0) continue
     out.push(c)
@@ -157,6 +185,7 @@ interface Selection { abilityId: AbilityId; unitId: UnitId | null; target?: Unit
 
 const selPrefix = (k: string): string => `abil:sel:${k}=`
 const rollPrefix = (k: string): string => `abil:roll:${k}=`
+const castPrefix = (k: string): string => `abil:cast:${k}=`
 const passMark = (k: string): string => `abil:pass:${k}`
 const usedPrefix = (k: string): string => `abil:used:${k}:`
 
@@ -209,11 +238,17 @@ function nextStep(ctx: EngineContext, window: AbilityWindow, k: string): 'pendin
     return 'pending'
   }
   const rd = readRedeploy(s)
-  if (rd) {
-    const queue = rd.unitIds.filter((id) => s.units[id]?.location === 'board')
+  // an anchored set-up (F8 C2) waits for its window (the anchor unit has to move first)
+  if (rd && (!rd.atWindow || rd.atWindow === window)) {
+    const queue = rd.unitIds.filter((id) => redeployable(s, rd, id))
     while (queue.length > 0) {
-      const opts = redeployOptions(s, queue[0], rd.minEnemyDistance)
-      if (opts.length === 0) { queue.shift(); continue } // nowhere legal: the unit stays where it is
+      const opts = redeployOptions(s, queue[0], rd.minEnemyDistance, 6, redeployShapeOf(rd))
+      if (opts.length === 0) {
+        // nowhere legal: a unit on the board stays where it is; a lifted unit goes back to (or nearest to) where it was
+        if (s.units[queue[0]]?.location === 'reserves') fallbackRedeploy(ctx, rd, queue[0])
+        queue.shift()
+        continue
+      }
       writeRedeploy(s, { ...rd, unitIds: queue })
       const data: WindowData = { window, k, redeploy: true }
       ctx.decide({
@@ -230,7 +265,7 @@ function nextStep(ctx: EngineContext, window: AbilityWindow, k: string): 'pendin
   if (mq) {
     const queue = mq.queue.filter((id) => s.units[id]?.location === 'board')
     while (queue.length > 0) {
-      const opts = slideOptions(s, queue[0], mq.maxDistance)
+      const opts = mq.kind === 'retreat' ? retreatOptions(s, queue[0], mq.maxDistance) : slideOptions(s, queue[0], mq.maxDistance, mq.opts)
       if (opts.length <= 1) { queue.shift(); continue }
       writeMoveQueue(s, { ...mq, queue })
       const data: WindowData = { window, k, move: true }
@@ -295,7 +330,17 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
     const n = s.phaseState.marks.filter((m) => m.startsWith(usedPrefix(k))).length
     let roll: DiceRoll | null = null
     let success = true
-    if (ab.roll) {
+    let cast: CastResult | null = null
+    if (ab.castingValue !== undefined && sel.unitId) {
+      // CORE-15 (F8): a spell's casting roll (2D6 vs the casting value, miscast, unbind) replaces the declared roll
+      cast = readMark<CastResult>(s, castPrefix(k))
+      if (!cast) {
+        cast = castingRoll(ctx, { abilityId: ab.id, unitId: sel.unitId, player }, sel.unitId, ab.castingValue)
+        writeMark(s, castPrefix(k), cast)
+        if (s.pending) return true
+      }
+      success = cast.cast
+    } else if (ab.roll) {
       roll = readMark<DiceRoll>(s, rollPrefix(k))
       if (!roll) {
         const p = parseDiceExpr(ab.roll.dice)
@@ -335,8 +380,11 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
     }
     clearMark(s, selPrefix(k))
     clearMark(s, rollPrefix(k))
+    clearMark(s, castPrefix(k))
     s.phaseState.marks.push(`${usedPrefix(k)}${n}`)
-    const summary = ab.roll ? (success ? `${ab.name}: rolled ${roll ? rollSum(roll) : 0}, it works` : `${ab.name}: rolled ${roll ? rollSum(roll) : 0}, it fails`) : ab.name
+    const summary = cast
+      ? `${ab.name}: casting roll ${cast.total}${cast.miscast ? ', miscast' : cast.unbound ? ', unbound' : cast.cast ? ', cast' : ', not cast'}`
+      : ab.roll ? (success ? `${ab.name}: rolled ${roll ? rollSum(roll) : 0}, it works` : `${ab.name}: rolled ${roll ? rollSum(roll) : 0}, it fails`) : ab.name
     ctx.emit({ type: 'AbilityTriggered', abilityId: ab.id, sourceUnitId: sel.unitId, targetUnitId: sel.target ?? null, summary, player })
     if (success) hook.resolve(ctx, { abilityId: ab.id, unitId: sel.unitId, player, targetUnitIds: sel.target ? [sel.target] : [], modeId, roll })
     if (s.pending) return true
@@ -344,11 +392,26 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
   throw new Error('abilities.runWindow: did not settle')
 }
 
+// F8 (LRL-BT-3): reactions to declaring an attack. The declaration is recorded once per key (readDeclaredAttack, with a phase
+// sequence number), then the declaring player's 'attackDeclared' window runs like any other.
+function runReactionWindow(ctx: EngineContext, player: PlayerId, trigger: ReactionTrigger, key: string): boolean {
+  const s = ctx.state
+  if (s.pending) return true
+  const once = `abil:atkSeen:${key}`
+  if (!s.phaseState.marks.includes(once)) {
+    s.phaseState.marks.push(once)
+    const prev = readDeclaredAttack(s)
+    writeDeclaredAttack(s, { unitId: trigger.unitId, phase: trigger.phase, seq: (prev?.seq ?? 0) + 1 })
+  }
+  return runWindow(ctx, 'attackDeclared', player, key)
+}
+
 export const abilityService: AbilityService = {
   usable(state, player, window) {
     return usableFor(state, player, window).map((c) => ({ abilityId: c.ab.id, unitId: c.unitId, label: `${c.ab.name} (${unitName(state, c.unitId)})` }))
   },
   runWindow,
+  runReactionWindow,
   handler: {
     handle(ctx, action, pending) {
       if (pending.kind !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'abilities: expected chooseOption' }
@@ -393,7 +456,8 @@ function answerMove(ctx: EngineContext, action: Answer): Rejected {
     if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'abilities: expected chooseOption or pass' }
     const slide = parseSlide(action.optionId)
     if (!slide) return { code: 'E_NOT_AN_OPTION', reason: `move option ${action.optionId} is not offered` }
-    if (!applySlide(ctx, unitId, slide.dx, slide.dz, mq.maxDistance)) return { code: 'E_OUT_OF_RANGE', reason: `${unitName(s, unitId)} cannot move there` }
+    const ok = mq.kind === 'retreat' ? applyRetreat(ctx, unitId, action.optionId, mq.maxDistance) : applySlide(ctx, unitId, slide.dx, slide.dz, mq.maxDistance, mq.opts)
+    if (!ok) return { code: 'E_OUT_OF_RANGE', reason: `${unitName(s, unitId)} cannot move there` }
   }
   writeMoveQueue(s, { ...mq, queue: mq.queue.slice(1) })
 }
@@ -406,7 +470,10 @@ function answerRedeploy(ctx: EngineContext, action: Answer): Rejected {
   if (action.type !== 'pass') {
     if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'abilities: expected chooseOption or pass' }
     const at = parseAt(action.optionId)
-    if (!at || !applyRedeploy(ctx, unitId, at, rd.minEnemyDistance, rd.markSetUp === true)) return { code: 'E_TERRITORY', reason: `${unitName(s, unitId)} cannot be set up there` }
+    if (!at || !applyRedeploy(ctx, unitId, at, rd.minEnemyDistance, rd.markSetUp === true, redeployShapeOf(rd))) return { code: 'E_TERRITORY', reason: `${unitName(s, unitId)} cannot be set up there` }
+  } else if (s.units[unitId]?.location === 'reserves') {
+    // passing on a lifted unit (F8 C2) puts it back where it was (or as near as is legal): it is never left off the table
+    fallbackRedeploy(ctx, rd, unitId)
   }
   writeRedeploy(s, { ...rd, unitIds: rd.unitIds.slice(1) })
 }

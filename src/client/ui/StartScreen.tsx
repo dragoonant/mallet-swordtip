@@ -1,5 +1,5 @@
 // Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (Cities of
-// Sigmar, Ironjawz, Slaves to Darkness or Fyreslayers; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
+// Sigmar, Ironjawz, Slaves to Darkness, Fyreslayers, Kruleboyz, Gloomspite Gitz, Lumineth Realm-lords or Kharadron Overlords; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
 // device, and Start. The battleplan is fixed (Fire and Jade, Aqshy side, standard terrain), so it is shown, not chosen.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
 import { FactionCrest } from './FactionCrest'
@@ -14,19 +14,23 @@ import { Tooltip } from './Tooltip'
 import { buttonActive, buttonBase, buttonDanger, buttonPrimary, colors, fontStack, mutedText, panel } from './theme'
 
 // Own-words one-liners per faction id. A faction with no entry here still appears (name only).
-const FACTION_BLURBS: Record<string, string> = {
+export const FACTION_BLURBS: Record<string, string> = {
   cities: 'Frontier soldiers of the human cities: drilled spearmen, hard-riding cavalry and a heavy cannon, led by a cavalry marshal who rallies the charge.',
   ironjawz: 'Iron-clad orruk warbands: huge brutes and armoured boyz who smash through anything in reach, with a pack of heavies that crashes in late from nowhere.',
   slaves: 'Oath-sworn raiders from the wild north: a fearless queen, shrieking savagers and fast riders who swear to win glory by deed, and fight harder when they keep their word.',
   fyreslayers: 'Stout gold-hungry duardin berserkers wreathed in rune-fire: fast on the charge, hard to put down, and able to burrow out of one place and into another.',
+  kruleboyz: 'Sneaky swamp orruks: poisoned crossbow bolts, hooked blades and a mud-slick boss on a lanky beast, who play dirty and hit hardest when the Waaagh! is up.',
+  gloomspite: 'A howling pack of grot wolf-riders and a rickety sun-stealing war-cart: quick to flank, quick to run, and quicker to come back and stab you in the back.',
+  lumineth: 'Serene wind-aelves who fight with the weather: a spirit of the gale, cloud-borne mages and mounted archers, and a wall of pikes, steering the whole board toward one leeward edge.',
+  kharadron: 'Brass-and-aether sky-duardin: a volley-gun company that shoots even in melee, flying skywardens and a fat armoured airship that ferries units across the field.',
 }
 
 // Preferred card order on the start screen (anything else follows, in data order).
-const FACTION_ORDER = ['cities', 'ironjawz', 'slaves', 'fyreslayers']
+const FACTION_ORDER = ['cities', 'ironjawz', 'slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron']
 
 // Own-words one-liners for the regiment abilities and enhancements shown on the cards; the full rules text from the data is the
 // tooltip. An id without an entry here falls back to its data text.
-const OPTION_BLURBS: Record<string, string> = {
+export const OPTION_BLURBS: Record<string, string> = {
   'cities.ability.for-sigmar-charge': 'Cavalry that charged this turn swing first in the fight.',
   'cities.ability.ironweld-discipline': 'In your opponent\'s shooting phase your cannon may fire too, on a 3+.',
   'ironjawz.ability.natural-disaster': 'A charge roll of 8+ (before bonuses) gives that unit +1 Attacks on its melee weapons.',
@@ -43,6 +47,30 @@ const OPTION_BLURBS: Record<string, string> = {
   'fyreslayers.enh.horn-of-grimnir': 'In your hero phase, if your general is not in combat, a unit that has lost models may get one back on a 3+ (rolled per unit).',
   'fyreslayers.enh.spirit-of-grimnir': 'You may re-roll the roll that wakes a rune each turn.',
   'fyreslayers.enh.powerful-presence': 'Your general counts as Control +3 on objectives.',
+  'kruleboyz.ability.covered-in-mud': 'Once per battle, a chosen unit is caked in swamp muck: enemies more than 12" away cannot see it, so cannot shoot it.',
+  'kruleboyz.ability.noisy-racket': 'In the first round, enemy units wound at -1: the racket puts them off.',
+  'kruleboyz.enh.kunnin-plan': 'Once a turn, a nearby unit can retreat for free and still shoot and charge afterwards.',
+  'kruleboyz.enh.morks-eye-pebble': 'Once per battle, in the enemy movement phase, units near your general get a 5+ Ward for the shooting phase after it.',
+  'kruleboyz.enh.egomaniak': 'While a friendly unit stands close, damage meant for your general slides onto that unit on a 4+.',
+  'kruleboyz.enh.eye-biter-ash': 'Once per battle, an enemy fighting your general hits at -1 for the phase, or for the rest of the battle on a 5+.',
+  'gloomspite.ability.flankin-force': 'Once per battle, in round 1, lift up to 2 units off the board and set them down anywhere more than 6" from the enemy.',
+  'gloomspite.ability.frazzleboom': 'When one of your war machines is destroyed, it blows up on a nearby enemy for D3 mortal damage on a 2 or 3.',
+  'gloomspite.enh.kunnin-as-a-snarlfang': 'Once per battle, in a combat phase, nearby units add 1 Rend to their melee weapons (mounts excepted) until the turn ends.',
+  'gloomspite.enh.glare-of-frazzlegit': 'Once per battle, an enemy fighting your general hits at -1 until the turn ends.',
+  'gloomspite.enh.sunsteala-shard': 'Once per battle, in the enemy shooting phase, units near your general cannot be shot at unless the shooter is already in combat with them.',
+  'gloomspite.enh.devious-backstabba': 'At the end of any turn, an enemy Hero fighting your general may take D3 mortal damage on a 2+.',
+  'lumineth.ability.lifted-debris': 'In your hero phase, hurl debris at an enemy unit: roll a dice per round so far, and each 3+ is 1 mortal damage.',
+  'lumineth.ability.roaring-headwind': 'Once per battle, in the enemy hero phase, pick an enemy unit: every move it makes this turn must end nearer your leeward edge.',
+  'lumineth.enh.scattered-to-the-winds': 'Enemy units close to your general lose control for each hurricane ability you used this round (never below 1).',
+  'lumineth.enh.wind-whisperer': 'Once per battle, in a hero phase, choose any board edge to be your leeward edge.',
+  'lumineth.enh.temple-guardians': 'While friendly infantry stand close to your general, the general and nearby infantry have a 5+ Ward.',
+  'lumineth.enh.curved-shots': 'Your general may shoot as if standing anywhere on your leeward edge.',
+  'kharadron.ability.assault-boat': 'Once per battle, a unit that was carried by Ply the Skies may still charge this turn.',
+  'kharadron.ability.disengage': 'Once per battle, your Frigate retreats without mortal damage and can still shoot afterwards.',
+  'kharadron.enh.leave-no-duardin-behind': 'Once per battle, a nearby Arkanaut Company rolls for each slain model, and each 4+ brings one back.',
+  'kharadron.enh.masterwrought-armour': 'Your general shrugs off damage on a 6+ (Ward).',
+  'kharadron.enh.flask-of-vintage-gorogna': 'Once per battle, in a hero phase, your general heals D6 damage.',
+  'kharadron.enh.no-reward-without-risk': 'Once per battle, a nearby unit that declares a charge may re-roll the charge roll.',
   'cities.enh.flask-of-lethisian-darkwater': 'Once per battle, your general heals D6 damage.',
   'cities.enh.heirloom-blade': 'Your general\'s longsword hits harder against armour: +1 Rend.',
   'cities.enh.brazier-of-holy-flame': 'At the end of any turn, up to D3 fallen Steelhelms stand up near your general.',
@@ -112,6 +140,12 @@ html[data-ff="compact"] .ss-check { display: flex; align-items: center; gap: 10p
 html[data-ff="compact"] .ss-field { display: flex; flex-direction: column; gap: 6px; }
 html[data-ff="compact"] .ss-card button[aria-pressed] { font-size: 12px !important; }
 html[data-ff="compact"] .ss-secondary { font-size: 13px; }
+/* Eight army tiles: 4 x 2 everywhere; a phone held sideways has the width for one row of 8 and not the height for two. */
+html[data-ff="compact"] .ss-armies { gap: 4px !important; }
+html[data-ff="compact"] .ss-armies button { padding: 4px 2px !important; font-size: 10.5px !important; gap: 2px !important; }
+html[data-ff="compact"] .ss-armies .ss-badge { width: 40px !important; height: 40px !important; }
+html[data-ff="compact"] .ss-armies .ss-badge svg { width: 34px; height: 34px; }
+@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; } }
 `
 
 // Automated browsers (Playwright) skip the intro so E2E runs don't wait on it.
@@ -123,8 +157,8 @@ const label: CSSProperties = { fontSize: 12, textTransform: 'uppercase', letterS
 const row: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
 const input: CSSProperties = { ...buttonBase, flex: 1, cursor: 'text' }
 const blurb: CSSProperties = { ...mutedText, marginTop: -8 }
-// Four armies sit in one row where the column allows (about 330px+), else two by two; never a lone orphan card.
-const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))', gap: 6 }
+// Eight armies sit four by two (the CSS class widens it to one row of eight on a phone held sideways); never an orphan card.
+const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }
 const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 4px', fontSize: 11.5, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
 const factionBadge: CSSProperties = { width: 52, height: 52, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }
 const saveCard: CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '10px 14px', borderRadius: 6, border: `1px solid ${colors.accent}`, background: 'rgba(255,255,255,0.05)' }
@@ -142,7 +176,7 @@ const pickText: CSSProperties = { fontSize: 11.5, color: 'inherit', opacity: 0.7
 function FactionCard({ id, name, active, onPick, testId }: { id: string; name: string; active: boolean; onPick: () => void; testId?: string }) {
   return (
     <button type="button" data-testid={testId} style={{ ...(active ? buttonActive : buttonBase), ...factionCard }} aria-pressed={active} onClick={onPick}>
-      <span style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={44} /></span>
+      <span className="ss-badge" style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={44} /></span>
       <span>{name}</span>
     </button>
   )
@@ -338,7 +372,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         <div className="ss-col">
 
         <div style={label}>Your Army</div>
-        <div style={factionGrid} data-testid="setup-patrol-A">
+        <div className="ss-armies" style={factionGrid} data-testid="setup-patrol-A">
           {factions.map((f) => (
             <FactionCard key={f.id} id={f.id} testId={`setup-army-A-${f.id}`} name={f.label} active={f.id === factionId} onPick={() => setFaction(f.id)} />
           ))}
@@ -376,7 +410,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         </div>
 
         <div style={label}>Opponent's Army</div>
-        <div style={factionGrid} data-testid="setup-opponent-faction">
+        <div className="ss-armies" style={factionGrid} data-testid="setup-opponent-faction">
           {factions.map((f) => (
             <FactionCard key={f.id} id={f.id} testId={`setup-army-B-${f.id}`} name={f.label} active={f.id === opponentFaction} onPick={() => setOpponentFaction(f.id)} />
           ))}

@@ -1,0 +1,17 @@
+{
+  "id": "gloomspite",
+  "name": "Gloomspite Gitz",
+  "factionKeyword": "GLOOMSPITE GITZ",
+  "armyRule": "gloomspite.ability.snarlpack-huntaz",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#4f8a2c",
+    "secondary": "#2a2a31",
+    "trim": "#a8452c",
+    "metal": "#6e6a66",
+    "decal": "#f0e08a"
+  },
+  "combatPatrols": [
+    "gloomspite.army.snarlpack-huntaz"
+  ]
+}

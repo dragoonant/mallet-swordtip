@@ -143,9 +143,10 @@ function chargeEndsLegally(state: GameState, geo: ChargeGeometry, finals: Model[
   return false
 }
 
-function chargeMoveRejection(state: GameState, unitId: UnitId, roll: number, placements: ModelPlacement[]): Rejection | null {
+export function chargeMoveRejection(state: GameState, unitId: UnitId, roll: number, placements: ModelPlacement[]): Rejection | null {
   const geo = chargeGeometry(state, unitId)
-  const constraints = emptyMoveConstraints(roll, { mustEndOutsideEngagement: false, coherency: true })
+  // F8 (LRL-RA-2 Roaring Headwind): a code hook may make every charging model end closer to one battlefield edge
+  const constraints = emptyMoveConstraints(roll, { mustEndOutsideEngagement: false, coherency: true, mustEndCloserToEdge: hookService.moveEdgeConstraintFor(state, unitId) })
   const result = checkPlacements({
     unitModels: geo.models, placements, constraints, otherFriendly: geo.otherFriendly, enemies: geo.enemies, board: state.board,
     fly: geo.fly, coherencyRange: datasheetOf(state, unitId).coherencyRange,
@@ -190,124 +191,308 @@ function ringPoint(e: Model, m: Model, angle: number, gap: number): Vec3 {
   return at(hi)
 }
 
-// candidate charge moves: the unit's nearest model (or, failing that, the next nearest) ends ~½" from one of the nearest enemy
-// models, approached from several angles. Each end point is tried first as a rigid slide of the whole unit, then as a
-// per-model fit (fitChargeAround: every other model finds its own spot and path). The first `limit` that pass the full
-// validation are returned.
-function legalChargeMoves(state: GameState, unitId: UnitId, roll: number, limit = 1): ModelPlacement[][] {
+// candidate charge moves (F8 rework). A roll that reaches should be a charge that lands, also for a line of wide oval bases:
+//  1. rigid slides of the whole unit that bring its nearest model to just inside ½" of one of the nearest enemy models along
+//     the shortest approach (approachPoint), cheap and shape-keeping;
+//  2. a per-model fit (fitChargeAround): a lead model's end spot is picked from its shortest approaches and from rings all the
+//     way round the nearest enemy models (24 angles, three facings for an oval: as it stands, long axis toward the enemy,
+//     side-on), cheapest reachable first; every other model then takes its own spot (rings round the models already placed and
+//     the enemy models nearby, also rotated) with its own path: straight, a one-bend detour, else the shortest way round on a
+//     ½" grid (pathField) pulled tight. The first `limit` that pass the full validation (chargeMoveRejection) are returned;
+//     caps on validations and fits keep a hopeless case cheap.
+// Tolerances: the validator allows 1/1000" on distances and on the ½" end gap, and positions are rounded to 1/1000", so an
+// exact approach aims at a 0.4996" gap with at most roll + 0.0002" of travel.
+const TRAVEL_SLACK = 0.0002
+const EXACT_GAP = 0.4996
+export function legalChargeMoves(state: GameState, unitId: UnitId, roll: number, limit = 1): ModelPlacement[][] {
   const geo = chargeGeometry(state, unitId)
   if (geo.models.length === 0 || geo.enemies.length === 0) return []
   const out: ModelPlacement[][] = []
   const tried = new Set<string>()
   const coherency = datasheetOf(state, unitId).coherencyRange ?? 0.5
+  const blockers: Footprint[] = [...geo.enemies, ...geo.otherFriendly]
+  const fields = new Map<string, PathField | null>()
+  const env: FitEnv = { state, geo, roll, blockers, fields, coherency }
+  let checks = 0
+  const MAX_CHECKS = 60
   const offer = (placements: ModelPlacement[] | null): boolean => {
-    if (!placements) return false
+    if (!placements || checks >= MAX_CHECKS) return false
     const key = JSON.stringify(placements)
     if (tried.has(key)) return false
     tried.add(key)
+    checks++
     if (chargeMoveRejection(state, unitId, roll, placements) !== null) return false
     out.push(placements)
     return out.length >= limit
   }
   const nearestEnemies = [...geo.enemies]
     .map((e) => ({ e, gap: Math.min(...geo.models.map((m) => horizontalGap(m, e))) }))
+    .filter((x) => x.gap - CHARGE_END <= roll + EPS)
     .sort((a, b) => a.gap - b.gap)
     .slice(0, 6)
-  for (const { e } of nearestEnemies) {
+  const settled = (pl: ModelPlacement): ModelPlacement => {
+    const model = geo.models.find((x) => x.id === pl.modelId) as Model
+    return { ...pl, pos: { ...pl.pos, y: settleY(state, model, pl.pos.x, pl.pos.z, model.pos.y) } }
+  }
+  const freeSpot = (m: Model, pos: Vec3, facing: number): boolean => {
+    const fp: Footprint = { pos, facing, base: m.base }
+    return whollyOnBoard(fp, state.board) && !blockers.some((b) => basesOverlap(fp, b)) && terrainService.canEndAt(state, { ...m, facing }, pos).ok
+  }
+  // 1. rigid slides along the shortest approach
+  for (const { e } of nearestEnemies.slice(0, 3)) {
     const leads = [...geo.models].sort((a, b) => horizontalGap(a, e) - horizontalGap(b, e)).slice(0, 2)
     for (const m of leads) {
-      const base = Math.atan2(m.pos.z - e.pos.z, m.pos.x - e.pos.x)
-      for (const phi of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.8, -1.8, 2.4, -2.4]) {
-        for (const gap of [0.4, 0.2, 0.05]) {
-          const p = ringPoint(e, m, base + phi, gap)
-          const dx = p.x - m.pos.x, dz = p.z - m.pos.z
-          if (Math.hypot(dx, dz) > roll - 0.02) continue
-          const rigid = translatePlacements(geo.models, dx, dz).map((pl) => {
-            const model = geo.models.find((x) => x.id === pl.modelId) as Model
-            return { ...pl, pos: { ...pl.pos, y: settleY(state, model, pl.pos.x, pl.pos.z, model.pos.y) } }
-          })
-          if (offer(rigid)) return out
-          // a rigid slide of a wide unit (a line of cavalry ovals) often rams a flank model into the enemy or a friendly unit,
-          // or its straight path is blocked: keep this end point for the lead and fit everything else in model by model
-          if (offer(fitChargeAround(state, geo, m, { x: p.x, y: m.pos.y, z: p.z }, roll, coherency))) return out
+      for (const gap of [0.45, EXACT_GAP]) {
+        const ap = approachPoint(m, m.facing, e, gap)
+        if (!ap || ap.travel > roll + TRAVEL_SLACK) continue
+        const dx = ap.to.x - m.pos.x, dz = ap.to.z - m.pos.z
+        const rigid = translatePlacements(geo.models, dx, dz).map(settled)
+        if (rigid.every((pl) => { const mm = geo.models.find((x) => x.id === pl.modelId) as Model; return freeSpot(mm, pl.pos, mm.facing) }) && offer(rigid)) return out
+      }
+    }
+  }
+  // 2. per-model fits around lead spots, cheapest lead travel first
+  interface LeadSpot { m: Model; to: Vec3; facing: number; travel: number }
+  const spots: LeadSpot[] = []
+  for (const { e } of nearestEnemies) {
+    const leads = [...geo.models].sort((a, b) => horizontalGap(a, e) - horizontalGap(b, e)).slice(0, 3)
+    for (const m of leads) {
+      const toward = Math.atan2(e.pos.z - m.pos.z, e.pos.x - m.pos.x)
+      const facings = oval(m) ? [m.facing, toward, toward + Math.PI / 2] : [m.facing]
+      for (const facing of facings) {
+        const mf: Model = { ...m, facing }
+        for (const gap of [0.45, EXACT_GAP]) {
+          const ap = approachPoint(m, facing, e, gap)
+          if (ap && ap.travel <= roll + TRAVEL_SLACK && freeSpot(m, ap.to, facing)) spots.push({ m, to: ap.to, facing, travel: ap.travel })
+        }
+        for (let i = 0; i < 24; i++) {
+          const p = ringPoint(e, mf, (i / 24) * Math.PI * 2, 0.4)
+          const travel = Math.hypot(p.x - m.pos.x, p.z - m.pos.z)
+          if (travel > roll + TRAVEL_SLACK || !freeSpot(m, p, facing)) continue
+          spots.push({ m, to: { x: p.x, y: m.pos.y, z: p.z }, facing, travel })
         }
       }
     }
   }
+  spots.sort((a, b) => a.travel - b.travel)
+  let fits = 0
+  for (const sp of spots) {
+    if (checks >= MAX_CHECKS || fits >= 60) break
+    fits++
+    if (offer(fitChargeAround(env, sp.m, sp.to, sp.facing))) return out
+  }
   return out
 }
 
-// a model's way to `to`: the straight line, else a one-bend detour around whatever is in the way; null when nothing fits the roll
-function chargePath(state: GameState, geo: ChargeGeometry, m: Model, to: Vec3, roll: number, blockers: Footprint[]): Vec3[] | null {
-  const fp: Footprint = { pos: to, facing: m.facing, base: m.base }
-  const ok = (path: Vec3[]): boolean => {
-    let len = 0
-    for (let i = 1; i < path.length; i++) len += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z)
-    if (len > roll - 0.02) return false
+const oval = (m: Model): boolean => m.base.radius2 !== undefined && Math.abs(m.base.radius2 - m.base.radius) > 0.05
+
+// the shortest straight move of `m` (facing `facing`) that brings it to `gap` of enemy model `e`: directions within ±0.6 rad of
+// the centre line are searched (a convex base's gap along a line is convex, so a bisection finds the first point at `gap`)
+function approachPoint(m: Model, facing: number, e: Model, gap: number): { to: Vec3; travel: number } | null {
+  const base = Math.atan2(e.pos.z - m.pos.z, e.pos.x - m.pos.x)
+  const d = Math.hypot(e.pos.x - m.pos.x, e.pos.z - m.pos.z)
+  const travelAt = (a: number): number | null => {
+    const ux = Math.cos(a), uz = Math.sin(a)
+    const g = (t: number): number => horizontalGap({ pos: { x: m.pos.x + ux * t, y: m.pos.y, z: m.pos.z + uz * t }, facing, base: m.base }, e)
+    if (g(0) <= gap) return 0
+    if (g(d) > gap) return null
+    let lo = 0, hi = d
+    for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (g(mid) <= gap) hi = mid; else lo = mid }
+    return hi
+  }
+  let best: { a: number; t: number } | null = null
+  const tryA = (a: number): void => { const t = travelAt(a); if (t !== null && (!best || t < best.t)) best = { a, t } }
+  for (const da of [0, 0.15, -0.15, 0.3, -0.3, 0.6, -0.6]) tryA(base + da)
+  if (!best) return null
+  // refine around the best direction
+  for (const step of [0.08, 0.04, 0.02, 0.01]) {
+    const b0: { a: number; t: number } = best
+    tryA(b0.a + step); tryA(b0.a - step)
+  }
+  const b: { a: number; t: number } = best
+  return { to: { x: m.pos.x + Math.cos(b.a) * b.t, y: m.pos.y, z: m.pos.z + Math.sin(b.a) * b.t }, travel: b.t }
+}
+
+// ---------- shortest ways round (½" grid Dijkstra per model and facing, cached per legalChargeMoves call) ----------
+interface FitEnv { state: GameState; geo: ChargeGeometry; roll: number; blockers: Footprint[]; fields: Map<string, PathField | null>; coherency: number }
+interface PathField { x0: number; z0: number; h: number; nx: number; nz: number; dist: Float64Array; prev: Int32Array }
+const FIELD_H = 0.5
+
+function buildField(env: FitEnv, m: Model, facing: number): PathField | null {
+  const { state, roll, blockers } = env
+  const h = FIELD_H
+  const hw = state.board.w / 2, hh = state.board.h / 2
+  const x0 = Math.max(-hw, m.pos.x - roll), x1 = Math.min(hw, m.pos.x + roll)
+  const z0 = Math.max(-hh, m.pos.z - roll), z1 = Math.min(hh, m.pos.z + roll)
+  const nx = Math.max(1, Math.floor((x1 - x0) / h) + 1), nz = Math.max(1, Math.floor((z1 - z0) / h) + 1)
+  const n = nx * nz
+  const free = new Uint8Array(n)
+  const near = blockers.filter((b) => Math.hypot(b.pos.x - m.pos.x, b.pos.z - m.pos.z) <= roll + 6)
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const pos: Vec3 = { x: x0 + i * h, y: m.pos.y, z: z0 + j * h }
+    const fp: Footprint = { pos, facing, base: m.base }
+    // a cell is free when the base fits there and stands clear of walls and solid blocks (the grid never climbs: a path over a
+    // wall would pay the climb, CORE-6.7, so it is left to the straight / one-bend tries)
+    free[j * nx + i] = whollyOnBoard(fp, state.board) && !near.some((b) => basesOverlap(fp, b)) && terrainService.canEndAt(state, { ...m, facing }, pos).ok ? 1 : 0
+  }
+  const dist = new Float64Array(n).fill(Infinity)
+  const prev = new Int32Array(n).fill(-1)
+  // seeds: the free cells round the model it can step to in a clear straight line (exact check), so the first leg is legal
+  const si = Math.round((m.pos.x - x0) / h), sj = Math.round((m.pos.z - z0) / h)
+  const seeds: number[] = []
+  for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) {
+    const i = si + di, j = sj + dj
+    if (i < 0 || j < 0 || i >= nx || j >= nz || !free[j * nx + i]) continue
+    const c: Vec3 = { x: x0 + i * h, y: m.pos.y, z: z0 + j * h }
+    if (pathCrossesModels({ pos: c, facing, base: m.base }, [m.pos, c], near)) continue
+    dist[j * nx + i] = Math.hypot(c.x - m.pos.x, c.z - m.pos.z)
+    seeds.push(j * nx + i)
+  }
+  if (seeds.length === 0) return null
+  // simple Dijkstra with a binary heap
+  const heap: number[] = []
+  const less = (a: number, b: number): boolean => dist[a] < dist[b]
+  const push = (v: number): void => { heap.push(v); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (!less(heap[c], heap[p])) break; [heap[c], heap[p]] = [heap[p], heap[c]]; c = p } }
+  const pop = (): number => { const top = heap[0]; const last = heap.pop() as number; if (heap.length > 0) { heap[0] = last; let c = 0; for (;;) { const l = 2 * c + 1, r = l + 1; let mi = c; if (l < heap.length && less(heap[l], heap[mi])) mi = l; if (r < heap.length && less(heap[r], heap[mi])) mi = r; if (mi === c) break; [heap[c], heap[mi]] = [heap[mi], heap[c]]; c = mi } } return top }
+  for (const v of seeds) push(v)
+  const done = new Uint8Array(n)
+  const steps: [number, number, number][] = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]]
+  while (heap.length > 0) {
+    const v = pop()
+    if (done[v]) continue
+    done[v] = 1
+    if (dist[v] > roll) continue
+    const vi = v % nx, vj = (v - vi) / nx
+    for (const [di, dj, c] of steps) {
+      const i = vi + di, j = vj + dj
+      if (i < 0 || j < 0 || i >= nx || j >= nz) continue
+      const w = j * nx + i
+      if (!free[w] || done[w]) continue
+      if (di !== 0 && dj !== 0 && (!free[vj * nx + i] || !free[j * nx + vi])) continue // no corner cutting
+      const nd = dist[v] + c * h
+      if (nd < dist[w]) { dist[w] = nd; prev[w] = v; push(w) }
+    }
+  }
+  return { x0, z0, h, nx, nz, dist, prev }
+}
+
+function fieldFor(env: FitEnv, m: Model, facing: number): PathField | null {
+  const key = `${m.id}|${facing.toFixed(3)}`
+  if (!env.fields.has(key)) env.fields.set(key, buildField(env, m, facing))
+  return env.fields.get(key) ?? null
+}
+
+// a model's way to `to`: the straight line, a one-bend detour, else the grid's shortest way round pulled tight; null when nothing
+// fits the roll
+function chargePath(env: FitEnv, m: Model, to: Vec3, facing = m.facing): Vec3[] | null {
+  const { state, geo, roll, blockers } = env
+  const fp: Footprint = { pos: to, facing, base: m.base }
+  const lenOf = (path: Vec3[]): number => { let len = 0; for (let i = 1; i < path.length; i++) len += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z); return len }
+  const clear = (path: Vec3[]): boolean => {
     if (!geo.fly && pathCrossesModels(fp, path, blockers)) return false
-    for (let i = 1; i < path.length - 1; i++) if (!whollyOnBoard({ pos: path[i], facing: m.facing, base: m.base }, state.board)) return false
+    for (let i = 1; i < path.length - 1; i++) if (!whollyOnBoard({ pos: path[i], facing, base: m.base }, state.board)) return false
     return !terrainService.crossesImpassable(state, m, path)
   }
+  // CORE-6.7: climbing over terrain taller than 1" costs the climb on top of the path length
+  const ok = (path: Vec3[]): boolean => lenOf(path) <= roll + TRAVEL_SLACK && clear(path) && lenOf(path) + terrainService.extraMoveCost(state, m, path) <= roll + TRAVEL_SLACK
   const straight = [m.pos, to]
   if (ok(straight)) return straight
   const dx = to.x - m.pos.x, dz = to.z - m.pos.z
   const len = Math.hypot(dx, dz)
-  if (len < 0.05) return null
+  if (len < 0.05 || roll - len <= 0.05) return null
   const px = -dz / len, pz = dx / len
   for (const along of [0.5, 0.3, 0.7]) {
-    for (const side of [1, -1, 2, -2, 3, -3, 4.5, -4.5]) {
+    for (const side of [1, -1, 2, -2]) {
+      if (Math.abs(side) > roll - len + 1) continue
       const w: Vec3 = { x: m.pos.x + dx * along + px * side, y: m.pos.y, z: m.pos.z + dz * along + pz * side }
       const path = [m.pos, w, to]
       if (ok(path)) return path
     }
   }
-  return null
+  if (geo.fly) return null
+  // the grid: shortest way round to the free cell nearest `to`, then string-pulled
+  const f = fieldFor(env, m, facing)
+  if (!f) return null
+  const ti = Math.round((to.x - f.x0) / f.h), tj = Math.round((to.z - f.z0) / f.h)
+  let bestCell = -1, bestCost = Infinity
+  for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+    const i = ti + di, j = tj + dj
+    if (i < 0 || j < 0 || i >= f.nx || j >= f.nz) continue
+    const c = j * f.nx + i
+    if (!Number.isFinite(f.dist[c])) continue
+    const cost = f.dist[c] + Math.hypot(f.x0 + i * f.h - to.x, f.z0 + j * f.h - to.z)
+    if (cost < bestCost) { bestCost = cost; bestCell = c }
+  }
+  if (bestCell < 0 || bestCost > roll * 1.08 + 0.5) return null
+  const cells: Vec3[] = []
+  for (let c = bestCell; c >= 0; c = f.prev[c]) { const i = c % f.nx, j = (c - i) / f.nx; cells.push({ x: f.x0 + i * f.h, y: m.pos.y, z: f.z0 + j * f.h }) }
+  cells.reverse()
+  const pts = [m.pos, ...cells, to]
+  // string pulling: from each kept point jump to the farthest point still reachable in a clear straight line
+  const pulled: Vec3[] = [pts[0]]
+  let i = 0
+  while (i < pts.length - 1) {
+    let j = pts.length - 1
+    while (j > i + 1 && !clear([pts[i], pts[j]])) j--
+    pulled.push(pts[j])
+    i = j
+  }
+  return ok(pulled) ? pulled : null
 }
 
-// per-model charge fit (CORE-6.6: each model moves its own path, the unit ends coherent). The lead model goes to `leadTo`; the
-// others, nearest first, take the first spot that is within the roll, overlaps nothing, has a clear path (chargePath) and sits
-// within coherency of a model already placed. Spots tried: the lead's slide (scaled down), then slots touching an already
-// placed model or an enemy model nearby, closest to the enemy first. Null when some model has no spot.
-function fitChargeAround(state: GameState, geo: ChargeGeometry, lead: Model, leadTo: Vec3, roll: number, coherency: number): ModelPlacement[] | null {
-  const blockers: Footprint[] = [...geo.enemies, ...geo.otherFriendly]
-  const fits = (m: Model, c: Vec3, placed: Model[]): ModelPlacement | null => {
-    if (Math.hypot(c.x - m.pos.x, c.z - m.pos.z) > roll - 0.02) return null
-    const fp: Footprint = { pos: c, facing: m.facing, base: m.base }
+// per-model charge fit (CORE-6.6: each model moves its own path, the unit ends coherent). The lead model goes to `leadTo` facing
+// `leadFacing`; the others, nearest first, take the first spot that is within the roll, overlaps nothing, has a path (chargePath)
+// and sits within coherency of a model already placed. Spots tried: the lead's slide (scaled down), then slots touching an
+// already placed model or an enemy model nearby (closest to the enemy first), each with the model's own facing, the lead's
+// facing and (ovals) the facing toward the enemy. Null when some model has no spot.
+function fitChargeAround(env: FitEnv, lead: Model, leadTo: Vec3, leadFacing: number): ModelPlacement[] | null {
+  const { state, geo, roll, blockers, coherency } = env
+  const fits = (m: Model, c: Vec3, facing: number, placed: Model[]): ModelPlacement | null => {
+    if (Math.hypot(c.x - m.pos.x, c.z - m.pos.z) > roll + TRAVEL_SLACK) return null
+    const fp: Footprint = { pos: c, facing, base: m.base }
     if (!whollyOnBoard(fp, state.board)) return null
     if (blockers.some((b) => basesOverlap(fp, b)) || placed.some((q) => basesOverlap(fp, q))) return null
     if (placed.length > 0 && !placed.some((q) => horizontalGap(fp, q) <= coherency - 0.02)) return null
     const to: Vec3 = { x: c.x, y: settleY(state, m, c.x, c.z, m.pos.y), z: c.z }
-    if (!terrainService.canEndAt(state, m, to).ok) return null
-    const path = chargePath(state, geo, m, to, roll, blockers)
-    return path ? { modelId: m.id, pos: to, facing: m.facing, path } : null
+    if (!terrainService.canEndAt(state, { ...m, facing }, to).ok) return null
+    const path = chargePath(env, m, to, facing)
+    return path ? { modelId: m.id, pos: to, facing, path } : null
   }
-  const first = fits(lead, leadTo, [])
+  const first = fits(lead, leadTo, leadFacing, [])
   if (!first) return null
-  const placed: Model[] = [{ ...lead, pos: first.pos }]
+  const placed: Model[] = [{ ...lead, pos: first.pos, facing: leadFacing }]
   const out: ModelPlacement[] = [first]
   if (geo.models.length === 1) return out
   const dx = leadTo.x - lead.pos.x, dz = leadTo.z - lead.pos.z
   const enemyGap = (f: Footprint): number => { let g = Infinity; for (const e of geo.enemies) g = Math.min(g, horizontalGap(f, e)); return g }
   const others = geo.models.filter((x) => x.id !== lead.id).sort((a, b) => horizontalGap(a, lead) - horizontalGap(b, lead))
-  const near = geo.enemies.filter((e) => horizontalGap({ pos: leadTo, facing: lead.facing, base: lead.base }, e) <= 6)
+  const near = geo.enemies.filter((e) => horizontalGap({ pos: leadTo, facing: leadFacing, base: lead.base }, e) <= 6)
   for (const m of others) {
-    const cands: Vec3[] = []
-    for (const t of [1, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1, 0]) cands.push({ x: m.pos.x + dx * t, y: m.pos.y, z: m.pos.z + dz * t })
-    const slots: { pos: Vec3; gap: number }[] = []
-    const ring = (anchor: Model, gap: number): void => {
-      for (let i = 0; i < 16; i++) {
-        const pos = ringPoint(anchor, m, (i / 16) * Math.PI * 2, gap)
-        slots.push({ pos, gap: enemyGap({ pos, facing: m.facing, base: m.base }) })
+    const facings = [...new Set([m.facing, leadFacing])]
+    if (oval(m) && near.length > 0) facings.push(Math.atan2(near[0].pos.z - m.pos.z, near[0].pos.x - m.pos.x))
+    const cands: { pos: Vec3; facing: number }[] = []
+    for (const t of [1, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1, 0]) cands.push({ pos: { x: m.pos.x + dx * t, y: m.pos.y, z: m.pos.z + dz * t }, facing: m.facing })
+    const slots: { pos: Vec3; facing: number; gap: number }[] = []
+    for (const facing of facings) {
+      const mf: Model = { ...m, facing }
+      const ring = (anchor: Model, gap: number, n: number): void => {
+        for (let i = 0; i < n; i++) {
+          const pos = ringPoint(anchor, mf, (i / n) * Math.PI * 2, gap)
+          if (Math.hypot(pos.x - m.pos.x, pos.z - m.pos.z) > roll + TRAVEL_SLACK) continue
+          const sfp: Footprint = { pos, facing, base: m.base }
+          if (!whollyOnBoard(sfp, state.board) || blockers.some((b) => basesOverlap(sfp, b)) || placed.some((q) => basesOverlap(sfp, q))) continue
+          slots.push({ pos, facing, gap: enemyGap(sfp) })
+        }
       }
+      for (const q of placed) { ring(q, Math.min(0.3, coherency * 0.6), 24); ring(q, Math.min(0.05, coherency * 0.1), 24) }
+      for (const e of near) ring(e, 0.3, 16)
     }
-    for (const q of placed) ring({ ...m, pos: q.pos, base: q.base, facing: q.facing }, Math.min(0.3, coherency * 0.6))
-    for (const e of near) ring(e, 0.3)
     slots.sort((a, b) => a.gap - b.gap)
-    cands.push(...slots.map((sl) => sl.pos))
+    cands.push(...slots.slice(0, 48))
     let got: ModelPlacement | null = null
-    for (const c of cands) if ((got = fits(m, c, placed))) break
+    for (const c of cands) if ((got = fits(m, c.pos, c.facing, placed))) break
     if (!got) return null
-    placed.push({ ...m, pos: got.pos })
+    placed.push({ ...m, pos: got.pos, facing: got.facing ?? m.facing })
     out.push(got)
   }
   return out
@@ -387,7 +572,7 @@ function driveCharge(ctx: EngineContext): 'pending' | 'progress' {
   ctx.decide({
     kind: 'chargeMove', player: unit.player, window: 'charge.moveEnded', canPass: true,
     context: { unitId, targetUnitIds: [], roll: charge.distance ?? 0 },
-    constraints: emptyMoveConstraints(charge.distance ?? 0, { mustEndOutsideEngagement: false, coherency: true }),
+    constraints: emptyMoveConstraints(charge.distance ?? 0, { mustEndOutsideEngagement: false, coherency: true, mustEndCloserToEdge: hookService.moveEdgeConstraintFor(s, unitId) }),
   })
   return 'pending'
 }

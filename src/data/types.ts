@@ -147,6 +147,11 @@ export interface Effect {
   // INF-5.6 (Predators, Not Prey): models may cross any model and ignore ER mid-path; Desperate Escape tests pass unrolled
   moveThroughModels?: true
   autoPassDesperateEscape?: true
+  // KRU-RA-1 (Covered in Mud): the holder unit is not visible to enemy models more than this many inches away (los.ts)
+  hiddenBeyond?: number
+  // GLO-AB-1 (Great Snarlin' Howl): a stat modifier that also reaches Companion weapons (weapons.ts effectiveWeapon); every
+  // other friendly stat modifier skips them (CORE-12.4)
+  affectsCompanion?: true
 }
 export type EffectList = Effect | Effect[]
 
@@ -174,7 +179,9 @@ export type AbilityTiming =
   | { kind: 'passive' }
   | { kind: 'phase'; phase: 'command' | 'movement' | 'shooting' | 'charge' | 'fight'; whose: AbilityWhose }
   | { kind: 'startOfTurn' | 'endOfTurn' | 'startOfRound' | 'endOfRound' | 'deployment'; whose: AbilityWhose }
-  | { kind: 'reaction'; trigger: 'youDeclared' | 'opponentDeclaredAttack'; abilityId?: Id } // P1
+  // abilityId 'core.move' = a reaction to a declared Move (KO-BT-1, abilities.ts window 'moveDeclared'); keyword 'ATTACK' = a reaction
+  // to declaring a Shoot or Fight attack (LRL-BT-3, abilities.ts runReactionWindow)
+  | { kind: 'reaction'; trigger: 'youDeclared' | 'opponentDeclaredAttack'; abilityId?: Id; keyword?: AbilityKeyword } // P1
 export type AbilityKeyword = 'CORE' | 'ATTACK' | 'MOVE' | 'RUN' | 'CHARGE' | 'SPELL' | 'PRAYER' | 'UNLIMITED'
 
 export interface AbilityDescriptor {

@@ -8,7 +8,7 @@
 // [interp] "Behind" (CORE-16.4): every straight line from any point of an attacking model's base to any point of a target
 // model's base crosses the feature's footprint, ignoring the parts of the footprint within 3" of the attacker's base.
 // [interp] Cover / Obscuring: a feature has them via the trait list on the piece ('cover', 'obscuring').
-import { baseEdgePoints, dist2D, ENGAGEMENT_H, EPS, pointInPolygon, signedDistanceToBase, whollyWithinPolygon, withinEngagementRange } from './geometry'
+import { baseEdgePoints, dist2D, distance, ENGAGEMENT_H, EPS, pointInPolygon, signedDistanceToBase, whollyWithinPolygon, withinEngagementRange } from './geometry'
 import { crateBlocks, wallCrosses3D } from './terrain'
 import { leaderService } from './leaders'
 import { boardModelsOf, hasKeyword, unitModels } from './state'
@@ -136,6 +136,35 @@ function behindOrOn(state: GameState, attackerUnitId: UnitId, targetUnitId: Unit
   return targetWhollyOn(targets, p.footprint) || targetBehind(boardModelsOfUnit(state, attackerUnitId), targets, p.footprint)
 }
 
+// ---------- KRU-RA-1 Covered in Mud (Effect.hiddenBeyond, F8) ----------
+// the lowest `hiddenBeyond` among the effects held by the unit (either half), or null. Read straight off unit.effects: the
+// ability grants it to the unit itself (scope self).
+export function hiddenBeyondFor(state: GameState, unitId: UnitId): number | null {
+  let best: number | null = null
+  for (const id of leaderService.halves(state, unitId)) {
+    for (const e of state.units[id]?.effects ?? []) {
+      for (const x of Array.isArray(e.effect) ? e.effect : [e.effect]) {
+        const n = x.hiddenBeyond
+        if (typeof n === 'number' && (best === null || n < best)) best = n
+      }
+    }
+  }
+  return best
+}
+
+// the observer belongs to the other player and is more than `hiddenBeyond` inches (edge to edge, as the range check measures)
+// from every model of the target's unit: the target unit is not visible to it. In-combat checks never use this (3" < any N).
+export function hiddenFrom(state: GameState, observer: Model, targetUnitId: UnitId): boolean {
+  const target = state.units[targetUnitId]
+  const obsUnit = state.units[observer.unitId]
+  if (!target || !obsUnit || obsUnit.player === target.player) return false
+  const n = hiddenBeyondFor(state, targetUnitId)
+  if (n === null) return false
+  const models = boardModelsOfUnit(state, targetUnitId)
+  if (models.length === 0) return false
+  return models.every((m) => distance(observer, m) > n + EPS)
+}
+
 export interface LosService {
   // base centre at heights {0.2, height/2, height} plus 4 base-edge points at height/2
   samplePoints(model: Model): Vec3[]
@@ -180,23 +209,27 @@ export const losService: LosService = {
   },
   visible(state, fromModelId, toModelId) {
     const from = state.models[fromModelId], to = state.models[toModelId]
-    if (!from || !to) return false
+    if (!from || !to || hiddenFrom(state, from, to.unitId)) return false
     return anyClearPair(state, from, to)
   },
   visibleFrom(state, probe, toModelId) {
     const to = state.models[toModelId]
-    if (!to) return false
+    if (!to || hiddenFrom(state, probe, to.unitId)) return false
     return anyClearPair(state, probe, to)
   },
   fullyVisible(state, fromModelId, toModelId) {
     const from = state.models[fromModelId], to = state.models[toModelId]
-    if (!from || !to) return false
+    if (!from || !to || hiddenFrom(state, from, to.unitId)) return false
     return anyClearPair(state, from, to) && everyPointFullyVisible(state, from, to)
   },
   unitVisible(state, fromModelId, targetUnitId) {
+    const from = state.models[fromModelId]
+    if (from && hiddenFrom(state, from, targetUnitId)) return false
     return boardModelsOfUnit(state, targetUnitId).some((m) => losService.visible(state, fromModelId, m.id))
   },
   unitFullyVisible(state, fromModelId, targetUnitId) {
+    const from = state.models[fromModelId]
+    if (from && hiddenFrom(state, from, targetUnitId)) return false
     const models = boardModelsOfUnit(state, targetUnitId)
     return models.length > 0 && models.every((m) => losService.fullyVisible(state, fromModelId, m.id))
   },

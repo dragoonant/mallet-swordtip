@@ -405,6 +405,8 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
     if (ctx.window('fight.unitSelected', unitId, ctx.order.active(), { unitId })) return 'pending'
     ctx.once(`fi:selWindow:${unitId}`)
   }
+  // LRL-BT-3 Gale Force (F8): reactions to declaring a Fight attack, the fighting unit's player only, before the pile-in
+  if (ctx.services.abilities.runReactionWindow?.(ctx, unit.player, { kind: 'youDeclaredAttack', unitId, phase: 'fight' }, `fi:${unitId}`)) return 'pending'
   if (fight.subStep === 'pileIn') {
     if (doPileIn(ctx, unitId) === 'pending') return 'pending'
     fight.subStep = 'declareTargets'

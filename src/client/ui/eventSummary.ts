@@ -306,6 +306,9 @@ export function summariseEvents(events: readonly GameEvent[], state: GameState, 
       case 'DamagePoolResolved':
         push(e, `${unit(e.unitId)}: ${e.points} damage${e.warded > 0 ? `, ${e.warded} warded off` : ''}${e.slain > 0 ? `, ${e.slain} model${e.slain === 1 ? '' : 's'} slain` : ''}`)
         break
+      case 'DamageRedirected':
+        push(e, `${e.points} damage ${e.points === 1 ? 'point is' : 'points are'} passed from ${unit(e.fromUnitId)} to ${unit(e.toUnitId)}`)
+        break
       case 'DiceRerolled': {
         const roll = rolls.get(e.rollId)
         const what = roll ? ROLL_PURPOSE_LABEL[roll.purpose] ?? roll.purpose : 'roll'

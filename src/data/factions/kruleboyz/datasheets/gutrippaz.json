@@ -1,0 +1,52 @@
+[
+  {
+    "id": "kruleboyz.unit.gutrippaz",
+    "faction": "kruleboyz",
+    "name": "Gutrippaz",
+    "keywords": [
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "KRULEBOYZ"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 2,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "gutrippa",
+        "name": "Gutrippa",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "kruleboyz.weapon.wicked-hacka"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "ork-boy"
+        }
+      }
+    ],
+    "abilities": [
+      "kruleboyz.ability.scare-taktikz"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "ork-boy"
+    },
+    "spearhead": true
+  }
+]

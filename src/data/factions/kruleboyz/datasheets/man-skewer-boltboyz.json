@@ -1,0 +1,53 @@
+[
+  {
+    "id": "kruleboyz.unit.man-skewer-boltboyz",
+    "faction": "kruleboyz",
+    "name": "Man-skewer Boltboyz",
+    "keywords": [
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "KRULEBOYZ"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 2,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "boltboy",
+        "name": "Man-skewer Boltboy",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "kruleboyz.weapon.man-skewer-crossbow",
+            "kruleboyz.weapon.jaggedy-blade"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "ork-boy"
+        }
+      }
+    ],
+    "abilities": [
+      "kruleboyz.ability.pick-em-off"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "ork-boy"
+    },
+    "spearhead": true
+  }
+]

@@ -243,6 +243,10 @@ export const EFFECT_HOOKS: Record<keyof Effect, HookName[]> = {
   autoPassDesperateEscape: [],
   // STD-RA-2: read directly by phases/movement.ts (unitIgnoresRetreatDamage)
   noRetreatDamage: [],
+  // KRU-RA-1: read directly by los.ts (hiddenBeyondFor)
+  hiddenBeyond: [],
+  // GLO-AB-1: a flag on a modifyStat entry, read by statFor (companionOnly queries)
+  affectsCompanion: [],
 }
 
 // hooks a descriptor must be registered at: its trigger's hook plus every hook its effect keys need

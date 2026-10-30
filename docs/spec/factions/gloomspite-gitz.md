@@ -258,6 +258,41 @@ into `code-hooks.ts` like `fyreslayersHooks`); (c) = engine change. Every activa
 
 ---
 
+## 9a. Implementation notes (F8, as built)
+
+Checked against `docs/sources/spearhead-gloomspite-gitz.pdf`: every number, keyword and timing in sections 2 to 5 matches the PDF.
+Code: `src/engine/factions/gloomspite.ts`; data: `src/data/factions/gloomspite/`; tests: `tests/engine/gloomspite.test.ts`,
+`tests/data/gloomspite.test.ts`.
+
+- **Test ID numbering.** Section 9 numbers the warscroll abilities differently from section 5 (the rules text there says AB-1 Howl,
+  AB-2 I Got Dis, AB-3 Frazzleburned Scrap, AB-4 Careening). The tests follow section 9: GLO-AB-1/2 Howl, AB-3 I Got Dis, AB-4
+  Frazzleburned Scrap, AB-5 to AB-7 Careening Destruction; GLO-RA-1 is Flankin' Force and GLO-RA-2 to RA-4 Frazzleboom; GLO-BT-1/2 are
+  the two halves of Fast as Frazzlegit. Data-only checks use `GLO-DATA-n`, the AI helpers `GLO-AI-1`.
+- **Careening Destruction is offered when the unit declares its move**, not in the end-of-phase window the mapping table assumed (the
+  AI activates every unit, so it would never have seen the ability). The data sets `params.window: 'moveDeclared'`; the unit may be
+  in combat (it then declared a Retreat, which Careening replaces). The modes are engine-built rigid slides (`slideOptions`
+  with `passThrough` + `mustEndOutOfCombat`), one per crossed enemy Infantry unit when the path crosses any ("..., hitting X"; no
+  mode names a non-Infantry unit), best first (a victim, then progress toward an objective nobody holds). After the slide the hook
+  sets `turn.moveType = 'normal'` (so no Retreat roll, no Run limits) and writes the movement phase's `mv:placements` mark with the
+  unit's new positions, so `phases/movement.ts` closes the unit with a zero-length move instead of asking for a second one.
+- **Frazzleboom** picks the enemy unit within 3" of the slain War Machine's snapshot position with the fewest wounds left (ties by
+  id); a human pick is a later refinement. Inside a Fight or Shooting attack sequence the mortal damage is held with
+  `deferMortalAfterFight` (drained by fight.ts and shooting.ts), otherwise it is dealt at once. The D3 is rolled when the Wheela falls.
+- **Kunnin' and Sunsteala Shard are live auras** (an effect on the bearer's unit with scope `friendly, wholly`), read at every attack /
+  target pick. `canUse` hides them when pointless: Kunnin' needs a unit in the aura that is in combat, the Shard needs an enemy unit
+  with a ranged weapon. Glare and Devious Backstabba list their targets (`enemiesInCombat` of the bearer's unit, Heroes only for
+  Backstabba), Backstabba's D3 is the data-declared roll (2+ succeeds, the roll is the damage).
+- **Great Snarlin' Howl** grants `affectsCompanion` stat modifiers (+1 Attacks, +1 Rend) limited by `when { weaponAbility: COMPANION }`.
+- **I Got Dis, Boss** is a code ward (`adjustFeelNoPain`), unit level: any model of the Wolfgits or the Snarlboss has Ward (5+) while
+  the two units' closest models are within 3".
+- **Flankin' Force** reuses `fyreslayersMagmicTunnels` with `params.preferDatasheets` (the Snarlpack Cavalry are the AI's first picks) and
+  `params.redeployText`.
+- **AI**: `gloomspiteAbilityTiming` (Careening only when it gets out of combat or runs down Infantry; the Shard only when an enemy shooter
+  is in reach) and `retreatsAndCharges` (src/ai/utility.ts counts a free Retreat as a charge set-up and rewards it in combat) live in the
+  faction file; utility.ts calls them in `abilityTiming`, `scorePosition` (`chargeNow`) and the `fallBack` score.
+
+---
+
 ## 10. Figures (3D pipeline)
 
 Palette for the whole army: bright green grot skin, charcoal-black hooded cloaks and robes, rust-red shields, pennants

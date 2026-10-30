@@ -1,0 +1,53 @@
+[
+  {
+    "id": "gloomspite.unit.snarlpack-cavalry",
+    "faction": "gloomspite",
+    "name": "Snarlpack Cavalry",
+    "keywords": [
+      "CAVALRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "GLOOMSPITE GITZ"
+    ],
+    "stats": {
+      "M": 12,
+      "W": 3,
+      "Sv": 4,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "snarlpack-cavalry",
+        "name": "Snarlpack Cavalry",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": {
+          "shape": "oval",
+          "mm": 75,
+          "mm2": 42
+        },
+        "weapons": {
+          "default": [
+            "gloomspite.weapon.pointy-skewas",
+            "gloomspite.weapon.giant-snarlfang-jaws"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "gloomspite.ability.frazzleburned-scrap"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

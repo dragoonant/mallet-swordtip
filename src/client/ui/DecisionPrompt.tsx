@@ -163,6 +163,29 @@ export function chooseOptionInfoFor(
       hint: `The unit was lifted off the battlefield. Pick the spot where it stands again; the candidate spots are ringed on the board, and the one you point at lights up. Pass to put it back where it was.`,
     }
   }
+  // A unit sliding or retreating under an ability's power (A Proper Ruckus, Careening Destruction, a Frigate's Disengage): options are headings
+  if (context.topic === 'abilityMode' && context.data?.move === true) {
+    const uname = context.unitId && state ? groupLabel(state, context.unitId) : undefined
+    return {
+      title: `Move ${uname ?? 'the unit'}`,
+      hint: `Pick a heading and the unit slides that way in a straight line (the distance is in the label). It cannot end in a spot it could not stand in. Pick Stay where it is, or pass, to leave it.`,
+    }
+  }
+  // A replacement unit is set up on the board (Call for Reinforcements and kin)
+  if (context.topic === 'abilityMode' && context.data?.place === true) {
+    const uname = context.unitId && state ? groupLabel(state, context.unitId) : undefined
+    return { title: `Set up ${uname ?? 'the replacement'}`, hint: 'Choose where the unit appears. Every spot offered is legal.' }
+  }
+  // Any other ability prompt carries the ability's own name, so "Choose an effect" says which ability is asking
+  // (Storm Brewing's edge, Wind Whisperer, Careening Destruction, Guide the Gusts ...).
+  const ab = context.abilityId && state ? state.abilities[context.abilityId] : undefined
+  if (ab && (context.topic === 'abilityMode' || context.topic === 'abilityTarget')) {
+    const base = CHOOSE_OPTION_INFO[context.topic]
+    return {
+      title: `${ab.name}: ${context.topic === 'abilityTarget' ? 'choose a target' : 'choose an effect'}`,
+      hint: base?.hint ?? '',
+    }
+  }
   return CHOOSE_OPTION_INFO[context.topic]
 }
 
@@ -171,6 +194,7 @@ function passLabelFor(pending: PendingDecision): string {
   if (pending.kind === 'chooseOption') {
     if (pending.context.topic === 'extraTactic') return 'Keep my hand'
     if (pending.context.topic === 'abilityMode' && pending.context.data?.redeploy === true) return 'Leave it where it was'
+    if (pending.context.topic === 'abilityMode' && pending.context.data?.move === true) return 'Leave it here'
   }
   return PASS_LABEL[pending.kind] ?? 'Pass'
 }

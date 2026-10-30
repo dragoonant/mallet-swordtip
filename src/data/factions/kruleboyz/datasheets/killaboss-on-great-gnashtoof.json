@@ -1,0 +1,55 @@
+[
+  {
+    "id": "kruleboyz.unit.killaboss-on-great-gnashtoof",
+    "faction": "kruleboyz",
+    "name": "Killaboss on Great Gnashtoof",
+    "keywords": [
+      "HERO",
+      "CAVALRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "KRULEBOYZ"
+    ],
+    "stats": {
+      "M": 10,
+      "W": 10,
+      "Sv": 3,
+      "OC": 2
+    },
+    "composition": [
+      {
+        "modelId": "killaboss",
+        "name": "Killaboss on Great Gnashtoof",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "oval",
+          "mm": 90,
+          "mm2": 52
+        },
+        "weapons": {
+          "default": [
+            "kruleboyz.weapon.jagged-boss-stikka",
+            "kruleboyz.weapon.gnashtoof-fangs"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "kruleboyz.ability.all-part-of-da-plan"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

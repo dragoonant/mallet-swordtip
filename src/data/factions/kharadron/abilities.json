@@ -1,0 +1,149 @@
+[
+  {
+    "id": "kharadron.ability.skyhammer-task-force",
+    "name": "Skyhammer Task Force",
+    "text": "Army marker for the Kharadron Overlords Skyhammer Task Force. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "kharadron.ability.ply-the-skies",
+    "name": "Ply the Skies",
+    "text": "When you declare a Normal Move, Run or Retreat for your Arkanaut Frigate, you can pick one friendly Infantry unit wholly within 3\" of it that is not in combat. Take that unit off the battlefield; when the Frigate has moved, set it up again wholly within 3\" of the Frigate and not in combat. A unit carried this way cannot use Charge abilities in the same turn.",
+    "trigger": "activated",
+    "timing": { "kind": "reaction", "trigger": "youDeclared", "abilityId": "core.move" },
+    "keywords": ["UNLIMITED"],
+    "code": "kharadronPlyTheSkies",
+    "params": {
+      "army": true,
+      "range": 3,
+      "minEnemyDistance": 3,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "kharadron.ability.assault-boat",
+    "name": "Assault Boat",
+    "text": "Once per battle, in your movement phase, pick a friendly unit that was carried by Ply the Skies this turn. It can use Charge abilities later this turn after all.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "limit": "oncePerBattle",
+    "code": "kharadronAssaultBoat",
+    "params": { "priority": "P2" }
+  },
+  {
+    "id": "kharadron.ability.disengage",
+    "name": "Disengage",
+    "text": "Once per battle, in your movement phase, pick your Arkanaut Frigate as it declares a Retreat. This turn it suffers no mortal damage for retreating and can still use Shoot abilities afterwards.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "limit": "oncePerBattle",
+    "code": "kharadronDisengage",
+    "params": {
+      "window": "moveDeclared",
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "kharadron.ability.masterwrought-armour",
+    "name": "Masterwrought Armour",
+    "text": "The bearer has Ward (6+).",
+    "trigger": "feelNoPainRoll",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": { "feelNoPain": 6 }
+  },
+  {
+    "id": "kharadron.ability.flask-of-vintage-gorogna",
+    "name": "Flask of Vintage Gorogna",
+    "text": "Once per battle, in any hero phase, heal the bearer for D6.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "code": "kharadronFlask",
+    "params": { "heal": "D6", "priority": "P3" }
+  },
+  {
+    "id": "kharadron.ability.no-reward-without-risk",
+    "name": "There's No Reward Without Risk",
+    "text": "Once per battle, when a unit wholly within 12\" of the bearer is declared to charge, you can re-roll its charge roll. (The re-roll is spent on the first charge roll that falls short.)",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "kharadronNoRewardWithoutRisk",
+    "params": { "range": 12, "priority": "P2" }
+  },
+  {
+    "id": "kharadron.ability.leave-no-duardin-behind",
+    "name": "Leave No Duardin Behind",
+    "text": "Once per battle, in your hero phase, pick a friendly Arkanaut Company wholly within 12\" of the bearer and roll a dice for each of its slain models. For each 4+, return one slain model to it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "code": "kharadronLeaveNoDuardin",
+    "params": {
+      "range": 12,
+      "successOn": 4,
+      "datasheets": ["kharadron.unit.arkanaut-company", "kharadron.unit.arkanaut-company-gunners"],
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "kharadron.ability.always-take-what-you-are-owed",
+    "name": "Always Take What You Are Owed",
+    "text": "In your hero phase, pick a friendly Arkanaut Company wholly within 12\" of this unit and roll a dice. Add the result to that unit's Control characteristic until the start of your next turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "duration": "untilNextTurn",
+    "code": "kharadronTakeWhatYouAreOwed",
+    "params": {
+      "range": 12,
+      "dice": "D6",
+      "datasheets": ["kharadron.unit.arkanaut-company", "kharadron.unit.arkanaut-company-gunners"],
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "kharadron.ability.glory-seekers",
+    "name": "Glory-Seekers",
+    "text": "Add 1 to hit rolls for this unit's attacks that target an enemy unit contesting an objective.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "targetOnObjective": true },
+      "modifyRoll": { "roll": "hit", "value": 1 }
+    }
+  },
+  {
+    "id": "kharadron.ability.timed-charges",
+    "name": "Timed Charges",
+    "text": "At the end of any turn, pick an enemy unit in combat with this unit and roll a dice. On a 2+ that unit suffers 1 mortal damage and this unit can immediately Retreat without suffering mortal damage. On a 1 nothing happens.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "roll": { "dice": "D6", "succeedOn": 2 },
+    "code": "kharadronTimedCharges",
+    "params": { "mortal": 1, "priority": "P2" }
+  },
+  {
+    "id": "kharadron.ability.battle-damaged",
+    "name": "Battle Damaged",
+    "text": "While this unit has 10 or more damage points, the Attacks characteristic of its Heavy Skyhook is 1.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" }
+  },
+  {
+    "id": "kharadron.ability.bomb-racks",
+    "name": "Bomb Racks",
+    "text": "Once per battle, in your movement phase, pick an enemy unit this unit passed across this phase and roll a dice. On a 2+ that unit suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "limit": "oncePerBattle",
+    "roll": { "dice": "D6", "succeedOn": 2 },
+    "code": "kharadronBombRacks",
+    "params": { "mortal": "D3", "priority": "P2" }
+  }
+]

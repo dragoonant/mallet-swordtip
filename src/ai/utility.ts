@@ -13,6 +13,9 @@ import { createRng, restoreRng, type Rng } from '../engine/rng'
 import { deployTerrainBlock } from '../engine/terrain'
 import { terrainLineClear } from '../engine/los'
 import { tacticOdds } from '../engine/cards'
+import { kruleboyzAbilityTiming, kruleboyzTargetBonus } from '../engine/factions/kruleboyz'
+import { gloomspiteAbilityTiming, retreatsAndCharges } from '../engine/factions/gloomspite'
+import { kharadronAbilityTiming, kharadronModeBonus, kharadronTargetBonus } from '../engine/factions/kharadron'
 import {
   bestRangedRangeOfUnit, expectedAttack, hasAnyMeleeWeapon, hasAnyRangedWeapon, isGunline,
   sumExpectedAttacks, threatAt, threatFrom, threatSources, type ThreatSource, unitMeleeDamage, unitRangedDamage, unitValue,
@@ -248,7 +251,7 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
       // a charge must end within 1/2" (CORE-9.4), so what it needs is the model-to-model gap minus 1/2"; a unit that ran or
       // retreated cannot charge this turn, so for it (and outside the movement phase) only next turn's charge counts
       const mt = moveType ?? state.units[unitId]?.turn.moveType
-      const chargeNow = state.phase === 'movement' && mt !== 'advance' && mt !== 'fallBack'
+      const chargeNow = state.phase === 'movement' && mt !== 'advance' && (mt !== 'fallBack' || retreatsAndCharges(state, unitId))
       const gap = placementGapTo(state, placements, enemy.unitId)
       const trade = chargeTrade(state, player, unitId, enemy.unitId)
       if (chargeNow) score += chargeProb(Math.ceil(Math.max(0, gap - 0.5))) * trade * (hammer ? 1 : 0.6)
@@ -504,6 +507,8 @@ function scoreDeclareMove(state: GameState, player: PlayerId, action: DeclareMov
             > unitMeleeDamage(state, unitId, enemy.unitId, {}) * unitValue(state, unitId) * 1.2
           : false
         if (!melee || losingTrade) s += 3.5
+        // GLO-BT-1: a free Retreat followed by a charge is a fresh Charge and Strike-first for nothing
+        else if (retreatsAndCharges(state, unitId)) s += 4
       }
       return s
     }
@@ -587,6 +592,22 @@ function formationRole(state: GameState, unitId: UnitId, n: number): FormationRo
   return 'ranged'
 }
 
+// A shallow zone (~5" deep) fills up with big oval bases (Gitz wolf riders and Wheelas, Fellriders): pack them flush against a zone
+// side or a friendly unit, so the free space stays one stretch wide enough for the next unit. Up to +2.5, nothing from 2" off.
+function packingBonus(feet: Footprint[], axis: 'x' | 'z', lo: number, hi: number, friends: Footprint[]): number {
+  const reach = (f: Footprint): number => Math.max(f.base.radius, f.base.radius2 ?? 0)
+  const along = (f: Footprint): number => (axis === 'x' ? f.pos.x : f.pos.z)
+  const across = (f: Footprint): number => (axis === 'x' ? f.pos.z : f.pos.x)
+  const fl = Math.min(...feet.map((f) => along(f) - reach(f))), fr = Math.max(...feet.map((f) => along(f) + reach(f)))
+  let gapL = fl - lo, gapR = hi - fr
+  for (const m of friends) {
+    if (!feet.some((f) => Math.abs(across(f) - across(m)) < reach(f) + reach(m))) continue // not in the same strip
+    if (along(m) + reach(m) <= fl + 1e-6) gapL = Math.min(gapL, fl - (along(m) + reach(m)))
+    else if (along(m) - reach(m) >= fr - 1e-6) gapR = Math.min(gapR, along(m) - reach(m) - fr)
+  }
+  return 2.5 * (1 - Math.min(Math.max(0, Math.min(gapL, gapR)), 2) / 2)
+}
+
 function chooseFormationDeployment(state: GameState, player: PlayerId, pending: Extract<PendingDecision, { kind: 'deployUnit' }>, rng: Rng): DeployUnitAction | null {
   const arrival = state.phase !== 'setup' && state.phase !== 'deployment'
   const zone = pending.constraints.region ?? pending.context.zone
@@ -624,6 +645,7 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
   const myReserves = Object.values(state.units).filter((u) => u.player === player && u.location === 'reserves').length
   const xStep = 2.5, zStep = 1 // a Combat Patrol zone is only ~5" deep: fine in z so a 2-3 rank block can sit anywhere in it
   const occupied: Footprint[] = [...boardModelsOf(state, player), ...enemyBoard]
+  const friendsOnTable: Footprint[] = boardModelsOf(state, player)
   const threats = threatSources(state, player)
   type Cand = { action: DeployUnitAction; score: number }
   const cands: Cand[] = []
@@ -647,7 +669,7 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
     for (let pass = 0; pass < 2 && unitBest === -Infinity; pass++) {
     const passShapes: FormationShape[] = pass === 0 ? shapes : ['line', 'block', 'phalanx', 'wedge', 'checker']
     for (let z = minZ + 0.5; z <= maxZ - 0.5 + 1e-9; z += zStep) {
-      for (let x = minX + 0.5; x <= maxX - 0.5 + 1e-9; x += pass === 0 ? xStep : 0.75) {
+      for (let x = minX + 0.5; x <= maxX - 0.5 + 1e-9; x += pass === 0 ? xStep : 0.25) {
         if (!pointInPolygon({ x, z }, zone)) continue
         const toEnemy = Math.atan2(enemyC.z - z, enemyC.x - x)
         const facings = pass === 1 ? [toEnemy, toEnemy + Math.PI / 2, toEnemy - Math.PI / 2] : oval ? [toEnemy, toEnemy + Math.PI / 2] : [toEnemy]
@@ -675,6 +697,10 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
             else if (role === 'ranged') { score += Math.min(dEnemy, 36) * 0.03; if (inTerrain) score += 0.8 }
             else if (role === 'melee' && !meleeOnly) score += Math.max(0, 36 - dEnemy) * 0.02
             if (arrival && role !== 'ranged') score += Math.max(0, 24 - dEnemy) * 0.05
+            if (oval && !arrival && Math.min(maxX - minX, maxZ - minZ) < 8) {
+              const lateral = maxX - minX >= maxZ - minZ ? 'x' as const : 'z' as const
+              score += packingBonus(feet, lateral, lateral === 'x' ? minX : minZ, lateral === 'x' ? maxX : maxZ, friendsOnTable)
+            }
             score += rng.next() * 0.6
             cands.push({ action, score })
             if (score > unitBest) unitBest = score
@@ -873,6 +899,12 @@ function selectedAbilityTarget(state: GameState, pending: PendingDecision): Unit
 // Most abilities are worth using whenever offered; the once-per-battle buffs and the charge helpers are not.
 function abilityTiming(state: GameState, player: PlayerId, abilityId: string, unitId: UnitId | null): number {
   const code = state.abilities[abilityId]?.code
+  const kruTiming = code?.startsWith('kruleboyz') ? kruleboyzAbilityTiming(state, player, code, unitId) : null
+  if (kruTiming !== null) return kruTiming
+  const gloTiming = code?.startsWith('gloomspite') ? gloomspiteAbilityTiming(state, player, code, unitId) : null
+  if (gloTiming !== null) return gloTiming
+  const koTiming = code?.startsWith('kharadron') ? kharadronAbilityTiming(state, player, code, unitId) : null
+  if (koTiming !== null) return koTiming
   if (code === 'fyreslayersPlantTheIcon') {
     // once per battle, Ward for one turn: wait for the turn the units around the Battlesmith are actually fighting
     const src = unitId ? centerOfUnit(state, unitId) : null
@@ -919,6 +951,10 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
   const code = abilityId ? state.abilities[abilityId]?.code : undefined
   const unit = state.units[unitId]
   if (!unit) return 0
+  const kruBonus = code?.startsWith('kruleboyz') ? kruleboyzTargetBonus(state, player, code, unitId) : null
+  if (kruBonus !== null) return kruBonus
+  const koBonus = code?.startsWith('kharadron') ? kharadronTargetBonus(state, player, code, unitId) : null
+  if (koBonus !== null) return koBonus
   if (code === 'citiesIronweldDiscipline') {
     // the Cannon fires at it: expected damage, not size
     let best = 0
@@ -943,6 +979,9 @@ function abilityModeBonus(state: GameState, pending: PendingDecision, optionId: 
   const abilityId = (pending as { context?: { abilityId?: string | null } }).context?.abilityId
   // The Officer's Order: set aside the card least likely to be scored, so its command is the one that comes free
   if (abilityId && state.abilities[abilityId]?.code === 'citiesOfficersOrder') return 0.5 - tacticOdds(state, pending.player, optionId)
+  const koCode = abilityId ? state.abilities[abilityId]?.code : undefined
+  const koMode = koCode?.startsWith('kharadron') ? kharadronModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId) : null
+  if (koMode !== null) return koMode
   const target = selectedAbilityTarget(state, pending)
   if (!target || !state.units[target]) return 0
   const key = optionId.toLowerCase().replace(/[^a-z]/g, '')

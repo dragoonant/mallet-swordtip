@@ -34,6 +34,14 @@ const SOURCE_HUES: Record<string, { major: string | null; minor: string | null }
   // Fyreslayers: burnished bronze-gold armour as the major, flame-orange hair, beards and ruddy skin as the minor (they share a hue band, so a repaint moves them together).
   slaves: { major: '#642620', minor: '#9b8061' },
   fyreslayers: { major: '#c58d3b', minor: '#ac5222' },
+  // Kruleboyz: sallow green skin as the major, crimson shields and rags as the minor (mustard, bone and rust iron are left to the metals/trim rule).
+  // Gloomspite: bright green grot skin as the major, rust-red shields, pennants and saddle cloths as the minor (charcoal cloaks, grey wolves and the yellow glow stay).
+  // Lumineth: sky-blue and teal cloth as the major, lilac-pink ribbons and plumes as the minor (ivory and silver have no hue to move).
+  // Kharadron: crimson plates as the major, burnished copper and brass as the minor (ivory and the green aether glow stay).
+  kruleboyz: { major: '#7d8a3a', minor: '#b9322e' },
+  gloomspite: { major: '#4f8a2c', minor: '#a8452c' },
+  lumineth: { major: '#2f7088', minor: '#c08ab8' },
+  kharadron: { major: '#a42532', minor: '#b9783a' },
   // Black plate has no hue to remap; the bone-coloured tabards/trim are the only repaintable colour.
   'black-templars': { major: null, minor: '#e6dfc8' },
 }

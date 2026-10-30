@@ -674,6 +674,13 @@
         },
         "autoPassDesperateEscape": {
           "const": true
+        },
+        "hiddenBeyond": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "affectsCompanion": {
+          "const": true
         }
       },
       "not": {
@@ -1424,6 +1431,9 @@
             },
             "abilityId": {
               "$ref": "#/$defs/Id"
+            },
+            "keyword": {
+              "$ref": "#/$defs/AbilityKeyword"
             }
           },
           "required": [

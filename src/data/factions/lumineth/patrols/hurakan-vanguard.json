@@ -1,0 +1,64 @@
+{
+  "id": "lumineth.army.hurakan-vanguard",
+  "faction": "lumineth",
+  "name": "Hurakan Vanguard",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "windmage",
+      "datasheet": "lumineth.unit.hurakan-windmage",
+      "size": 1
+    },
+    {
+      "ref": "windchargers",
+      "datasheet": "lumineth.unit.hurakan-windchargers",
+      "size": 5
+    },
+    {
+      "ref": "wardens",
+      "datasheet": "lumineth.unit.vanari-auralan-wardens",
+      "size": 10
+    },
+    {
+      "ref": "spirit",
+      "datasheet": "lumineth.unit.hurakan-spirit-of-the-wind",
+      "size": 1
+    }
+  ],
+  "warlord": "windmage",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "lumineth.ability.storm-brewing",
+    "lumineth.ability.pulled-by-the-winds",
+    "lumineth.ability.gale-force"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "lumineth.ability.lifted-debris",
+      "default": true
+    },
+    {
+      "id": "lumineth.ability.roaring-headwind",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "lumineth.enh.scattered-to-the-winds",
+      "default": true
+    },
+    {
+      "id": "lumineth.enh.wind-whisperer",
+      "default": false
+    },
+    {
+      "id": "lumineth.enh.temple-guardians",
+      "default": false
+    },
+    {
+      "id": "lumineth.enh.curved-shots",
+      "default": false
+    }
+  ]
+}

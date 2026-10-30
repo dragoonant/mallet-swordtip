@@ -59,22 +59,34 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
   force: { id: 'psychic-zap', volume: 0.9 },
 }
 
-/** Spearhead weapons (Cities of Sigmar, Ironjawz, Slaves to Darkness, Fyreslayers) by what their id or name says. Blades and polearms swing, the
+/** Spearhead weapons (all eight armies) by what their id or name says. Blades and polearms swing, the
  *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
  *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
-const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers)\./
+const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron)\./
 const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
   [/grapeshot/, 'aos-cannon-fire', 0.85],
   [/cannon/, 'aos-cannon-fire'],
+  // Kharadron: the Frigate's harpoon gun booms, a light skyhook and the Killbow's great bolts whoosh out like a launched missile,
+  // the volley gun rattles, carbines crack. Bows and crossbows (Kruleboyz, Gitz, Lumineth) loose with the spear-shot twang,
+  // and a windblast is a crackle of force.
+  [/heavy.skyhook/, 'aos-cannon-fire', 0.75],
+  [/skyhook|beast.skewer/, 'wpn-hunter-killer-missile', 0.75],
+  [/volley.gun/, 'burst-cannon-whir', 0.85],
+  [/carbine/, 'cult-autogun-burst', 0.8],
+  [/windblast|vortex/, 'psychic-zap', 0.8],
+  [/bow|bolt/, 'guardian-spear-shot'],
   [/pistol|handgun|flintlock|musket|blunderbuss/, 'wpn-slugga', 0.7],
   [/lance|cavalier/, 'aos-lance-charge-impact'],
-  [/longsword|sword|rapier|sabre/, 'aos-sword-clash'],
+  // Bites and rakes crunch; the Gitz' stikkas and skewers stab like a spear.
+  [/fangs?|jaws|claws?/, 'aos-fist-smash'],
+  [/skewa|stabbin/, 'aos-halberd-strike'],
+  [/longsword|sword|rapier|sabre|shards/, 'aos-sword-clash'],
   [/halberd|spear|pike|freeguild|steelhelm|poleaxe|javelin/, 'aos-halberd-strike'],
   // Darkoath fellrider blades are curved cavalry sabres; the Warqueen's rune-etched axe and Fyreslayer axes fall to the chop below.
-  [/fellrider|blades?/, 'aos-sword-clash'],
-  [/hoove?s|crew|sidearm|shield/, 'aos-shield-bash'],
-  [/choppa|stikka|rager|cleaver|axe/, 'aos-choppa-hit'],
-  [/brute|fist|klaw|club|gore/, 'aos-fist-smash'],
+  [/fellrider|blades?|cutter|loppa/, 'aos-sword-clash'],
+  [/hoove?s|crew|sidearm|shield|butt|aspiragillum/, 'aos-shield-bash'],
+  [/choppa|stikka|rager|cleaver|axe|hacka/, 'aos-choppa-hit'],
+  [/brute|fist|klaw|club|gore|hammer/, 'aos-fist-smash'],
 ]
 
 /** The swing or shot for a Spearhead weapon, or undefined for any other game's weapon id. Melee that nothing above
@@ -476,6 +488,11 @@ const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
   // Darkoath raiders and Fyreslayers are men and duardin: the human cries are the nearest voices we have.
   slaves: ['aos-human-death-1', 'aos-human-death-2'],
   fyreslayers: ['aos-human-death-1', 'aos-human-death-2'],
+  // Kruleboyz and Gloomspite Gitz fall with an orruk's bellow (the nearest green-skin voice we have); Lumineth and Kharadron are aelves and duardin.
+  kruleboyz: ['aos-orruk-death-1', 'aos-orruk-death-2'],
+  gloomspite: ['aos-orruk-death-1', 'aos-orruk-death-2'],
+  lumineth: ['aos-human-death-1', 'aos-human-death-2'],
+  kharadron: ['aos-human-death-1', 'aos-human-death-2'],
 }
 
 function takeFor(modelId: string): number {
@@ -568,8 +585,12 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
     case 'ChargeDeclared': {
       const chargeFaction = lookup?.factionOfUnit(event.unitId)
       if (chargeFaction === 'ironjawz') return [{ id: 'aos-orruk-stomp' }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }]
-      // Darkoath and Fyreslayer footsloggers pound in on foot with a battle cry; only the Fellriders thunder.
-      if ((chargeFaction === 'slaves' || chargeFaction === 'fyreslayers') && !(lookup?.keywordsOfUnit?.(event.unitId) ?? []).includes('CAVALRY')) {
+      const mounted = (lookup?.keywordsOfUnit?.(event.unitId) ?? []).includes('CAVALRY')
+      // Kruleboyz stomp in with an orruk roar (a Gnashtoof rider hits the ground at a gallop); the Gitz howl in on wolves (or the war-cart's wheels).
+      if (chargeFaction === 'kruleboyz') return mounted ? [{ id: 'aos-horse-charge', opts: { volume: 0.8 } }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }] : [{ id: 'aos-orruk-stomp', opts: { volume: 0.8 } }, { id: 'aos-orruk-roar', opts: { volume: 0.6 } }]
+      if (chargeFaction === 'gloomspite') return [{ id: 'aos-horse-charge', opts: { volume: 0.8 } }, { id: 'aos-orruk-roar', opts: { volume: 0.6 } }]
+      // Darkoath, Fyreslayer, Lumineth and Kharadron footsloggers pound in on foot with a battle cry; only mounted units thunder.
+      if ((chargeFaction === 'slaves' || chargeFaction === 'fyreslayers' || chargeFaction === 'lumineth' || chargeFaction === 'kharadron') && !mounted) {
         return [{ id: 'aos-armoured-march', opts: { volume: 0.7 } }, { id: 'aos-human-battle-cry', opts: { volume: 0.8 } }]
       }
       return [{ id: 'aos-horse-charge' }, { id: 'aos-human-battle-cry', opts: { volume: 0.7 } }]

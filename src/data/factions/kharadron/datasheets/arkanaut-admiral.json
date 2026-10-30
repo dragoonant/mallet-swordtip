@@ -1,0 +1,31 @@
+[
+  {
+    "id": "kharadron.unit.arkanaut-admiral",
+    "faction": "kharadron",
+    "name": "Arkanaut Admiral",
+    "keywords": ["HERO", "INFANTRY"],
+    "factionKeywords": ["ORDER", "KHARADRON OVERLORDS"],
+    "stats": { "M": 4, "W": 6, "Sv": 3, "OC": 2 },
+    "composition": [
+      {
+        "modelId": "admiral",
+        "name": "Arkanaut Admiral",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 32 },
+        "weapons": {
+          "default": [
+            "kharadron.weapon.masterwork-volley-pistol",
+            "kharadron.weapon.skalfhammer"
+          ]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["kharadron.ability.always-take-what-you-are-owed"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

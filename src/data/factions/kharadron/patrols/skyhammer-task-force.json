@@ -1,0 +1,27 @@
+{
+  "id": "kharadron.army.skyhammer-task-force",
+  "faction": "kharadron",
+  "name": "Skyhammer Task Force",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "admiral", "datasheet": "kharadron.unit.arkanaut-admiral", "size": 1 },
+    { "ref": "arkanauts-skypike", "datasheet": "kharadron.unit.arkanaut-company", "size": 5 },
+    { "ref": "arkanauts-gunners", "datasheet": "kharadron.unit.arkanaut-company-gunners", "size": 5 },
+    { "ref": "skywardens", "datasheet": "kharadron.unit.skywardens", "size": 3 },
+    { "ref": "frigate", "datasheet": "kharadron.unit.arkanaut-frigate", "size": 1 }
+  ],
+  "warlord": "admiral",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": ["kharadron.ability.ply-the-skies"],
+  "regimentAbilities": [
+    { "id": "kharadron.ability.assault-boat", "default": true },
+    { "id": "kharadron.ability.disengage", "default": false }
+  ],
+  "enhancements": [
+    { "id": "kharadron.enh.leave-no-duardin-behind", "default": true },
+    { "id": "kharadron.enh.masterwrought-armour", "default": false },
+    { "id": "kharadron.enh.flask-of-vintage-gorogna", "default": false },
+    { "id": "kharadron.enh.no-reward-without-risk", "default": false }
+  ]
+}

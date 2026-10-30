@@ -187,7 +187,8 @@ export function rollAttackCount(ctx: EngineContext, modelId: ModelId, weaponId: 
   const unit = s.units[model.unitId]
   const base = s.weapons[weaponId]
   const companion = hasAb(base, 'COMPANION')
-  const weapon = companion ? base : weaponService.effectiveWeapon(s, modelId, weaponId)
+  // GLO-AB-1: effectiveWeapon applies only `affectsCompanion` modifiers to a Companion weapon
+  const weapon = weaponService.effectiveWeapon(s, modelId, weaponId)
   const { total } = ctx.rollExpr(weapon.A, { purpose: 'attacks', player: unit.player, unitId: unit.id, modelId, weaponId })
   let n = total
   if (!companion && targetUnitId) {
@@ -331,10 +332,10 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   const lead = batch.entries[0].modelId
   const base = s.weapons[batch.weaponId]
   const companion = hasAb(base, 'COMPANION')
-  const draft = companion ? base : weaponService.effectiveWeapon(s, lead, batch.weaponId)
+  const draft = weaponService.effectiveWeapon(s, lead, batch.weaponId)
   const cover = coverFor(s, attackerUnitId, batch.targetUnitId)
   const actx0 = buildActx(ctx, kind, attackerUnitId, lead, draft, batch.targetUnitId, rep.id, cover)
-  const ew = companion ? base : weaponService.effectiveWeapon(s, lead, batch.weaponId, actx0)
+  const ew = weaponService.effectiveWeapon(s, lead, batch.weaponId, actx0)
   const actx: AttackContext = { ...actx0, weapon: ew }
   const attackerPlayer = attacker.player
   const targetPlayer = target.player
@@ -426,7 +427,7 @@ function buildBatches(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   for (const tu of targetOrder) {
     targets.forEach((t, i) => {
       if (t.targetUnitId !== tu || counts[i] <= 0) return
-      const w = hasAb(s.weapons[t.weaponId], 'COMPANION') ? s.weapons[t.weaponId] : weaponService.effectiveWeapon(s, t.modelId, t.weaponId)
+      const w = weaponService.effectiveWeapon(s, t.modelId, t.weaponId)
       const key = JSON.stringify([tu, t.weaponId, w.skill, w.wound, w.rend, w.D, w.abilities, bearer(t.modelId) ? t.modelId : ''])
       let b = batches.get(key)
       if (!b) { b = { targetUnitId: tu, weaponId: t.weaponId, entries: [] }; batches.set(key, b); order.push(key) }
@@ -497,6 +498,10 @@ function resolvePool(ctx: EngineContext, unitId: UnitId, pool: Pool): void {
     }
     points -= warded
   }
+  // KRU-ENH Egomaniak (EngineCodeHook.redirectDamage, F8): after the ward, each remaining point may move to another unit
+  const moved = points > 0 ? redirectPoints(ctx, unitId, points) : null
+  if (moved) points -= moved.points
+  if (points > 0 && pool.source && 'attackerUnitId' in pool.source && pool.by.kind === 'ranged' && pool.attackerUnitId) markShotDamage(s, pool.attackerUnitId, unitId)
   let slain = 0
   const dealt = new Map<ModelId, number>()
   while (points > 0 && models.length > 0) {
@@ -516,6 +521,65 @@ function resolvePool(ctx: EngineContext, unitId: UnitId, pool: Pool): void {
   }
   flushDamage(ctx, unit, dealt, pool)
   ctx.emit({ type: 'DamagePoolResolved', unitId, points: original, warded, slain, player: unit.player })
+  // the moved points: allocated straight to the recipient's models, no second ward roll (they already took the first one)
+  if (moved && s.units[moved.to]?.location === 'board') {
+    ctx.emit({ type: 'DamageRedirected', fromUnitId: unitId, toUnitId: moved.to, points: moved.points, player: unit.player })
+    allocatePoints(ctx, moved.to, moved.points, pool)
+  }
+}
+
+// rolls the redirect dice (one per point, the defender's roll) and picks the recipient; null when nothing moves
+function redirectPoints(ctx: EngineContext, unitId: UnitId, points: number): { to: UnitId; points: number } | null {
+  const s = ctx.state
+  const unit = s.units[unitId]
+  const rd = hookService.damageRedirectFor(s, unitId)
+  if (!rd) return null
+  const wounds = (id: UnitId): number => unitModels(s, id).reduce((a, m) => a + m.woundsRemaining, 0)
+  const cands = rd.candidates
+    .filter((id) => id !== unitId && s.units[id]?.location === 'board' && s.units[id].player === unit.player && unitModels(s, id).length > 0)
+    .sort((a, b) => wounds(b) - wounds(a) || (a < b ? -1 : a > b ? 1 : 0))
+  if (cands.length === 0) return null
+  const roll = ctx.roll({ purpose: 'ability', player: unit.player, sides: 6, count: points, mode: 'perDie', unitId, commandRerollable: false, needed: rd.succeedOn })
+  const n = roll.dice.filter((d) => d >= rd.succeedOn).length
+  return n > 0 ? { to: cands[0], points: n } : null
+}
+
+// damage points straight onto a unit's models (no ward): the allocation half of resolvePool
+function allocatePoints(ctx: EngineContext, unitId: UnitId, points: number, pool: Pool): void {
+  const s = ctx.state
+  const unit = s.units[unitId]
+  let models = unitModels(s, unitId)
+  let slain = 0
+  const dealt = new Map<ModelId, number>()
+  while (points > 0 && models.length > 0) {
+    const m = nextTarget(s, models, pool.attackerUnitId)
+    const take = Math.min(points, m.woundsRemaining)
+    m.woundsRemaining -= take
+    points -= take
+    dealt.set(m.id, (dealt.get(m.id) ?? 0) + take)
+    if (m.woundsRemaining <= 0) {
+      flushDamage(ctx, unit, dealt, pool)
+      slain += slayModel(ctx, m.id, pool.by)
+      if (s.units[unitId].location !== 'board') break
+      slain += cullForCoherency(ctx, unitId, pool.by)
+      if (s.units[unitId].location !== 'board') break
+      models = unitModels(s, unitId)
+    }
+  }
+  flushDamage(ctx, unit, dealt, pool)
+  ctx.emit({ type: 'DamagePoolResolved', unitId, points: 0, warded: 0, slain, player: unit.player })
+}
+
+// ---------- LRL-AB-3 Hurricane Winds (F8): who damaged whom with shooting attacks this phase ----------
+const SHOT_DMG = 'shotDmg:'
+function markShotDamage(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId): void {
+  const key = `${SHOT_DMG}${attackerUnitId}>${targetUnitId}`
+  if (!state.phaseState.marks.includes(key)) state.phaseState.marks.push(key)
+}
+// the units `attackerUnitId` allocated at least one damage point to with shooting attacks this phase (after wards)
+export function damagedByShootingThisPhase(state: GameState, attackerUnitId: UnitId): UnitId[] {
+  const prefix = `${SHOT_DMG}${attackerUnitId}>`
+  return state.phaseState.marks.filter((m) => m.startsWith(prefix)).map((m) => m.slice(prefix.length))
 }
 
 function flushDamage(ctx: EngineContext, unit: Unit, dealt: Map<ModelId, number>, pool: Pool): void {

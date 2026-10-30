@@ -16,10 +16,14 @@ import { citiesHooks } from './factions/cities'
 import { ironjawzHooks } from './factions/ironjawz'
 import { slavesHooks } from './factions/slaves'
 import { fyreslayersHooks } from './factions/fyreslayers'
+import { luminethHooks } from './factions/lumineth'
+import { kharadronHooks } from './factions/kharadron'
+import { gloomspiteHooks } from './factions/gloomspite'
+import { kruleboyzHooks } from './factions/kruleboyz'
 import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
   ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, Model, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
-  RuntimeAbility, RuntimeStratagem, RuntimeWeapon, Unit, UnitId, WeaponId,
+  RuntimeAbility, RuntimeStratagem, RuntimeWeapon, Unit, UnitId, Vec2, WeaponId, EdgeRef,
 } from './types'
 import type { DestroyedBy } from './attack'
 
@@ -125,7 +129,26 @@ export interface EngineCodeHook extends CodeHook {
   // every source whose holder belongs to `player` and is on the board; the largest answer counts. cards.ts then offers the draw
   // (topic 'extraTactic') and the put-back to the bottom of the deck (topic 'bottomTactic').
   extraTacticDraw?(state: GameState, entry: HookSourceEntry, player: PlayerId): number
+  // ---- F8 engine items (four new armies). Each is asked of EVERY source entry on the board, passive descriptors and
+  // ActiveEffects alike (entry.active is set for an effect an activated ability granted, which is how an activated ability
+  // keeps answering after its use), after the source's gate. ----
+  // KRU-ENH Egomaniak: damage points allocated to `unitId` may be moved to another unit. attack.ts resolvePool asks
+  // hookService.damageRedirectFor after the ward rolls: one D6 per remaining point, each roll >= succeedOn moves that point to
+  // one recipient (the candidate on the board with the most wounds left, ties by unit id), allocated with no second ward.
+  redirectDamage?(state: GameState, entry: HookSourceEntry, unitId: UnitId): { candidates: UnitId[]; succeedOn: number } | null
+  // GLO-ENH Sunsteala Shard: true when `firingUnitId` may not pick `targetUnitId` as a shooting target right now
+  // (phases/shooting.ts targetLegality; hookService.shootingTargetForbidden)
+  forbidsShootingTarget?(state: GameState, entry: HookSourceEntry, firingUnitId: UnitId, targetUnitId: UnitId): boolean
+  // LRL-ENH Curved Shots: extra points range and visibility may be measured from for `shooterModelId`'s shooting attacks
+  // (a target is legal from the model OR from any point; phases/shooting.ts targetLegality). null = no opinion
+  extraShootingOrigins?(state: GameState, entry: HookSourceEntry, shooterModelId: ModelId): Vec2[] | null
+  // LRL-RA-2 Roaring Headwind: every model of `unitId` must end any Move ability closer to this battlefield edge than it
+  // started (MoveConstraints.mustEndCloserToEdge; movement.ts, charge.ts, aos-moves.ts slides/retreats). null = no opinion
+  moveEdgeConstraint?(state: GameState, entry: HookSourceEntry, unitId: UnitId): EdgeRef | null
 }
+
+// a battlefield edge: axis 'z' sign -1 = the edge at z = -h/2, axis 'x' sign 1 = the edge at x = +w/2 (types.ts EdgeRef)
+export type { EdgeRef }
 
 
 // ---------- reactions recorded for the phase modules ----------
@@ -228,6 +251,10 @@ export const codeHooks: Record<string, EngineCodeHook> = {
   ...ironjawzHooks,
   ...slavesHooks,
   ...fyreslayersHooks,
+  ...luminethHooks,
+  ...kharadronHooks,
+  ...gloomspiteHooks,
+  ...kruleboyzHooks,
   // core Spearhead abilities no data file names (Call for Reinforcements, SPH-12); abilities.ts adds their descriptor itself
   [spearheadCallForReinforcements.name]: spearheadCallForReinforcements,
 }

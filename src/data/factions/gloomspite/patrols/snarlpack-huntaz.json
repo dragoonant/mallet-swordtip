@@ -1,0 +1,72 @@
+{
+  "id": "gloomspite.army.snarlpack-huntaz",
+  "faction": "gloomspite",
+  "name": "Snarlpack Huntaz",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "snarlboss",
+      "datasheet": "gloomspite.unit.snarlboss",
+      "size": 1
+    },
+    {
+      "ref": "wolfgits",
+      "datasheet": "gloomspite.unit.wolfgit-retinue",
+      "size": 2
+    },
+    {
+      "ref": "cavalry-a",
+      "datasheet": "gloomspite.unit.snarlpack-cavalry",
+      "size": 3
+    },
+    {
+      "ref": "cavalry-b",
+      "datasheet": "gloomspite.unit.snarlpack-cavalry",
+      "size": 3
+    },
+    {
+      "ref": "wheela-a",
+      "datasheet": "gloomspite.unit.sunsteala-wheelas",
+      "size": 1
+    },
+    {
+      "ref": "wheela-b",
+      "datasheet": "gloomspite.unit.sunsteala-wheelas",
+      "size": 1
+    }
+  ],
+  "warlord": "snarlboss",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "gloomspite.ability.fast-as-frazzlegit"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "gloomspite.ability.flankin-force",
+      "default": true
+    },
+    {
+      "id": "gloomspite.ability.frazzleboom",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "gloomspite.enh.kunnin-as-a-snarlfang",
+      "default": true
+    },
+    {
+      "id": "gloomspite.enh.glare-of-frazzlegit",
+      "default": false
+    },
+    {
+      "id": "gloomspite.enh.sunsteala-shard",
+      "default": false
+    },
+    {
+      "id": "gloomspite.enh.devious-backstabba",
+      "default": false
+    }
+  ]
+}

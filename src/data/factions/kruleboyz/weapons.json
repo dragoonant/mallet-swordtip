@@ -1,0 +1,130 @@
+[
+  {
+    "id": "kruleboyz.weapon.jagged-boss-stikka",
+    "name": "Jagged Boss-stikka",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  },
+  {
+    "id": "kruleboyz.weapon.gnashtoof-fangs",
+    "name": "Gnashtoof's Bone-crushing Fangs",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "COMPANION"
+      }
+    ]
+  },
+  {
+    "id": "kruleboyz.weapon.murknob-cleaver",
+    "name": "Murknob Cleaver",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  },
+  {
+    "id": "kruleboyz.weapon.man-skewer-crossbow",
+    "name": "Man-skewer Crossbow",
+    "type": "ranged",
+    "range": 18,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "CRIT_AUTO_WOUND"
+      }
+    ]
+  },
+  {
+    "id": "kruleboyz.weapon.jaggedy-blade",
+    "name": "Jaggedy Blade",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  },
+  {
+    "id": "kruleboyz.weapon.wicked-hacka",
+    "name": "Wicked Hacka",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  },
+  {
+    "id": "kruleboyz.weapon.beast-skewer-bolts",
+    "name": "Beast-skewer Bolts",
+    "type": "ranged",
+    "range": 24,
+    "A": 2,
+    "skill": 4,
+    "wound": 2,
+    "rend": 2,
+    "D": "D6",
+    "abilities": [
+      {
+        "ability": "CRIT_AUTO_WOUND"
+      }
+    ]
+  },
+  {
+    "id": "kruleboyz.weapon.jaggedy-blades",
+    "name": "Jaggedy Blades",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  }
+]

@@ -15,7 +15,11 @@ describe('Spearhead armies (SPH-2)', () => {
     expect(armies.map((a) => a.id).sort()).toEqual([
       'cities.army.castelite-company',
       'fyreslayers.army.saga-axeband',
+      'gloomspite.army.snarlpack-huntaz',
       'ironjawz.army.bigmob',
+      'kharadron.army.skyhammer-task-force',
+      'kruleboyz.army.swampskulka-gang',
+      'lumineth.army.hurakan-vanguard',
       'slaves.army.darkoath-raiders',
     ])
     for (const a of armies) expect(a.units.some((u) => u.ref === a.warlord)).toBe(true)

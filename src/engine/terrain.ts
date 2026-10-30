@@ -12,7 +12,7 @@
 // The caller passes the exact `pos.y` it wants validated to canEndAt, which checks that specific height against every
 // candidate surface. Craters/barricades never raise the standing height (R-5.7: ≤2" ignored;
 // barricades may be crossed but never stood on top of).
-import { partlyWithinPolygon, pointInPolygon, pointToSegment, whollyWithinPolygon, EPS, type Footprint } from './geometry'
+import { partlyWithinPolygon, pointInPolygon, pointToSegment, signedDistanceToBase, whollyWithinPolygon, EPS, type Footprint } from './geometry'
 import { hasKeyword } from './state'
 import type { WallData } from '../data/types'
 import type { GameState, Model, Path, TerrainPiece, TerrainPieceId, Vec2, Vec3 } from './types'
@@ -130,6 +130,26 @@ function wallOccupiesPoint(wall: WallData, pos: Vec3, radius: number): boolean {
   return true
 }
 
+// F8: the same test against the real outline of an oval base (the round worst case above keeps a cavalry oval side-on to a
+// wall 1.8" away from it). Round bases use wallOccupiesPoint unchanged.
+function wallOccupiesBase(wall: WallData, fp: Footprint): boolean {
+  const r1 = fp.base.radius, r2 = fp.base.radius2 ?? r1
+  if (Math.abs(r1 - r2) < 1e-6) return wallOccupiesPoint(wall, fp.pos, r1)
+  if (!wallOccupiesPoint(wall, fp.pos, Math.max(r1, r2))) return false
+  const halfThickness = (wall.thickness ?? 0.25) / 2
+  const abx = wall.b.x - wall.a.x, abz = wall.b.z - wall.a.z
+  const len = Math.hypot(abx, abz)
+  const n = Math.max(1, Math.ceil(len / 0.1))
+  for (let k = 0; k <= n; k++) {
+    const u = k / n
+    const p = { x: wall.a.x + abx * u, z: wall.a.z + abz * u }
+    if (signedDistanceToBase(p, fp) > halfThickness + EPS) continue
+    const inGap = (wall.gaps ?? []).some((g) => u >= g.from - EPS && u <= g.to + EPS && fp.pos.y >= (g.bottom ?? 0) - EPS && fp.pos.y <= (g.top ?? wall.height) + EPS)
+    if (!inGap) return true
+  }
+  return false
+}
+
 // R-3.9: units/models within 2" of each other across a barricade count as in Engagement Range (charging into one,
 // and for Fight-phase eligibility/attacks). `a`/`b` are plain positions (base centres) — callers pass horizontalGap
 // separately since that already accounts for base shape.
@@ -204,7 +224,6 @@ export const terrainService: TerrainService = {
   },
   canEndAt(state, model, pos) {
     const fp: Footprint = { pos, facing: model.facing, base: model.base }
-    const radius = Math.max(model.base.radius, model.base.radius2 ?? model.base.radius)
     const groundLevel = Math.abs(pos.y) <= EPS
     for (const p of Object.values(state.board.pieces)) {
       // Impassable (CORE-16.7): no model may end any move on any part
@@ -216,7 +235,7 @@ export const terrainService: TerrainService = {
         return { ok: false, reason: 'may not end a move on top of a barricade' }
       }
       if (p.kind === 'ruin' || p.kind === 'wall') {
-        for (const w of p.walls) if (wallOccupiesPoint(w, pos, radius)) {
+        for (const w of p.walls) if (wallOccupiesBase(w, fp)) {
           return { ok: false, reason: 'may not end a move inside a wall' }
         }
       }

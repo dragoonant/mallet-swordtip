@@ -77,6 +77,9 @@ export interface DamageApplied extends EventBase { type: 'DamageApplied'; unitId
 // AoS damage pool (CORE-13): one per target unit after an attack's damage is allocated; points = damage points in the pool,
 // warded = points cancelled by ward rolls, slain = models slain. Ward rolls themselves reuse FeelNoPainRolled.
 export interface DamagePoolResolved extends EventBase { type: 'DamagePoolResolved'; unitId: UnitId; points: number; warded: number; slain: number }
+// KRU-ENH Egomaniak (EngineCodeHook.redirectDamage): `points` damage points of a pool were moved off `fromUnitId` onto `toUnitId`
+// after the ward rolls (13-engine-port-plan F8 note)
+export interface DamageRedirected extends EventBase { type: 'DamageRedirected'; fromUnitId: UnitId; toUnitId: UnitId; points: number }
 // SPH-12 (P1): a replacement unit was set up for a destroyed Reinforcements unit
 export interface UnitReplaced extends EventBase { type: 'UnitReplaced'; unitId: UnitId; replacementOf: UnitId }
 export interface FeelNoPainRolled extends EventBase { type: 'FeelNoPainRolled'; unitId: UnitId; modelId: ModelId; die: number; needed: number; ignored: boolean }
@@ -131,7 +134,7 @@ export interface DecisionRequested extends EventBase { type: 'DecisionRequested'
 
 export type GameEvent =
   | GameCreated | RoundStarted | RoundEnded | TurnStarted | PhaseStarted | PhaseEnded | GameEnded | SidesChosen | FirstTurnChosen | UnitDeployed
-  | PriorityRolled | UnderdogDetermined | InitiativeSeized | DamagePoolResolved | UnitReplaced
+  | PriorityRolled | UnderdogDetermined | InitiativeSeized | DamagePoolResolved | DamageRedirected | UnitReplaced
   | TwistDrawn | TwistPicked | TacticsDrawn | TacticDiscarded | TacticScored | TacticCommandUsed
   | CpChanged | BattleShockTested | BattleShocked | BattleShockRecovered | OathTargetChosen | WaaaghCalled
   | MoveDeclared | UnitMoved | UnitAdvanced | UnitFellBack | UnitRemainedStationary | DesperateEscapeRolled | ReinforcementsArrived | UnitRemovedFromBattlefield | UnitLostInReserves | CoherencyCulled

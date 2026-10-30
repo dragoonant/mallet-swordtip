@@ -1,0 +1,75 @@
+[
+  {
+    "id": "gloomspite.unit.wolfgit-retinue",
+    "faction": "gloomspite",
+    "name": "Wolfgit Retinue",
+    "keywords": [
+      "CAVALRY"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "GLOOMSPITE GITZ"
+    ],
+    "stats": {
+      "M": 12,
+      "W": 2,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "wolfgit-bow",
+        "name": "Wolfgit (Grot Bow)",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "oval",
+          "mm": 60,
+          "mm2": 35
+        },
+        "weapons": {
+          "default": [
+            "gloomspite.weapon.grot-bow",
+            "gloomspite.weapon.snarlfang-jaws"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      },
+      {
+        "modelId": "wolfgit-stikka",
+        "name": "Wolfgit (Stabbin' Stikka)",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "oval",
+          "mm": 60,
+          "mm2": 35
+        },
+        "weapons": {
+          "default": [
+            "gloomspite.weapon.stabbin-stikka",
+            "gloomspite.weapon.snarlfang-jaws"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "gloomspite.ability.i-got-dis-boss"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

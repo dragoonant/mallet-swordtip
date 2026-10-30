@@ -239,10 +239,18 @@ const tunnelAbilityId = (state: GameState, player: PlayerId): string | null => {
   return id && state.abilities[id]?.code === CODE_TUNNELS ? id : null
 }
 
-// the cheap Vulkite-style units first, the general last: the AI takes the first mode
+// the cheap Vulkite-style units first, the general last: the AI takes the first mode. F8: the same hook serves any army's
+// "set up two units anywhere" regiment ability (GLO-RA-1 Flankin' Force); `params.preferDatasheets` (datasheet ids) puts those
+// units first instead
 const tunnelOrder = (state: GameState, player: PlayerId, ids: UnitId[]): UnitId[] => {
   const general = state.players[player]?.warlordUnitId
-  const rank = (id: UnitId): number => (id === general ? 2 : state.datasheets[state.units[id].datasheetId].stats.W > 2 ? 1 : 0)
+  const abilityId = tunnelAbilityId(state, player)
+  const prefer = abilityId ? paramOf(state, abilityId, 'preferDatasheets', []) : []
+  const preferred = Array.isArray(prefer) ? (prefer as string[]) : []
+  const rank = (id: UnitId): number => {
+    if (preferred.includes(state.units[id].datasheetId)) return -1
+    return id === general ? 2 : state.datasheets[state.units[id].datasheetId].stats.W > 2 ? 1 : 0
+  }
   return [...ids].sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : 1))
 }
 
@@ -264,7 +272,11 @@ const tunnelsActivate: ActivatedAbilityHook & {
     const second = use.modeId && use.modeId !== NONE && use.modeId !== first && onBoard(s, use.modeId) ? use.modeId : null
     const ids = second ? [first, second] : [first]
     requestRedeploy(s, { abilityId: use.abilityId, player: use.player, unitIds: ids, minEnemyDistance: num(paramOf(s, use.abilityId, 'minEnemyDistance', 6), 6) })
-    announce(ctx, use, first, `Magmic Tunnels: ${ids.map((id) => s.units[id].name).join(' and ')} dive into the tunnels`)
+    // F8: announced under the ability's own name; `params.redeployText` replaces the default wording
+    const name = s.abilities[use.abilityId]?.name ?? 'Magmic Tunnels'
+    const custom = paramOf(s, use.abilityId, 'redeployText', null)
+    const text = typeof custom === 'string' ? custom : name === 'Magmic Tunnels' ? 'dive into the tunnels' : 'leave the battlefield, to be set up again elsewhere'
+    announce(ctx, use, first, `${name}: ${ids.map((id) => s.units[id].name).join(' and ')} ${text}`)
   },
 }
 const fyreslayersMagmicTunnels: EngineCodeHook = { name: CODE_TUNNELS, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: tunnelsActivate }

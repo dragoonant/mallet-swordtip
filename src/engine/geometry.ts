@@ -423,6 +423,13 @@ export function checkPlacements(input: PlacementCheckInput): { rejection: Reject
     if (constraints.minDistanceFromEnemies > 0) {
       for (const e of input.enemies) if (horizontalGap(f, e) <= constraints.minDistanceFromEnemies + EPS) return { rejection: { code: 'E_ENGAGEMENT', reason: `${r.model.id} must end more than ${constraints.minDistanceFromEnemies}" from enemy models`, details: { modelId: r.model.id } } }
     }
+    // F8 (LRL-RA-2 Roaring Headwind): every model that moves must end closer to that edge (centre to edge line) than it started.
+    // RULING: a model that does not move is not checked, so "declared a move but stayed put" stays legal
+    const edge = constraints.mustEndCloserToEdge
+    if (edge && r.distance > EPS) {
+      const toward = (v: Vec3): number => (edge.axis === 'x' ? v.x : v.z) * edge.sign
+      if (toward(r.to) <= toward(r.from) + EPS) return { rejection: { code: 'E_OUT_OF_RANGE', reason: `${r.model.id} must end closer to the ${edge.axis === 'x' ? (edge.sign > 0 ? 'right' : 'left') : (edge.sign > 0 ? 'bottom' : 'top')} edge`, details: { modelId: r.model.id } } }
+    }
   }
   for (const unitId of constraints.mustEndInEngagementWith) {
     const targets = input.engagementTargets?.[unitId] ?? []

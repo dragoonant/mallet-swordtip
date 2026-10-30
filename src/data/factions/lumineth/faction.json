@@ -1,0 +1,17 @@
+{
+  "id": "lumineth",
+  "name": "Lumineth Realm-lords",
+  "factionKeyword": "LUMINETH REALM-LORDS",
+  "armyRule": "lumineth.ability.hurakan-vanguard",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#e8e3d0",
+    "secondary": "#2f7088",
+    "trim": "#d6b758",
+    "metal": "#b9c6cf",
+    "decal": "#9fe4ee"
+  },
+  "combatPatrols": [
+    "lumineth.army.hurakan-vanguard"
+  ]
+}

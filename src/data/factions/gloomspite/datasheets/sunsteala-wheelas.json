@@ -1,0 +1,54 @@
+[
+  {
+    "id": "gloomspite.unit.sunsteala-wheelas",
+    "faction": "gloomspite",
+    "name": "Sunsteala Wheelas",
+    "keywords": [
+      "WAR MACHINE"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "GLOOMSPITE GITZ"
+    ],
+    "stats": {
+      "M": 12,
+      "W": 6,
+      "Sv": 4,
+      "OC": 2
+    },
+    "composition": [
+      {
+        "modelId": "sunsteala-wheela",
+        "name": "Sunsteala Wheela",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "oval",
+          "mm": 120,
+          "mm2": 92
+        },
+        "weapons": {
+          "default": [
+            "gloomspite.weapon.grot-bow",
+            "gloomspite.weapon.wheela-slicers",
+            "gloomspite.weapon.snarlfangs-jaws-pair"
+          ]
+        },
+        "figure": {
+          "archetype": "vehicle",
+          "kit": "generic-vehicle"
+        }
+      }
+    ],
+    "abilities": [
+      "gloomspite.ability.careening-destruction"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "vehicle",
+      "kit": "generic-vehicle"
+    },
+    "spearhead": true
+  }
+]

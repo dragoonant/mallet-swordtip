@@ -1,0 +1,156 @@
+[
+  {
+    "id": "kharadron.weapon.masterwork-volley-pistol",
+    "name": "Masterwork Volley Pistol",
+    "type": "ranged",
+    "range": 10,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "SHOOT_IN_COMBAT" }
+    ]
+  },
+  {
+    "id": "kharadron.weapon.skalfhammer",
+    "name": "Skalfhammer",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 2,
+    "rend": 1,
+    "D": 3,
+    "abilities": []
+  },
+  {
+    "id": "kharadron.weapon.privateer-pistol",
+    "name": "Privateer Pistol",
+    "type": "ranged",
+    "range": 10,
+    "A": 2,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "SHOOT_IN_COMBAT" }
+    ]
+  },
+  {
+    "id": "kharadron.weapon.aethermatic-volley-gun",
+    "name": "Aethermatic Volley Gun",
+    "type": "ranged",
+    "range": 15,
+    "A": "2D6",
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "kharadron.weapon.light-skyhook",
+    "name": "Light Skyhook",
+    "type": "ranged",
+    "range": 15,
+    "A": 1,
+    "skill": 4,
+    "wound": 3,
+    "rend": 2,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "kharadron.weapon.arkanaut-cutter",
+    "name": "Arkanaut Cutter",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "kharadron.weapon.gun-butt",
+    "name": "Gun Butt",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "kharadron.weapon.skypike",
+    "name": "Skypike",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "CRIT_MORTAL" }
+    ]
+  },
+  {
+    "id": "kharadron.weapon.vulcaniser-pistol",
+    "name": "Vulcaniser Pistol",
+    "type": "ranged",
+    "range": 10,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      { "ability": "SHOOT_IN_COMBAT" }
+    ]
+  },
+  {
+    "id": "kharadron.weapon.heavy-skyhook",
+    "name": "Heavy Skyhook",
+    "type": "ranged",
+    "range": 24,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 2,
+    "D": "D6",
+    "abilities": []
+  },
+  {
+    "id": "kharadron.weapon.aethershot-carbines",
+    "name": "Aethershot Carbines",
+    "type": "ranged",
+    "range": 12,
+    "A": 4,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "SHOOT_IN_COMBAT" }
+    ]
+  },
+  {
+    "id": "kharadron.weapon.crews-boarding-weapons",
+    "name": "Crew's Boarding Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 8,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  }
+]

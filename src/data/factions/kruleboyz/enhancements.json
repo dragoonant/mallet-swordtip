@@ -1,0 +1,38 @@
+[
+  {
+    "id": "kruleboyz.enh.kunnin-plan",
+    "faction": "kruleboyz",
+    "name": "Kunnin' Plan",
+    "text": "Once per turn, in your hero phase, a friendly unit wholly within 12\" of the general can retreat without suffering mortal damage and can still shoot and charge afterwards.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kruleboyz.ability.kunnin-plan"
+  },
+  {
+    "id": "kruleboyz.enh.morks-eye-pebble",
+    "faction": "kruleboyz",
+    "name": "Mork's Eye Pebble",
+    "text": "Once per battle, in the enemy movement phase, friendly units wholly within 12\" of the general have Ward (5+) in the following shooting phase.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kruleboyz.ability.morks-eye-pebble"
+  },
+  {
+    "id": "kruleboyz.enh.egomaniak",
+    "faction": "kruleboyz",
+    "name": "Egomaniak",
+    "text": "While another friendly unit is within 3\" of the general, each damage point bound for the general moves to that unit on a 4+.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kruleboyz.ability.egomaniak"
+  },
+  {
+    "id": "kruleboyz.enh.eye-biter-ash",
+    "faction": "kruleboyz",
+    "name": "Eye-biter Ash",
+    "text": "Once per battle, in any combat phase, an enemy unit in combat with the general gets -1 to hit, for the phase or, on a roll of 5+, for the rest of the battle.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "kruleboyz.ability.eye-biter-ash"
+  }
+]

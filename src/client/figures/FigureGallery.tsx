@@ -260,7 +260,7 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'soulreaper', faction: 'thousand-sons', label: 'Scarab Terminator (soulreaper cannon)' },
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'hellfyre', faction: 'thousand-sons', label: 'Scarab Terminator (hellfyre rack)' },
   { datasheetId: 'ths.tzaangors', modelId: 'tzaangor', faction: 'thousand-sons', label: 'Tzaangor' },
-  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers)
+  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron)
   { datasheetId: 'cities.unit.freeguild-cavalier-marshal', modelId: 'cavalier-marshal', faction: 'cities', label: 'Cavalier-Marshal' },
   { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm', faction: 'cities', label: 'Steelhelm' },
   { datasheetId: 'cities.unit.freeguild-cavaliers', modelId: 'cavalier', faction: 'cities', label: 'Freeguild Cavalier' },
@@ -277,6 +277,28 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'fyreslayers.unit.battlesmith', modelId: 'battlesmith', faction: 'fyreslayers', label: 'Battlesmith' },
   { datasheetId: 'fyreslayers.unit.hearthguard-berzerkers', modelId: 'hearthguard', faction: 'fyreslayers', label: 'Hearthguard Berzerker' },
   { datasheetId: 'fyreslayers.unit.vulkite-berzerkers', modelId: 'vulkite', faction: 'fyreslayers', label: 'Vulkite Berzerker' },
+  { datasheetId: 'kruleboyz.unit.killaboss-on-great-gnashtoof', modelId: 'killaboss', faction: 'kruleboyz', label: 'Killaboss on Great Gnashtoof' },
+  { datasheetId: 'kruleboyz.unit.murknob-with-belcha-banna', modelId: 'murknob', faction: 'kruleboyz', label: 'Murknob' },
+  { datasheetId: 'kruleboyz.unit.man-skewer-boltboyz', modelId: 'boltboy', faction: 'kruleboyz', label: 'Man-skewer Boltboy' },
+  { datasheetId: 'kruleboyz.unit.gutrippaz', modelId: 'gutrippa', faction: 'kruleboyz', label: 'Gutrippa' },
+  { datasheetId: 'kruleboyz.unit.beast-skewer-killbow', modelId: 'killbow', faction: 'kruleboyz', label: 'Beast-skewer Killbow' },
+  { datasheetId: 'gloomspite.unit.snarlboss', modelId: 'snarlboss', faction: 'gloomspite', label: 'Snarlboss' },
+  { datasheetId: 'gloomspite.unit.wolfgit-retinue', modelId: 'wolfgit-bow', faction: 'gloomspite', label: 'Wolfgit (bow)' },
+  { datasheetId: 'gloomspite.unit.wolfgit-retinue', modelId: 'wolfgit-stikka', faction: 'gloomspite', label: 'Wolfgit (stikka)' },
+  { datasheetId: 'gloomspite.unit.snarlpack-cavalry', modelId: 'snarlpack-cavalry', faction: 'gloomspite', label: 'Snarlpack Cavalry' },
+  { datasheetId: 'gloomspite.unit.sunsteala-wheelas', modelId: 'sunsteala-wheela', faction: 'gloomspite', label: 'Sunsteala Wheela' },
+  { datasheetId: 'lumineth.unit.hurakan-windmage', modelId: 'windmage', faction: 'lumineth', label: 'Hurakan Windmage' },
+  { datasheetId: 'lumineth.unit.hurakan-windchargers', modelId: 'windcharger', faction: 'lumineth', label: 'Hurakan Windcharger' },
+  { datasheetId: 'lumineth.unit.hurakan-spirit-of-the-wind', modelId: 'spirit', faction: 'lumineth', label: 'Spirit of the Wind' },
+  { datasheetId: 'lumineth.unit.vanari-auralan-wardens', modelId: 'warden', faction: 'lumineth', label: 'Vanari Auralan Warden' },
+  { datasheetId: 'kharadron.unit.arkanaut-admiral', modelId: 'admiral', faction: 'kharadron', label: 'Arkanaut Admiral' },
+  { datasheetId: 'kharadron.unit.arkanaut-company', modelId: 'arkanaut', faction: 'kharadron', label: 'Arkanaut' },
+  { datasheetId: 'kharadron.unit.arkanaut-company', modelId: 'arkanaut-skypike', faction: 'kharadron', label: 'Arkanaut (Skypike)' },
+  { datasheetId: 'kharadron.unit.arkanaut-company-gunners', modelId: 'arkanaut-volley', faction: 'kharadron', label: 'Arkanaut (Volley Gun)' },
+  { datasheetId: 'kharadron.unit.arkanaut-company-gunners', modelId: 'arkanaut-skyhook', faction: 'kharadron', label: 'Arkanaut (Light Skyhook)' },
+  { datasheetId: 'kharadron.unit.skywardens', modelId: 'skywarden', faction: 'kharadron', label: 'Skywarden' },
+  { datasheetId: 'kharadron.unit.skywardens', modelId: 'skywarden-volley', faction: 'kharadron', label: 'Skywarden (Volley Gun)' },
+  { datasheetId: 'kharadron.unit.arkanaut-frigate', modelId: 'frigate', faction: 'kharadron', label: 'Arkanaut Frigate' },
 ]
 
 // Figures are true tabletop-miniature scale (~1-2 world-inches tall — see resolveBase), so packing

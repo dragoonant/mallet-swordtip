@@ -4,14 +4,15 @@
 // destinations. Every option id encodes its own geometry (`mv:<dx>:<dz>` for a rigid slide, `at:<x>:<z>` for a formation centred
 // on a point) so the answer can be recomputed and re-validated when it is applied; nothing here keeps state besides the queue mark.
 import {
-  EPS, anyWithinEngagementRange, basesOverlap, checkPlacements, dist2D, emptyMoveConstraints, whollyOnBoard, whollyWithinPolygon,
+  EPS, anyWithinEngagementRange, basesOverlap, checkPlacements, dist2D, emptyMoveConstraints, pathCrossesModels, whollyOnBoard, whollyWithinPolygon,
   type Footprint, type ResolvedPlacement,
 } from '../geometry'
+import { hookService } from '../hooks-impl'
 import type { ModelPlacement } from '../actions'
 import type { EngineContext } from '../modules'
 import { boardModelsOf, datasheetOf, enemyModelsOnBoard, setModelPos, territoryOf, unitModels } from '../state'
 import { terrainService } from '../terrain'
-import type { GameState, Model, PlayerId, UnitId, Vec2 } from '../types'
+import type { EdgeRef, GameState, Model, ModelId, PlayerId, UnitId, Vec2, Vec3 } from '../types'
 import { enemiesInCombat } from './aos-common'
 
 export interface MoveOption { id: string; label: string }
@@ -33,14 +34,36 @@ function objectiveName(state: GameState, id: string): string {
 // ---------- rigid slides (Mighty Destroyers) ----------
 export interface SlideResult { ok: boolean; reason?: string; resolved?: ResolvedPlacement[]; endsInCombat?: boolean }
 
+// F8 slide options (all optional; the default is Mighty Destroyers' IJZ-2.2 move):
+//  passThrough        the path may cross any models and combat ranges (GLO-AB-4 Careening Destruction). Rigid slides only ever
+//                     check the END spot against other models, so every slide behaves this way; the flag documents intent.
+//  mustEndOutOfCombat the slide may not end inside any enemy combat range, and a unit starting in combat is NOT made to end in
+//                     combat (Careening Destruction; LRL-BT-2 Pulled by the Winds as `mayNotEndInCombat`; KO-AB-2 retreats)
+//  towardEdge         the slide's component toward that battlefield edge must be > 0 (LRL-BT-2 Pulled by the Winds); also
+//                     adds a "Toward the ... edge" heading to slideOptions
+// A Move-ability edge constraint from a code hook (LRL-RA-2 Roaring Headwind, hookService.moveEdgeConstraintFor) is always
+// applied the same way as towardEdge.
+export interface SlideOpts { passThrough?: boolean; mustEndOutOfCombat?: boolean; mayNotEndInCombat?: boolean; towardEdge?: EdgeRef | null }
+
+const edgeVector = (e: EdgeRef): Vec2 => (e.axis === 'x' ? { x: e.sign, z: 0 } : { x: 0, z: e.sign })
+const EDGE_NAMES: Record<string, string> = { 'z:-1': 'the top edge', 'z:1': 'the bottom edge', 'x:-1': 'the left edge', 'x:1': 'the right edge' }
+export const edgeName = (e: EdgeRef): string => EDGE_NAMES[`${e.axis}:${e.sign}`] ?? 'the edge'
+
 // can the whole unit slide by (dx, dz) without any model moving more than maxDistance? `mustEndInCombat`: the unit started in
-// combat and so has to finish in combat (IJZ-2.2)
-export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: number, maxDistance: number, mustEndInCombat: boolean): SlideResult {
+// combat and so has to finish in combat (IJZ-2.2); ignored when opts.mustEndOutOfCombat / mayNotEndInCombat is set
+export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: number, maxDistance: number, mustEndInCombat: boolean, opts: SlideOpts = {}): SlideResult {
   const unit = state.units[unitId]
   if (!unit || unit.location !== 'board') return { ok: false, reason: 'not on the battlefield' }
   const models = unitModels(state, unitId)
   if (models.length === 0) return { ok: false, reason: 'no models' }
   if (Math.hypot(dx, dz) > maxDistance + 1e-3) return { ok: false, reason: `further than ${maxDistance}"` }
+  const outOfCombat = opts.mustEndOutOfCombat === true || opts.mayNotEndInCombat === true
+  if (outOfCombat) mustEndInCombat = false
+  for (const edge of [opts.towardEdge ?? null, hookService.moveEdgeConstraintFor(state, unitId)]) {
+    if (!edge) continue
+    const v = edgeVector(edge)
+    if (dx * v.x + dz * v.z <= EPS) return { ok: false, reason: `the move must end closer to ${edgeName(edge)}` }
+  }
   const mine = new Set(models.map((m) => m.id))
   const result = checkPlacements({
     unitModels: models,
@@ -60,21 +83,23 @@ export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: num
   const enemies = enemyModelsOnBoard(state, unit.player)
   const endsInCombat = result.resolved.some((r) => anyWithinEngagementRange(fp(r.model, r.to, r.facing), enemies))
   if (mustEndInCombat && !endsInCombat) return { ok: false, reason: 'a unit that starts in combat must end in combat' }
+  if (outOfCombat && endsInCombat) return { ok: false, reason: 'the move may not end in combat' }
   return { ok: true, resolved: result.resolved, endsInCombat }
 }
 
 // the short list of slides offered for one unit: a few useful headings, each as far as it legally goes (up to maxDistance), + stay
-export function slideOptions(state: GameState, unitId: UnitId, maxDistance: number): MoveOption[] {
+export function slideOptions(state: GameState, unitId: UnitId, maxDistance: number, opts: SlideOpts = {}): MoveOption[] {
   const unit = state.units[unitId]
   const models = unit ? unitModels(state, unitId) : []
   const out: MoveOption[] = []
   if (!unit || unit.location !== 'board' || models.length === 0) return out
-  const mustEnd = enemiesInCombat(state, unitId).length > 0
+  const mustEnd = enemiesInCombat(state, unitId).length > 0 && !opts.mustEndOutOfCombat && !opts.mayNotEndInCombat
   const c = centroidOf(models)
   const enemies = enemyModelsOnBoard(state, unit.player)
   const nearestEnemy = enemies.length ? enemies.reduce((a, b) => (dist2D(c, b.pos) < dist2D(c, a.pos) ? b : a)) : null
   const objectives = (Object.values(state.objectives)).filter((o) => !o.removed).sort((a, b) => dist2D(c, a.pos) - dist2D(c, b.pos))
   const heads: { dir: Vec2; label: string }[] = []
+  if (opts.towardEdge) heads.push({ dir: edgeVector(opts.towardEdge), label: `Toward ${edgeName(opts.towardEdge)}` })
   const unit2 = (to: Vec2): Vec2 | null => { const d = dist2D(c, to); return d < 1e-6 ? null : { x: (to.x - c.x) / d, z: (to.z - c.z) / d } }
   if (nearestEnemy) {
     const v = unit2(nearestEnemy.pos)
@@ -85,13 +110,18 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
     if (v && dist2D(c, o.pos) > 0.5) heads.push({ dir: v, label: `Toward ${objectiveName(state, o.id)}` })
   }
   heads.push({ dir: { x: 1, z: 0 }, label: 'Slide right' }, { dir: { x: -1, z: 0 }, label: 'Slide left' }, { dir: { x: 0, z: 1 }, label: 'Slide down the table' }, { dir: { x: 0, z: -1 }, label: 'Slide up the table' })
+  // diagonals: a unit boxed in on all four sides often still has a diagonal way out (retreats, edge moves)
+  if (opts.towardEdge || opts.mustEndOutOfCombat || opts.mayNotEndInCombat) {
+    const D = Math.SQRT1_2
+    heads.push({ dir: { x: D, z: D }, label: 'Slide down and right' }, { dir: { x: -D, z: D }, label: 'Slide down and left' }, { dir: { x: D, z: -D }, label: 'Slide up and right' }, { dir: { x: -D, z: -D }, label: 'Slide up and left' })
+  }
   const seen = new Set<string>()
   for (const h of heads) {
     for (const dist of [maxDistance, maxDistance * 0.67, maxDistance * 0.34]) {
       const dx = r3(h.dir.x * dist), dz = r3(h.dir.z * dist)
       const key = `${Math.round(dx * 2)}:${Math.round(dz * 2)}`
       if (seen.has(key)) break
-      const check = checkSlide(state, unitId, dx, dz, maxDistance, mustEnd)
+      const check = checkSlide(state, unitId, dx, dz, maxDistance, mustEnd, opts)
       if (!check.ok) continue
       seen.add(key)
       out.push({ id: `mv:${fmt(dx)}:${fmt(dz)}`, label: `${h.label} (${r3(Math.hypot(dx, dz)).toFixed(1)}")${check.endsInCombat && !mustEnd ? ', into combat' : ''}` })
@@ -107,14 +137,16 @@ export function parseSlide(optionId: string): { dx: number; dz: number } | null 
   return m ? { dx: Number(m[1]), dz: Number(m[2]) } : null
 }
 
-// moves the unit (state mutation) and reports it; returns false (nothing changed) when the slide is not legal
-export function applySlide(ctx: EngineContext, unitId: UnitId, dx: number, dz: number, maxDistance: number): boolean {
+// moves the unit (state mutation) and reports it; returns false (nothing changed) when the slide is not legal. The enemy units
+// the slide passed across are recorded for passedAcrossThisPhase (KO-AB-6 / GLO-AB-4, F8)
+export function applySlide(ctx: EngineContext, unitId: UnitId, dx: number, dz: number, maxDistance: number, opts: SlideOpts = {}): boolean {
   const s = ctx.state
   const unit = s.units[unitId]
   if (!unit) return false
   if (Math.hypot(dx, dz) < 1e-6) return true
-  const check = checkSlide(s, unitId, dx, dz, maxDistance, enemiesInCombat(s, unitId).length > 0)
+  const check = checkSlide(s, unitId, dx, dz, maxDistance, enemiesInCombat(s, unitId).length > 0, opts)
   if (!check.ok || !check.resolved) return false
+  const across = unitsPassedAcross(s, unitId, dx, dz)
   const paths: Record<string, ResolvedPlacement['path']> = {}
   for (const r of check.resolved) {
     const m = s.models[r.model.id]
@@ -122,12 +154,74 @@ export function applySlide(ctx: EngineContext, unitId: UnitId, dx: number, dz: n
     if (r.distance > EPS) paths[m.id] = r.path
     setModelPos(m, r.to, r.facing)
   }
+  recordPassedAcross(s, unitId, across)
   ctx.emit({ type: 'UnitMoved', unitId, moveType: 'abilityMove', paths, player: unit.player })
   return true
 }
 
+// ---------- "passed across" (GLO-AB-4 Careening Destruction, KO-AB-6 Bomb Racks; F8) ----------
+// enemy units with a model whose base the moving base touches somewhere along the path (the moving footprint sampled every
+// quarter inch along the straight segment), for a rigid slide of the unit by (dx, dz) from where it stands now
+export function unitsPassedAcross(state: GameState, unitId: UnitId, dx: number, dz: number): UnitId[] {
+  const unit = state.units[unitId]
+  if (!unit || unit.location !== 'board') return []
+  const paths: Record<ModelId, Vec3[]> = {}
+  for (const m of unitModels(state, unitId)) paths[m.id] = [m.pos, { x: m.pos.x + dx, y: m.pos.y, z: m.pos.z + dz }]
+  return unitsPassedAcrossPaths(state, unitId, paths)
+}
+
+// the same for explicit per-model paths (phases/movement.ts records ordinary moves with it)
+export function unitsPassedAcrossPaths(state: GameState, unitId: UnitId, paths: Record<ModelId, Vec3[]>): UnitId[] {
+  const unit = state.units[unitId]
+  if (!unit) return []
+  const byUnit = new Map<UnitId, Model[]>()
+  for (const e of enemyModelsOnBoard(state, unit.player)) byUnit.set(e.unitId, [...(byUnit.get(e.unitId) ?? []), e])
+  const out: UnitId[] = []
+  for (const [uid, ems] of byUnit) {
+    for (const [mid, path] of Object.entries(paths)) {
+      const m = state.models[mid]
+      if (!m || path.length < 2) continue
+      if (pathCrossesModels({ pos: path[0], facing: m.facing, base: m.base }, path, ems)) { out.push(uid); break }
+    }
+  }
+  return out.sort()
+}
+
+const ACROSS = 'mv:across:'
+export function recordPassedAcross(state: GameState, unitId: UnitId, ids: UnitId[]): void {
+  if (ids.length === 0) return
+  const key = `${ACROSS}${unitId}=`
+  const prev = state.phaseState.marks.find((m) => m.startsWith(key))
+  const all = new Set<UnitId>([...(prev ? (JSON.parse(prev.slice(key.length)) as UnitId[]) : []), ...ids])
+  state.phaseState.marks = state.phaseState.marks.filter((m) => !m.startsWith(key))
+  state.phaseState.marks.push(key + JSON.stringify([...all].sort()))
+}
+
+// every enemy unit `unitId` passed across with any move this phase (movement-phase moves and ability slides; union)
+export function passedAcrossThisPhase(state: GameState, unitId: UnitId): UnitId[] {
+  const key = `${ACROSS}${unitId}=`
+  const m = state.phaseState.marks.find((x) => x.startsWith(key))
+  return m ? (JSON.parse(m.slice(key.length)) as UnitId[]) : []
+}
+
+// ---------- ability retreats (KO-AB-2 Timed Charges, F8 C3) ----------
+// rigid slides up to `max` that may cross enemy combat ranges (and, like every slide, models) and must end outside every enemy
+// combat range; plus "Stay where it is". No mortal damage is taken.
+export function retreatOptions(state: GameState, unitId: UnitId, max = 6): MoveOption[] {
+  return slideOptions(state, unitId, max, { mustEndOutOfCombat: true })
+}
+
+// applies a retreat option id from retreatOptions; 'mv:0:0' (stay) is a legal no-op. False when the option is not legal now
+export function applyRetreat(ctx: EngineContext, unitId: UnitId, optionId: string, max = 6): boolean {
+  const slide = parseSlide(optionId)
+  if (!slide) return false
+  return applySlide(ctx, unitId, slide.dx, slide.dz, max, { mustEndOutOfCombat: true })
+}
+
 // ---------- queue of units still to be offered a move (A Proper Ruckus moves several in turn) ----------
-export interface MoveQueue { abilityId: string; player: PlayerId; maxDistance: number; queue: UnitId[] }
+// kind 'slide' (default) offers slideOptions(..., opts); 'retreat' offers retreatOptions (F8). The abilities loop
+// (abilities.ts nextStep) asks one unit at a time; pass = the unit stays.
+export interface MoveQueue { abilityId: string; player: PlayerId; maxDistance: number; queue: UnitId[]; kind?: 'slide' | 'retreat'; opts?: SlideOpts }
 const QUEUE_PREFIX = 'abil:mq='
 
 export function readMoveQueue(state: GameState): MoveQueue | null {

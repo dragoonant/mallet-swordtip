@@ -53,6 +53,11 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
   }
 
   if (psychic || gauss) return 'psychic'
+  // Age of Sigmar wind magic (Lumineth) crackles like a spell; Kharadron skyhooks are harpoon guns (heavy), their volley guns and the
+  // Kruleboyz' poisoned crossbow bolts spit a rattle of green streaks.
+  if (/windblast|vortex|wind.s.vengeance/.test(text)) return 'psychic'
+  if (/skyhook/.test(text)) return 'heavy'
+  if (/crossbow|beast.skewer|volley.gun/.test(text)) return 'shoota'
   // A macro plasma *incinerator* is a plasma gun, not a flame template.
   if (/plasma.*incinerat/.test(text)) return 'heavy'
   // TORRENT is the rules-level marker for a flame template (no hit roll, auto-hits).
@@ -94,7 +99,7 @@ export interface VfxClassification {
 
 /** Engine faction ids by the prefix of a weapon id ('ork.w.shoota'), for weapons classified with no faction given. */
 const ID_PREFIX_FACTION: [string, string][] = [
-  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
+  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
   ['am.', 'astra-militarum'], ['lov.', 'leagues-of-votann'], ['gk.', 'grey-knights'], ['csm', 'chaos-space-marines'], ['we.', 'world-eaters'], ['ade', 'adepta-sororitas'], ['cus.', 'adeptus-custodes'], ['drk.', 'drukhari'], ['ael.', 'aeldari'], ['adm.', 'adeptus-mechanicus'], ['dg.', 'death-guard'], ['ths.', 'thousand-sons'], ['sw.', 'space-wolves'], ['da.', 'dark-angels'], ['ba.', 'blood-angels'], ['dw.', 'deathwatch'], ['bt.', 'black-templars'],
 ]
 
@@ -108,6 +113,14 @@ export function classifyVfxFamily(weaponId: string, weapon: WeaponData | undefin
   if (/cannonball/.test(text)) return kw('cannonball')
   if (/grapeshot/.test(text)) return kw('grapeshot')
   if (/dragoon.pistol|flintlock|handgun|blunderbuss|musket/.test(text)) return kw('flintlock')
+  // Age of Sigmar wind and aether: Lumineth windblasts are spell-streaks and their silver bows a bright pulse; Kharadron skyhooks are harpoon
+  // bolts, volley guns a rattling stream and their pistols and carbines black-powder shots; crossbow bolts and grot bows are hard kinetic streaks.
+  if (/windblast|vortex/.test(text)) return kw('psychic')
+  if (/wind.s.vengeance/.test(text)) return kw('pulse')
+  if (/skyhook/.test(text)) return kw('missile')
+  if (/volley.gun/.test(text)) return kw('dakka')
+  if (/volley.pistol|privateer|vulcaniser|aethershot|carbine/.test(text)) return kw('flintlock')
+  if (/crossbow|beast.skewer|grot.bow|windcharger.bow/.test(text)) return kw('bolt')
   // Spat, flung or sprayed biomass: Tyranid guns, and the cult's webber.
   if (/fleshborer|barb|devourer|venom|spine|spore|acid|borer|webber|web/.test(text) || (fac === 'tyranids' && !/torrent/.test(text))) return kw('bio')
   if (/gauss|tachyon|doomsday|necron|\barc\b/.test(text)) return kw('gauss')

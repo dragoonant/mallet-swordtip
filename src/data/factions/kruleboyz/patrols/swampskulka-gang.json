@@ -1,0 +1,72 @@
+{
+  "id": "kruleboyz.army.swampskulka-gang",
+  "faction": "kruleboyz",
+  "name": "Swampskulka Gang",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "killaboss",
+      "datasheet": "kruleboyz.unit.killaboss-on-great-gnashtoof",
+      "size": 1
+    },
+    {
+      "ref": "murknob",
+      "datasheet": "kruleboyz.unit.murknob-with-belcha-banna",
+      "size": 1
+    },
+    {
+      "ref": "boltboyz",
+      "datasheet": "kruleboyz.unit.man-skewer-boltboyz",
+      "size": 3
+    },
+    {
+      "ref": "gutrippaz-a",
+      "datasheet": "kruleboyz.unit.gutrippaz",
+      "size": 5
+    },
+    {
+      "ref": "gutrippaz-b",
+      "datasheet": "kruleboyz.unit.gutrippaz",
+      "size": 5
+    },
+    {
+      "ref": "killbow",
+      "datasheet": "kruleboyz.unit.beast-skewer-killbow",
+      "size": 1
+    }
+  ],
+  "warlord": "killaboss",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "kruleboyz.ability.kruleboyz-waaagh"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "kruleboyz.ability.covered-in-mud",
+      "default": true
+    },
+    {
+      "id": "kruleboyz.ability.noisy-racket",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "kruleboyz.enh.kunnin-plan",
+      "default": true
+    },
+    {
+      "id": "kruleboyz.enh.morks-eye-pebble",
+      "default": false
+    },
+    {
+      "id": "kruleboyz.enh.egomaniak",
+      "default": false
+    },
+    {
+      "id": "kruleboyz.enh.eye-biter-ash",
+      "default": false
+    }
+  ]
+}

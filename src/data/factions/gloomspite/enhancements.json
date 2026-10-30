@@ -1,0 +1,38 @@
+[
+  {
+    "id": "gloomspite.enh.kunnin-as-a-snarlfang",
+    "faction": "gloomspite",
+    "name": "Kunnin' as a Snarlfang",
+    "text": "Once per battle, in any combat phase, until the end of the turn friendly units wholly within 12\" of the general have +1 Rend on their melee weapons. Companion weapons are not affected.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "gloomspite.ability.kunnin-as-a-snarlfang"
+  },
+  {
+    "id": "gloomspite.enh.glare-of-frazzlegit",
+    "faction": "gloomspite",
+    "name": "Glare of Frazzlegit",
+    "text": "Once per battle, in any combat phase, pick an enemy unit in combat with the general. Until the end of the turn, subtract 1 from that unit's hit rolls.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "gloomspite.ability.glare-of-frazzlegit"
+  },
+  {
+    "id": "gloomspite.enh.sunsteala-shard",
+    "faction": "gloomspite",
+    "name": "Sunsteala Shard",
+    "text": "Once per battle, in the enemy shooting phase, until the end of the turn friendly units wholly within 6\" of the general cannot be picked as the target of a shooting attack, unless the attacker is in combat with that unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "gloomspite.ability.sunsteala-shard"
+  },
+  {
+    "id": "gloomspite.enh.devious-backstabba",
+    "faction": "gloomspite",
+    "name": "Devious Backstabba",
+    "text": "At the end of any turn, pick an enemy Hero in combat with the general's unit and roll a D3. On a 2+, that Hero suffers that much mortal damage.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "gloomspite.ability.devious-backstabba"
+  }
+]

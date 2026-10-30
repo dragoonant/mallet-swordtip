@@ -1,0 +1,38 @@
+[
+  {
+    "id": "lumineth.enh.scattered-to-the-winds",
+    "faction": "lumineth",
+    "name": "Scattered to the Winds",
+    "text": "Each enemy unit within 6\" of the general loses 1 control score for each of your Ride the Hurricane abilities used this battle round (to a minimum of 1).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "lumineth.ability.scattered-to-the-winds"
+  },
+  {
+    "id": "lumineth.enh.wind-whisperer",
+    "faction": "lumineth",
+    "name": "Wind Whisperer",
+    "text": "Once per battle, in any hero phase, pick any edge to be your leeward edge. The edge does not turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "lumineth.ability.wind-whisperer"
+  },
+  {
+    "id": "lumineth.enh.temple-guardians",
+    "faction": "lumineth",
+    "name": "Temple Guardians",
+    "text": "While another friendly Infantry unit is within 3\" of the general, the general and friendly Infantry units within 3\" of it have Ward (5+).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "lumineth.ability.temple-guardians"
+  },
+  {
+    "id": "lumineth.enh.curved-shots",
+    "faction": "lumineth",
+    "name": "Curved Shots",
+    "text": "The general's shooting attacks can measure range and visibility from any point on your leeward edge as well as from the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "lumineth.ability.curved-shots"
+  }
+]

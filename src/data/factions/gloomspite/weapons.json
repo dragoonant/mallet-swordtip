@@ -1,0 +1,114 @@
+[
+  {
+    "id": "gloomspite.weapon.boss-loppa",
+    "name": "Boss Loppa",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 4,
+    "wound": 4,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "gloomspite.weapon.snarlfang-jaws",
+    "name": "Snarlfang's Slavering Jaws",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "COMPANION"
+      }
+    ]
+  },
+  {
+    "id": "gloomspite.weapon.grot-bow",
+    "name": "Grot Bow",
+    "type": "ranged",
+    "range": 15,
+    "A": 2,
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "gloomspite.weapon.stabbin-stikka",
+    "name": "Stabbin' Stikka",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "gloomspite.weapon.pointy-skewas",
+    "name": "Pointy Skewas",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "CHARGE_DAMAGE"
+      }
+    ]
+  },
+  {
+    "id": "gloomspite.weapon.giant-snarlfang-jaws",
+    "name": "Giant Snarlfang's Jaws",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "COMPANION"
+      }
+    ]
+  },
+  {
+    "id": "gloomspite.weapon.wheela-slicers",
+    "name": "Wheela Slicers and Stabbin' Stikka",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "gloomspite.weapon.snarlfangs-jaws-pair",
+    "name": "Snarlfangs' Slavering Jaws",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "COMPANION"
+      }
+    ]
+  }
+]

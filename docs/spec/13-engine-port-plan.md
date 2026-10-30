@@ -263,6 +263,39 @@ Contract edits (all additive): `types.ts` `TacticPiles` `+ oath?: Id | null` and
 | Opponent's hero phase window: already in `phases/command.ts` (`timing { kind: 'phase', phase: 'command', whose: 'any' }`) | — | FYR-AB-2 |
 | Sim pairs every Spearhead army in the bundle (`simPairings`, `--armies a,b`); the start screen already lists armies from data | `tools/sim-core.ts` | any vs any |
 
+### 3.9 F8 engine-core: generic mechanisms for Kruleboyz, Gloomspite Gitz, Lumineth and Kharadron (additive)
+
+Contract edits (all additive): `types.ts` `MoveConstraints` `+ mustEndCloserToEdge?: EdgeRef | null` and the new
+`EdgeRef { axis: 'x' | 'z'; sign: -1 | 1 }`; `events.ts` `+ DamageRedirected { fromUnitId, toUnitId, points }` in the
+`GameEvent` union; `hooks.ts` `EFFECT_HOOKS` `+ hiddenBeyond: []`, `+ affectsCompanion: []` (both read directly). Data
+(types + `common.schema.json`): `Effect.hiddenBeyond?: number`, `Effect.affectsCompanion?: true`, reaction timing
+`+ keyword?: AbilityKeyword`. Non-frozen: `EngineCodeHook` `+ redirectDamage`, `+ forbidsShootingTarget`,
+`+ extraShootingOrigins`, `+ moveEdgeConstraint` (asked of every source entry, ActiveEffects included, after the gate);
+`AbilityWindow` `+ 'moveDeclared' | 'moveEnded' | 'attackDeclared'`; `AbilityService.runReactionWindow?`.
+
+| Mechanism | Where | For |
+|---|---|---|
+| `Effect.hiddenBeyond: N`: enemy models more than N" (edge to edge) from every model of the holder unit cannot see it (`visible`, `visibleFrom`, `fullyVisible`, `unitVisible`, `unitFullyVisible`); `hiddenBeyondFor(state, unitId)`; in-combat checks unaffected | `los.ts` | KRU-RA-1 |
+| `redirectDamage(state, entry, unitId) -> { candidates, succeedOn } \| null` (`hookService.damageRedirectFor`): after the ward, one D6 per point, each >= succeedOn moves to the candidate with most wounds left (ties by id), allocated without a second ward; `DamageRedirected` event | `attack.ts resolvePool`, `code-hooks.ts`, `hooks-impl.ts` | KRU-ENH Egomaniak |
+| Enemy movement / combat / end-of-turn windows: already offered to both players (movement at the end of the phase, combat before the first pick) | — | KRU-ENH, GLO-ENH |
+| Passive descriptors with `noRetreatDamage` / `moveThroughModels` count (`hookService.unitHasEffectFlag`), not only ActiveEffects | `phases/movement.ts`, `hooks-impl.ts` | GLO-BT-1 |
+| `Effect.affectsCompanion`: a stat modifier that also reaches Companion weapons (`effectiveWeapon` queries `statFor` with `companionOnly`; other modifiers and granted abilities still skip them); attack counts of Companion weapons use the effective weapon | `weapons.ts`, `hooks-impl.ts`, `attack.ts` | GLO-AB-1 |
+| `forbidsShootingTarget(state, entry, firingUnitId, targetUnitId)` (`hookService.shootingTargetForbidden` / `...By`): `targetLegality` rejects with the ability name; Ironweld Discipline and the AI read legal targets, so they follow | `phases/shooting.ts` | GLO-ENH Sunsteala Shard |
+| Shooting windows: the opponent's Shooting Phase abilities are also offered before the first shot (`shooting:enemy:start`) and both players' after each activation (`shooting:after:<unitId>`, active first) | `phases/shooting.ts` | GLO-ENH, LRL-AB-3 |
+| Deferred mortal queue drained after each shooting activation (`drainAfterFightMortal`) | `phases/shooting.ts` | GLO-RA-2 |
+| Slides: `checkSlide(..., opts)` / `slideOptions(..., opts)` / `applySlide(..., opts)` with `SlideOpts { passThrough, mustEndOutOfCombat, mayNotEndInCombat, towardEdge }` (a "Toward the ... edge" heading, diagonals); `MoveQueue.opts`; `unitsPassedAcross(state, unitId, dx, dz)`, `unitsPassedAcrossPaths`, `passedAcrossThisPhase(state, unitId)` (movement-phase moves and slides record it) | `factions/aos-moves.ts`, `phases/movement.ts`, `abilities.ts` | GLO-AB-4, LRL-BT-2, KO-AB-6 |
+| Magmic Tunnels hook announces under the ability's own name (`params.redeployText`, `params.preferDatasheets`) | `factions/fyreslayers.ts` | GLO-RA-1 |
+| `moveEdgeConstraint(state, entry, unitId) -> EdgeRef \| null` (`hookService.moveEdgeConstraintFor`) feeds `MoveConstraints.mustEndCloserToEdge` (movement, charge) and every slide; checked per moved model, centre to edge line | `geometry.ts`, `phases/movement.ts`, `phases/charge.ts`, `factions/aos-moves.ts` | LRL-RA-2 |
+| `extraShootingOrigins(state, entry, modelId) -> Vec2[]`: range and visibility may be measured from those points too | `phases/shooting.ts` | LRL-ENH Curved Shots |
+| Reaction window `runReactionWindow(ctx, player, { kind: 'youDeclaredAttack', unitId, phase }, key)`: offers `timing { kind: 'reaction', trigger: 'youDeclared', keyword: 'ATTACK' }`; called after a Shoot declaration and when a unit is picked to fight; `readDeclaredAttack(state) -> { unitId, phase, seq }` | `abilities.ts`, `declared.ts`, `phases/shooting.ts`, `phases/fight.ts` | LRL-BT-3 |
+| Casting (CORE-15 slice): a descriptor with `castingValue` rolls `castingRoll` (2D6, miscast on double 1 = D3 mortal to the caster and no more spells that phase, power level per phase from `wizard` or the WIZARD keyword) instead of its declared roll; enemy Wizards within 30" try to unbind automatically (RULING) | `magic.ts`, `abilities.ts` | LRL-AB-1 |
+| `damagedByShootingThisPhase(state, attackerUnitId)` (phase marks `shotDmg:a>t`) | `attack.ts` | LRL-AB-3 |
+| `RedeployRequest.region` (wholly within), `.anchor { unitId, whollyWithin }` (rings round the anchor), `.origin` + `liftForRedeploy(ctx, unitId)` (fallback: origin, else nearest legal spot), `.atWindow` (asked only in that window); `export largeFeatureIn` | `redeploy.ts`, `abilities.ts`, `cards.ts` | LRL-AB-4, LRL-RA-1, KO-BT-1 |
+| Move-declared window: after `declareMove` (not stationary), before the Run / Retreat roll, `runWindow('moveDeclared', player, 'md:<unitId>')` offers `{ kind: 'reaction', trigger: 'youDeclared', abilityId: 'core.move' }` and movement descriptors with `params.window: 'moveDeclared'`; `readDeclaredMove(state)`; after the unit's move, `runWindow('moveEnded', ...)` asks queued set-ups | `phases/movement.ts`, `abilities.ts`, `declared.ts` | KO-BT-1, KO-RA-2 |
+| Ability retreats: `retreatOptions(state, unitId, max)`, `applyRetreat(ctx, unitId, optionId, max)`, `MoveQueue.kind: 'retreat'` | `factions/aos-moves.ts`, `abilities.ts` | KO-AB-2 |
+| Charge placement: shortest approaches (exact ½" reach), rings with rotations for ovals, per-model fits with ½" grid paths round blockers that never climb; oval bases end against walls by their real outline (`canEndAt`) | `phases/charge.ts`, `terrain.ts` | F7 AI finding |
+| Move candidates: up to 9 varied intents (each of 3 objectives, stopping on it; toward / away from the nearest enemy; toward the nearest friend; both sides; compass) | `phases/movement.ts` | F7 AI finding |
+
 ## 4. Client impact
 
 ### 4.1 Counts

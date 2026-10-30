@@ -1,0 +1,54 @@
+[
+  {
+    "id": "kruleboyz.unit.beast-skewer-killbow",
+    "faction": "kruleboyz",
+    "name": "Beast-skewer Killbow",
+    "keywords": [
+      "WAR MACHINE"
+    ],
+    "factionKeywords": [
+      "DESTRUCTION",
+      "ORRUK WARCLANS",
+      "KRULEBOYZ"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 5,
+      "Sv": 5,
+      "OC": 2
+    },
+    "composition": [
+      {
+        "modelId": "killbow",
+        "name": "Beast-skewer Killbow",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "oval",
+          "mm": 90,
+          "mm2": 52
+        },
+        "weapons": {
+          "default": [
+            "kruleboyz.weapon.beast-skewer-bolts",
+            "kruleboyz.weapon.jaggedy-blades"
+          ]
+        },
+        "figure": {
+          "archetype": "vehicle",
+          "kit": "generic-vehicle"
+        }
+      }
+    ],
+    "abilities": [
+      "kruleboyz.ability.skewered"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "vehicle",
+      "kit": "generic-vehicle"
+    },
+    "spearhead": true
+  }
+]

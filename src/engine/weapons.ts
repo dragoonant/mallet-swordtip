@@ -26,16 +26,17 @@ export const weaponService: WeaponService = {
   },
   // stat modifiers (onStatQuery: modifyStat/setStat) applied to the weapon's numeric stats (range, Attacks / Damage when they
   // are flat numbers, Hit via BS/WS, Rend via the AP axis: Rend n = AP -n) and grantWeaponAbility effects merged in.
-  // CORE-12.4 Companion: a Companion weapon is unaffected by friendly characteristic changes, so it is returned as printed
-  // (negative modifiers and enemy abilities act on the rolls, not on the profile).
+  // CORE-12.4 Companion: a Companion weapon is unaffected by friendly characteristic changes, so only stat modifiers whose
+  // effect carries `affectsCompanion` (GLO-AB-1 Great Snarlin' Howl) reach it, and no ability is granted to it (negative
+  // modifiers and enemy abilities act on the rolls, not on the profile).
   effectiveWeapon(state, modelId, weaponId, attack) {
     const base = state.weapons[weaponId]
     const model = state.models[modelId]
     if (!base || !model) return base
-    if (base.abilities.some((a) => a.ability === 'COMPANION')) return base
-    const abilities = hookService.weaponAbilitiesFor ? hookService.weaponAbilitiesFor(state, modelId, base, attack) : base.abilities
+    const companionOnly = base.abilities.some((a) => a.ability === 'COMPANION')
+    const abilities = companionOnly ? base.abilities : hookService.weaponAbilitiesFor ? hookService.weaponAbilitiesFor(state, modelId, base, attack) : base.abilities
     const q = (stat: 'BS' | 'WS' | 'S' | 'AP' | 'range' | 'A' | 'D', v: number) =>
-      hookService.statFor ? hookService.statFor(state, { unitId: model.unitId, modelId, weapon: base, stat, attack }, v) : v
+      hookService.statFor ? hookService.statFor(state, { unitId: model.unitId, modelId, weapon: base, stat, attack, ...(companionOnly ? { companionOnly } : {}) }, v) : v
     const skillStat = base.kind === 'ranged' ? 'BS' as const : 'WS' as const
     const skill = base.skill === null ? null : q(skillStat, base.skill)
     const range = q('range', base.range)
@@ -43,7 +44,9 @@ export const weaponService: WeaponService = {
     const parsedA = parseDiceExpr(base.A)
     const A: DiceExpr = parsedA.count === 0 ? q('A', parsedA.flat) : base.A
     const parsedD = parseDiceExpr(base.D)
-    const D: DiceExpr = parsedD.count === 0 ? q('D', parsedD.flat) : base.D
+    // KRU-AB-2 Skewered: a setStat on a dice Damage (D6 -> 6) replaces it. Two probes with very different bases agree only when a
+    // set is in force (a plain modifier would shift both), so additive modifiers still leave a dice Damage alone.
+    const D: DiceExpr = parsedD.count === 0 ? q('D', parsedD.flat) : ((set) => (set === q('D', 2000) ? set : base.D))(q('D', 1000))
     if (abilities === base.abilities && skill === base.skill && range === base.range && A === base.A && D === base.D && rend === base.rend) return base
     return { ...base, abilities, skill, range, A, D, rend }
   },

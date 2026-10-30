@@ -1,0 +1,17 @@
+{
+  "id": "kharadron",
+  "name": "Kharadron Overlords",
+  "factionKeyword": "KHARADRON OVERLORDS",
+  "armyRule": "kharadron.ability.skyhammer-task-force",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#a42532",
+    "secondary": "#ebe2cd",
+    "trim": "#b9783a",
+    "metal": "#c9954f",
+    "decal": "#58d6a0"
+  },
+  "combatPatrols": [
+    "kharadron.army.skyhammer-task-force"
+  ]
+}

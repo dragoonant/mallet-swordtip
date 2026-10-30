@@ -1,0 +1,296 @@
+[
+  {
+    "id": "kruleboyz.ability.swampskulka-gang",
+    "name": "Swampskulka Gang",
+    "text": "Army marker for the Swampskulka Gang. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.kruleboyz-waaagh",
+    "name": "Kruleboyz Waaagh!",
+    "text": "Once per battle, in any combat phase, the general can call a Waaagh!: pick another friendly unit wholly within 12\" of the general. For the rest of the phase, the general and that unit have Strike-first.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "duration": "untilEndOfPhase",
+    "code": "kruleboyzWaaagh",
+    "params": {
+      "army": true,
+      "range": 12,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.covered-in-mud",
+    "name": "Covered in Mud",
+    "text": "Once per battle, at the start of the first battle round, pick 1 friendly unit. For the rest of the battle, enemy models more than 12\" away from that unit cannot see it, so they cannot target it.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfRound",
+      "whose": "your"
+    },
+    "limit": "oncePerBattle",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "duration": "battle",
+    "code": "kruleboyzCoveredInMud",
+    "params": {
+      "round": 1,
+      "hiddenBeyond": 12,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.noisy-racket",
+    "name": "Noisy Racket",
+    "text": "In the first battle round, subtract 1 from the wound rolls of attacks made by enemy units.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "enemy"
+    },
+    "when": {
+      "round": {
+        "lte": 1
+      }
+    },
+    "effect": {
+      "modifyRoll": {
+        "roll": "wound",
+        "value": -1
+      }
+    }
+  },
+  {
+    "id": "kruleboyz.ability.kunnin-plan",
+    "name": "Kunnin' Plan",
+    "text": "Once per turn, in your hero phase, pick a friendly unit wholly within 12\" of the general (the general can pick itself). If that unit retreats this turn, it suffers no mortal damage from the retreat, and it can still shoot and charge later in the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "limit": "oncePerTurn",
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "kruleboyzKunninPlan",
+    "params": {
+      "range": 12,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.morks-eye-pebble",
+    "name": "Mork's Eye Pebble",
+    "text": "Once per battle, in the enemy movement phase, pick this ability: in the shooting phase that follows, friendly units have Ward (5+) while they are wholly within 12\" of the general.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "movement",
+      "whose": "enemy"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "duration": "untilEndOfTurn",
+    "code": "kruleboyzMorksEyePebble",
+    "params": {
+      "ward": 5,
+      "range": 12,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.egomaniak",
+    "name": "Egomaniak",
+    "text": "Each time a damage point would be allocated to the general while another friendly unit is within 3\" of the general, roll a dice. On a 4+, that point is allocated to one of those units instead.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "kruleboyzEgomaniak",
+    "params": {
+      "range": 3,
+      "succeedOn": 4
+    }
+  },
+  {
+    "id": "kruleboyz.ability.eye-biter-ash",
+    "name": "Eye-biter Ash",
+    "text": "Once per battle, in any combat phase, pick an enemy unit in combat with the general and roll a dice. On a 1-4, subtract 1 from that unit's hit rolls for the rest of the phase. On a 5+, subtract 1 from its hit rolls for the rest of the battle.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "code": "kruleboyzEyeBiterAsh",
+    "params": {
+      "battleOn": 5,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.all-part-of-da-plan",
+    "name": "All Part of Da Plan",
+    "text": "In your hero phase, pick another friendly unit wholly within 9\" of this unit. Until the start of your next turn, that unit has 3 more Control.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 9
+          }
+        }
+      }
+    ],
+    "duration": "untilNextTurn",
+    "code": "kruleboyzAllPartOfDaPlan",
+    "params": {
+      "range": 9,
+      "control": 3,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.breath-of-the-mire-drakes",
+    "name": "Breath of the Mire-drakes",
+    "text": "In any combat phase, if this unit is in combat, roll a dice for each enemy unit in combat with it. On a 2-5 that unit suffers 1 mortal damage; on a 6 it suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "code": "kruleboyzBreathOfTheMireDrakes",
+    "params": {
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.pick-em-off",
+    "name": "Pick 'Em Off",
+    "text": "Add 1 to hit rolls for this unit's shooting attacks if it has not used a Move ability this turn.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "when": {
+        "weaponType": "ranged"
+      },
+      "modifyRoll": {
+        "roll": "hit",
+        "value": 1
+      }
+    },
+    "code": "kruleboyzPickEmOff"
+  },
+  {
+    "id": "kruleboyz.ability.scare-taktikz",
+    "name": "Scare Taktikz",
+    "text": "In any combat phase, roll a dice. On a 3+, subtract 1 from the hit rolls of attacks that target this unit for the rest of the phase, unless the attacker is a Hero.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "duration": "untilEndOfPhase",
+    "code": "kruleboyzScareTaktikz",
+    "params": {
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "kruleboyz.ability.skewered",
+    "name": "Skewered",
+    "text": "The Beast-skewer Bolts have Damage 6 instead of D6 when they target a Monster.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "when": {
+        "weaponId": "kruleboyz.weapon.beast-skewer-bolts",
+        "targetKeyword": "MONSTER"
+      },
+      "setStat": {
+        "stat": "D",
+        "value": 6
+      }
+    }
+  }
+]

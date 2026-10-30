@@ -24,13 +24,14 @@ Rule IDs `KO-*` double as test IDs (§9).
 | ID | Unit | Models | Role | Reinforcements | Base (mm) |
 |---|---|---|---|---|---|
 | `kharadron.unit.arkanaut-admiral` | Arkanaut Admiral | 1 | **General** | no | 32 round (Wahapedia) |
-| `kharadron.unit.arkanaut-company` (a) | Arkanaut Company | 5: 4 pistol + cutter, 1 Skypike | Unit | **yes** | 25 round (Wahapedia) |
-| `kharadron.unit.arkanaut-company` (b) | Arkanaut Company | 5: 3 pistol + cutter, 1 Volley Gun + Gun Butt, 1 Light Skyhook + Gun Butt | Unit | **yes** | 25 round |
+| `kharadron.unit.arkanaut-company` (a) | Arkanaut Company (Skypike) | 5: 4 pistol + cutter, 1 Skypike | Unit | **yes** | 25 round (Wahapedia) |
+| `kharadron.unit.arkanaut-company-gunners` (b) | Arkanaut Company (Gunners) | 5: 3 pistol + cutter, 1 Volley Gun + Gun Butt, 1 Light Skyhook + Gun Butt | Unit | **yes** | 25 round |
 | `kharadron.unit.skywardens` | Skywardens | 3: 2 Vulcaniser Pistol + Skypike, 1 Volley Gun + Gun Butt | Unit | **yes** | 32 round, flying stand (Wahapedia) |
 | `kharadron.unit.arkanaut-frigate` | Arkanaut Frigate | 1 | Unit | no | 120×92 oval, flying stand (Wahapedia) |
 
-Total: 5 units, 15 models. Both Arkanaut Company units share one warscroll but differ in loadout (patrol
-`wargear` per unit, see §7). No Wizard or Priest. Only the Frigate and the Skywardens have **Fly**.
+Total: 5 units, 15 models. Both Arkanaut Company units share one printed warscroll but differ in loadout. As shipped they are
+two datasheet ids with identical stats and abilities (the engine fixes a unit's model counts from the datasheet defaults, and the
+patrol `wargear` list only swaps weapons, so one datasheet cannot give 4+1 to one unit and 3+1+1 to the other); see §11. No Wizard or Priest. Only the Frigate and the Skywardens have **Fly**.
 
 ---
 
@@ -96,7 +97,9 @@ Keywords: **Hero, Infantry**
 **KO-AB-1 `kharadron.ability.always-take-what-you-are-owed` — Always Take What You Are Owed**
 - **Timing:** Your hero phase (once per phase for this unit, CORE-3.4).
 - **Declare:** Pick a friendly **Arkanaut Company** unit wholly within 12" of this unit.
-- **Effect:** Roll a D6; add the result to the target's **Control** until the start of your next turn.
+- **Effect:** Roll a D6; add the result to the target's **control score** (the unit's total on an objective, CORE-17.4) until the
+  start of your next turn. [fixed after checking the PDF: the printed text says control score, not the Control characteristic,
+  so the bonus is added once per unit and not once per model.]
 
 ### 5.2 `kharadron.unit.arkanaut-company` — Arkanaut Company
 | Move | Health | Save | Control | Ward |
@@ -186,7 +189,7 @@ faction code hook in `src/engine/factions/kharadron.ts` (registered in `code-hoo
 | Rule | Class | How |
 |---|---|---|
 | Stats, keywords, no printed Ward | (a) | Datasheets as the other four armies; `HERO`, `INFANTRY`, `FLY`, `WAR MACHINE`, `REINFORCEMENTS` keywords. |
-| Two Arkanaut loadouts | (a) | One datasheet with model variants (`arkanaut`, `arkanaut-skypike`, `arkanaut-volley`, `arkanaut-skyhook`); the patrol's two `arkanaut-company` entries pick counts through `PatrolUnitData.wargear` (or composition `default`s plus wargear). List special-weapon models **last** so list-order allocation kills them last (as the StD Godspeaker). Skywardens: `skywarden` ×2, `skywarden-volley` ×1. Reinforcement copies keep the loadout (`spawnDestroyedUnitCopy`). |
+| Two Arkanaut loadouts | (a) | [shipped as two datasheets, see §11] One datasheet with model variants (`arkanaut`, `arkanaut-skypike`, `arkanaut-volley`, `arkanaut-skyhook`); the patrol's two `arkanaut-company` entries pick counts through `PatrolUnitData.wargear` (or composition `default`s plus wargear). List special-weapon models **last** so list-order allocation kills them last (as the StD Godspeaker). Skywardens: `skywarden` ×2, `skywarden-volley` ×1. Reinforcement copies keep the loadout (`spawnDestroyedUnitCopy`). |
 | Shoot in Combat, Crit (Mortal), 2D6 / D3 / D6 values | (a) | Weapon abilities `SHOOT_IN_COMBAT`, `CRIT_MORTAL`; dice expressions in `A` / `D`. |
 | Fly (Frigate, Skywardens) | (a) | Existing FLY handling in `phases/movement.ts` and `phases/charge.ts`. |
 | Reinforcements (both Companies, Skywardens) | (a) | Core `spearheadCallForReinforcements`. Admiral and Frigate cannot be replaced. |
@@ -194,7 +197,7 @@ faction code hook in `src/engine/factions/kharadron.ts` (registered in `code-hoo
 | KO-AB-5 Battle Damaged | (a) | Datasheet `damaged: { threshold: 5, effect: { when: { weaponId: 'kharadron.weapon.heavy-skyhook' }, setStat: { stat: 'A', value: 1 } } }` (hooks-impl adds `damaged` entries while `woundsRemaining <= threshold`). Verify the `damaged` entry reaches the weapon-stat query (`onStatQuery`, A), not only roll hooks; if not, a small (c) in `hooks-impl.ts`. |
 | KO-ENH Masterwrought Armour | (a) | Passive enhancement, scope bearer, `{ feelNoPain: 6 }` (as Armour of Gork). |
 | KO-ENH Flask of Vintage Gorogna | (a) | Reuse code `citiesFlask` (timing comes from data): `timing { phase: 'command', whose: 'any' }`, `limit oncePerBattle`, `params.heal 'D6'`; `canUse` needs the general damaged. |
-| KO-AB-1 Always Take What You Are Owed | (b) `kharadronTakeWhatYouAreOwed` | Activated, `phase command / your`, `limit oncePerPhase`. Targets: friendly units with `isDatasheet(…, 'arkanaut-company')` and `whollyWithinUnit(target, admiral, 12)`. Resolve: roll D6 (`ctx.rollExpr`), `effects.grant(target, { modifyStat: { stat: 'OC', value: n } }, scope self, duration 'untilNextTurn')`. |
+| KO-AB-1 Always Take What You Are Owed | (b) `kharadronTakeWhatYouAreOwed` | Activated, `phase command / your`, `limit oncePerPhase`. Targets: friendly units with `isDatasheet(…, 'arkanaut-company')` and `whollyWithinUnit(target, admiral, 12)`. Resolve: roll D6 (`ctx.rollExpr`), grant an empty effect (scope self, duration 'untilNextTurn') and keep `n` in a ledger (`mission.custom.koControl[effect id]`); the hook's `produce` at `onObjectiveControl` returns `{ kind: 'stat', delta: n }` for the contesting unit (a `modifyStat OC` would have added n to every model). |
 | KO-ENH Leave No Duardin Behind | (b) `kharadronLeaveNoDuardin` | Shape of `fyreslayersHornOfGrimnir`: `phase command / your`, `oncePerBattle`; targets = Arkanaut Companies wholly within 12" of the general with `returnableModels > 0`; roll `returnableModels` D6 (perDie), `returnSlainModels(ctx, target, count of ≥ params.successOn (4))`. |
 | KO-ENH No Reward Without Risk | (b) `kharadronNoRewardWithoutRisk` | Like Visions of Glory's ledger on `onChargeRoll`: `produce` answers `{ kind: 'roll', reroll: 'all' }` when the charging unit is `whollyWithinUnit(charger, general, 12)` and `mission.custom.koNoReward[player]` is unspent; mark it spent on that answer. `rerolls.ts` only asks for a roll that falls short, so the once-per-battle re-roll is never wasted. Data timing stays the reaction (the loop never offers reactions). |
 | KO-RA-2 Disengage | (b) `kharadronDisengage` + (c) C1 | Grants the Frigate `[{ noRetreatDamage: true }, { shootAfterFallBack: true }]` until end of turn (`Effect` fields exist; `movement.ts` waives the damage, `hooks-impl` allows the shot after `fallBack`). Problem: movement-phase abilities are only offered **after** all units moved (`doAbilities`), too late. Offer it in the C1 move-declared window when the Frigate declares a Retreat (before the D3 roll); `params.window: 'moveDeclared'`. |
@@ -306,6 +309,28 @@ whether it is still alive). No champion or musician variants: the Spearhead give
 
 ## 11. Implementation notes
 
-Not built yet. When shipped, record here: data path `src/data/factions/kharadron/`, hooks `src/engine/factions/kharadron.ts`
-(`...kharadronHooks` in `code-hooks.ts`), tests `tests/engine/kharadron.test.ts` / `tests/data/kharadron.test.ts`, and any
-choice the spec left open (C1–C4 shapes, passenger fallback, AI tie-breaks).
+Shipped (F8). Data `src/data/factions/kharadron/` (army `kharadron.army.skyhammer-task-force`), hooks `src/engine/factions/kharadron.ts`
+(`...kharadronHooks` in `code-hooks.ts`), tests `tests/engine/kharadron.test.ts` and `tests/data/kharadron.test.ts` (one test per KO- id).
+
+- **Two Company datasheets.** `kharadron.unit.arkanaut-company` ("Arkanaut Company (Skypike)": models `arkanaut` x4 + `arkanaut-skypike`)
+  and `kharadron.unit.arkanaut-company-gunners` ("Arkanaut Company (Gunners)": `arkanaut` x3 + `arkanaut-volley` + `arkanaut-skyhook`).
+  Both carry Glory-Seekers and Reinforcements; the Always Take / Leave No Duardin hooks match them by `params.datasheets`. Special
+  models are listed last. Figure mapping keys are `<datasheet id>/<modelId>`.
+- **Engine hooks used (F8 engine-core):** C1 `moveDeclared` window (Ply the Skies as a reaction `{ youDeclared, abilityId 'core.move' }`,
+  Disengage as a movement ability with `params.window 'moveDeclared'`), C2 `liftForRedeploy` + anchored `requestRedeploy` (`atWindow
+  'moveEnded'`, `markSetUp`, origin fallback), C3 `MoveQueue kind 'retreat'`, C4 `passedAcrossThisPhase`.
+- **Ply the Skies:** one use per Frigate and phase (phase mark `ko:ply:<frigate>`); the descriptor carries UNLIMITED so CORE-3.4 does not
+  block a second Frigate. The target step lists the Companies first. The passenger gets `forbid: charge` until end of turn (Assault Boat
+  removes the effect granted by Ply the Skies).
+- **No Reward Without Risk:** a passive marker. `ensureEffects` puts a battle-long empty effect on the general's unit; `produce` at
+  `onChargeRoll` answers `{ kind: 'roll', reroll: 'all' }` only for a charge roll that already fell short (the roll carries `needed`),
+  for a charger wholly within 12" of the general, once per battle (`mission.custom.koNoReward[player]`).
+- **Flask of Vintage Gorogna:** own hook `kharadronFlask` (the Cities flask announces under its own name); any hero phase, either player's.
+- **Timed Charges:** [RULING] the Retreat is only queued when the Skywardens are still in combat after the mortal damage (a Retreat is how
+  a unit leaves combat); the player may pass to stay. Move = the unit's Move characteristic (12").
+- **AI** (`kharadronAbilityTiming` / `kharadronTargetBonus` / `kharadronModeBonus`, called from `src/ai/utility.ts`): Assault Boat only for a ride that
+  ended within 12" of an enemy; Ply the Skies carries the Skypike Company, then the gunners, not the Admiral; Always Take What You Are Owed
+  prefers a Company on an objective; Bomb Racks prefers the weakest unit; the Timed Charges retreat is taken only from an enemy with
+  more Health left than the Skywardens.
+- **Defaults for the sim:** regiment Assault Boat and enhancement Leave No Duardin Behind; variant games Disengage and There's No Reward
+  Without Risk (the last entries in the patrol lists).

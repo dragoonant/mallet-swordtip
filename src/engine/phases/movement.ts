@@ -22,12 +22,13 @@ import {
   samplePath, whollyOnBoard, withinEngagementRange, type Footprint, type ResolvedPlacement,
 } from '../geometry'
 import { hookService } from '../hooks-impl'
-import { effectService } from '../effects'
 import { leaderService } from '../leaders'
 import { attackService } from '../attack'
 import { losService } from '../los'
 import { terrainService } from '../terrain'
 import { notImplementedHandle, type AdvanceResult, type EngineContext, type PhaseModule } from '../modules'
+import { writeDeclaredMove } from '../declared'
+import { recordPassedAcross, unitsPassedAcrossPaths } from '../factions/aos-moves'
 import {
   boardModelsOf, boardUnitsOf, datasheetOf, deploymentZone, enemyModelsOnBoard, hasKeyword, keywordsOf, modelStats, setModelPos,
   unitModels, unitModelsForCoherency,
@@ -130,8 +131,9 @@ function moveAllowance(state: GameState, unitId: UnitId): { perModel: Record<Mod
 function buildMoveConstraints(state: GameState, unitId: UnitId) {
   const { perModel } = moveAllowance(state, unitId)
   const max = Object.values(perModel).reduce((a, b) => Math.max(a, b), 0)
-  // combat range is checked by this module with visibility (CORE-1.5), not by the plain range flag
-  return emptyMoveConstraints(max, { perModel, mustEndOutsideEngagement: false, coherency: true })
+  // combat range is checked by this module with visibility (CORE-1.5), not by the plain range flag. F8 (LRL-RA-2 Roaring
+  // Headwind): a code hook may make every model end closer to one battlefield edge
+  return emptyMoveConstraints(max, { perModel, mustEndOutsideEngagement: false, coherency: true, mustEndCloserToEdge: hookService.moveEdgeConstraintFor(state, unitId) })
 }
 
 const flyOf = (state: GameState, m: Model): boolean => hasKeyword(state, m.unitId, 'FLY')
@@ -144,8 +146,7 @@ function resolveMove(state: GameState, unitId: UnitId, moveType: MoveType, place
   const player = state.units[unitId].player
   const enemies = enemyModelsOnBoard(state, player)
   const otherFriendly = friendlyOthers(state, unitId)
-  const max = Object.values(perModel).reduce((a, b) => Math.max(a, b), 0)
-  const constraints = emptyMoveConstraints(max, { perModel, mustEndOutsideEngagement: false, coherency: true })
+  const constraints = buildMoveConstraints(state, unitId)
   const allFly = models.length > 0 && models.every((m) => flyOf(state, m))
   const result = checkPlacements({
     unitModels: models, placements, constraints, otherFriendly, enemies, board: state.board, pivotCost: pivot, fly: allFly,
@@ -206,12 +207,14 @@ export function resolveSurgeMove(_ctx: EngineContext, _unitId: UnitId, _distance
 export function crossesBigFriendly(_state: GameState, _model: Model, _fp: Footprint, _path: Vec3[], _otherFriendly: Model[]): boolean { return false }
 export function overwatchTargets(_state: GameState, _shooterUnitId: UnitId, _targetUnitId: UnitId): DeclaredTarget[] { return [] }
 export function defaultOverwatchSelection(_state: GameState, all: DeclaredTarget[]): DeclaredTarget[] { return all }
+// active effects and (F8) passive descriptors the unit holds itself (hookService.unitHasEffectFlag)
 export function unitMovesThroughModels(state: GameState, unitId: UnitId): boolean {
-  return effectService.activeFor(state, unitId).some((e) => (Array.isArray(e.effect) ? e.effect : [e.effect]).some((x) => (x as Record<string, unknown>).moveThroughModels === true))
+  return hookService.unitHasEffectFlag(state, unitId, 'moveThroughModels')
 }
-// Effect.noRetreatDamage (STD-RA-2 Fearless Invaders): an active effect on the unit waives the Retreat mortal damage
+// Effect.noRetreatDamage (STD-RA-2 Fearless Invaders; GLO-BT-1 Fast as Frazzlegit as a passive battle trait, F8): the Retreat
+// costs no mortal damage
 export function unitIgnoresRetreatDamage(state: GameState, unitId: UnitId): boolean {
-  return effectService.activeFor(state, unitId).some((e) => (Array.isArray(e.effect) ? e.effect : [e.effect]).some((x) => (x as Record<string, unknown>).noRetreatDamage === true))
+  return hookService.unitHasEffectFlag(state, unitId, 'noRetreatDamage')
 }
 
 // ---------- move declaration ----------
@@ -233,12 +236,21 @@ function setUpThisTurn(state: GameState, unitId: UnitId): boolean {
 
 function finishUnit(state: GameState, unitId: UnitId, extraIds: UnitId[] = []): void {
   for (const id of [unitId, ...extraIds]) if (!state.phaseState.activated.includes(id)) state.phaseState.activated.push(id)
+  // F8 C2: a unit whose 'moveDeclared' window ran gets its 'moveEnded' window before the next unit is picked
+  if (state.phaseState.marks.includes(`mv:declWin:${unitId}`)) writeMark(state, 'mv:endWin', unitId)
   writeMark(state, 'mv:cur', null)
   writeMark(state, 'mv:placements', null)
 }
 
 function doSelect(ctx: EngineContext): 'pending' | 'declare' | 'reinforcements' {
   const s = ctx.state
+  // F8 C2: the finished unit's 'moveEnded' window (asks queued anchored set-ups: KO-BT-1 Ply the Skies' passenger)
+  const ended = readMark(s, 'mv:endWin')
+  if (ended !== null) {
+    if (ctx.services.abilities.runWindow(ctx, 'moveEnded', s.units[ended]?.player ?? s.activePlayer, `me:${ended}`)) return 'pending'
+    writeMark(s, 'mv:endWin', null)
+    writeDeclaredMove(s, null)
+  }
   if (readMark(s, 'mv:cur') !== null) return 'declare'
   const active = s.activePlayer
   const activated = new Set(s.phaseState.activated)
@@ -282,6 +294,12 @@ function doDeclare(ctx: EngineContext): 'pending' | 'move' | 'select' {
     ctx.emit({ type: 'UnitRemainedStationary', unitId, player: unit.player })
     finishUnit(s, unitId)
     return 'select'
+  }
+  // F8 C1: abilities that react to the declared move (KO-BT-1 Ply the Skies, KO-RA-2 Disengage), before any roll or move
+  if (!s.phaseState.marks.includes(`mv:declWin:${unitId}`)) {
+    writeDeclaredMove(s, { unitId, moveType: unit.turn.moveType })
+    if (ctx.services.abilities.runWindow(ctx, 'moveDeclared', unit.player, `md:${unitId}`)) return 'pending'
+    s.phaseState.marks.push(`mv:declWin:${unitId}`)
   }
   unit.turn.usedCoreThisPhase = true // CORE-3.4: one Core ability per unit per phase
   // Run: D6 added to Move (CORE-6.2)
@@ -339,6 +357,9 @@ function doMove(ctx: EngineContext): 'pending' | 'select' {
   const placements = (JSON.parse(placementsRaw) as ModelPlacement[]).filter((p) => s.models[p.modelId])
   const result = resolveMove(s, unitId, moveType, placements)
   if (result.rejection) throw new EngineInvariantError('movement: stored placements failed re-validation', { rejection: result.rejection })
+  // F8 C4: enemy units this move passed across (KO-AB-6 Bomb Racks; passedAcrossThisPhase)
+  const moved = Object.fromEntries(result.resolved.filter((r) => r.distance > EPS).map((r) => [r.model.id, r.path]))
+  recordPassedAcross(s, unitId, unitsPassedAcrossPaths(s, unitId, moved))
   for (const r of result.resolved) { const m = s.models[r.model.id]; if (m) setModelPos(m, r.to, r.facing) }
   ctx.emit({
     type: 'UnitMoved', unitId, moveType,
@@ -456,6 +477,10 @@ function doAbilities(ctx: EngineContext): 'pending' | 'done' {
 
 // ---------- legal-action candidates (generic Deciders need >=1 concrete answer for continuous decisions) ----------
 // Shared by moveUnitCandidates and canRetreat (declareMove must not offer a Retreat no placement can answer).
+// F8: up to MOVE_CANDIDATES varied moves, one per intent (each objective, stopping on it; toward / away from the nearest enemy;
+// toward the nearest friendly unit; both sides at right angles to the nearest objective; then the compass), each as far as it
+// legally goes (full, 60%, 30%); then staying put and the coherency repairs / formations fill any room left.
+const MOVE_CANDIDATES = 9
 function moveUnitCandidatesFor(state: GameState, unitId: UnitId, moveType: MoveType, player: PlayerId, decisionId: string): Action[] {
   const unit = state.units[unitId]
   if (!unit) return []
@@ -466,17 +491,43 @@ function moveUnitCandidatesFor(state: GameState, unitId: UnitId, moveType: MoveT
   const c = centroid(models)
   const enemies = enemyModelsOnBoard(state, unit.player)
   const dirs: { x: number; z: number }[] = []
+  const intents: { v: { x: number; z: number }; len: number }[] = []
+  const intent = (to: { x: number; z: number } | null, stopAt?: number): void => {
+    if (!to) return
+    const v = unitVector(c, to)
+    if (!v || intents.some((i) => Math.abs(i.v.x - v.x) < 0.05 && Math.abs(i.v.z - v.z) < 0.05 && (stopAt === undefined || i.len >= allow))) return
+    intents.push({ v, len: stopAt === undefined ? allow : Math.max(0.5, Math.min(allow, stopAt)) })
+  }
   const objs = Object.values(state.objectives).filter((o) => !o.removed).sort((a, b) => dist2D(c, a.pos) - dist2D(c, b.pos))
+  for (const o of objs.slice(0, 3)) intent(o.pos, dist2D(c, o.pos))
   if (objs[0]) { const v = unitVector(c, objs[0].pos); if (v) dirs.push(v) }
   if (enemies.length > 0) {
     const e = [...enemies].sort((a, b) => dist2D(c, a.pos) - dist2D(c, b.pos))[0]
     const v = unitVector(c, e.pos)
-    if (v) { dirs.push(v); dirs.push({ x: -v.x, z: -v.z }) }
+    if (v) { dirs.push(v); dirs.push({ x: -v.x, z: -v.z }); intent(e.pos); intent({ x: c.x - v.x, z: c.z - v.z }) }
   }
+  const friends = boardUnitsOf(state, unit.player).filter((u) => !leaderService.halves(state, unitId).includes(u.id)).map((u) => centroid(unitModels(state, u.id))).filter((p) => Number.isFinite(p.x))
+  if (friends.length > 0) {
+    const f = friends.reduce((a, b) => (dist2D(c, b) < dist2D(c, a) ? b : a))
+    intent(f, dist2D(c, f) - 3)
+  }
+  if (objs[0]) {
+    const v = unitVector(c, objs[0].pos)
+    if (v) { intent({ x: c.x - v.z, z: c.z + v.x }); intent({ x: c.x + v.z, z: c.z - v.x }) }
+  }
+  for (let i = 0; i < 8; i++) intent({ x: c.x + Math.cos((2 * Math.PI * i) / 8), z: c.z + Math.sin((2 * Math.PI * i) / 8) })
   for (let i = 0; i < 16; i++) dirs.push({ x: Math.cos((2 * Math.PI * i) / 16), z: Math.sin((2 * Math.PI * i) / 16) })
   const mk = (placements: ModelPlacement[]): Action => ({ type: 'moveUnit', player, decisionId, unitId, placements })
+  const valid = (a: Action): boolean => a.type === 'moveUnit' && moveRejection(state, unitId, moveType, a.placements) === null
+  const picked: Action[] = []
+  for (const it of intents) {
+    if (picked.length >= MOVE_CANDIDATES - 1) break
+    for (const frac of [1, 0.6, 0.3]) {
+      const a = mk(translatePlacements(models, it.v.x * it.len * frac, it.v.z * it.len * frac))
+      if (valid(a)) { picked.push(a); break }
+    }
+  }
   const candidates: Action[] = []
-  for (const frac of [1, 0.6, 0.3]) for (const d of dirs) candidates.push(mk(translatePlacements(models, d.x * allow * frac, d.z * allow * frac)))
   candidates.push(mk([]))
   // regroup candidates for a unit that starts out of coherency (rigid translations can never end coherent)
   const allowOf = (m: Model): number => Math.max(0, (perModel[m.id] ?? 0) - 0.05)
@@ -496,7 +547,7 @@ function moveUnitCandidatesFor(state: GameState, unitId: UnitId, moveType: MoveT
       if (frac === 0) break
     }
   }
-  return filterValid(candidates, (a) => (a.type === 'moveUnit' ? moveRejection(state, unitId, moveType, a.placements) : null), 6)
+  return [...picked, ...filterValid(candidates, (a) => (a.type === 'moveUnit' ? moveRejection(state, unitId, moveType, a.placements) : null), Math.max(1, MOVE_CANDIDATES + 1 - picked.length))]
 }
 
 function arrivalCandidates(state: GameState, pending: Extract<PendingDecision, { kind: 'deployUnit' }>): Action[] {

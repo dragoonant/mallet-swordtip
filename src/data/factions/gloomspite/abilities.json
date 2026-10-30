@@ -1,0 +1,279 @@
+[
+  {
+    "id": "gloomspite.ability.snarlpack-huntaz",
+    "name": "Snarlpack Huntaz",
+    "text": "Army marker for the Gloomspite Gitz Snarlpack Huntaz. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "gloomspite.ability.fast-as-frazzlegit",
+    "name": "Fast as Frazzlegit",
+    "text": "Friendly units can charge in a turn in which they retreated, and they suffer no mortal damage when they retreat.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "chargeAfterFallBack": true,
+      "noRetreatDamage": true
+    }
+  },
+  {
+    "id": "gloomspite.ability.flankin-force",
+    "name": "Flankin' Force",
+    "text": "Once per battle, at the start of the first battle round, pick up to 2 friendly units. Take them off the battlefield and set them up again anywhere, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfRound",
+      "whose": "your"
+    },
+    "limit": "oncePerBattle",
+    "code": "fyreslayersMagmicTunnels",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "params": {
+      "round": 1,
+      "maxUnits": 2,
+      "minEnemyDistance": 6,
+      "anywhere": true,
+      "preferDatasheets": [
+        "gloomspite.unit.snarlpack-cavalry"
+      ],
+      "redeployText": "slip away on the hunt, to be set up again elsewhere",
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "gloomspite.ability.frazzleboom",
+    "name": "Frazzleboom",
+    "text": "Each time a friendly War Machine is destroyed, pick an enemy unit within 3\" of it and roll a D3. On a 2 or 3, that unit suffers that much mortal damage.",
+    "trigger": "modelDestroyed",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "gloomspiteFrazzleboom",
+    "params": {
+      "range": 3,
+      "dice": "D3",
+      "succeedOn": 2,
+      "keyword": "WAR MACHINE"
+    }
+  },
+  {
+    "id": "gloomspite.ability.kunnin-as-a-snarlfang",
+    "name": "Kunnin' as a Snarlfang",
+    "text": "Once per battle, in any combat phase, until the end of the turn friendly units wholly within 12\" of the bearer have +1 Rend on their melee weapons. Companion weapons are not affected.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "duration": "untilEndOfTurn",
+    "code": "gloomspiteKunnin",
+    "params": {
+      "range": 12,
+      "rend": 1,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "gloomspite.ability.glare-of-frazzlegit",
+    "name": "Glare of Frazzlegit",
+    "text": "Once per battle, in any combat phase, pick an enemy unit in combat with the bearer. Until the end of the turn, subtract 1 from that unit's hit rolls.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 3
+          }
+        }
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "gloomspiteGlare",
+    "params": {
+      "hitModifier": -1,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "gloomspite.ability.sunsteala-shard",
+    "name": "Sunsteala Shard",
+    "text": "Once per battle, in the enemy shooting phase, until the end of the turn friendly units wholly within 6\" of the bearer cannot be picked as the target of a shooting attack, unless the attacking unit is in combat with that unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "shooting",
+      "whose": "enemy"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "duration": "untilEndOfTurn",
+    "code": "gloomspiteSunstealaShard",
+    "params": {
+      "range": 6,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "gloomspite.ability.devious-backstabba",
+    "name": "Devious Backstabba",
+    "text": "At the end of any turn, pick an enemy Hero in combat with the bearer's unit and roll a D3. On a 2+, that Hero suffers mortal damage equal to the roll.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "endOfTurn",
+      "whose": "any"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy",
+        "filter": {
+          "keyword": "HERO",
+          "within": {
+            "of": "self",
+            "inches": 3
+          }
+        }
+      }
+    ],
+    "roll": {
+      "dice": "D3",
+      "succeedOn": 2
+    },
+    "code": "gloomspiteBackstabba",
+    "params": {
+      "priority": "P3"
+    }
+  },
+  {
+    "id": "gloomspite.ability.great-snarlin-howl",
+    "name": "Great Snarlin' Howl",
+    "text": "Once per turn for the army, in your hero phase, pick this unit and one other friendly unit within 3\" of it, and roll a dice. On a 3+, until the end of the turn both have +1 Attacks and +1 Rend on their Companion melee weapons.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "limit": "oncePerTurnArmy",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 3
+          }
+        }
+      }
+    ],
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "duration": "untilEndOfTurn",
+    "code": "gloomspiteSnarlinHowl",
+    "params": {
+      "range": 3,
+      "extraAttacks": 1,
+      "extraRend": 1,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "gloomspite.ability.i-got-dis-boss",
+    "name": "I Got Dis, Boss",
+    "text": "While a friendly Snarlboss is within this unit's combat range, this unit and that Snarlboss both have Ward (5+).",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "gloomspiteIGotDisBoss",
+    "params": {
+      "range": 3,
+      "ward": 5,
+      "datasheet": "gloomspite.unit.snarlboss"
+    }
+  },
+  {
+    "id": "gloomspite.ability.frazzleburned-scrap",
+    "name": "Frazzleburned Scrap",
+    "text": "While this unit has charged this turn, it has Strike-first.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "when": {
+        "unitCharged": true
+      },
+      "fightsFirst": true
+    }
+  },
+  {
+    "id": "gloomspite.ability.careening-destruction",
+    "name": "Careening Destruction",
+    "text": "Core, Move. In your movement phase, this unit moves up to its Move characteristic in place of its usual move. It can pass through other models and through enemy combat ranges (even if it starts in combat) but cannot finish the move in combat. Then pick 1 enemy Infantry unit it passed across: that unit suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "movement",
+      "whose": "your"
+    },
+    "keywords": [
+      "CORE",
+      "MOVE"
+    ],
+    "code": "gloomspiteCareening",
+    "params": {
+      "window": "moveDeclared",
+      "mortal": "D3",
+      "targetKeyword": "INFANTRY",
+      "priority": "P2"
+    }
+  }
+]

@@ -21,11 +21,11 @@ import {
   type HookRegistry, type HookResult, type HookResultFor, type RollContext,
 } from './hooks'
 import { leaderService } from './leaders'
-import { unitWhollyWithin } from './effects'
+import { effectService, unitWhollyWithin } from './effects'
 import { cardStatChange } from './cardFlags'
 import type { DecisionHandler, EngineContext, WindowTrigger } from './modules'
 import { keywordsOf, modelKeywordsOf, modelStats, mortalCredit, unitModels } from './state'
-import type { ActiveEffect, DiceRoll, GameState, ModelId, PlayerId, RuntimeAbility, RuntimeWeapon, Unit, UnitId } from './types'
+import type { ActiveEffect, DiceRoll, EdgeRef, GameState, ModelId, PlayerId, RuntimeAbility, RuntimeWeapon, Unit, UnitId, Vec2 } from './types'
 
 // the hook-specific part of a HookContext; the service fills in state/phase/activePlayer/source/unitId/hook per descriptor.
 // hooks.ts HookContextFor<K> is `never` for contexts shared by several hooks (AttackRollHookContext, …) because Extract
@@ -33,7 +33,8 @@ import type { ActiveEffect, DiceRoll, GameState, ModelId, PlayerId, RuntimeAbili
 type ContextOf<K extends HookName> = HookContext extends infer C ? (C extends { hook: infer H } ? (K extends H ? C : never) : never) : never
 export type HookData<K extends HookName> = Omit<ContextOf<K>, keyof HookContextBase | 'hook'>
 
-export interface StatQuery { unitId: UnitId; modelId: ModelId | null; weapon: RuntimeWeapon | null; stat: StatName; attack?: AttackContext | null }
+// companionOnly (CORE-12.4, GLO-AB-1): the weapon is a Companion weapon; only modifiers whose effect carries `affectsCompanion` apply
+export interface StatQuery { unitId: UnitId; modelId: ModelId | null; weapon: RuntimeWeapon | null; stat: StatName; attack?: AttackContext | null; companionOnly?: boolean }
 
 export interface HookService {
   // bespoke `code` hooks by name (20-data §12 validates data against these keys)
@@ -107,6 +108,19 @@ export interface HookQueries {
   // AoS IJZ-5.4.1 (You Messin'?): false when some source's code hook `denyContest(state, entry, unitId)` returns true
   // (WP7 adds `denyContest?` to EngineCodeHook); objectives then drop the unit from the contest
   contestAllowed(state: GameState, unitId: UnitId): boolean
+  // ---- F8 (EngineCodeHook fields of the same names; every source entry is asked, ActiveEffects included) ----
+  // KRU-ENH Egomaniak: the first non-null redirectDamage answer for damage allocated to `unitId`, or null
+  damageRedirectFor(state: GameState, unitId: UnitId): { candidates: UnitId[]; succeedOn: number } | null
+  // GLO-ENH Sunsteala Shard: the name of the ability that forbids `firingUnitId` to shoot `targetUnitId`, or null
+  shootingTargetForbiddenBy(state: GameState, firingUnitId: UnitId, targetUnitId: UnitId): string | null
+  shootingTargetForbidden(state: GameState, firingUnitId: UnitId, targetUnitId: UnitId): boolean
+  // LRL-ENH Curved Shots: every extra shooting origin point for the model (empty = none)
+  extraShootingOriginsFor(state: GameState, shooterModelId: ModelId): Vec2[]
+  // LRL-RA-2 Roaring Headwind: the edge every Move ability of `unitId` must end closer to, or null
+  moveEdgeConstraintFor(state: GameState, unitId: UnitId): EdgeRef | null
+  // GLO-BT-1 (F8): true when an effect with `flag` applies to the unit: an ActiveEffect (effectService.activeFor) or a passive
+  // descriptor the unit holds itself (battle trait, regiment ability, datasheet ability, enhancement), gate and `when` passed
+  unitHasEffectFlag(state: GameState, unitId: UnitId, flag: 'noRetreatDamage' | 'moveThroughModels' | 'shootAfterFallBack' | 'chargeAfterFallBack'): boolean
 }
 
 // AoS contest filter a code hook may carry (read structurally so code-hooks.ts can add it to EngineCodeHook later)
@@ -732,6 +746,7 @@ export const hookService: HookService & HookQueries = {
     let halve = false
     const capped: { delta: number; cap: number }[] = []
     for (const m of matchEffects(state, 'onStatQuery', data, new Set<keyof Effect>(['modifyStat', 'setStat', 'halveStat']))) {
+      if (q.companionOnly && m.effect.affectsCompanion !== true) continue
       const r = resultFor(null, state, 'onStatQuery', data, m)
       if (!r || r.kind !== 'stat') continue
       if (r.set !== undefined) set = r.set
@@ -742,7 +757,7 @@ export const hookService: HookService & HookQueries = {
       }
     }
     // cards: Grasping Vines halves Move, Inspiring Presence adds to Control
-    const card = cardStatChange(state, q.unitId, q.stat)
+    const card = q.companionOnly ? { halve: false, delta: 0 } : cardStatChange(state, q.unitId, q.stat)
     if (card.halve) halve = true
     delta += card.delta
     // C6: halving (rounded up) comes before additive deltas; a capped modifier never takes the stat past its cap
@@ -1001,6 +1016,70 @@ export const hookService: HookService & HookQueries = {
     }
     if (cap !== null) score = Math.min(score, cap)
     return Math.max(1, score)
+  },
+
+  damageRedirectFor(state, unitId) {
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.redirectDamage || !gateOpen(state, entry)) continue
+      const r = spec.redirectDamage(state, entry, unitId)
+      if (r && r.candidates.length > 0) return r
+    }
+    return null
+  },
+
+  shootingTargetForbiddenBy(state, firingUnitId, targetUnitId) {
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.forbidsShootingTarget || !gateOpen(state, entry)) continue
+      if (spec.forbidsShootingTarget(state, entry, firingUnitId, targetUnitId)) {
+        const id = entry.source.id
+        return state.abilities[id]?.name ?? state.stratagems[id]?.name ?? id
+      }
+    }
+    return null
+  },
+
+  shootingTargetForbidden(state, firingUnitId, targetUnitId) {
+    return hookService.shootingTargetForbiddenBy(state, firingUnitId, targetUnitId) !== null
+  },
+
+  extraShootingOriginsFor(state, shooterModelId) {
+    const out: Vec2[] = []
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.extraShootingOrigins || !gateOpen(state, entry)) continue
+      const pts = spec.extraShootingOrigins(state, entry, shooterModelId)
+      if (pts) out.push(...pts)
+    }
+    return out
+  },
+
+  moveEdgeConstraintFor(state, unitId) {
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.moveEdgeConstraint || !gateOpen(state, entry)) continue
+      const e = spec.moveEdgeConstraint(state, entry, unitId)
+      if (e) return e
+    }
+    return null
+  },
+
+  unitHasEffectFlag(state, unitId, flag) {
+    const has = (list: Effect | Effect[] | undefined): boolean => asList(list).some((x) => (x as Record<string, unknown>)[flag] === true)
+    if (effectService.activeFor(state, unitId).some((e) => has(e.effect))) return true
+    const halves = new Set(leaderService.halves(state, unitId))
+    for (const entry of sourcesFor(state)) {
+      if (entry.active || !halves.has(entry.holderUnitId)) continue
+      if (entry.scope.who !== 'self' && entry.scope.who !== 'bearer') continue
+      const flagged = entry.effects.filter((x) => (x as Record<string, unknown>)[flag] === true)
+      if (flagged.length === 0 || !gateOpen(state, entry)) continue
+      const holder = state.units[entry.holderUnitId]
+      const env: ConditionEnv = { state, holder, player: holder.player, attack: null, roll: null, weapon: null }
+      if (!evaluateCondition(env, entry.when)) continue
+      if (flagged.some((x) => evaluateCondition(env, x.when))) return true
+    }
+    return false
   },
 
   contestAllowed(state, unitId) {
