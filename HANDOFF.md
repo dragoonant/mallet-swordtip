@@ -91,14 +91,31 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
   disabled, so Playwright waited until the whole test timed out ("target crashed"). The loop now only clicks on the human's decisions.
   `QA_TRACE=1` logs each decision to `e2e-out/f8/<prefix>-trace.log`; `QA_HANG=1` dumps the page's state if it stops answering.
 
+## F9 (2026-10-30): rules audit, balance matrix, Ghyran, QA
+- Bugs fixed: Kruleboyz, Slaves to Darkness and Cities rules audit fixes, plus utility-AI tuning (`src/ai/moves.ts`, deploy lanes,
+  retreat/hold weights). F9 QA fix: the HUD's "Battlefield:" button (and the phone menu's "Ground:" item) always named the
+  Aqshy mat, even on a Ghyran game where the jade mat is shown. It now reads "Ghyran Jade Grove" there and the button no longer cycles
+  (the ground cycle only covers the Realm of Fire mats).
+- Balance: the 8x8 AI-vs-AI matrix is in `docs/balance.md` (672 games, 0 invariant violations). Kharadron 78% score, Kruleboyz 66%,
+  Ironjawz 59%, Fyreslayers 53%, Lumineth 51%, Cities 42%, Gloomspite 27%, Slaves 23%. Stats stay 1:1 with the warscrolls.
+- Ghyran: playable. The start screen has a realm picker (Aqshy, Ghyran, Random-by-seed). Data in
+  `src/data/missions/sph-fire-and-jade-ghyran-*.json` and `src/data/terrain/sph-fire-and-jade-ghyran-standard.json`, spec
+  `docs/spec/15-fire-and-jade-ghyran.md`. The jade ground mat is `public/assets/terrain/battlefield/ghyran/` (recoloured Aqshy mat; it was
+  missing from the F9 commit and is added in the QA commit). Its generator `art/board-textures/tint_ghyran.py` is still untracked.
+- QA on the built site (`vite preview --port 4463`): `tests/e2e/f9-playthrough.spec.ts` plays Cities (human) vs the Kharadron bot on
+  Ghyran and Slaves (human) vs the Kruleboyz bot on Aqshy to the end screen in 4 rounds, no console errors, no failed requests;
+  shots in `e2e-out/f9/`. `f9-ghyran.spec.ts` also passes. Typecheck clean.
+- Left red: `tests/engine/kharadron.test.ts` KO-BT-3 end to end. The Kharadron bot never uses Ply the Skies: the ability is only offered
+  when a Company stands wholly within 3" of a Frigate that declares a move, and the AI neither deploys the Companies beside the Frigate
+  nor moves the Frigate much. The rule works (the other KO-BT tests pass; a human gets the offer). Fix is AI deployment / movement, not
+  the engine.
+
 ## Next
-- Balance: Ironjawz still win about 4 of 5 AI-vs-AI games (32/40). Use `tools/balance-stats.ts` to see where Cities lose damage
-  (Steelhelm and Cavalier charges, Cannon uptime) and tune unit stats or the Cities AI.
-- Balance all eight armies with `tools/balance-stats.ts --armies a,b` and `tools/ai-trace.ts` (start with the four F8 armies, which have
-  only been played a few times), then the Cities/Ironjawz gap.
+- Balance: read `docs/balance.md`, then `tools/balance-stats.ts --armies a,b` and `tools/ai-trace.ts` on the worst pairings.
 - Figures: concepts and MGSD GLBs for the four F8 armies (the Frigate, Wheelas, Killaboss and Windmage first); then play Gloomspite and
   Lumineth as the human side once to check their ability prompts.
 - Add a regiment-ability / enhancement picker test pass for Fearless Invaders and Fyresteel Throwing Axes (the QA bot only takes the default).
-- Ghyran side is data only (no Ghyran battleplan file), so only the Aqshy side is playable.
+- Kharadron bot: deploy the Companies beside the Frigate and move the Frigate so Ply the Skies is used (turns KO-BT-3 end to end green),
+  then pull Kharadron (78%) back toward the pack by AI play, not stats; lift Slaves and Gloomspite (about 25%).
 - Phone: the board is small while a prompt is open and unit tags crowd the objective labels; hide tags during placement.
 - Ship: push to `main`; Pages deploys `dist/` at https://dragoonant.github.io/mallet-swordtip/.

@@ -14,7 +14,8 @@ import { shortSeatName, vpSplit } from './cardInfo'
 import { Tooltip } from './Tooltip'
 import { primaryScoringWindowHint, sourceName } from './labels'
 import { PHASE_NAME } from './phaseNames'
-import { BATTLEFIELDS } from '../board/terrainAssets'
+import { BATTLEFIELDS, GHYRAN_BATTLEFIELD } from '../board/terrainAssets'
+import { useRealmSide } from '../board/realm'
 import { cameraNudge } from '../board/touchCamera'
 import { useFormFactor } from './formFactor'
 import { FactionCrest } from './FactionCrest'
@@ -322,7 +323,8 @@ function ToolButtons() {
 
   const battlefieldIndex = useUiStore((s) => s.battlefieldIndex)
   const cycleBattlefield = useUiStore((s) => s.cycleBattlefield)
-  const battlefieldName = BATTLEFIELDS[battlefieldIndex].name
+  const onGhyran = useRealmSide() === 'ghyran'
+  const battlefieldName = onGhyran ? GHYRAN_BATTLEFIELD.name : BATTLEFIELDS[battlefieldIndex].name
 
   const buttons = (
     <>
@@ -331,9 +333,9 @@ function ToolButtons() {
           style={{ ...toolBtn, width: 'auto', padding: '0 10px', fontSize: 12, whiteSpace: 'nowrap' }}
           data-testid="btn-battlefield"
           aria-label={`Battlefield: ${battlefieldName}`}
-          onClick={cycleBattlefield}
+          onClick={onGhyran ? undefined : cycleBattlefield}
         >
-          Battlefield: {battlefieldName} ▸
+          Battlefield: {battlefieldName}{onGhyran ? '' : ' ▸'}
         </button>
       </Tooltip>
       <Tooltip title="Measure (M)" body={'Click-drag on the board to draw a ruler. Drag from a model to the nearest enemy under the cursor for base-edge-to-base-edge range.'} placement="bottom">
@@ -788,6 +790,7 @@ function CompactHud({ state, passAction, thinking, dispatch }: { state: GameStat
   const focusCamera = useUiStore((s) => s.focusCamera)
   const battlefieldIndex = useUiStore((s) => s.battlefieldIndex)
   const cycleBattlefield = useUiStore((s) => s.cycleBattlefield)
+  const onGhyran = useRealmSide() === 'ghyran'
   const [menuOpen, setMenuOpen] = useState(false)
   const [badgeOpen, setBadgeOpen] = useState<PlayerId | null>(null)
 
@@ -857,8 +860,8 @@ function CompactHud({ state, passAction, thinking, dispatch }: { state: GameStat
                 <button style={{ ...cMenuItem, opacity: selectedUnitId ? 1 : 0.5 }} data-testid="btn-focus" disabled={!selectedUnitId} onClick={afterTool(focusSelected)}>
                   Focus unit
                 </button>
-                <button style={cMenuItem} data-testid="btn-battlefield" onClick={cycleBattlefield}>
-                  Ground: {BATTLEFIELDS[battlefieldIndex].name}
+                <button style={cMenuItem} data-testid="btn-battlefield" onClick={onGhyran ? undefined : cycleBattlefield}>
+                  Ground: {onGhyran ? GHYRAN_BATTLEFIELD.name : BATTLEFIELDS[battlefieldIndex].name}
                 </button>
                 <button style={cMenuItem} data-testid="btn-painter" onClick={afterTool(togglePainter)}>
                   Paint army
