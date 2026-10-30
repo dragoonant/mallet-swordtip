@@ -14,6 +14,7 @@ import type { EngineContext, Services, WindowTrigger } from './modules'
 import { keywordsOf, unitModels } from './state'
 import { citiesHooks } from './factions/cities'
 import { ironjawzHooks } from './factions/ironjawz'
+import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
   ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
   RuntimeStratagem, RuntimeWeapon, Unit, UnitId, WeaponId,
@@ -109,6 +110,9 @@ export interface EngineCodeHook extends CodeHook {
   // IJZ-5.4.1 (You Messin'?): true when this source stops `unitId` from contesting objectives right now. Asked through
   // hookService.contestAllowed, which objectives.ts calls for every unit that would otherwise contest.
   denyContest?(state: GameState, entry: HookSourceEntry, unitId: UnitId): boolean
+  // called by abilities.ts at the top of every ability window, for each code present in state.abilities: put the battle-long
+  // effects or bookkeeping this source needs in place (Glimmering's re-roll holder, Consecrate the Land's Ward). Must be idempotent.
+  ensureEffects?(ctx: EngineContext): void
 }
 
 
@@ -210,6 +214,8 @@ export function unitWithinObjectiveRange(state: GameState, unitId: UnitId, obj: 
 export const codeHooks: Record<string, EngineCodeHook> = {
   ...citiesHooks,
   ...ironjawzHooks,
+  // core Spearhead abilities no data file names (Call for Reinforcements, SPH-12); abilities.ts adds their descriptor itself
+  [spearheadCallForReinforcements.name]: spearheadCallForReinforcements,
 }
 
 export type { ChooseOptionDecision }

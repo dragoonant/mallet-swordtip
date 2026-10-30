@@ -17,18 +17,18 @@ import type { WeaponData } from '../../data/types'
 import { weaponFlavour, type WeaponFlavour } from '../weaponFlavour'
 import type { AudioManager, PlayOptions } from './manager'
 import { SFX_IDS, type SfxId, type SoundId, type VoiceId } from './manifest'
+import type { AosSfxId } from './aos'
 
 export interface EventSound {
   id: SoundId
   opts?: PlayOptions
 }
 
+// Spearhead calls them the Hero, Movement, Shooting, Charge and Combat phases (the HUD banner says so), so the narrator
+// only speaks the two lines that match; the Combat phase is opened by the army's marshal instead of a "Fight phase" line.
 const PHASE_VOICE_LINE: Partial<Record<Phase, VoiceId>> = {
-  command: 'narr-command-phase',
   movement: 'narr-movement-phase',
-  shooting: 'narr-shooting-phase',
   charge: 'narr-charge',
-  fight: 'narr-fight-phase',
 }
 
 /** The per-weapon SFX for each flavour, with a playback trim where the asset itself is much louder
@@ -49,6 +49,33 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
   chain: { id: 'melee-chainsword' },
   crush: { id: 'power-klaw-crunch' },
   force: { id: 'psychic-zap', volume: 0.9 },
+}
+
+/** Spearhead weapons (Cities of Sigmar, Ironjawz) by what their id or name says. Blades and polearms swing, the
+ *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
+ *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
+const AOS_FACTION_ID = /^(cities|ironjawz)\./
+const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
+  [/grapeshot/, 'aos-cannon-fire', 0.85],
+  [/cannon/, 'aos-cannon-fire'],
+  [/pistol|handgun|flintlock|musket|blunderbuss/, 'wpn-slugga', 0.7],
+  [/lance|cavalier/, 'aos-lance-charge-impact'],
+  [/longsword|sword|rapier|sabre/, 'aos-sword-clash'],
+  [/halberd|spear|pike|freeguild|steelhelm/, 'aos-halberd-strike'],
+  [/hoove?s|crew|sidearm|shield/, 'aos-shield-bash'],
+  [/choppa|stikka|rager|cleaver|axe/, 'aos-choppa-hit'],
+  [/brute|fist|klaw|club|gore/, 'aos-fist-smash'],
+]
+
+/** The swing or shot for a Spearhead weapon, or undefined for any other game's weapon id. Melee that nothing above
+ *  names falls to a generic blow for the faction. */
+export function aosWeaponSound(weaponId: string, weaponName = '', melee = true): { id: SoundId; volume?: number } | undefined {
+  if (!AOS_FACTION_ID.test(weaponId)) return undefined
+  const text = `${weaponId.slice(weaponId.indexOf('.') + 1)} ${weaponName}`.toLowerCase()
+  const hit = AOS_WEAPON_RULES.find(([re]) => re.test(text))
+  if (hit) return hit[2] === undefined ? { id: hit[1] } : { id: hit[1], volume: hit[2] }
+  if (!melee) return undefined
+  return { id: weaponId.startsWith('ironjawz.') ? 'aos-choppa-hit' : 'aos-halberd-strike' }
 }
 
 /** What a caller with the data bundle and game state can offer for weapon-accurate firing sounds
@@ -362,11 +389,13 @@ export function weaponSound(weaponId: string): { id: SfxId; volume?: number } | 
  *  throttle timing rather than on what was fired). */
 function firingSounds(event: Extract<GameEvent, { type: 'TargetsDeclared' }>, lookup?: SoundLookup): EventSound[] {
   const faction = lookup?.factionOfUnit(event.unitId) ?? ''
-  const seen = new Set<SfxId>()
+  const seen = new Set<SoundId>()
   const out: EventSound[] = []
   for (const target of event.targets) {
+    const weapon = lookup?.weapon(target.weaponId)
     const { id, volume = 1 } =
-      weaponSound(target.weaponId) ?? FLAVOUR_SOUND[weaponFlavour(target.weaponId, lookup?.weapon(target.weaponId), faction)]
+      aosWeaponSound(target.weaponId, weapon?.name, weapon ? weapon.type === 'melee' : true) ??
+      weaponSound(target.weaponId) ?? FLAVOUR_SOUND[weaponFlavour(target.weaponId, weapon, faction)]
     if (seen.has(id)) continue
     seen.add(id)
     // Second and later weapons in the same declaration duck further, so two guns firing together
@@ -426,7 +455,22 @@ const DEATH_TRIM: Partial<Record<SfxId, number>> = {
   'death-adeptus-custodes': 0.8,
 }
 
-function deathSound(faction: string): EventSound {
+/** Cities fall with a soldier's cry, Ironjawz with a bellow; two takes of each, picked by the model so a squad
+ *  going down does not repeat one voice. */
+const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
+  cities: ['aos-human-death-1', 'aos-human-death-2'],
+  ironjawz: ['aos-orruk-death-1', 'aos-orruk-death-2'],
+}
+
+function takeFor(modelId: string): number {
+  let h = 0
+  for (let i = 0; i < modelId.length; i++) h = (h * 31 + modelId.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+function deathSound(faction: string, modelId = ''): EventSound {
+  const aos = AOS_DEATH[faction]
+  if (aos) return { id: aos[takeFor(modelId) % aos.length] }
   const id = DEATH_SOUND[faction] ?? 'model-death'
   const volume = DEATH_TRIM[id]
   return volume === undefined ? { id } : { id, opts: { volume } }
@@ -438,14 +482,25 @@ function deathSound(faction: string): EventSound {
 export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?: SoundLookup): EventSound[] {
   switch (event.type) {
     case 'RoundStarted':
-      return event.round === 1 ? [{ id: 'narr-battle-round-one' }] : [{ id: 'turn-start-horn' }]
+      return event.round === 1 ? [{ id: 'narr-battle-round-one' }, { id: 'aos-round-start-war-horn', opts: { volume: 0.8 } }] : [{ id: 'aos-round-start-war-horn' }]
+
+    // Rounds 2+ roll for priority (reducer.ts); the drums build to the result the dice tray then shows.
+    case 'PriorityRolled':
+      return [{ id: 'aos-priority-drumroll' }]
+
+    case 'InitiativeSeized':
+      return [{ id: 'aos-marshal-command' }]
+
+    case 'WaaaghCalled':
+      return [{ id: 'aos-orruk-roar' }]
 
     case 'TurnStarted':
       return perspective && event.turn === perspective ? [{ id: 'narr-your-turn' }] : []
 
     case 'PhaseStarted': {
       const line = PHASE_VOICE_LINE[event.phase]
-      return line ? [{ id: line }] : []
+      if (line) return [{ id: line }]
+      return event.phase === 'fight' ? [{ id: 'aos-marshal-command', opts: { volume: 0.7 } }] : []
     }
 
     case 'DiceRolled':
@@ -460,11 +515,14 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
       return firingSounds(event, lookup)
 
     case 'SaveRolled':
-      if (event.saved) return [{ id: event.kind === 'invuln' ? 'invuln-shimmer' : 'armour-save-clank' }]
+      // A cannonball is heard where it lands, saved or not.
+      if (/cannonball/.test(event.attack.weaponId)) return [{ id: 'aos-cannonball-impact' }]
+      // Armour and ward alike turn a blow aside with a clank of plate; the 42k energy shimmer has no place here.
+      if (event.saved) return [{ id: 'aos-armour-hit' }]
       return [{ id: 'hit-impact' }]
 
     case 'ModelDestroyed':
-      return [deathSound(lookup?.factionOfUnit(event.unitId) ?? '')]
+      return [deathSound(lookup?.factionOfUnit(event.unitId) ?? '', event.modelId)]
 
     case 'UnitDestroyed':
       return [{ id: 'narr-unit-destroyed' }]
@@ -472,20 +530,29 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
     case 'DeadlyDemiseRolled':
       return event.exploded ? [{ id: 'vehicle-explosion' }] : []
 
-    case 'ChargeDeclared':
-      return [{ id: 'charge-rumble' }]
+    // Cities charge on horse with a roar of men, Ironjawz stomp in bellowing.
+    case 'ChargeDeclared': {
+      if (lookup?.factionOfUnit(event.unitId) === 'ironjawz') return [{ id: 'aos-orruk-stomp' }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }]
+      return [{ id: 'aos-horse-charge' }, { id: 'aos-human-battle-cry', opts: { volume: 0.7 } }]
+    }
+
+    // Spearhead emits ObjectiveControlChanged when an objective changes hands (objectives.ts); a hand-off to nobody is silent.
+    case 'ObjectiveControlChanged':
+      if (event.to === null) return []
+      return perspective && event.to === perspective ? [{ id: 'aos-objective-captured' }, { id: 'narr-objective-taken' }] : [{ id: 'aos-objective-captured', opts: { volume: 0.7 } }]
 
     case 'ObjectiveSecured':
-      return [{ id: 'objective-captured-chime' }, { id: 'narr-objective-taken' }]
+      return event.by === null ? [] : [{ id: 'aos-objective-captured' }]
 
     case 'VpScored':
-      return event.amount < 0 ? [] : [{ id: 'vp-scored-sting' }]
+      return event.amount < 0 ? [] : [{ id: 'aos-battle-tactic-scored' }]
 
     case 'CpChanged':
       return event.delta > 0 ? [{ id: 'cp-gained-click' }] : []
 
     case 'StratagemUsed':
-      return [{ id: 'stratagem-whoosh' }, { id: 'narr-stratagem' }]
+      // A command ability: the marshal bellows the order (the 42k "Stratagem!" line is not Spearhead's word for it).
+      return [{ id: 'stratagem-whoosh', opts: { volume: 0.5 } }, { id: 'aos-marshal-command', opts: { volume: 0.8 } }]
 
     case 'BattleShocked':
       return [{ id: 'battle-shock-sting' }]
@@ -496,7 +563,7 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
     case 'GameEnded': {
       if (!perspective) return []
       if (event.result.winner === 'draw') return []
-      return [{ id: event.result.winner === perspective ? 'victory-fanfare' : 'defeat-sting' }]
+      return [{ id: event.result.winner === perspective ? 'aos-victory' : 'aos-defeat' }]
     }
 
     default:

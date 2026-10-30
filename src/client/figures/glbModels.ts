@@ -5,6 +5,15 @@
 // TO ENABLE A MODEL: drop <slug>.glb into public/assets/models/ and add the slug to ENABLED_GLB_SLUGS.
 // Nothing else changes. Slugs not listed there are never requested and keep the procedural figure.
 export const ENABLED_GLB_SLUGS: readonly string[] = [
+  // Age of Sigmar Spearhead (MGSD, 2026-10-29)
+  'cavalier-marshal',
+  'freeguild-steelhelm',
+  'freeguild-cavalier',
+  'ironweld-great-cannon',
+  'ironjawz-megaboss',
+  'brute-rager',
+  'ironjawz-ardboy',
+  'ironjawz-brute',
   'captain-octavius',
   'librarian-tantus',
   'infernus-sergeant',
@@ -252,6 +261,15 @@ export const ENABLED_GLB_SLUGS: readonly string[] = [
 ]
 
 export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
+  // Age of Sigmar Spearhead: Cities of Sigmar and Ironjawz.
+  'cities.unit.freeguild-cavalier-marshal/cavalier-marshal': 'cavalier-marshal',
+  'cities.unit.freeguild-steelhelms/steelhelm': 'freeguild-steelhelm',
+  'cities.unit.freeguild-cavaliers/cavalier': 'freeguild-cavalier',
+  'cities.unit.ironweld-great-cannon/great-cannon': 'ironweld-great-cannon',
+  'ironjawz.unit.megaboss/megaboss': 'ironjawz-megaboss',
+  'ironjawz.unit.brute-ragerz/brute-rager': 'brute-rager',
+  'ironjawz.unit.ardboyz/ardboy': 'ironjawz-ardboy',
+  'ironjawz.unit.brutes/brute': 'ironjawz-brute',
   'sm.captain-octavius/captain': 'captain-octavius',
   'sm.librarian-tantus/librarian': 'librarian-tantus',
   'sm.infernus-squad/sergeant': 'infernus-sergeant',
@@ -559,6 +577,8 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
  *  (figures face +Z, so a bike/skimmer's long axis must run along Z). Sizes are chosen against the real kits: an
  *  Impulsor/Rhino overhangs its base a little, a bike or juggernaut fills its oval, a Dreadknight stands ~2.7 footsoldiers tall. */
 export const GLB_FIGURE_ADJUST: Readonly<Record<string, { scale?: number; yaw?: number }>> = {
+  // Spearhead: the Great Cannon came out of the pipeline with its barrel along X (the 120x92mm oval runs along Z).
+  'ironweld-great-cannon': { yaw: 1 },
   'bt-impulsor': { scale: 1.8 },
   'ba-impulsor': { scale: 1.2 },
   'sororitas-rhino': { scale: 1.6 },

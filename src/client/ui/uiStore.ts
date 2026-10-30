@@ -6,11 +6,12 @@ import type { ModelPlacement } from '@/engine'
 import type { FormationKind } from '../interaction/formations'
 import { PRESET_CYCLE, type CameraPresetId } from '../board/cameraPresets'
 
-const BATTLEFIELD_COUNT = 6
-const BATTLEFIELD_KEY = 'swordtip.battlefield'
-const BATTLEFIELD_SLUGS = ['aerialrock', 'dirt', 'dryrocks', 'rocks08', 'crackmud', 'laterite']
+// Mirrors BATTLEFIELDS in board/terrainAssets.ts: the three Realm of Fire mats (the 40k grim mats were retired).
+const BATTLEFIELD_COUNT = 3
+const BATTLEFIELD_KEY = 'swordtip.battlefield.v2'
+const BATTLEFIELD_SLUGS = ['aqshy', 'basalt', 'ashlands']
 
-/** `?board=<1-6 or slug>` forces a battlefield (for screenshots); null when absent/invalid. */
+/** `?board=<1-3 or slug>` forces a battlefield (for screenshots); null when absent/invalid. */
 function forcedBattlefield(): number | null {
   try {
     const v = new URLSearchParams(window.location.search).get('board')
@@ -32,8 +33,8 @@ function storedBattlefield(): number {
   } catch {
     /* storage unavailable */
   }
-  // Last-used index; the first new game advances from here, so start one before 0.
-  return BATTLEFIELD_COUNT - 1
+  // Nothing stored: the Realm of Fire default (Aqshy Scorchlands).
+  return 0
 }
 
 function saveBattlefield(i: number): void {
@@ -301,12 +302,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   resetForDecision: () =>
     set({ deployTargetUnitId: null, draft: null, previewDraft: null, movePreview: null, deployPreview: null, hoveredUnitId: null, hoveredUnitIds: [], hoveredModelId: null, hoveredObjectiveId: null, nudge: null, shootStage: null }),
   resetAll: () => {
-    // New game: rotate to the next battlefield unless ?board= forces one.
-    let battlefieldIndex = get().battlefieldIndex
-    if (FORCED_BATTLEFIELD === null) {
-      battlefieldIndex = (battlefieldIndex + 1) % BATTLEFIELD_COUNT
-      saveBattlefield(battlefieldIndex)
-    }
+    // New game keeps the chosen battlefield (default Aqshy Scorchlands; the HUD button cycles it, ?board= forces one).
+    const battlefieldIndex = get().battlefieldIndex
     set({
       battlefieldIndex,
       selectedUnitId: null,

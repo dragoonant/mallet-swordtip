@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { InstancedPool, additiveMaterial } from './pool'
-import { DEBRIS_COLOR, DUST_COLOR, IMPACT_COLOR, IMPACT_FLASH_COLOR, MORTAL_COLOR, MORTAL_FLASH_COLOR, SAVE_COLOR, TRACER_THICKNESS, TRACER_TRAVEL_S, factionColor, shotPalette } from './palette'
+import { DEBRIS_COLOR, DUST_COLOR, IMPACT_COLOR, IMPACT_FLASH_COLOR, MORTAL_COLOR, MORTAL_FLASH_COLOR, SAVE_COLOR, SLASH_CORE_COLOR, TRACER_THICKNESS, TRACER_TRAVEL_S, factionColor, meleeStyle, shotPalette } from './palette'
 import { FxEngine } from './fx'
 import type { FactionLike, ShotKind, Vec3Like, VfxApi, VfxFamily, VolleyOptions } from './types'
 
@@ -220,6 +220,54 @@ function makeController(pools: Pools, fx: FxEngine): VfxApi {
 
     melee(at: Vec3Like, attackerFaction: FactionLike) {
       const color = factionColor(attackerFaction)
+      const style = meleeStyle(attackerFaction)
+      if (style === 'blade') {
+        // Cities: a swept steel arc (a few thin segments laid along a curve, drawn in quick succession) and a bright ring-out.
+        const heading = Math.random() * Math.PI * 2
+        const dx = Math.cos(heading), dz = Math.sin(heading)
+        const flip = Math.random() < 0.5 ? -1 : 1
+        const radius = 0.95
+        const SEGMENTS = 6
+        const pointAt = (i: number): Vec3Like => {
+          const u = (i / SEGMENTS) * 2 - 1
+          const theta = u * 1.05
+          const along = Math.sin(theta) * radius
+          return { x: at.x + dx * along, y: at.y + 0.55 - flip * u * 0.4 + Math.cos(theta) * 0.22, z: at.z + dz * along }
+        }
+        for (let i = 0; i < SEGMENTS; i++) {
+          const a = pointAt(i), b = pointAt(i + 1)
+          const draw = () => {
+            spawnTracer(pools.tracerPool, 0.2, a, b, 0.07, color)
+            spawnTracer(pools.tracerPool, 0.15, a, b, 0.03, SLASH_CORE_COLOR)
+          }
+          if (i === 0) draw()
+          else setTimeout(draw, i * 16)
+        }
+        const strike = pointAt(SEGMENTS - 2)
+        spawnBurst(pools.sparkPool, 6, strike.x, strike.y, strike.z, 0.26, 2.4, 0.07, 0.015, color, 1)
+        spawnDisc(pools.ringPool, 0.14, strike.x, strike.y, strike.z, 0.1, 0.55, SLASH_CORE_COLOR)
+        return
+      }
+      if (style === 'chop') {
+        // Ironjawz: crude heavy chops that land hard: thick rusty-orange slashes, a hot spark burst, kicked-up dust and grit.
+        for (let i = 0; i < 2; i++) {
+          const heading = Math.random() * Math.PI * 2
+          const dx = Math.cos(heading) * 0.55, dz = Math.sin(heading) * 0.55
+          const from = { x: at.x - dx, y: at.y + 1.0 + Math.random() * 0.2, z: at.z - dz }
+          const to = { x: at.x + dx, y: at.y + 0.15, z: at.z + dz }
+          const draw = () => {
+            spawnTracer(pools.tracerPool, 0.22, from, to, 0.15, color)
+            spawnTracer(pools.tracerPool, 0.14, from, to, 0.06, SLASH_CORE_COLOR)
+            spawnBurst(pools.sparkPool, 9, to.x, to.y + 0.1, to.z, 0.3, 3.2, 0.1, 0.02, color, 1)
+            spawnDisc(pools.ringPool, 0.18, to.x, to.y + 0.1, to.z, 0.15, 0.85, SLASH_CORE_COLOR)
+            spawnDisc(pools.puffPool, 0.45, to.x, 0.05, to.z, 0.2, 1.4, DUST_COLOR)
+            spawnBurst(pools.sparkPool, 3, to.x, to.y + 0.1, to.z, 0.5, 1.8, 0.08, 0.02, DEBRIS_COLOR, 1.6)
+          }
+          if (i === 0) draw()
+          else setTimeout(draw, 120)
+        }
+        return
+      }
       spawnBurst(pools.sparkPool, 7, at.x, at.y, at.z, 0.28, 2.6, 0.09, 0.02, color, 1)
       for (let i = 0; i < 2; i++) {
         const angle = Math.random() * Math.PI * 2

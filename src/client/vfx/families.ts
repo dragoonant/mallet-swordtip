@@ -17,7 +17,7 @@ export type ProjectileType =
   | 'rocket' // a rocket model on a near-straight flight with a smoke trail
 
 export type ImpactKind =
-  | 'sparks' | 'zap' | 'small' | 'blast' | 'big' | 'acid' | 'warp' | 'plasma' | 'melta' | 'beam' | 'fire'
+  | 'sparks' | 'zap' | 'small' | 'blast' | 'big' | 'acid' | 'warp' | 'plasma' | 'melta' | 'beam' | 'fire' | 'iron'
 
 export interface TrailSpec {
   sprite: SpriteName
@@ -174,6 +174,28 @@ export const FAMILY_FX: Record<VfxFamily, FamilyFx> = {
       trail: { sprite: 'warp_wisp', rate: 40, size0: 0.55, size1: 0.15, life: 0.35, alpha: 0.7, additive: true, color: '#b46bff', spread: 0.6 },
     },
     impact: 'warp', impactScale: 1, impactColor: '#c488ff', staggerMs: 110,
+  },
+  // Black powder (Age of Sigmar): no energy glow, just a gout of flame and smoke at the muzzle and iron flying.
+  cannonball: {
+    family: 'cannonball', label: 'Cannonball', examples: 'Great Cannon: cannonball',
+    muzzle: { sprite: 'muzzle_ballistic', color: '#ffc870', size: 2.6, life: 0.2, sparks: 10, smoke: true },
+    projectile: {
+      type: 'lob', speed: 46, color: '#5a5a5a', core: '#ffffff', width: 0.5, length: 0.8, sprite: 'debris_chunk', arc: 0.14, spin: 4, head: 0.85,
+      trail: { sprite: 'smoke_puff_2', rate: 34, size0: 0.3, size1: 0.9, life: 0.7, alpha: 0.4, additive: false, color: '#cfcfcf', spread: 0.2, rise: 0.25 },
+    },
+    impact: 'iron', impactScale: 1.1, impactColor: '#ffb050', staggerMs: 320,
+  },
+  grapeshot: {
+    family: 'grapeshot', label: 'Grapeshot', examples: 'Great Cannon: grapeshot',
+    muzzle: { sprite: 'muzzle_ballistic', color: '#ffc870', size: 2.2, life: 0.18, sparks: 9, smoke: true },
+    projectile: { type: 'streak', speed: 78, color: '#c9a86a', core: '#fff3d0', width: 0.07, length: 0.8, head: 0.18 },
+    impact: 'sparks', impactScale: 1.15, impactColor: '#e8c070', staggerMs: 22,
+  },
+  flintlock: {
+    family: 'flintlock', label: 'Flintlock', examples: 'Dragoon pistol',
+    muzzle: { sprite: 'muzzle_ballistic', color: '#ffd890', size: 1.0, life: 0.09, sparks: 3, smoke: true },
+    projectile: { type: 'streak', speed: 105, color: '#f0c070', core: '#fff6d8', width: 0.06, length: 0.9, head: 0.18 },
+    impact: 'sparks', impactScale: 1, impactColor: '#e8b860', staggerMs: 90,
   },
 }
 

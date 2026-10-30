@@ -7,13 +7,13 @@ import { useBoardSize } from './Board'
  *  code (ambience flashes, decals, UI) can stay consistent with the key light. Elevation is ~32 degrees:
  *  low enough to rake across figures and terrain so forms show a light-to-shade gradient. */
 export const SUN_DIRECTION: readonly [number, number, number] = [0.736, 0.534, 0.416]
-export const SUN_COLOR = '#ffe2b8'
+export const SUN_COLOR = '#ffcf98'
 const SUN_DISTANCE = 60
 const SUN_POSITION: [number, number, number] = [SUN_DIRECTION[0] * SUN_DISTANCE, SUN_DIRECTION[1] * SUN_DISTANCE, SUN_DIRECTION[2] * SUN_DISTANCE]
 
-/** Sun-lit scene: a warm shadowed directional key, a cool sky / warm bounce hemisphere carrying most of the
- *  ambient, and a weak cool shadowless fill from the opposite side so faces turned away from the sun stay
- *  readable (darker and bluer than the lit side, never black). The shadow frustum is an orthographic box
+/** Ember-lit scene (Aqshy): a warm shadowed directional key, a peach sky / glowing-ground bounce hemisphere carrying
+ *  most of the ambient, and a weak copper shadowless fill from the opposite side so faces turned away from the sun
+ *  stay readable (darker and redder than the lit side, never black). The shadow frustum is an orthographic box
  *  looking down the sun direction: +-30" across covers the 44x30 board's half-diagonal (26.6") plus the
  *  sideways shift of tall terrain, +-24" vertically covers the board's foreshortened depth (~14") plus terrain
  *  height, and far=130 reaches past the board from the 60" stand-off. The shadow map is only re-rendered on
@@ -26,9 +26,11 @@ export function Lighting() {
   const sy = sx * 0.8
   return (
     <>
-      <hemisphereLight intensity={1} color="#9dbaff" groundColor="#7a6446" />
-      <ambientLight intensity={0.15} />
-      <directionalLight position={[-24, 14, -16]} intensity={0.5} color="#a9c0ff" />
+      {/* Realm of Fire: a smouldering dusk sky behind the board, warm sky/ember-bounce ambient, a coppery fill */}
+      <color attach="background" args={['#1c0d08']} />
+      <hemisphereLight intensity={1.05} color="#ffc9a0" groundColor="#8a3a1c" />
+      <ambientLight intensity={0.18} color="#ffb48a" />
+      <directionalLight position={[-24, 14, -16]} intensity={0.55} color="#ff9a6a" />
       <directionalLight
         position={SUN_POSITION}
         intensity={2.6}

@@ -41,6 +41,9 @@ export const TRACER_TRAVEL_S: Record<ShotKind, number> = {
 }
 
 const FACTION_COLOR: Record<string, string> = {
+  // Age of Sigmar: Cities' polished steel, Ironjawz' rust-hot orange.
+  cities: '#dfe6f2',
+  ironjawz: '#ff9a3a',
   sm: '#5aa7ff',
   ork: '#8dff5a',
   necrons: '#39ff6a',
@@ -73,6 +76,15 @@ export function factionColor(faction: string): THREE.Color {
   return new THREE.Color(FACTION_COLOR[faction] ?? NEUTRAL_MELEE_COLOR)
 }
 
+/** How a faction's melee reads: 'blade' = swept steel arcs, 'chop' = heavy crude chops with dust and grit,
+ *  'spark' = the original spark-and-streak clash every other faction keeps. */
+export type MeleeStyle = 'blade' | 'chop' | 'spark'
+const MELEE_STYLE: Record<string, MeleeStyle> = { cities: 'blade', ironjawz: 'chop' }
+export function meleeStyle(faction: string): MeleeStyle {
+  return MELEE_STYLE[faction] ?? 'spark'
+}
+
+export const SLASH_CORE_COLOR = new THREE.Color('#fffbe8')
 export const IMPACT_COLOR = new THREE.Color('#ffb14a')
 export const IMPACT_FLASH_COLOR = new THREE.Color('#fff6d8')
 export const SAVE_COLOR = new THREE.Color('#5ad2ff')

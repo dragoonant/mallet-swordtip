@@ -19,6 +19,8 @@ import { parseDiceExpr, rollSum } from './dice'
 import { codeHookFor } from './hooks-impl'
 import type { DecisionHandler, EngineContext } from './modules'
 import type { ActivatedAbilityHook } from './hooks'
+import { applySlide, parseAt, parseSlide, readMoveQueue, readPlaceRequest, slideOptions, writeMoveQueue, writePlaceRequest } from './factions/aos-moves'
+import { CFR_ID, SYNTHETIC_ABILITIES, discardReplacement, placeReplacement, replaceableUnits, replacementOptions } from './factions/spearhead-core'
 import type { TimingWindowId } from '../data/types'
 import type { AbilityId, DiceRoll, GameState, Phase, PlayerId, RuntimeAbility, UnitId } from './types'
 
@@ -56,9 +58,23 @@ const DISPLAY_WINDOW: Record<AbilityWindow, TimingWindowId> = {
 // ---------- candidates and gates ----------
 interface Candidate { ab: RuntimeAbility; unitId: UnitId | null }
 
-function activateOf(ab: RuntimeAbility): ActivatedAbilityHook | null {
+// Optional extras a faction hook may carry beyond the frozen ActivatedAbilityHook contract (hooks.ts): `targets` also receives the
+// player using the ability (army abilities have no unit to read it from) and `modesFor` offers modes that depend on the game
+// (Mighty Destroyers only offers A Proper Ruckus while it is unspent).
+type ExtHook = ActivatedAbilityHook & {
+  targets?(state: GameState, unitId: UnitId | null, player?: PlayerId): UnitId[]
+  modesFor?(state: GameState, unitId: UnitId | null, player: PlayerId): { id: string; label: string }[]
+}
+
+function activateOf(ab: RuntimeAbility): ExtHook | null {
   return codeHookFor(ab.code)?.activate ?? null
 }
+
+// descriptors for abilities no data file names (Call for Reinforcements) fall back to the synthetic table
+const abilityOf = (state: GameState, id: AbilityId): RuntimeAbility | undefined => state.abilities[id] ?? SYNTHETIC_ABILITIES[id]
+
+// CORE-6.16: a player with a destroyed, not yet replaced Reinforcements unit can call it back (hook.canUse checks the room)
+const hasReplaceable = (state: GameState, player: PlayerId): boolean => replaceableUnits(state, player).length > 0
 
 function candidates(state: GameState, player: PlayerId): Candidate[] {
   const out: Candidate[] = []
@@ -81,6 +97,7 @@ function candidates(state: GameState, player: PlayerId): Candidate[] {
   const p = state.players[player]
   if (p.regimentAbilityId) add(state.abilities[p.regimentAbilityId], null)
   for (const id of p.battleTraitIds) add(state.abilities[id], null)
+  if (hasReplaceable(state, player)) add(SYNTHETIC_ABILITIES[CFR_ID], null)
   return out
 }
 
@@ -128,7 +145,7 @@ function usableFor(state: GameState, player: PlayerId, window: AbilityWindow): C
     if (!hook) continue
     if (!limitOk(state, player, ab, unitId)) continue
     if (!hook.canUse(state, unitId, { abilityId: ab.id, unitId, player })) continue
-    if (hook.targets && hook.targets(state, unitId).length === 0) continue
+    if (hook.targets && hook.targets(state, unitId, player).length === 0) continue
     out.push(c)
   }
   return out
@@ -154,7 +171,8 @@ function clearMark(state: GameState, prefix: string): void {
   state.phaseState.marks = state.phaseState.marks.filter((x) => !x.startsWith(prefix))
 }
 
-interface WindowData { window: AbilityWindow; k: string; choices?: { id: string; abilityId: AbilityId; unitId: UnitId | null }[] }
+// move / place: the decision is the next step of an ability's movement (Mighty Destroyers) or a replacement's set-up (Call for Reinforcements)
+interface WindowData { window: AbilityWindow; k: string; choices?: { id: string; abilityId: AbilityId; unitId: UnitId | null }[]; move?: boolean; place?: boolean }
 
 function optionAction(player: PlayerId, optionId: string) {
   return { type: 'chooseOption' as const, player, decisionId: '', optionId }
@@ -164,12 +182,63 @@ function unitName(state: GameState, unitId: UnitId | null): string {
   return unitId ? state.units[unitId]?.name ?? unitId : 'army'
 }
 
+// ---------- battle-long bookkeeping hooks ask for (Glimmering's re-roll holder, Consecrate the Land's Ward) ----------
+function ensureEffects(ctx: EngineContext): void {
+  const codes = new Set<string>()
+  for (const a of Object.values(ctx.state.abilities) as RuntimeAbility[]) if (a.code) codes.add(a.code)
+  for (const code of codes) codeHookFor(code)?.ensureEffects?.(ctx)
+}
+
+// ---------- multi-step abilities: unit moves and replacement set-up ----------
+// 'pending' = a decision was raised; 'again' = state changed, look again; 'none' = nothing left to do
+function nextStep(ctx: EngineContext, window: AbilityWindow, k: string): 'pending' | 'again' | 'none' {
+  const s = ctx.state
+  const place = readPlaceRequest(s)
+  if (place) {
+    const opts = replacementOptions(s, place.unitId)
+    if (opts.length === 0) { discardReplacement(s, place.unitId); writePlaceRequest(s, null); return 'again' }
+    if (opts.length === 1) { placeReplacement(ctx, place.unitId, opts[0].centre); writePlaceRequest(s, null); return 'again' }
+    const data: WindowData = { window, k, place: true }
+    ctx.decide({
+      kind: 'chooseOption', player: place.player, window: DISPLAY_WINDOW[window], canPass: false,
+      context: { topic: 'abilityMode', unitId: place.unitId, abilityId: place.abilityId, data: data as unknown as Record<string, unknown> },
+      options: opts.map((o) => ({ id: o.id, label: o.label, action: optionAction(place.player, o.id) })),
+    })
+    return 'pending'
+  }
+  const mq = readMoveQueue(s)
+  if (mq) {
+    const queue = mq.queue.filter((id) => s.units[id]?.location === 'board')
+    while (queue.length > 0) {
+      const opts = slideOptions(s, queue[0], mq.maxDistance)
+      if (opts.length <= 1) { queue.shift(); continue }
+      writeMoveQueue(s, { ...mq, queue })
+      const data: WindowData = { window, k, move: true }
+      ctx.decide({
+        kind: 'chooseOption', player: mq.player, window: DISPLAY_WINDOW[window], canPass: true,
+        context: { topic: 'abilityMode', unitId: queue[0], abilityId: mq.abilityId, data: data as unknown as Record<string, unknown> },
+        options: opts.map((o) => ({ id: o.id, label: `${unitName(s, queue[0])}: ${o.label}`, action: optionAction(mq.player, o.id) })),
+      })
+      return 'pending'
+    }
+    writeMoveQueue(s, null)
+    return 'again'
+  }
+  return 'none'
+}
+
 // ---------- the loop ----------
 function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, key?: string): boolean {
   const s = ctx.state
   const k = `${window}:${key ?? window}:${player}`
   if (s.pending) return true
+  ensureEffects(ctx)
   for (let guard = 0; guard < 1000; guard++) {
+    // an ability that moves units (Mighty Destroyers) or sets up a replacement (Call for Reinforcements) leaves its remaining
+    // steps in the marks; they come before anything else is offered
+    const stepDecision = nextStep(ctx, window, k)
+    if (stepDecision === 'pending') return true
+    if (stepDecision === 'again') continue
     if (s.phaseState.marks.includes(passMark(k))) return false
     const sel = readMark<Selection>(s, selPrefix(k))
     if (!sel) {
@@ -184,13 +253,13 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
       })
       return true
     }
-    const ab = s.abilities[sel.abilityId] as RuntimeAbility | undefined
+    const ab = abilityOf(s, sel.abilityId)
     const hook = ab ? activateOf(ab) : null
     if (!ab || !hook) { clearMark(s, selPrefix(k)); continue }
 
     // Declare: target
     if (hook.targets && sel.target === undefined) {
-      const cands = hook.targets(s, sel.unitId)
+      const cands = hook.targets(s, sel.unitId, player)
       if (cands.length === 0) { clearMark(s, selPrefix(k)); continue }
       if (cands.length === 1) { writeMark(s, selPrefix(k), { ...sel, target: cands[0] }); continue }
       const data: WindowData = { window, k }
@@ -220,7 +289,7 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
     }
 
     // Effect: the mode (only when the effect happens)
-    const modes = hook.modes ?? ab.modes?.map((m) => ({ id: m.id, label: m.name })) ?? []
+    const modes = hook.modesFor?.(s, sel.unitId, player) ?? hook.modes ?? ab.modes?.map((m) => ({ id: m.id, label: m.name })) ?? []
     let modeId: string | null = sel.mode ?? null
     if (success && modes.length > 0 && modeId === null) {
       if (modes.length === 1) modeId = modes[0].id
@@ -236,6 +305,7 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
     }
 
     // record, announce, resolve
+    if (!s.abilities[ab.id]) s.abilities = { ...s.abilities, [ab.id]: ab } // synthetic descriptors join the (shared, so replaced) table
     const p = s.players[player]
     p.abilityUses.push({ abilityId: ab.id, unitId: sel.unitId, round: s.round, turn: s.activePlayer, phase: s.phase })
     if (sel.unitId && s.units[sel.unitId]) {
@@ -266,6 +336,8 @@ export const abilityService: AbilityService = {
       const data = pending.context.data as unknown as WindowData
       const k = data.k
       const topic = pending.context.topic
+      if (data.move) return answerMove(ctx, action)
+      if (data.place) return answerPlace(ctx, action)
       if (action.type === 'pass') {
         if (topic === 'abilityUse') { s.phaseState.marks.push(passMark(k)); return }
         clearMark(s, selPrefix(k)) // cancelling a target pick drops the whole selection
@@ -285,4 +357,32 @@ export const abilityService: AbilityService = {
       else return { code: 'E_NOT_AN_OPTION', reason: `abilities: no handler for topic ${topic}` }
     },
   },
+}
+
+// ---------- answers to the multi-step decisions ----------
+type Answer = Parameters<DecisionHandler['handle']>[1]
+type Rejected = ReturnType<DecisionHandler['handle']>
+
+function answerMove(ctx: EngineContext, action: Answer): Rejected {
+  const s = ctx.state
+  const mq = readMoveQueue(s)
+  if (!mq || mq.queue.length === 0) return { code: 'E_NOT_AN_OPTION', reason: 'abilities: no move is being offered' }
+  const unitId = mq.queue[0]
+  if (action.type !== 'pass') {
+    if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'abilities: expected chooseOption or pass' }
+    const slide = parseSlide(action.optionId)
+    if (!slide) return { code: 'E_NOT_AN_OPTION', reason: `move option ${action.optionId} is not offered` }
+    if (!applySlide(ctx, unitId, slide.dx, slide.dz, mq.maxDistance)) return { code: 'E_OUT_OF_RANGE', reason: `${unitName(s, unitId)} cannot move there` }
+  }
+  writeMoveQueue(s, { ...mq, queue: mq.queue.slice(1) })
+}
+
+function answerPlace(ctx: EngineContext, action: Answer): Rejected {
+  const s = ctx.state
+  const req = readPlaceRequest(s)
+  if (!req) return { code: 'E_NOT_AN_OPTION', reason: 'abilities: no replacement is waiting to be set up' }
+  if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'abilities: choose where the replacement is set up' }
+  const at = parseAt(action.optionId)
+  if (!at || !placeReplacement(ctx, req.unitId, at)) return { code: 'E_TERRITORY', reason: 'the replacement cannot be set up there' }
+  writePlaceRequest(s, null)
 }

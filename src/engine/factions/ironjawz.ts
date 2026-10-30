@@ -15,20 +15,25 @@
 //  ironjawzYouMessin (IJZ-5.4.1)      denyContest, params maxHealth.
 //  Trophy Skulls (setStat OC 5), Armour of Gork (feelNoPain 6) and Unleashed Rage (when unitCharged, fightsFirst) are plain descriptors.
 //
-// P1 (registered with canUse false so choosing them is harmless): ironjawzMightyDestroyers, ironjawzProperRuckus. 'Ere We Go!'s
-// arrival has no code: the movement module reads its params (13-port-plan §1.2).
+//  ironjawzMightyDestroyers (IJZ-2.2)  army-wide, any hero phase, once per turn: pick a friendly unit not set up this turn; it may slide
+//        up to params.distance (3") and may end in combat (a unit that starts in combat must end in combat). The slide itself is a
+//        short list of engine-built destinations (aos-moves.ts) that abilities.ts asks as 'abilityMode' decisions.
+//  ironjawzProperRuckus (IJZ-3.2)      regiment ability, once per battle. The data timing is a reaction, which the loop never offers
+//        by itself: instead Mighty Destroyers gains a second mode, "A Proper Ruckus", while the player has this ability unspent, and
+//        in that mode every friendly unit not set up this turn is offered the move in turn (the target first).
+// 'Ere We Go!'s arrival has no code: the movement module reads its params (13-port-plan §1.2).
 import type { ActivatedAbilityHook } from '../hooks'
 import type { EngineCodeHook } from '../code-hooks'
 import type { Effect } from '../../data/types'
-import type { GameState, UnitId } from '../types'
+import type { GameState, PlayerId, Unit, UnitId } from '../types'
 import { distance, EPS } from '../geometry'
 import { announce, declaredRoll, enemiesInCombat, hasKeyword, inflictMortal, liveModels, onBoard, paramOf, paramsByCode, whollyWithinUnit } from './aos-common'
+import { slideOptions, writeMoveQueue } from './aos-moves'
 
 const noop = () => undefined
 
 const num = (v: unknown, fallback: number): number => (typeof v === 'number' ? v : fallback)
 
-const parked = (name: string): EngineCodeHook => ({ name, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: { canUse: () => false, resolve: noop } })
 
 // ---------- IJZ-3.1 Natural Disaster ----------
 const ironjawzNaturalDisaster: EngineCodeHook = {
@@ -133,9 +138,59 @@ const ironjawzYouMessin: EngineCodeHook = {
   },
 }
 
+// ---------- IJZ-2.2 Mighty Destroyers / IJZ-3.2 A Proper Ruckus ----------
+const CODE_MD = 'ironjawzMightyDestroyers'
+const CODE_RUCKUS = 'ironjawzProperRuckus'
+
+// CORE-6.13: set up this turn (a reserve arrival, a replacement)
+const setUpThisTurn = (state: GameState, u: Unit): boolean =>
+  u.turn.arrivedThisTurn || (u.setUpTurn !== null && u.setUpTurn.round === state.round && u.setUpTurn.player === state.activePlayer)
+
+const mdDistance = (state: GameState): number => num(Object.values(state.abilities).find((a) => a.code === CODE_MD)?.params?.distance, 3)
+
+// friendly units on the table that were not set up this turn and have somewhere to go
+const mdTargets = (state: GameState, player: PlayerId): UnitId[] =>
+  Object.values(state.units)
+    .filter((u) => u.player === player && u.location === 'board' && !setUpThisTurn(state, u) && slideOptions(state, u.id, mdDistance(state)).length > 1)
+    .map((u) => u.id)
+
+const ruckusAbility = (state: GameState, player: PlayerId) => {
+  const id = state.players[player].regimentAbilityId
+  const ab = id ? state.abilities[id] : undefined
+  return ab && ab.code === CODE_RUCKUS ? ab : null
+}
+// once per battle
+const ruckusAvailable = (state: GameState, player: PlayerId): boolean => {
+  const ab = ruckusAbility(state, player)
+  return !!ab && !state.players[player].abilityUses.some((u) => u.abilityId === ab.id)
+}
+
+const mightyDestroyersActivate: ActivatedAbilityHook & { modesFor?(state: GameState, unitId: UnitId | null, player: PlayerId): { id: string; label: string }[] } = {
+  canUse: (state, _unitId, use) => mdTargets(state, use.player ?? state.activePlayer).length > 0,
+  targets: ((state: GameState, _unitId: UnitId | null, player?: PlayerId) => mdTargets(state, player ?? state.activePlayer)) as ActivatedAbilityHook['targets'],
+  modesFor: (state, _unitId, player) => (ruckusAvailable(state, player)
+    ? [{ id: 'single', label: 'Move just that unit' }, { id: 'ruckus', label: 'A Proper Ruckus: every unit may move (once per battle)' }]
+    : []),
+  resolve(ctx, use) {
+    const s = ctx.state
+    const first = use.targetUnitIds[0]
+    if (!first || !onBoard(s, first)) return
+    const queue: UnitId[] = [first]
+    if (use.modeId === 'ruckus' && ruckusAvailable(s, use.player)) {
+      const ab = ruckusAbility(s, use.player)!
+      s.players[use.player].abilityUses.push({ abilityId: ab.id, unitId: null, round: s.round, turn: s.activePlayer, phase: s.phase })
+      for (const u of Object.values(s.units)) if (u.player === use.player && u.location === 'board' && u.id !== first && !setUpThisTurn(s, u)) queue.push(u.id)
+      announce(ctx, use, null, 'A Proper Ruckus: the whole warband gets to move')
+    } else announce(ctx, use, first, 'Mighty Destroyers: the unit lurches forward')
+    writeMoveQueue(s, { abilityId: use.abilityId, player: use.player, maxDistance: mdDistance(s), queue })
+  },
+}
+const ironjawzMightyDestroyers: EngineCodeHook = { name: CODE_MD, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: mightyDestroyersActivate }
+// the data timing of A Proper Ruckus is a reaction to Mighty Destroyers; the loop never offers reactions, so this is only the marker
+// Mighty Destroyers looks for (see ruckusAbility)
+const ironjawzProperRuckus: EngineCodeHook = { name: CODE_RUCKUS, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: { canUse: () => false, resolve: noop } }
+
 export const ironjawzHooks: Record<string, EngineCodeHook> = {
   ironjawzNaturalDisaster, ironjawzAmberbone, ironjawzMegaBossy, ironjawzGetStuckIn, ironjawzShieldBash, ironjawzYouMessin,
-  // P1: registered, never usable yet
-  ironjawzMightyDestroyers: parked('ironjawzMightyDestroyers'),
-  ironjawzProperRuckus: parked('ironjawzProperRuckus'),
+  ironjawzMightyDestroyers, ironjawzProperRuckus,
 }

@@ -769,6 +769,17 @@ export class FxEngine {
         this.puffs(5, x, y, z, 0.8 * k, 2.4 * k, 1.5, 0.5, SMOKE_GREY, 1.7)
         this.decal(x, z, 2.8 * k, 5, 'scorch_decal', WHITE, 0.8)
         break
+      case 'iron':
+        // An iron ball striking ground and bodies: a short flash, a pushed-out ring of dirt, a spray of grit and debris and a
+        // tall column of dust and smoke - no fireball, this is black powder not a warhead.
+        this.flash(x, y, z, 1.6 * k, col, 0.12)
+        this.ring(x, z, 4.2 * k, 0.45, DUST)
+        this.sparks(8, x, y, z, 6 * k, 0.3, 0.13 * k, col)
+        this.debris(11, x, y, z, 6 * k, 0.32 * k)
+        this.puffs(4, x, y, z, 0.7 * k, 2.2 * k, 1.3, 0.5, DUST, 1.5)
+        this.puffs(2, x, y, z, 0.5 * k, 1.8 * k, 1.5, 0.4, SMOKE_GREY, 2.0)
+        this.decal(x, z, 1.9 * k, 5, 'scorch_decal', WHITE, 0.7)
+        break
       case 'acid':
         this.flash(x, y, z, 1.2 * k, col, 0.16)
         this.spr(true, 'bio_glob', WHITE, x, y, z, 0.28, 0.4 * k, 1.5 * k, 0.95)

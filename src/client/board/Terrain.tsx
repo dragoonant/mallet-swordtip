@@ -7,7 +7,7 @@ import { extrudedPolygonGeometry, polygonBoundingRadius, polygonCentroid, seeded
 import { fittedScale, orientedBounds, polygonBounds, simpleTurns, type Bounds } from './ruinFit'
 import { useRuinModel, useRuinModelSet, type RuinModel, type RuinModelState } from './ruinModels'
 import { planPillars, planWallPanels, panelScale, slabPool, wallBoxes, type KitModel, type KitPanel } from './ruinKit'
-import { CRATER_FLOOR_MAX_HEIGHT, ENGINE_DEFAULT_WALL_THICKNESS, RUIN_KIT_FLOOR_THICKNESS, glbVisualHeight, variantPool } from './terrainCatalog'
+import { CRATER_FLOOR_MAX_HEIGHT, ENGINE_DEFAULT_WALL_THICKNESS, RUIN_KIT_FLOOR_THICKNESS, glbVisualHeight, variantPool, aosModelFor } from './terrainCatalog'
 import { planTerrainVariants, resolveTerrainSeed, seedUnit, type PieceVariant } from './terrainVariants'
 import { DECAL_MARGIN, floorSlabGeometry, ruinDecalTexture, rubbleGeometry, rubbleMaterial, scatterRubble, slabConcreteTexture } from './ruinDressing'
 import {
@@ -91,6 +91,8 @@ export function Terrain({ pieces, seed = '' }: TerrainProps) {
 
 function TerrainPiece({ piece, variant }: { piece: TerrainPieceData; variant: PieceVariant }) {
   const colors = PALETTE[piece.kind] ?? PALETTE.wall
+  const aos = aosModelFor(piece)
+  if (aos) return <AosPiece piece={piece} slug={aos} />
 
   switch (piece.kind) {
     case 'ruin':
@@ -178,6 +180,30 @@ function useOccluderFade(group: React.RefObject<THREE.Group | null>, centre: { x
       }
     })
   })
+}
+
+/** An Age of Sigmar Spearhead terrain piece: one painted GLB (long axis along X, length 1) stretched to the footprint's
+ *  oriented box (planar axes fitted exactly, height follows the mean so it keeps its proportions). Nothing else is
+ *  drawn: the data walls stay invisible rules geometry. */
+function AosPiece({ piece, slug }: { piece: TerrainPieceData; slug: string }) {
+  const glb = useRuinModel(slug)
+  const ob = useMemo(() => orientedBounds(piece.footprint), [piece.footprint])
+  const variant = useMemo(() => seedUnit(`aos:${piece.id}`) < 0.5, [piece.id])
+  const group = useRef<THREE.Group>(null)
+  const centre = useMemo(() => ({ x: ob.cx, z: ob.cz }), [ob])
+  useOccluderFade(group, centre, Math.hypot(ob.w, ob.d) / 2, piece.height)
+  if (glb.status !== 'ready') return <group ref={group} />
+  const { size, object } = glb.model
+  const sx = ob.w / size[0]
+  const sz = ob.d / size[2]
+  const sy = (sx + sz) / 2
+  return (
+    <group ref={group}>
+      <group userData={{ fittedModel: true }} position={[ob.cx, 0, ob.cz]} rotation={[0, -ob.angle + (variant ? Math.PI : 0), 0]} scale={[sx, sy, sz]}>
+        <primitive object={object} />
+      </group>
+    </group>
+  )
 }
 
 function RuinPiece({ piece, variant }: { piece: TerrainPieceData; variant: PieceVariant }) {

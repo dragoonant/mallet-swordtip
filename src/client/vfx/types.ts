@@ -17,6 +17,8 @@ export type ShotKind = 'bolter' | 'shoota' | 'heavy' | 'flame' | 'psychic'
 export type VfxFamily =
   | 'bolt' | 'autocannon' | 'las' | 'lascannon' | 'plasma' | 'melta' | 'flamer'
   | 'missile' | 'grenade' | 'gauss' | 'pulse' | 'dakka' | 'bio' | 'psychic'
+  // Age of Sigmar black powder: the Great Cannon's iron ball and grapeshot, and pistols.
+  | 'cannonball' | 'grapeshot' | 'flintlock'
 
 /** One projectile of a volley: where it leaves, where it is aimed (the target model), and whether it lands. */
 export interface VolleyShot {

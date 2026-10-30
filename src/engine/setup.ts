@@ -179,17 +179,25 @@ function resolveDeploy(
   const unit = state.units[action.unitId]
   if (!unit) return { rejection: { code: 'E_SCHEMA', reason: `unknown unit ${action.unitId}` } }
   if (action.toReserves) return { rejection: { code: 'E_NOT_AN_OPTION', reason: 'units cannot be put in reserve at deployment (only units that arrive by an ability start there)' } }
+  return resolveDeployCore(state, pending.player, unit.id, action.placements, pending.constraints, [])
+}
+
+// the geometry half of resolveDeploy; `extraFriendly` are models treated as already standing there (suggestDeployment plans several units ahead)
+function resolveDeployCore(
+  state: GameState, player: PlayerId, unitId: UnitId, placements: ModelPlacement[], constraints: MoveConstraints, extraFriendly: Model[],
+): { rejection: Rejection } | { rejection: null; resolved: ResolvedPlacement[] } {
+  const unit = state.units[unitId]
   const result = checkPlacements({
     unitModels: unitModels(state, unit.id),
-    placements: action.placements,
-    constraints: pending.constraints,
-    otherFriendly: boardModelsOf(state, pending.player),
-    enemies: boardModelsOf(state, otherPlayer(pending.player)),
+    placements,
+    constraints,
+    otherFriendly: [...boardModelsOf(state, player), ...extraFriendly],
+    enemies: boardModelsOf(state, otherPlayer(player)),
     board: state.board,
     coherencyRange: state.datasheets[unit.datasheetId]?.coherencyRange,
   })
   if (result.rejection) return { rejection: result.rejection }
-  const territory = territoryProblem(state, pending.player, result.resolved.map((r) => ({ pos: r.to, facing: r.facing, base: r.model.base })))
+  const territory = territoryProblem(state, player, result.resolved.map((r) => ({ pos: r.to, facing: r.facing, base: r.model.base })))
   if (territory) return { rejection: territory }
   for (const r of result.resolved) {
     const blocked = deployTerrainBlock(state, r.model, r.to, r.facing)
@@ -524,6 +532,84 @@ function preBattle(ctx: EngineContext): 'pending' | 'done' {
   return 'done'
 }
 
+// ---------- compact placement and the deployment suggestion ----------
+// hardest-to-fit first: biggest base, then most models
+function biggestFirst(state: GameState, ids: UnitId[]): UnitId[] {
+  const size = (id: UnitId): [number, number] => {
+    const ms = unitModels(state, id)
+    return [Math.max(0, ...ms.map((m) => Math.max(m.base.radius, m.base.radius2 ?? 0))), ms.length]
+  }
+  return [...ids].sort((a, b) => { const [ra, na] = size(a), [rb, nb] = size(b); return rb - ra || nb - na })
+}
+
+// A placement for one unit wholly inside `zone` and clear of everything on the table plus `extra` (models planned earlier), or
+// null when it has no room: a raster scan first, then a compact block slid across the zone (the raster can wrap a unit across a row
+// gap, out of coherency), then a model-by-model chain from fine-grid starts for shallow or crowded zones. `accept` is the real
+// validation (coherency, territory, terrain), so what comes back is always a legal answer.
+function compactPlacement(
+  state: GameState, player: PlayerId, unitId: UnitId, zone: Polygon, extra: Model[], accept: (p: ModelPlacement[]) => boolean,
+): ModelPlacement[] | null {
+  const models = unitModels(state, unitId)
+  if (models.length === 0) return null
+  const friendly = [...boardModelsOf(state, player), ...extra]
+  const enemies = boardModelsOf(state, otherPlayer(player))
+  const canPlace = (m: Model, pos: Vec3, f?: number): boolean => deployTerrainBlock(state, m, pos, f ?? m.facing) === null
+  const raster = autoDeployPlacements(models, zone, friendly, enemies, { canPlace, board: state.board })
+  if (raster && accept(raster)) return raster
+  const rad = Math.max(...models.map((m) => Math.max(m.base.radius, m.base.radius2 ?? 0)))
+  const spacing = 2 * rad + 0.2
+  const minX = Math.min(...zone.map((p) => p.x)), maxX = Math.max(...zone.map((p) => p.x))
+  const minZ = Math.min(...zone.map((p) => p.z)), maxZ = Math.max(...zone.map((p) => p.z))
+  const facing = deployFacing(zone)
+  for (let cols = Math.ceil(Math.sqrt(models.length)); cols <= models.length; cols++) {
+    for (let z0 = minZ + rad + 0.1; z0 < maxZ; z0 += 1) {
+      for (let x0 = minX + rad + 0.1; x0 < maxX; x0 += 1) {
+        const block = models.map((m, i) => ({ modelId: m.id, pos: { x: x0 + (i % cols) * spacing, y: 0, z: z0 + Math.floor(i / cols) * spacing }, facing }))
+        if (accept(block)) return block
+      }
+    }
+  }
+  return chainDeployPlacements(models, zone, friendly, enemies, accept, canPlace)
+}
+
+export interface DeploySuggestion {
+  unitId: UnitId
+  placements: ModelPlacement[]
+  // true when every unit still to deploy was also given a spot after this one (nobody is boxed out)
+  fitsAll: boolean
+  // the plan the suggestion comes from: this unit first, then the rest biggest-first
+  order: UnitId[]
+}
+
+// Where to put `unitId` (default: the biggest unit still to deploy) so the units after it still fit. It plans the whole remaining
+// army in order, the asked-for unit first and the others biggest-first, each into the first legal spot left by the ones before, and
+// reports whether all of them found one. A human who drops small units in the middle of a 5" deep strip can strand a big base;
+// following this suggestion cannot. Null when it is nobody's turn to deploy, the unit is not waiting, or it has no legal spot at all.
+export function suggestDeployment(state: GameState, unitId?: UnitId): DeploySuggestion | null {
+  if (state.phase !== 'deployment') return null
+  const player = unitId ? state.units[unitId]?.player ?? null : deploymentTurnPlayer(state)
+  if (!player) return null
+  const waiting = remainingToDeploy(state, player)
+  const first = unitId ?? biggestFirst(state, waiting)[0]
+  if (!first || !waiting.includes(first)) return null
+  const zone = deploymentZone(state, player)
+  const constraints = emptyMoveConstraints(1e9, { region: zone, mustEndOutsideEngagement: false })
+  const order = [first, ...biggestFirst(state, waiting.filter((id) => id !== first))]
+  const extra: Model[] = []
+  let firstPlacement: ModelPlacement[] | null = null
+  let fitsAll = true
+  for (const id of order) {
+    const found = compactPlacement(state, player, id, zone, extra, (p) => resolveDeployCore(state, player, id, p, constraints, extra).rejection === null)
+    if (!found) { if (id === first) return null; fitsAll = false; continue }
+    if (id === first) firstPlacement = found
+    for (const p of found) {
+      const m = state.models[p.modelId]
+      extra.push({ ...m, pos: p.pos, facing: p.facing ?? m.facing })
+    }
+  }
+  return firstPlacement ? { unitId: first, placements: firstPlacement, fitsAll, order } : null
+}
+
 // ---------- the module ----------
 export const setupModule: PhaseModule = {
   name: 'setup',
@@ -580,43 +666,12 @@ export const setupModule: PhaseModule = {
     if (pending.kind === 'deployUnit') {
       // a placement for one unit, or [] if it has no room left anywhere in the zone
       const tryUnit = (unitId: UnitId): Action[] => {
-        const models = unitModels(state, unitId)
-        const zone = pending.constraints.region ?? deploymentZone(state, pending.player)
-        const mk = (placements: ModelPlacement[]): DeployUnitAction => ({ type: 'deployUnit', player: pending.player, decisionId: pending.id, unitId, placements })
-        const canPlace = (m: Model, pos: Vec3, f?: number): boolean => deployTerrainBlock(state, m, pos, f ?? m.facing) === null
-        const placements = autoDeployPlacements(models, zone, boardModelsOf(state, pending.player), boardModelsOf(state, otherPlayer(pending.player)), { canPlace, board: state.board })
-        if (placements) {
-          const action = mk(placements)
-          if (resolveDeploy(state, action, pending).rejection === null) return [action]
-        }
-        // the raster scan can wrap a unit across a row gap left by earlier drops (out of coherency): fall back to a compact
-        // block slid across the zone, accepting the first one the real validation accepts
-        if (models.length === 0) return []
-        const rad = Math.max(...models.map((m) => Math.max(m.base.radius, m.base.radius2 ?? 0)))
-        const spacing = 2 * rad + 0.2
-        const minX = Math.min(...zone.map((p) => p.x)), maxX = Math.max(...zone.map((p) => p.x))
-        const minZ = Math.min(...zone.map((p) => p.z)), maxZ = Math.max(...zone.map((p) => p.z))
-        const facing = deployFacing(zone)
-        for (let cols = Math.ceil(Math.sqrt(models.length)); cols <= models.length; cols++) {
-          for (let z0 = minZ + rad + 0.1; z0 < maxZ; z0 += 1) {
-            for (let x0 = minX + rad + 0.1; x0 < maxX; x0 += 1) {
-              const action = mk(models.map((m, i) => ({ modelId: m.id, pos: { x: x0 + (i % cols) * spacing, y: 0, z: z0 + Math.floor(i / cols) * spacing }, facing })))
-              if (resolveDeploy(state, action, pending).rejection === null) return [action]
-            }
-          }
-        }
-        // shallow or crowded zone: grow the unit model-by-model from fine-grid starts (lines, zig-zags, diagonals)
-        const chained = chainDeployPlacements(models, zone, boardModelsOf(state, pending.player), boardModelsOf(state, otherPlayer(pending.player)),
-          (p) => resolveDeploy(state, mk(p), pending).rejection === null, canPlace)
-        return chained ? [mk(chained)] : []
+        const zone = pending.context.zone ?? deploymentZone(state, pending.player)
+        const found = compactPlacement(state, pending.player, unitId, pending.constraints.region ?? zone, [], (p) => resolveDeploy(state, { type: 'deployUnit', player: pending.player, decisionId: pending.id, unitId, placements: p }, pending).rejection === null)
+        return found ? [{ type: 'deployUnit', player: pending.player, decisionId: pending.id, unitId, placements: found }] : []
       }
       // hardest-to-fit first (biggest base, then most models); offer the first unit that actually fits
-      const ids = [...pending.context.unitIds]
-      const size = (id: UnitId): [number, number] => {
-        const ms = unitModels(state, id)
-        return [Math.max(0, ...ms.map((m) => Math.max(m.base.radius, m.base.radius2 ?? 0))), ms.length]
-      }
-      ids.sort((a, b) => { const [ra, na] = size(a), [rb, nb] = size(b); return rb - ra || nb - na })
+      const ids = biggestFirst(state, [...pending.context.unitIds])
       for (const id of ids) {
         const found = tryUnit(id)
         if (found.length > 0) return found

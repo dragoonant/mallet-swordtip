@@ -12,7 +12,8 @@
 // This module does not know about GameEvent — see eventSounds.ts for the mapping — so it stays
 // reusable for UI sounds (ui-click/ui-error) too.
 
-import { ALL_SOUND_IDS, STREAMED_SOUNDS, SFX_IDS, VOICE_IDS, STINGER_IDS, audioUrl, channelFor, type SoundChannel, type SoundId, type StingerId } from './manifest'
+import { STREAMED_SOUNDS, PRELOAD_IDS, AOS_STINGER_IDS, audioUrl, channelFor, type SoundChannel, type SoundId } from './manifest'
+import { soundTrim } from './aos'
 import { DEFAULT_AUDIO_SETTINGS, loadAudioSettings, saveAudioSettings, type AudioSettings } from './settings'
 
 export interface PlayOptions {
@@ -65,6 +66,8 @@ export class AudioManager {
 
   private buffers = new Map<SoundId, AudioBuffer>()
   private loading = new Map<SoundId, Promise<AudioBuffer | null>>()
+  /** One decode per file: an `aos-` id and the 42k sound it borrows (or two aos ids sharing one) decode once. */
+  private byUrl = new Map<string, Promise<AudioBuffer | null>>()
   private throttle = new Map<SoundId, ThrottleState>()
 
   private unlocked = false
@@ -77,7 +80,7 @@ export class AudioManager {
 
   private stingerEl: HTMLAudioElement | null = null
   private stingerTimer: ReturnType<typeof setTimeout> | null = null
-  private lastStinger: StingerId | null = null
+  private lastStingerUrl: string | null = null
 
   /** Gestures unlock audio. iOS Safari only lets a touchend / pointerup / click resume an AudioContext (not the
    *  touchstart / pointerdown that comes first), and suspends it again after a call or a trip to another app, so the
@@ -137,8 +140,7 @@ export class AudioManager {
     const was = this.unlocked
     this.unlocked = this.ctx?.state === 'running'
     if (this.unlocked && !was) {
-      this.preload(SFX_IDS)
-      this.preload(VOICE_IDS)
+      this.preload(PRELOAD_IDS)
       if (this.ambientWanted) this.startAmbientPlayback()
     }
   }
@@ -195,23 +197,27 @@ export class AudioManager {
     const inFlight = this.loading.get(id)
     if (inFlight) return inFlight
 
-    const promise = (async () => {
+    const url = audioUrl(id)
+    const shared = this.byUrl.get(url)
+    const promise = (shared ?? (async () => {
       try {
         this.ensureContext()
         if (!this.ctx) return null
-        const res = await fetch(audioUrl(id))
+        const res = await fetch(url)
         if (!res.ok) throw new Error(`${res.status}`)
         const arrayBuffer = await res.arrayBuffer()
-        const buffer = await this.ctx.decodeAudioData(arrayBuffer)
-        this.buffers.set(id, buffer)
-        return buffer
+        return await this.ctx.decodeAudioData(arrayBuffer)
       } catch (err) {
         console.warn(`[audio] failed to load "${id}":`, err)
+        this.byUrl.delete(url) // a failed load may be retried
         return null
-      } finally {
-        this.loading.delete(id)
       }
-    })()
+    })()).then((buffer) => {
+      if (buffer) this.buffers.set(id, buffer)
+      this.loading.delete(id)
+      return buffer
+    })
+    if (!shared) this.byUrl.set(url, promise)
     this.loading.set(id, promise)
     return promise
   }
@@ -251,7 +257,7 @@ export class AudioManager {
     if (jitter) source.detune.value = (Math.random() * 2 - 1) * jitter
 
     const gain = this.ctx.createGain()
-    gain.gain.value = clamp01(opts.volume ?? 1)
+    gain.gain.value = clamp01((opts.volume ?? 1) * soundTrim(id)) // a borrowed 42k file carries its Spearhead trim
     source.connect(gain).connect(destination)
 
     state.active++
@@ -286,7 +292,7 @@ export class AudioManager {
     const musicGain = this.channelGains.music
     if (!musicGain) return
     if (!this.ambientEl) {
-      const el = new Audio(audioUrl('ambient-battlefield-loop'))
+      const el = new Audio(audioUrl('aos-ambient-bed'))
       el.loop = true
       el.crossOrigin = 'anonymous'
       this.ambientEl = el
@@ -304,13 +310,14 @@ export class AudioManager {
 
   /** Plays one music stinger now (a random one, never the same twice running, unless `id` is
    *  given), ducking the ambient bed underneath. No-op before unlock. */
-  playStinger(id?: StingerId): void {
+  playStinger(id?: SoundId): void {
     if (!this.unlocked || !this.ctx) return
     const musicGain = this.channelGains.music
     if (!musicGain) return
-    const pool = STINGER_IDS.filter((s) => s !== this.lastStinger)
-    const pick = id ?? pool[Math.floor(Math.random() * pool.length)]
-    this.lastStinger = pick
+    // The Spearhead pool; two ids that currently borrow the same file count once, and the same cue never plays twice running.
+    const pool = AOS_STINGER_IDS.filter((s, i, all) => audioUrl(s) !== this.lastStingerUrl && all.findIndex((o) => audioUrl(o) === audioUrl(s)) === i)
+    const pick: SoundId = id ?? pool[Math.floor(Math.random() * pool.length)]
+    this.lastStingerUrl = audioUrl(pick)
     if (!this.stingerEl) {
       const el = new Audio()
       el.crossOrigin = 'anonymous'
@@ -320,7 +327,7 @@ export class AudioManager {
       this.ctx.createMediaElementSource(el).connect(gain).connect(musicGain)
       this.stingerEl = el
     }
-    this.stingerEl.src = audioUrl(pick)
+    this.stingerEl.src = this.lastStingerUrl
     this.setDuck(DUCK_LEVEL)
     void this.stingerEl.play().catch(() => this.setDuck(1))
   }
@@ -385,11 +392,11 @@ export class AudioManager {
   }
 }
 
-/** Preloads everything (SFX + voice) eagerly; call after unlock, or rely on attachAutoUnlock which
+/** Preloads the Spearhead set and the shared UI/dice/hit sounds (PRELOAD_IDS) eagerly; call after unlock, or rely on attachAutoUnlock which
  *  does this itself once the context is running. Exposed for callers that want to warm the cache
  *  ahead of unlock (decoding doesn't need a gesture). */
 export function preloadAll(manager: AudioManager): void {
-  manager.preload(ALL_SOUND_IDS.filter((id) => !STREAMED_SOUNDS.has(id)))
+  manager.preload(PRELOAD_IDS)
 }
 
 export { DEFAULT_AUDIO_SETTINGS }

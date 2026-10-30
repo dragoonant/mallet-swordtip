@@ -4,9 +4,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_MODULES, ScriptedRng, abilityService, createContext, isCoherent, basesOverlap, removeModel, unitModels,
-  type AbilityWindow, type ChooseOptionDecision, type EngineContext, type GameEvent, type GameState, type PlayerId, type UnitId,
+  type AbilityWindow, type AttackContext, type ChooseOptionDecision, type EngineContext, type GameEvent, type GameState, type PlayerId, type UnitId,
 } from '../../src/engine'
 import { attackService } from '../../src/engine/attack'
+import { distance, whollyWithinPolygon } from '../../src/engine/geometry'
+import { reinforcementFormation } from '../../src/engine/factions/aos-moves'
 import { codeHooks } from '../../src/engine/code-hooks'
 import { effectService } from '../../src/engine/effects'
 import { hookService } from '../../src/engine/hooks-impl'
@@ -134,16 +136,9 @@ describe('registry', () => {
     }
   })
 
-  it('CITIES-P1 parked abilities can never be used', () => {
+  it('CITIES-P2 the Officers Order (battle tactic cards) is still parked and can never be used', () => {
     const s = game()
-    for (const code of ['citiesConsecrateTheLand', 'citiesIronweldDiscipline', 'citiesBrazier', 'citiesOfficersOrder']) {
-      expect(codeHooks[code].activate!.canUse(s, 'A:marshal', {})).toBe(false)
-    }
-    // the regiment ability Ironweld Discipline shows up for no one, even in the enemy shooting phase
-    const t = game('cities.enh.glimmering', 'cities.ability.ironweld-discipline')
-    t.activePlayer = 'B'
-    t.phase = 'shooting'
-    expect(abilityService.usable(t, 'A', 'shooting')).toEqual([])
+    expect(codeHooks.citiesOfficersOrder.activate!.canUse(s, 'A:marshal', {})).toBe(false)
   })
 })
 
@@ -361,3 +356,351 @@ describe('Flask of Lethisian Darkwater', () => {
   })
 })
 
+
+// ---------- L1: the P1 abilities ----------
+describe('Brazier of Holy Flame', () => {
+  const BRAZIER = 'cities.enh.brazier-of-holy-flame'
+  function brazierGame() {
+    const s = game(BRAZIER)
+    place(s, 'A:marshal', -6, -6)
+    place(s, 'A:steelhelms-a', -6, -3.2) // within the general's combat range (3")
+    place(s, 'A:steelhelms-b', 8, -6) // too far
+    for (const id of [...s.units['A:steelhelms-a'].models].slice(2)) removeModel(s, id)
+    for (const id of [...s.units['A:steelhelms-b'].models].slice(2)) removeModel(s, id)
+    return s
+  }
+
+  it('CITIES-BRAZIER at the end of any turn up to D3 slain models return to the Steelhelms within 3" of the general', () => {
+    const s = brazierGame()
+    const ctx = ctxFor(s, [6]) // D3 face 6 -> 3
+    const topics = useOnce(ctx, 'endOfTurn', 'A', 'cities.ability.brazier-of-holy-flame')
+    expect(topics).toEqual(['abilityUse']) // the only target is picked for us
+    expect(s.units['A:steelhelms-a'].models).toHaveLength(5)
+    expect(s.units['A:steelhelms-b'].models).toHaveLength(2)
+    expect(isCoherent(unitModels(s, 'A:steelhelms-a'))).toBe(true)
+    expect(eventsOf(ctx, 'ModelReturned')).toHaveLength(3)
+  })
+
+  it('CITIES-BRAZIER works in the enemy turn as well, and not when nothing is slain or nobody is near', () => {
+    const s = brazierGame()
+    s.activePlayer = 'B'
+    expect(abilityService.usable(s, 'A', 'endOfTurn').map((u) => u.abilityId)).toContain('cities.ability.brazier-of-holy-flame')
+    place(s, 'A:steelhelms-a', -6, 4) // far from the general
+    expect(abilityService.usable(s, 'A', 'endOfTurn')).toEqual([])
+    const t = game(BRAZIER)
+    place(t, 'A:marshal', -6, -6)
+    place(t, 'A:steelhelms-a', -6, -3.2)
+    expect(abilityService.usable(t, 'A', 'endOfTurn')).toEqual([]) // no slain models
+  })
+})
+
+describe('CITIES-AB-2 Consecrate the Land', () => {
+  const CONSECRATE = 'cities.ability.consecrate-the-land'
+  function siteGame() {
+    const s = game()
+    place(s, 'A:steelhelms-a', -7.4, -6.9) // on the South marker (-6,-6)
+    place(s, 'A:cavaliers', 9, -9) // the bystanders' back rows would otherwise touch the marker
+    s.objectives['obj-a'].controller = 'A'
+    s.phase = 'movement'
+    return s
+  }
+  const wardOf = (ctx: EngineContext, unitId: UnitId): number[] => {
+    const s = ctx.state
+    const attacker = s.units['B:brute']
+    const attack: AttackContext = {
+      kind: 'melee', overwatch: false, attackerUnitId: attacker.id, attackerModelId: attacker.models[0], weapon: s.weapons['fx.w.brute-axe'],
+      targetUnitId: unitId, targetModelId: s.units[unitId].models[0], range: 0, halfRange: false, inCover: false, charged: false, oathTarget: false, attackerInEngagement: true,
+    }
+    const roll = ctx.roll({ purpose: 'fnp', player: 'A', unitId })
+    return hookService.collect(ctx, 'onFeelNoPainRoll', { attack, roll: { purpose: 'fnp', roll, dieIndex: 0, unmodified: roll.dice[0], rerolled: false }, mortal: false })
+      .flatMap((r) => (r.result.kind === 'roll' && r.result.feelNoPain !== undefined ? [r.result.feelNoPain] : []))
+  }
+
+  it('CITIES-AB-2 on a 3+ the held, uncontested objective is consecrated: friendly units on it get Ward (6+)', () => {
+    const s = siteGame()
+    const ctx = ctxFor(s, [3, ...Array(20).fill(1)])
+    expect(abilityService.usable(s, 'A', 'movement').map((u) => u.abilityId)).toContain(CONSECRATE)
+    useOnce(ctx, 'movement', 'A', CONSECRATE)
+    expect(s.mission.custom.consecrated).toEqual({ 'obj-a': 'A' })
+    expect(wardOf(ctx, 'A:steelhelms-a')).toEqual([6])
+    // a friendly unit that does not contest it has none; neither does the enemy
+    expect(wardOf(ctx, 'A:cavaliers')).toEqual([])
+    place(s, 'A:cavaliers', 6, -4) // a different spot, still off the marker
+    expect(wardOf(ctx, 'A:cavaliers')).toEqual([])
+  })
+
+  it('CITIES-AB-2 any friendly unit on the consecrated objective has the Ward, not just the one that consecrated it', () => {
+    const s = siteGame()
+    const ctx = ctxFor(s, [4, ...Array(20).fill(1)])
+    useOnce(ctx, 'movement', 'A', CONSECRATE)
+    place(s, 'A:cavaliers', -7, -6)
+    expect(wardOf(ctx, 'A:cavaliers')).toEqual([6])
+  })
+
+  it('CITIES-AB-2 a roll of 2 or less does nothing; the ability is still used up', () => {
+    const s = siteGame()
+    const ctx = ctxFor(s, [2, ...Array(20).fill(1)])
+    useOnce(ctx, 'movement', 'A', CONSECRATE)
+    expect(s.mission.custom.consecrated).toBeUndefined()
+    expect(wardOf(ctx, 'A:steelhelms-a')).toEqual([])
+    expect(abilityService.usable(s, 'A', 'movement').map((u) => u.unitId)).not.toContain('A:steelhelms-a')
+  })
+
+  it('CITIES-AB-2 needs an objective the army holds and no enemy contests', () => {
+    const s = siteGame()
+    s.objectives['obj-a'].controller = null
+    expect(abilityService.usable(s, 'A', 'movement').map((u) => u.abilityId)).not.toContain(CONSECRATE)
+    s.objectives['obj-a'].controller = 'A'
+    place(s, 'B:brute', -6, -6)
+    expect(abilityService.usable(s, 'A', 'movement').map((u) => u.abilityId)).not.toContain(CONSECRATE)
+  })
+
+  it('CITIES-AB-2 the Ward ends the moment the enemy gains control, and does not come back if it is retaken', () => {
+    const s = siteGame()
+    const ctx = ctxFor(s, [5, ...Array(20).fill(1)])
+    useOnce(ctx, 'movement', 'A', CONSECRATE)
+    expect(wardOf(ctx, 'A:steelhelms-a')).toEqual([6])
+    s.objectives['obj-a'].controller = 'B'
+    expect(wardOf(ctx, 'A:steelhelms-a')).toEqual([])
+    abilityService.runWindow(ctx, 'hero', 'A') // the next ability window tidies the flag up
+    s.objectives['obj-a'].controller = 'A'
+    expect(wardOf(ctx, 'A:steelhelms-a')).toEqual([])
+  })
+})
+
+describe('CITIES-RA-2 Ironweld Discipline', () => {
+  const DISCIPLINE = 'cities.ability.ironweld-discipline'
+  function cannonGame() {
+    const s = game('cities.enh.glimmering', DISCIPLINE)
+    s.activePlayer = 'B'
+    s.phase = 'shooting'
+    place(s, 'A:cannon', 4, -8)
+    place(s, 'B:brute', 4, -2) // 6" away, clear of the terrain
+    return s
+  }
+
+  it('CITIES-RA-2 in the enemy shooting phase, on a 3+ the Cannon fires at the enemy unit it could shoot', () => {
+    const s = cannonGame()
+    expect(abilityService.usable(s, 'A', 'shooting').map((u) => u.abilityId)).toEqual([DISCIPLINE])
+    const before = s.units['B:brute'].models.map((m) => s.models[m].woundsRemaining).reduce((a, b) => a + b, 0)
+    // declared D6 = 4, then 5 Grapeshot hits (6s), 5 wounds (6s), 5 failed saves (1s); the Cannon prefers Grapeshot at this range
+    const ctx = ctxFor(s, [4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1])
+    useOnce(ctx, 'shooting', 'A', DISCIPLINE)
+    const after = s.units['B:brute'].location === 'board' ? s.units['B:brute'].models.map((m) => s.models[m].woundsRemaining).reduce((a, b) => a + b, 0) : 0
+    expect(after).toBeLessThan(before)
+    expect(eventsOf(ctx, 'AttackSequenceStarted')).toHaveLength(1)
+    expect(s.units['A:cannon'].turn.shotThisPhase).toBe(true)
+    // once per turn
+    expect(abilityService.usable(s, 'A', 'shooting')).toEqual([])
+  })
+
+  it('CITIES-RA-2 a roll of 2 or less means the Cannon holds fire', () => {
+    const s = cannonGame()
+    const ctx = ctxFor(s, [2])
+    useOnce(ctx, 'shooting', 'A', DISCIPLINE)
+    expect(eventsOf(ctx, 'AttackSequenceStarted')).toHaveLength(0)
+  })
+
+  it('CITIES-RA-2 not in your own shooting phase, and not when the Cannon has nothing to shoot', () => {
+    const s = cannonGame()
+    s.activePlayer = 'A'
+    expect(abilityService.usable(s, 'A', 'shooting')).toEqual([])
+    const t = cannonGame()
+    for (const u of Object.values(t.units)) if (u.player === 'B') u.location = 'reserves' // nothing on the table to shoot at
+    expect(abilityService.usable(t, 'A', 'shooting')).toEqual([])
+  })
+
+  it('CITIES-RA-2 is not offered when the other regiment ability was picked', () => {
+    const s = cannonGame()
+    s.players.A.regimentAbilityId = 'cities.ability.for-sigmar-charge'
+    expect(abilityService.usable(s, 'A', 'shooting')).toEqual([])
+  })
+})
+
+describe('Glimmering', () => {
+  const GLIM = 'cities.enh.glimmering'
+  const rollData = (s: GameState, purpose: 'hit' | 'wound' | 'save', unmodified: number, who: 'attacker' | 'defender' = 'attacker') => {
+    const marshal = s.units['A:marshal']
+    const brute = s.units['B:brute']
+    const attack: AttackContext = {
+      kind: 'melee', overwatch: false, attackerUnitId: who === 'attacker' ? marshal.id : brute.id, attackerModelId: (who === 'attacker' ? marshal : brute).models[0],
+      weapon: s.weapons['cities.weapon.master-forged-longsword'], targetUnitId: who === 'attacker' ? brute.id : marshal.id, targetModelId: (who === 'attacker' ? brute : marshal).models[0],
+      range: 0, halfRange: false, inCover: false, charged: false, oathTarget: false, attackerInEngagement: true,
+    }
+    const roll = { id: 'r', purpose, sides: 6 as const, dice: [unmodified], rerolled: null, modifiers: [], final: [unmodified], player: 'A' as const, unitId: null, modelId: null, weaponId: null, targetUnitId: null, commandRerollable: false, needed: 3 }
+    return { attack, roll: { purpose, roll, dieIndex: 0, unmodified, rerolled: false } }
+  }
+  const rerolls = (ctx: EngineContext, hook: 'onHitRoll' | 'onWoundRoll' | 'onSaveRoll', data: ReturnType<typeof rollData>) =>
+    hookService.collect(ctx, hook, data as never).filter((r) => r.result.kind === 'roll' && (r.result as { reroll?: string }).reroll === 'oneDie')
+
+  it('Glimmering: the first failed hit, wound or save roll for the general in a phase may be re-rolled, once per phase', () => {
+    const s = game(GLIM)
+    place(s, 'A:marshal', -4, -2)
+    place(s, 'B:brute', -4, -0.4)
+    const ctx = ctxFor(s, [])
+    abilityService.runWindow(ctx, 'hero', 'A') // puts the battle-long holder effect on the general
+    expect(s.units['A:marshal'].effects).toHaveLength(1)
+    abilityService.runWindow(ctx, 'hero', 'A')
+    expect(s.units['A:marshal'].effects).toHaveLength(1) // idempotent
+    expect(rerolls(ctx, 'onHitRoll', rollData(s, 'hit', 5))).toHaveLength(0) // a success is not re-rolled
+    expect(rerolls(ctx, 'onHitRoll', rollData(s, 'hit', 2))).toHaveLength(1)
+    // used up for the rest of the phase, whichever roll type comes next
+    expect(rerolls(ctx, 'onWoundRoll', rollData(s, 'wound', 1))).toHaveLength(0)
+    expect(rerolls(ctx, 'onSaveRoll', rollData(s, 'save', 1, 'defender'))).toHaveLength(0)
+    // a new phase (marks reset) offers it again, here for a save
+    s.phaseState.marks = []
+    expect(rerolls(ctx, 'onSaveRoll', rollData(s, 'save', 1, 'defender'))).toHaveLength(1)
+  })
+
+  it('Glimmering: in a real attack the first failed hit die is re-rolled and the wound roll that follows is not', () => {
+    const s = game(GLIM)
+    place(s, 'A:marshal', -4, -2)
+    place(s, 'B:boss', -4, -0.4)
+    const sword = 'cities.weapon.master-forged-longsword'
+    const model = s.units['A:marshal'].models[0]
+    // 5 hit dice: all 2s fail on 3+; Glimmering re-rolls the first one (a 6 hits); the one wound die is a 1 and stays failed
+    const ctx = ctxFor(s, [2, 2, 2, 2, 2, 6, 1, 1, 1, 1, 1, 1])
+    abilityService.runWindow(ctx, 'hero', 'A')
+    attackService.begin(ctx, { kind: 'melee', attackerUnitId: 'A:marshal', overwatch: false, targets: [{ modelId: model, weaponId: sword, targetUnitId: 'B:boss', profileGroup: null, attacks: null }] })
+    attackService.advance(ctx)
+    const rerolls = eventsOf(ctx, 'DiceRerolled') as { source: string }[]
+    expect(rerolls).toHaveLength(1)
+    expect(rerolls[0].source).toBe('cities.ability.glimmering')
+  })
+
+  it('Glimmering: only rolls made for the general count', () => {
+    const s = game(GLIM)
+    const ctx = ctxFor(s, [])
+    abilityService.runWindow(ctx, 'hero', 'A')
+    // the enemy's own attack against someone else, and the enemy's hit roll against the general
+    expect(rerolls(ctx, 'onHitRoll', rollData(s, 'hit', 1, 'defender'))).toHaveLength(0)
+    expect(rerolls(ctx, 'onSaveRoll', rollData(s, 'save', 1, 'attacker'))).toHaveLength(0)
+  })
+
+  it('Glimmering: another enhancement leaves the general without it', () => {
+    const s = game(HEIRLOOM)
+    const ctx = ctxFor(s, [])
+    abilityService.runWindow(ctx, 'hero', 'A')
+    expect(s.units['A:marshal'].effects).toHaveLength(0)
+  })
+})
+
+describe('SPH-12 Call for Reinforcements', () => {
+  const CFR = 'core.ability.call-for-reinforcements'
+  function reinforceGame() {
+    const s = game()
+    s.phase = 'movement'
+    place(s, 'B:brute', 6, 5)
+    // the first Steelhelms unit is wiped out
+    for (const id of [...s.units['A:steelhelms-a'].models]) removeModel(s, id)
+    return s
+  }
+  const callIt = (ctx: EngineContext, choose: (ids: string[]) => string = (ids) => ids[0]) =>
+    runWindow(ctx, 'movement', 'A', (topic, ids) => (topic === 'abilityUse' ? (ids.find((i) => i.startsWith(CFR)) ?? 'pass') : topic === 'abilityMode' ? choose(ids) : ids[0]))
+
+  it('SPH-015 own movement phase, a destroyed Reinforcements unit: offered once this turn; never in the enemy\'s turn', () => {
+    const s = reinforceGame()
+    expect(s.units['A:steelhelms-a'].location).toBe('destroyed')
+    expect(abilityService.usable(s, 'A', 'movement').map((u) => u.abilityId)).toContain(CFR)
+    const ctx = ctxFor(s, [])
+    callIt(ctx)
+    expect(abilityService.usable(s, 'A', 'movement').map((u) => u.abilityId)).not.toContain(CFR)
+    const t = reinforceGame()
+    t.activePlayer = 'B'
+    expect(abilityService.usable(t, 'A', 'movement')).toEqual([])
+  })
+
+  it('SPH-016 the replacement is set up wholly in friendly territory, wholly within 6" of an edge and out of combat', () => {
+    const s = reinforceGame()
+    const ctx = ctxFor(s, [])
+    const topics = callIt(ctx)
+    expect(topics).toContain('abilityMode') // where it goes is a choice
+    const copy = Object.values(s.units).find((u) => u.replacementOf === 'A:steelhelms-a')!
+    expect(copy.location).toBe('board')
+    expect(copy.models).toHaveLength(5)
+    const models = unitModels(s, copy.id)
+    const territory = s.mission.data.territories!.A
+    for (const m of models) {
+      expect(whollyWithinPolygon(m, territory), m.id).toBe(true)
+      const R = m.base.radius
+      const hw = s.board.w / 2, hh = s.board.h / 2
+      expect(m.pos.x + R <= -hw + 6 + 1e-6 || m.pos.x - R >= hw - 6 - 1e-6 || m.pos.z + R <= -hh + 6 + 1e-6 || m.pos.z - R >= hh - 6 - 1e-6, m.id).toBe(true)
+      for (const e of Object.values(s.models).filter((x) => s.units[x.unitId].player === 'B' && s.units[x.unitId].location === 'board')) expect(distance(m, e)).toBeGreaterThan(3)
+    }
+    expect(isCoherent(models)).toBe(true)
+    for (let i = 0; i < models.length; i++) for (let j = i + 1; j < models.length; j++) expect(basesOverlap(models[i], models[j])).toBe(false)
+    expect(eventsOf(ctx, 'UnitReplaced')).toHaveLength(1)
+  })
+
+  it('SPH-016 whatever centre is asked for, a returned formation is legal: territory, edge band, out of combat, clear and coherent', () => {
+    const s = reinforceGame()
+    place(s, 'B:brute', -9.5, -5) // an enemy sitting in the left-hand band
+    const models = snapshot(s)
+    const territory = s.mission.data.territories!.A
+    const enemies = Object.values(s.models).filter((x) => s.units[x.unitId].player === 'B' && s.units[x.unitId].location === 'board')
+    let found = 0
+    for (let x = -14; x <= 14; x += 4) {
+      for (let z = -10; z <= 3; z += 3) {
+        const placements = reinforcementFormation(s, 'A', models, 0.5, { x, z })
+        if (!placements) continue
+        found++
+        const fps = placements.map((p, i) => ({ pos: p.pos, facing: p.facing ?? 0, base: models[i].base }))
+        for (const f of fps) {
+          expect(whollyWithinPolygon(f, territory)).toBe(true)
+          const R = f.base.radius
+          expect(f.pos.x + R <= -15 + 6 + 1e-6 || f.pos.x - R >= 15 - 6 - 1e-6 || f.pos.z + R <= -11 + 6 + 1e-6 || f.pos.z - R >= 11 - 6 - 1e-6).toBe(true)
+          for (const e of enemies) expect(distance(f, e)).toBeGreaterThan(3)
+        }
+        expect(isCoherent(fps)).toBe(true)
+      }
+    }
+    expect(found).toBeGreaterThan(5)
+  })
+
+  it('SPH-017 the replacement is a brand-new unit: full strength, no effects or tokens, once-per-battle uses available again', () => {
+    const s = reinforceGame()
+    const orig = s.units['A:steelhelms-a']
+    orig.effects.push({ id: 'e', sourceAbilityId: 'x', sourceUnitId: null, effect: {}, scope: { who: 'self' }, expires: { kind: 'battle', round: 1, player: null }, when: null })
+    orig.tokens = { marker: 1 }
+    s.players.A.abilityUses.push({ abilityId: 'cities.ability.consecrate-the-land', unitId: 'A:steelhelms-a', round: 1, turn: 'A', phase: 'movement' })
+    callIt(ctxFor(s, []))
+    const copy = Object.values(s.units).find((u) => u.replacementOf === 'A:steelhelms-a')!
+    expect(copy.id).not.toBe(orig.id)
+    expect(copy.effects).toEqual([])
+    expect(copy.tokens).toEqual({})
+    expect(copy.models.map((m) => s.models[m].woundsRemaining)).toEqual([1, 1, 1, 1, 1])
+    expect(s.players.A.abilityUses.some((u) => u.unitId === copy.id)).toBe(false)
+    expect(orig.replaced).toBe(true)
+  })
+
+  it('SPH-018 a replacement that is destroyed cannot be replaced; a unit without Reinforcements is never offered', () => {
+    const s = reinforceGame()
+    callIt(ctxFor(s, []))
+    const copy = Object.values(s.units).find((u) => u.replacementOf === 'A:steelhelms-a')!
+    for (const id of [...copy.models]) removeModel(s, id)
+    expect(copy.location).toBe('destroyed')
+    s.round = 2
+    expect(abilityService.usable(s, 'A', 'movement').map((u) => u.abilityId)).not.toContain(CFR)
+    // the Marshal has no Reinforcements keyword
+    const t = game()
+    t.phase = 'movement'
+    for (const id of [...t.units['A:marshal'].models]) removeModel(t, id)
+    expect(abilityService.usable(t, 'A', 'movement').map((u) => u.abilityId)).not.toContain(CFR)
+  })
+
+  it('SPH-015 the other Steelhelms unit can still be called back later, one replacement per turn', () => {
+    const s = reinforceGame()
+    for (const id of [...s.units['A:steelhelms-b'].models]) removeModel(s, id)
+    const ctx = ctxFor(s, [])
+    callIt(ctx)
+    expect(Object.values(s.units).filter((u) => u.replacementOf !== null)).toHaveLength(1)
+    s.round = 2
+    callIt(ctxFor(s, []))
+    expect(Object.values(s.units).filter((u) => u.replacementOf !== null)).toHaveLength(2)
+  })
+})
+
+// the original models of a destroyed unit, as Call for Reinforcements sees them
+function snapshot(s: GameState) {
+  return s.units['A:steelhelms-a'].destroyedModels
+}

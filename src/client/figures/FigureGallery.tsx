@@ -260,6 +260,15 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'soulreaper', faction: 'thousand-sons', label: 'Scarab Terminator (soulreaper cannon)' },
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'hellfyre', faction: 'thousand-sons', label: 'Scarab Terminator (hellfyre rack)' },
   { datasheetId: 'ths.tzaangors', modelId: 'tzaangor', faction: 'thousand-sons', label: 'Tzaangor' },
+  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz)
+  { datasheetId: 'cities.unit.freeguild-cavalier-marshal', modelId: 'cavalier-marshal', faction: 'cities', label: 'Cavalier-Marshal' },
+  { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm', faction: 'cities', label: 'Steelhelm' },
+  { datasheetId: 'cities.unit.freeguild-cavaliers', modelId: 'cavalier', faction: 'cities', label: 'Freeguild Cavalier' },
+  { datasheetId: 'cities.unit.ironweld-great-cannon', modelId: 'great-cannon', faction: 'cities', label: 'Great Cannon' },
+  { datasheetId: 'ironjawz.unit.megaboss', modelId: 'megaboss', faction: 'ironjawz', label: 'Megaboss' },
+  { datasheetId: 'ironjawz.unit.brute-ragerz', modelId: 'brute-rager', faction: 'ironjawz', label: 'Brute Rager' },
+  { datasheetId: 'ironjawz.unit.ardboyz', modelId: 'ardboy', faction: 'ironjawz', label: 'Ardboy' },
+  { datasheetId: 'ironjawz.unit.brutes', modelId: 'brute', faction: 'ironjawz', label: 'Brute' },
 ]
 
 // Figures are true tabletop-miniature scale (~1-2 world-inches tall — see resolveBase), so packing

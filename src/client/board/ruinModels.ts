@@ -24,6 +24,26 @@ let manifestPromise: Promise<Record<string, ManifestEntry> | null> | null = null
 
 const base = () => `${import.meta.env.BASE_URL}assets/terrain/ruins/`
 
+/** Age of Sigmar pieces: slugs written `aos/<name>` load from public/assets/terrain/aos/ with that folder's manifest. */
+export const AOS_SLUG_PREFIX = 'aos/'
+const aosBase = () => `${import.meta.env.BASE_URL}assets/terrain/aos/`
+let aosManifestPromise: Promise<Record<string, ManifestEntry> | null> | null = null
+function loadAosManifest() {
+  if (!aosManifestPromise) {
+    aosManifestPromise = (async () => {
+      try {
+        const res = await fetch(`${aosBase()}manifest.json`)
+        if (!res.ok) return null
+        const json = await res.json()
+        return json && typeof json === 'object' ? (json as Record<string, ManifestEntry>) : null
+      } catch {
+        return null
+      }
+    })()
+  }
+  return aosManifestPromise
+}
+
 function loadManifest() {
   if (!manifestPromise) {
     manifestPromise = (async () => {
@@ -108,6 +128,7 @@ function unifyMaterial(mat: MeshStandardMaterial) {
 }
 
 const isEnabledSlug = (slug: string): boolean =>
+  slug.startsWith(AOS_SLUG_PREFIX) ||
   (ENABLED_RUIN_MODELS as readonly string[]).includes(slug) ||
   LEGACY_TERRAIN_SLUGS.includes(slug) ||
   Object.values(NEW_TERRAIN_SLUGS).some((l) => l.includes(slug))
@@ -128,12 +149,14 @@ function request(slug: RuinSlug): Entry {
     return entry
   }
   try {
-    Promise.all([loadManifest(), new GLTFLoader().loadAsync(`${base()}${slug}.glb`)])
+    const aos = slug.startsWith(AOS_SLUG_PREFIX)
+    const name = aos ? slug.slice(AOS_SLUG_PREFIX.length) : slug
+    Promise.all([aos ? loadAosManifest() : loadManifest(), new GLTFLoader().loadAsync(`${aos ? aosBase() : base()}${name}.glb`)])
       .then(([manifest, gltf]) => {
-        if (!manifest || !manifest[slug]) throw new Error('no manifest entry')
+        if (!manifest || !manifest[name]) throw new Error('no manifest entry')
         const scene = gltf.scene
         // The painted v5 variants keep their own colours; only the older grey-resin GLBs get the shared tint.
-        const painted = Object.values(NEW_TERRAIN_SLUGS).some((l) => l.includes(slug))
+        const painted = aos || Object.values(NEW_TERRAIN_SLUGS).some((l) => l.includes(slug))
         scene.traverse((o) => {
           const mesh = o as Mesh
           if (!mesh.isMesh) return
@@ -151,7 +174,7 @@ function request(slug: RuinSlug): Entry {
         const box = new Box3().setFromObject(scene)
         const m = box.getSize(new Vector3())
         const measured: Size3 = [m.x, m.y, m.z]
-        const size = validSize(measured) ? measured : manifest[slug].size
+        const size = validSize(measured) ? measured : manifest[name].size
         if (!validSize(size)) throw new Error('bad size')
         const centre = box.getCenter(new Vector3())
         scene.position.set(-centre.x, -box.min.y, -centre.z)

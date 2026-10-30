@@ -95,3 +95,12 @@ export const TERRAIN_CATALOG: Record<TerrainPieceData['kind'], CatalogEntry> = {
 export function glbVisualHeight(kind: TerrainPieceData['kind'], pieceHeight: number): number {
   return kind === 'crater' ? Math.min(Math.max(pieceHeight, 0.05), CRATER_FLOOR_MAX_HEIGHT) : pieceHeight
 }
+
+/** Age of Sigmar Spearhead layouts name their pieces `tf-*`: a ruin there is the ruined domicile (5x3in), a crate-kind
+ *  piece the ravaged shrine (3x2in). Other boards keep the 40k look. Returns the `aos/<slug>` model slug, or undefined. */
+export function aosModelFor(piece: Pick<TerrainPieceData, 'id' | 'kind'>): string | undefined {
+  if (!piece.id.startsWith('tf-')) return undefined
+  if (piece.kind === 'ruin') return 'aos/ruined-domicile'
+  if (piece.kind === 'crate') return 'aos/ravaged-shrine'
+  return undefined
+}

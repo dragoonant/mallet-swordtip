@@ -11,14 +11,30 @@
 //  citiesFlask                     enhancement, params heal (dice expression); needs the bearer unit damaged.
 //  Heirloom Blade has no code: scope bearer, effect { when: { weaponId }, modifyStat: { stat: 'AP', value: -1 } } (AP = -Rend).
 //
-// P1 (registered with canUse false so choosing them is harmless): citiesConsecrateTheLand, citiesIronweldDiscipline,
-// citiesBrazier, citiesOfficersOrder; citiesGlimmering is a bare name.
+//  citiesConsecrateTheLand (AB-2)   roll D6 3+ (descriptor); marks an objective consecrated in mission.custom.consecrated and gives
+//        the owner's units a battle-long Ward (6+) effect that `gateEffect` only lets through while the unit contests a consecrated
+//        objective its owner still controls.
+//  citiesIronweldDiscipline (RA-2)  regiment ability, enemy shooting phase; targets = enemy units the Cannon could shoot; the Cannon
+//        then fires its best profile at the target as if it were its shooting phase (attackService.begin + advance).
+//  citiesBrazier                    enhancement, end of any turn: return D3 slain models to a Steelhelms unit within params.range (3").
+//  citiesGlimmering                 enhancement: a battle-long active effect on the bearer's unit (ensureEffects) whose `produce`
+//        answers hit / wound / save rolls with a one-die re-roll, once per phase (phase mark `glim:used`).
+// Still parked (registered with canUse false): citiesOfficersOrder (needs battle tactic cards, P2).
 import type { AbilityUse, ActivatedAbilityHook } from '../hooks'
 import type { EngineCodeHook } from '../code-hooks'
 import type { DiceExpr } from '../../data/types'
-import type { GameState, UnitId } from '../types'
+import type { DeclaredTarget, GameState, PlayerId, RuntimeWeapon, UnitId } from '../types'
 import { keywordsOf } from '../state'
-import { announce, declaredRoll, enemiesInCombat, healUnit, inCombat, inflictMortal, isDamaged, isDatasheet, onBoard, paramOf, paramsByCode, returnableModels, returnSlainModels, whollyWithinUnit } from './aos-common'
+import { parseDiceExpr } from '../dice'
+import { attackService } from '../attack'
+import { effectService } from '../effects'
+import { weaponService } from '../weapons'
+import { buildShootingWeaponEntries, unitEligibleToShoot } from '../phases/shooting'
+import type { EngineContext } from '../modules'
+import {
+  announce, consecratedFor, consecratedMap, declaredRoll, enemiesInCombat, healUnit, inCombat, inflictMortal, isDamaged, isDatasheet, liveObjectives, onBoard, paramOf, paramsByCode, playerContestsObjective,
+  returnableModels, returnSlainModels, unitContestsObjective, unitsWithin, whollyWithinUnit,
+} from './aos-common'
 
 const noop = () => undefined
 
@@ -147,12 +163,194 @@ const flaskActivate: ActivatedAbilityHook = {
 }
 const citiesFlask: EngineCodeHook = { name: 'citiesFlask', kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: flaskActivate }
 
+// ---------- CITIES-AB-2 Consecrate the Land ----------
+const CODE_CONSECRATE = 'citiesConsecrateTheLand'
+
+// the objectives this unit could consecrate right now: its owner controls them, it contests them, no enemy does, not already done
+function consecrateSites(state: GameState, unitId: UnitId | null) {
+  const unit = onBoard(state, unitId)
+  if (!unit) return []
+  const done = consecratedFor(state, unit.player).map((o) => o.id)
+  const enemy: PlayerId = unit.player === 'A' ? 'B' : 'A'
+  return liveObjectives(state).filter((o) => o.controller === unit.player && !done.includes(o.id) && unitContestsObjective(state, unit.id, o) && !playerContestsObjective(state, enemy, o))
+}
+
+// a battle-long Ward (6+) on every unit of the player; gateEffect below decides when it counts
+function grantConsecratedWard(ctx: EngineContext, player: PlayerId, abilityId: string, sourceUnitId: UnitId | null): void {
+  for (const u of Object.values(ctx.state.units)) {
+    if (u.player !== player || u.location === 'destroyed') continue
+    if (u.effects.some((e) => e.sourceAbilityId === abilityId)) continue
+    effectService.grant(ctx, u.id, { feelNoPain: num(paramOf(ctx.state, abilityId, 'ward', 6), 6) }, { sourceAbilityId: abilityId, sourceUnitId, scope: { who: 'self' }, duration: 'battle' })
+  }
+}
+
+const consecrateActivate: ActivatedAbilityHook = {
+  canUse: (state, unitId) => consecrateSites(state, unitId).length > 0,
+  resolve(ctx, use) {
+    const unit = onBoard(ctx.state, use.unitId)
+    if (!unit) return
+    const sites = consecrateSites(ctx.state, unit.id)
+    if (sites.length === 0) return
+    const { passed, total } = declaredRoll(ctx, use, 3)
+    if (!passed) { announce(ctx, use, null, `Consecrate the Land: rolled ${total}, no effect`); return }
+    const obj = sites[0]
+    ctx.state.mission.custom.consecrated = { ...consecratedMap(ctx.state), [obj.id]: unit.player }
+    grantConsecratedWard(ctx, unit.player, use.abilityId, unit.id)
+    announce(ctx, use, null, 'Consecrate the Land: the objective is consecrated, friendly units on it have Ward (6+)')
+  },
+}
+
+const citiesConsecrateTheLand: EngineCodeHook = {
+  name: CODE_CONSECRATE, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: consecrateActivate,
+  // the granted Ward only counts while the holder contests an objective consecrated for its owner (and still held by them)
+  gateEffect(state, holder) {
+    if (!holder || holder.location !== 'board') return false
+    return consecratedFor(state, holder.player).some((o) => unitContestsObjective(state, holder.id, o))
+  },
+  // called by abilities.ts at the top of every window: a consecration lapses when the enemy takes the objective; replacement
+  // units (Call for Reinforcements) inherit the Ward
+  ensureEffects(ctx) {
+    const map = consecratedMap(ctx.state)
+    const keep: Record<string, PlayerId> = {}
+    let changed = false
+    for (const [id, owner] of Object.entries(map)) {
+      if (ctx.state.objectives[id]?.controller === owner) keep[id] = owner
+      else changed = true
+    }
+    if (changed) ctx.state.mission.custom.consecrated = keep
+    const ab = Object.values(ctx.state.abilities).find((a) => a.code === CODE_CONSECRATE)
+    if (!ab) return
+    for (const owner of new Set(Object.values(keep))) grantConsecratedWard(ctx, owner, ab.id, null)
+  },
+}
+
+// ---------- CITIES-RA-2 Ironweld Discipline ----------
+const CODE_DISCIPLINE = 'citiesIronweldDiscipline'
+
+const disciplineCannons = (state: GameState, player: PlayerId): UnitId[] => {
+  const reg = state.players[player]?.regimentAbilityId
+  const want = state.abilities[reg ?? '']?.params?.datasheet
+  return Object.values(state.units)
+    .filter((u) => u.player === player && u.location === 'board' && isDatasheet(state, u.id, want, 'great-cannon'))
+    .map((u) => u.id)
+}
+
+// state-only stand-in for the shooting helpers, which read nothing but ctx.state
+const stateCtx = (state: GameState): EngineContext => ({ state } as unknown as EngineContext)
+
+const avgOf = (e: RuntimeWeapon['A']): number => { const p = parseDiceExpr(e); return p.sides === null ? p.flat : (p.count * (p.sides + 1)) / 2 + p.flat }
+const chance = (t: number | null): number => (t === null ? 1 : Math.max(1 / 6, Math.min(5 / 6, (7 - t) / 6)))
+const expectedDamage = (w: RuntimeWeapon): number => avgOf(w.A) * chance(w.skill) * chance(w.wound) * avgOf(w.D) * (1 + Math.min(3, w.rend) / 12)
+
+// the Cannon's targets: enemy units any of its weapons could hit right now
+const disciplineTargets = (state: GameState, player: PlayerId): UnitId[] => {
+  const out = new Set<UnitId>()
+  const ctx = stateCtx(state)
+  for (const id of disciplineCannons(state, player)) {
+    if (!unitEligibleToShoot(ctx, id)) continue
+    for (const e of buildShootingWeaponEntries(ctx, id)) for (const t of e.legalTargets) out.add(t)
+  }
+  return [...out]
+}
+
+// the Cannon fires in the ENEMY shooting phase, so with no player given the user is whoever is not the active player
+const otherThanActive = (state: GameState): PlayerId => (state.activePlayer === 'A' ? 'B' : 'A')
+
+const disciplineActivate: ActivatedAbilityHook = {
+  canUse: (state, _unitId, use) => disciplineTargets(state, use.player ?? otherThanActive(state)).length > 0,
+  targets: ((state: GameState, _unitId: UnitId | null, player?: PlayerId) => disciplineTargets(state, player ?? otherThanActive(state))) as ActivatedAbilityHook['targets'],
+  resolve(ctx, use) {
+    const target = use.targetUnitIds[0]
+    if (!target || !onBoard(ctx.state, target)) return
+    const cannon = disciplineCannons(ctx.state, use.player).find((id) => buildShootingWeaponEntries(ctx, id).some((e) => e.legalTargets.includes(target)))
+    if (!cannon) return
+    const entries = buildShootingWeaponEntries(ctx, cannon).filter((e) => e.legalTargets.includes(target))
+    // one profile per profile group per model: the one with the best expected damage
+    const best = new Map<string, { score: number; e: (typeof entries)[number] }>()
+    for (const e of entries) {
+      const w = weaponService.effectiveWeapon(ctx.state, e.modelId, e.weaponId)
+      const key = e.profileGroup ? `${e.modelId}::${e.profileGroup}` : `${e.modelId}::${e.weaponId}`
+      const score = expectedDamage(w)
+      const cur = best.get(key)
+      if (!cur || score > cur.score) best.set(key, { score, e })
+    }
+    const targets: DeclaredTarget[] = [...best.values()].map(({ e }) => ({ modelId: e.modelId, weaponId: e.weaponId, targetUnitId: target, profileGroup: e.profileGroup, attacks: null }))
+    if (targets.length === 0) return
+    announce(ctx, use, target, `Ironweld Discipline: the ${ctx.state.units[cannon].name} fires on its own initiative`)
+    attackService.begin(ctx, { kind: 'ranged', attackerUnitId: cannon, overwatch: false, targets })
+    attackService.advance(ctx)
+    ctx.state.units[cannon].turn.shotThisPhase = true
+  },
+}
+const citiesIronweldDiscipline: EngineCodeHook = { name: CODE_DISCIPLINE, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: disciplineActivate }
+
+// ---------- Brazier of Holy Flame ----------
+const CODE_BRAZIER = 'citiesBrazier'
+
+const brazierTargets = (state: GameState, unitId: UnitId | null): UnitId[] => {
+  const src = onBoard(state, unitId)
+  if (!src) return []
+  const p = paramsByCode(state, src.id, CODE_BRAZIER)
+  const range = num(p.range, 3)
+  return Object.values(state.units)
+    .filter((u) => u.player === src.player && u.location === 'board' && isDatasheet(state, u.id, p.datasheet, 'steelhelms') && unitsWithin(state, src.id, u.id, range) && returnableModels(state, u.id) > 0)
+    .map((u) => u.id)
+}
+
+const brazierActivate: ActivatedAbilityHook = {
+  canUse: (state, unitId) => brazierTargets(state, unitId).length > 0,
+  targets: brazierTargets,
+  resolve(ctx, use) {
+    const target = use.targetUnitIds[0]
+    if (!target || !onBoard(ctx.state, target)) return
+    const dice = paramOf<DiceExpr>(ctx.state, use.abilityId, 'returnModels', 'D3')
+    const n = ctx.rollExpr(dice, { purpose: 'ability', player: use.player, unitId: target, commandRerollable: false }).total
+    const back = returnSlainModels(ctx, target, n, use.abilityId)
+    announce(ctx, use, target, `Brazier of Holy Flame: ${back} slain model${back === 1 ? '' : 's'} returned`)
+  },
+}
+const citiesBrazier: EngineCodeHook = { name: CODE_BRAZIER, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: brazierActivate }
+
+// ---------- Glimmering ----------
+const CODE_GLIMMERING = 'citiesGlimmering'
+const GLIM_MARK = 'glim:used'
+
+const citiesGlimmering: EngineCodeHook = {
+  name: CODE_GLIMMERING, kind: 'ability', hook: 'onStatQuery', run: noop,
+  producesAt: ['onHitRoll', 'onWoundRoll', 'onSaveRoll'],
+  // answers on the active effect ensureEffects put on the bearer's unit: re-roll the first failed die of the first roll the bearer
+  // makes or defends with in a phase (hit, wound or save), once per phase
+  produce(ctx, entry, data) {
+    const attack = data.attack as { attackerUnitId: UnitId; targetUnitId: UnitId } | undefined
+    const rc = data.roll as { purpose: string; roll: { needed?: number; modifiers: { value: number }[] }; unmodified: number } | undefined
+    if (!entry.active || !attack || !rc) return null
+    const mine = rc.purpose === 'save' ? attack.targetUnitId === entry.holderUnitId : (rc.purpose === 'hit' || rc.purpose === 'wound') && attack.attackerUnitId === entry.holderUnitId
+    if (!mine || ctx.state.phaseState.marks.includes(GLIM_MARK)) return null
+    const needed = rc.roll.needed
+    if (needed === undefined) return null
+    const sum = rc.roll.modifiers.reduce((a, m) => a + m.value, 0)
+    const mod = rc.purpose === 'save' ? sum : Math.max(-1, Math.min(1, sum))
+    if (rc.unmodified !== 1 && rc.unmodified + mod >= needed) return null // this die passes: nothing to re-roll
+    ctx.state.phaseState.marks.push(GLIM_MARK)
+    return { kind: 'roll', reroll: 'oneDie' }
+  },
+  // the bearer's unit carries a battle-long effect so `produce` has an active entry to answer on
+  ensureEffects(ctx) {
+    for (const ab of Object.values(ctx.state.abilities)) {
+      if (ab.code !== CODE_GLIMMERING || ab.source !== 'enhancement' || !ab.bearerModelId) continue
+      const unitId = ctx.state.models[ab.bearerModelId]?.unitId
+      const unit = unitId ? ctx.state.units[unitId] : undefined
+      if (!unit || unit.effects.some((e) => e.sourceAbilityId === ab.id)) continue
+      effectService.grant(ctx, unit.id, {}, { sourceAbilityId: ab.id, sourceUnitId: unit.id, scope: { who: 'self' }, duration: 'battle' })
+    }
+  },
+}
+
+const num = (v: unknown, fallback: number): number => (typeof v === 'number' ? v : fallback)
+
 export const citiesHooks: Record<string, EngineCodeHook> = {
   citiesForSigmarCharge, citiesDecisiveCommander, citiesDevastatingCharge, citiesShotAndShell, citiesFlask,
-  // P1: registered, never usable yet
-  citiesConsecrateTheLand: parked('citiesConsecrateTheLand'),
-  citiesIronweldDiscipline: parked('citiesIronweldDiscipline'),
-  citiesBrazier: parked('citiesBrazier'),
+  citiesConsecrateTheLand, citiesIronweldDiscipline, citiesBrazier, citiesGlimmering,
+  // P2: needs the battle tactic cards, which the engine does not have yet
   citiesOfficersOrder: parked('citiesOfficersOrder'),
-  citiesGlimmering: { name: 'citiesGlimmering', kind: 'ability', hook: 'onStatQuery', run: noop },
 }

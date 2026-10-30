@@ -3,7 +3,7 @@
 // test-side patch is the declarative `effect` a gated passive needs when the data does not carry it yet (see PATCHES).
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_MODULES, ScriptedRng, abilityService, createContext, unitModels,
+  DEFAULT_MODULES, ScriptedRng, abilityService, createContext, isCoherent, unitModels,
   type AbilityWindow, type AttackContext, type ChooseOptionDecision, type EngineContext, type GameState, type PlayerId, type UnitId,
 } from '../../src/engine'
 import { attackService } from '../../src/engine/attack'
@@ -12,7 +12,8 @@ import { effectService } from '../../src/engine/effects'
 import { hookService } from '../../src/engine/hooks-impl'
 import { objectiveService } from '../../src/engine/objectives'
 import { weaponService } from '../../src/engine/weapons'
-import { unitsWithin, whollyWithinUnit } from '../../src/engine/factions/aos-common'
+import { enemiesInCombat, unitsWithin, whollyWithinUnit } from '../../src/engine/factions/aos-common'
+import { applySlide, checkSlide, parseSlide, slideOptions } from '../../src/engine/factions/aos-moves'
 import type { AbilityDescriptor, DataBundle, DatasheetData, EnhancementData, FactionData, WeaponData } from '../../src/data/types'
 import { aosState, makeAosPlayer, withAosBundle } from '../fixtures'
 import abilitiesJson from '../../src/data/factions/ironjawz/abilities.json'
@@ -140,9 +141,10 @@ describe('registry', () => {
     }
   })
 
-  it('IJZ-P1 Mighty Destroyers and A Proper Ruckus are registered but can never be used', () => {
-    const s = game()
-    for (const code of ['ironjawzMightyDestroyers', 'ironjawzProperRuckus']) expect(codeHooks[code].activate!.canUse(s, 'A:megaboss', {})).toBe(false)
+  it('IJZ-3.2 the Ruckus data timing is a reaction, so the loop never offers it on its own', () => {
+    const s = game(GORK, 'ironjawz.ability.a-proper-ruckus')
+    expect(abilityService.usable(s, 'A', 'hero').map((u) => u.abilityId)).not.toContain('ironjawz.ability.a-proper-ruckus')
+    expect(codeHooks.ironjawzProperRuckus.activate!.canUse(s, null, {})).toBe(false)
   })
 })
 
@@ -271,7 +273,8 @@ describe('IJZ-5.1.1 Get Stuck In, Ladz!', () => {
     const ctx = ctxFor(s, [2])
     const topics = useOnce(ctx, 'hero', 'A', 'ironjawz.ability.get-stuck-in-ladz', { target: 'A:brute-ragerz' })
     // this unit and the near Brutes are the only targets
-    expect(topics).toEqual(['abilityUse', 'abilityTarget'])
+    // (the loop then offers Mighty Destroyers, which this test passes on)
+    expect(topics).toEqual(['abilityUse', 'abilityTarget', 'abilityUse'])
     expect(weapon(s, 'A:brute-ragerz', RAGER).A).toBe(base + 1)
     expect(weapon(s, 'A:megaboss', BOSS).A).toBe(s.weapons[BOSS].A)
     expect(weapon(s, 'A:ardboyz-1', CHOPPA).A).toBe(s.weapons[CHOPPA].A)
@@ -414,5 +417,142 @@ describe('IJZ-5.4.1 You Messin', () => {
     place(s, 'B:guard', -4, -0.4)
     s.units['A:brutes'].location = 'reserves'
     expect(contest(s, 'B:guard')).toBe(true)
+  })
+})
+
+// ---------- L1: Mighty Destroyers and A Proper Ruckus ----------
+describe('IJZ-2.2 Mighty Destroyers', () => {
+  const MD = 'ironjawz.ability.mighty-destroyers'
+  const RUCKUS = 'ironjawz.ability.a-proper-ruckus'
+
+  function mdGame(regiment = NATURAL) {
+    const s = game(GORK, regiment)
+    place(s, 'A:ardboyz-1', -6, -4)
+    place(s, 'B:brute', 8, 8)
+    return s
+  }
+
+  // answer the loop: use Mighty Destroyers on `target`, pick `mode` when asked, answer each move with `move(optionIds, unitId)`
+  function useMd(ctx: EngineContext, opts: { target?: string; mode?: string; move?: (ids: string[], unit: string | null) => string }) {
+    const log: { topic: string; ids: string[]; unit: string | null }[] = []
+    let used = false
+    const pick = (topic: string, ids: string[]): string => {
+      const unit = (ctx.state.pending as ChooseOptionDecision).context.unitId
+      log.push({ topic, ids, unit })
+      if (topic === 'abilityUse') { const hit = used ? undefined : ids.find((id) => id.startsWith(MD)); used = true; return hit ?? 'pass' }
+      if (topic === 'abilityTarget') return opts.target ?? ids[0]
+      if (ids.some((id) => id.startsWith('mv:'))) return opts.move ? opts.move(ids, unit) : ids[0]
+      return opts.mode ? ids.find((id) => id === opts.mode) ?? ids[0] : ids[0]
+    }
+    runWindow(ctx, 'hero', 'A', pick)
+    return log
+  }
+
+  it('IJZ-2.2 the picked unit may slide up to 3" and the move is reported as an ability move', () => {
+    const s = mdGame()
+    const ctx = ctxFor(s, [])
+    const before = unitModels(s, 'A:ardboyz-1').map((m) => ({ ...m.pos }))
+    const log = useMd(ctx, { target: 'A:ardboyz-1', move: (ids) => ids.find((id) => id.startsWith('mv:') && id !== 'mv:0:0') as string })
+    expect(log.map((l) => l.topic)).toEqual(['abilityUse', 'abilityTarget', 'abilityMode', 'abilityUse'])
+    const after = unitModels(s, 'A:ardboyz-1').map((m) => m.pos)
+    const d = Math.hypot(after[0].x - before[0].x, after[0].z - before[0].z)
+    expect(d).toBeGreaterThan(0.5)
+    expect(d).toBeLessThanOrEqual(3 + 1e-3)
+    for (let i = 0; i < after.length; i++) expect(Math.hypot(after[i].x - before[i].x, after[i].z - before[i].z)).toBeCloseTo(d, 2)
+    expect(isCoherent(unitModels(s, 'A:ardboyz-1'))).toBe(true)
+  })
+
+  it('IJZ-2.2 once per turn: the army cannot use it twice, and it is offered again next turn', () => {
+    const s = mdGame()
+    const ctx = ctxFor(s, [])
+    useMd(ctx, { target: 'A:ardboyz-1' })
+    expect(abilityService.usable(s, 'A', 'hero').some((u) => u.abilityId === MD)).toBe(false)
+    s.round = 2
+    expect(abilityService.usable(s, 'A', 'hero').some((u) => u.abilityId === MD)).toBe(true)
+  })
+
+  it('IJZ-2.2 a unit set up this turn is not a legal target', () => {
+    const s = mdGame()
+    s.units['A:ardboyz-1'].setUpTurn = { round: s.round, player: s.activePlayer }
+    s.units['A:ardboyz-2'].turn.arrivedThisTurn = true
+    const targets = (codeHooks.ironjawzMightyDestroyers.activate!.targets as (st: GameState, u: null, p: PlayerId) => UnitId[])(s, null, 'A')
+    expect(targets).not.toContain('A:ardboyz-1')
+    expect(targets).not.toContain('A:ardboyz-2')
+    expect(targets).toContain('A:brutes')
+  })
+
+  it('IJZ-2.2 the move may end in combat; a unit that starts in combat must end in combat', () => {
+    const s = mdGame()
+    // an enemy 6" away: one slide of 3" cannot reach combat range (3"), two would; right at 4" it can
+    place(s, 'B:brute', -6, -4 + 1.2 + 4.5)
+    const opts = (id: string) => slideOptions(s, id, 3)
+    const free = opts('A:ardboyz-1')
+    expect(free.some((o) => o.label.includes('into combat'))).toBe(true)
+    // now start in combat: every offered slide (except staying put) keeps the unit in combat
+    place(s, 'B:brute', -6, -4 + 1.2 + 1.5)
+    expect(enemiesInCombat(s, 'A:ardboyz-1').length).toBeGreaterThan(0)
+    const ctx = ctxFor(s, [])
+    for (const o of opts('A:ardboyz-1').filter((x) => x.id !== 'mv:0:0')) {
+      const t = structuredClone(s)
+      const slide = parseSlide(o.id)!
+      expect(applySlide(createContext(t, new ScriptedRng([]), DEFAULT_MODULES).ctx, 'A:ardboyz-1', slide.dx, slide.dz, 3), o.label).toBe(true)
+      expect(enemiesInCombat(t, 'A:ardboyz-1').length, o.label).toBeGreaterThan(0)
+    }
+    // and a retreat out of combat is refused
+    const away = checkSlide(s, 'A:ardboyz-1', 0, -3, 3, true)
+    expect(away.ok).toBe(false)
+    void ctx
+  })
+
+  it('IJZ-2.2 a slide never leaves coherency, overlaps a model or exceeds 3"', () => {
+    const s = mdGame()
+    expect(checkSlide(s, 'A:ardboyz-1', 3.5, 0, 3, false).ok).toBe(false)
+    place(s, 'A:ardboyz-2', -6, -2.4) // a unit right in the way
+    const blocked = checkSlide(s, 'A:ardboyz-1', 0, 1.2, 3, false)
+    expect(blocked.ok).toBe(false)
+    expect(checkSlide(s, 'A:ardboyz-1', 1, 0, 3, false).ok).toBe(true)
+  })
+
+  it('IJZ-2.2 is usable in the opponent\'s hero phase too (Any Hero Phase)', () => {
+    const s = mdGame()
+    s.activePlayer = 'B'
+    expect(abilityService.usable(s, 'A', 'hero').some((u) => u.abilityId === MD)).toBe(true)
+  })
+
+  describe('IJZ-3.2 A Proper Ruckus', () => {
+    it('IJZ-3.2 only offered as a mode while the regiment ability is picked and unspent', () => {
+      const plain = mdGame(NATURAL)
+      const log = useMd(ctxFor(plain, []), { target: 'A:ardboyz-1' })
+      expect(log.some((l) => l.ids.includes('ruckus'))).toBe(false)
+      const s = mdGame(RUCKUS)
+      const log2 = useMd(ctxFor(s, []), { target: 'A:ardboyz-1', mode: 'single' })
+      expect(log2.some((l) => l.ids.includes('ruckus'))).toBe(true)
+    })
+
+    it('IJZ-3.2 every friendly unit not set up this turn gets its own move, once per battle', () => {
+      const s = mdGame(RUCKUS)
+      s.units['A:brutes'].setUpTurn = { round: s.round, player: s.activePlayer } // just arrived: left out
+      const ctx = ctxFor(s, [])
+      const moved: string[] = []
+      const log = useMd(ctx, { target: 'A:ardboyz-1', mode: 'ruckus', move: (ids, unit) => { moved.push(unit as string); return ids[0] } })
+      const eligible = Object.values(s.units).filter((u) => u.player === 'A' && u.location === 'board' && u.id !== 'A:brutes').map((u) => u.id)
+      expect(moved[0]).toBe('A:ardboyz-1')
+      expect(new Set(moved).size).toBe(moved.length)
+      expect(moved).not.toContain('A:brutes')
+      for (const id of moved) expect(eligible).toContain(id)
+      expect(moved.length).toBeGreaterThan(1)
+      expect(log.filter((l) => l.topic === 'abilityMode').length).toBe(moved.length + 1) // the mode question + one per unit
+      // spent for the battle
+      s.round = 2
+      const again = useMd(ctxFor(s, []), { target: 'A:ardboyz-1' })
+      expect(again.some((l) => l.ids.includes('ruckus'))).toBe(false)
+    })
+
+    it('IJZ-3.2 passing on a unit leaves it where it is', () => {
+      const s = mdGame(RUCKUS)
+      const where = unitModels(s, 'A:ardboyz-1').map((m) => ({ ...m.pos }))
+      useMd(ctxFor(s, []), { target: 'A:ardboyz-1', mode: 'ruckus', move: () => 'mv:0:0' })
+      expect(unitModels(s, 'A:ardboyz-1').map((m) => ({ ...m.pos }))).toEqual(where)
+    })
   })
 })

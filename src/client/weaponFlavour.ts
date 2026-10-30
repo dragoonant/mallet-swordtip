@@ -83,7 +83,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
 import type { VfxFamily } from './vfx/types'
 export type { VfxFamily } from './vfx/types'
 
-export const VFX_FAMILIES: readonly VfxFamily[] = ['bolt', 'autocannon', 'las', 'lascannon', 'plasma', 'melta', 'flamer', 'missile', 'grenade', 'gauss', 'pulse', 'dakka', 'bio', 'psychic']
+export const VFX_FAMILIES: readonly VfxFamily[] = ['bolt', 'autocannon', 'las', 'lascannon', 'plasma', 'melta', 'flamer', 'missile', 'grenade', 'gauss', 'pulse', 'dakka', 'bio', 'psychic', 'cannonball', 'grapeshot', 'flintlock']
 
 export interface VfxClassification {
   family: VfxFamily
@@ -94,7 +94,7 @@ export interface VfxClassification {
 
 /** Engine faction ids by the prefix of a weapon id ('ork.w.shoota'), for weapons classified with no faction given. */
 const ID_PREFIX_FACTION: [string, string][] = [
-  ['ork.', 'ork'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
+  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
   ['am.', 'astra-militarum'], ['lov.', 'leagues-of-votann'], ['gk.', 'grey-knights'], ['csm', 'chaos-space-marines'], ['we.', 'world-eaters'], ['ade', 'adepta-sororitas'], ['cus.', 'adeptus-custodes'], ['drk.', 'drukhari'], ['ael.', 'aeldari'], ['adm.', 'adeptus-mechanicus'], ['dg.', 'death-guard'], ['ths.', 'thousand-sons'], ['sw.', 'space-wolves'], ['da.', 'dark-angels'], ['ba.', 'blood-angels'], ['dw.', 'deathwatch'], ['bt.', 'black-templars'],
 ]
 
@@ -104,6 +104,10 @@ export function classifyVfxFamily(weaponId: string, weapon: WeaponData | undefin
   const kw = (family: VfxFamily): VfxClassification => ({ family, via: 'keyword' })
 
   if (hasAbility(weapon, 'PSYCHIC') || /smite|witchfire|psychic|psychoclastic|psilencer|psycannon|purge soul|rite of possession|rite-of-possession/.test(text)) return kw('psychic')
+  // Age of Sigmar black powder, ahead of the generic "cannon" rule: an iron ball, a spray of grapeshot, a pistol's lead.
+  if (/cannonball/.test(text)) return kw('cannonball')
+  if (/grapeshot/.test(text)) return kw('grapeshot')
+  if (/dragoon.pistol|flintlock|handgun|blunderbuss|musket/.test(text)) return kw('flintlock')
   // Spat, flung or sprayed biomass: Tyranid guns, and the cult's webber.
   if (/fleshborer|barb|devourer|venom|spine|spore|acid|borer|webber|web/.test(text) || (fac === 'tyranids' && !/torrent/.test(text))) return kw('bio')
   if (/gauss|tachyon|doomsday|necron|\barc\b/.test(text)) return kw('gauss')
@@ -150,6 +154,7 @@ export function vfxFamily(weaponId: string, weapon: WeaponData | undefined, fact
 const FAMILY_FLAVOUR: Record<VfxFamily, RangedFlavour> = {
   bolt: 'bolter', autocannon: 'heavy', las: 'bolter', lascannon: 'heavy', plasma: 'heavy', melta: 'flame', flamer: 'flame',
   missile: 'heavy', grenade: 'heavy', gauss: 'psychic', pulse: 'psychic', dakka: 'shoota', bio: 'shoota', psychic: 'psychic',
+  cannonball: 'heavy', grapeshot: 'shoota', flintlock: 'bolter',
 }
 
 /** A family mapped back onto the 5 SFX/tracer flavours. */

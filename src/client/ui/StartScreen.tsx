@@ -9,12 +9,30 @@ import { AI_DIFFICULTY_OPTIONS, DEFAULT_AI_DIFFICULTY, DEFAULT_SPEARHEAD_FACTION
 import { phaseLabel, relativeTime, shouldConfirmReplace, type SaveEnvelope } from '../store/saveGame'
 import { randomArmyPaint, usePaintStore } from '../figures/paint'
 import { PainterPanel } from './PainterPanel'
+import { Tooltip } from './Tooltip'
 import { buttonActive, buttonBase, buttonDanger, buttonPrimary, colors, fontStack, mutedText, panel } from './theme'
 
 // Own-words one-liners per faction id. A faction with no entry here still appears (name only).
 const FACTION_BLURBS: Record<string, string> = {
   cities: 'Frontier soldiers of the human cities: drilled spearmen, hard-riding cavalry and a heavy cannon, led by a cavalry marshal who rallies the charge.',
   ironjawz: 'Iron-clad orruk warbands: huge brutes and armoured boyz who smash through anything in reach, with a pack of heavies that crashes in late from nowhere.',
+}
+
+// Own-words one-liners for the regiment abilities and enhancements shown on the cards; the full rules text from the data is the
+// tooltip. An id without an entry here falls back to its data text.
+const OPTION_BLURBS: Record<string, string> = {
+  'cities.ability.for-sigmar-charge': 'Cavalry that charged this turn swing first in the fight.',
+  'cities.ability.ironweld-discipline': 'In your opponent\'s shooting phase your cannon may fire too, on a 3+.',
+  'ironjawz.ability.natural-disaster': 'A charge roll of 8+ (before bonuses) gives that unit +1 Attacks on its melee weapons.',
+  'ironjawz.ability.a-proper-ruckus': 'Once per battle, the free 3" move of Mighty Destroyers is offered to every unit at once.',
+  'cities.enh.flask-of-lethisian-darkwater': 'Once per battle, your general heals D6 damage.',
+  'cities.enh.heirloom-blade': 'Your general\'s longsword hits harder against armour: +1 Rend.',
+  'cities.enh.brazier-of-holy-flame': 'At the end of any turn, up to D3 fallen Steelhelms stand up near your general.',
+  'cities.enh.glimmering': 'Once a phase, re-roll one hit, wound or save made for your general.',
+  'ironjawz.enhancement.amberbone-whetstone': 'Your general\'s melee weapons have Rend 2.',
+  'ironjawz.enhancement.trophy-skulls': 'Your general counts as Control 5 on objectives.',
+  'ironjawz.enhancement.armour-of-gork': 'Your general shrugs off damage on a 6+ (Ward).',
+  'ironjawz.enhancement.mega-bossy': 'After your general charges, nearby units add 1 to their charge rolls.',
 }
 
 interface FactionChoice {
@@ -97,6 +115,10 @@ const errorText: CSSProperties = { color: colors.danger, fontSize: 13 }
 const missionBlurb: CSSProperties = { ...mutedText, marginTop: -6, fontSize: 12 }
 const missionList: CSSProperties = { margin: '2px 0 0', paddingLeft: 16, fontSize: 11.5, color: colors.muted }
 const optionCard: CSSProperties = { border: `1px solid ${colors.border}`, borderRadius: 6, padding: '8px 10px', fontSize: 12, textAlign: 'left' as const }
+const pickList: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
+const pickItem: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, width: '100%', textAlign: 'left', whiteSpace: 'normal', padding: '7px 10px', lineHeight: 1.25 }
+const pickName: CSSProperties = { fontWeight: 700, fontSize: 13 }
+const pickText: CSSProperties = { fontSize: 11.5, color: 'inherit', opacity: 0.78, fontWeight: 400 }
 
 function FactionCard({ name, active, onPick, testId }: { name: string; active: boolean; onPick: () => void; testId?: string }) {
   return (
@@ -104,6 +126,27 @@ function FactionCard({ name, active, onPick, testId }: { name: string; active: b
       <span style={factionBadge} aria-hidden="true">{name.charAt(0)}</span>
       <span>{name}</span>
     </button>
+  )
+}
+
+interface PickItem { id: string; name: string; text: string }
+
+/** A short list of cards, one picked: the name, an own-words one-liner and the full rules text in the shared tooltip. */
+function PickList({ items, selected, onPick, testId, itemTestId }: { items: PickItem[]; selected: string | undefined; onPick: (id: string) => void; testId: string; itemTestId: string }) {
+  return (
+    <div style={pickList} role="radiogroup" data-testid={testId}>
+      {items.map((it) => {
+        const on = it.id === selected
+        return (
+          <Tooltip key={it.id} title={it.name} body={it.text} placement="right">
+            <button type="button" role="radio" aria-checked={on} aria-pressed={on} data-testid={`${itemTestId}-${it.id}`} style={{ ...(on ? buttonActive : buttonBase), ...pickItem }} onClick={() => onPick(it.id)}>
+              <span style={pickName}>{it.name}</span>
+              <span style={pickText}>{OPTION_BLURBS[it.id] ?? it.text}</span>
+            </button>
+          </Tooltip>
+        )
+      })}
+    </div>
   )
 }
 
@@ -122,24 +165,15 @@ function ArmyOptions({ bundle, factionKey, regiment, setRegiment, enhancement, s
   const regiments = regimentChoices(bundle, army)
   const regimentId = regiments.find((r) => r.id === regiment)?.id ?? regiments.find((r) => r.default)?.id ?? regiments[0]?.id
   const enhancementId = army.enhancements.find((e) => e.id === enhancement)?.id ?? army.enhancements.find((e) => e.default)?.id ?? army.enhancements[0]?.id
-  const picked = regiments.find((r) => r.id === regimentId)
-  const pickedEnh = enhancementId ? bundle.enhancements[enhancementId] : undefined
   return (
     <>
-      <div style={label}>Regiment ability (pick 1)</div>
-      <div style={row} data-testid={`setup-regiment-${who}`}>
-        {regiments.map((r) => (
-          <button key={r.id} style={r.id === regimentId ? buttonActive : buttonBase} aria-pressed={r.id === regimentId} onClick={() => setRegiment(r.id)}>{r.name}</button>
-        ))}
-      </div>
-      {picked?.text && <div style={optionCard}>{picked.text}</div>}
-      <div style={label}>General's enhancement (pick 1)</div>
-      <div style={row} data-testid={`setup-enhancement-${who}`}>
-        {army.enhancements.map((e) => (
-          <button key={e.id} style={e.id === enhancementId ? buttonActive : buttonBase} aria-pressed={e.id === enhancementId} onClick={() => setEnhancement(e.id)}>{bundle.enhancements[e.id]?.name ?? e.id}</button>
-        ))}
-      </div>
-      {pickedEnh?.text && <div style={optionCard}>{pickedEnh.text}</div>}
+      <div style={label}>Regiment ability (pick 1 of {regiments.length})</div>
+      <PickList items={regiments.map((r) => ({ id: r.id, name: r.name, text: r.text }))} selected={regimentId} onPick={setRegiment} testId={`setup-regiment-${who}`} itemTestId={`setup-regiment-${who}`} />
+      <div style={label}>General's enhancement (pick 1 of {army.enhancements.length})</div>
+      <PickList
+        items={army.enhancements.map((e) => ({ id: e.id, name: bundle.enhancements[e.id]?.name ?? e.id, text: bundle.enhancements[e.id]?.text ?? '' }))}
+        selected={enhancementId} onPick={setEnhancement} testId={`setup-enhancement-${who}`} itemTestId={`setup-enhancement-${who}`}
+      />
     </>
   )
 }
@@ -241,8 +275,8 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         seed,
         regimentAbilityId: regimentA || undefined,
         enhancementId: enhancementA || undefined,
-        opponentRegimentAbilityId: opponent === 'hotseat' ? regimentB || undefined : undefined,
-        opponentEnhancementId: opponent === 'hotseat' ? enhancementB || undefined : undefined,
+        opponentRegimentAbilityId: regimentB || undefined,
+        opponentEnhancementId: enhancementB || undefined,
         difficulty: opponent === 'bot' ? difficulty : undefined,
       })
       onStarted()
@@ -328,7 +362,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
           ))}
         </div>
         {opponentActive?.blurb && <p style={blurb}>{opponentActive.blurb}</p>}
-        {bundle && opponent === 'hotseat' && <ArmyOptions bundle={bundle} factionKey={opponentFaction} regiment={regimentB} setRegiment={setRegimentB} enhancement={enhancementB} setEnhancement={setEnhancementB} who="B" />}
+        {bundle && <ArmyOptions bundle={bundle} factionKey={opponentFaction} regiment={regimentB} setRegiment={setRegimentB} enhancement={enhancementB} setEnhancement={setEnhancementB} who="B" />}
 
         {opponent === 'bot' && (
           <>

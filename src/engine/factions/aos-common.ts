@@ -1,12 +1,12 @@
 // Helpers shared by the two Spearhead armies' code hooks (cities.ts, ironjawz.ts). WP7, 13-engine-port-plan §5.
 // Pure geometry / state queries plus the few effects both armies need: declared rolls, Heal, returning slain models,
 // mortal damage. Nothing here knows an army; ids and numbers come from the callers.
-import { ENGAGEMENT_H, EPS, basesOverlap, coherencyNeighboursNeeded, distance, inCoherencyRange, whollyOnBoard, whollyWithinOf, type Footprint } from '../geometry'
+import { ENGAGEMENT_H, EPS, OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE, basesOverlap, coherencyNeighboursNeeded, distance, inCoherencyRange, whollyOnBoard, whollyWithinOf, withinObjectiveRange, type Footprint } from '../geometry'
 import type { AbilityUse } from '../hooks'
 import type { EngineContext } from '../modules'
 import { rollSum } from '../dice'
 import { keywordsOf, modelStats, unitModels } from '../state'
-import type { DiceRoll, GameState, Model, Unit, UnitId } from '../types'
+import type { DiceRoll, GameState, Model, Objective, PlayerId, Unit, UnitId } from '../types'
 
 export const onBoard = (state: GameState, unitId: UnitId | null | undefined): Unit | null => {
   const u = unitId ? state.units[unitId] : undefined
@@ -46,6 +46,31 @@ export function enemiesInCombat(state: GameState, unitId: UnitId): UnitId[] {
 }
 
 export const inCombat = (state: GameState, unitId: UnitId): boolean => enemiesInCombat(state, unitId).length > 0
+
+// ---------- objectives ----------
+export const liveObjectives = (state: GameState): Objective[] => (Object.values(state.objectives) as Objective[]).filter((o) => !o.removed)
+
+// any live model of the unit overlaps the objective circle (the same test objectives.ts uses to contest)
+export function unitContestsObjective(state: GameState, unitId: UnitId, obj: Objective): boolean {
+  const range = state.mission.data.objectiveRange ?? OBJECTIVE_RANGE
+  const radius = obj.radius ?? state.mission.data.objectiveMarkerRadius ?? OBJECTIVE_MARKER_RADIUS
+  return liveModels(state, unitId).some((m) => withinObjectiveRange(m, obj, 0, range, radius))
+}
+
+// does any unit of `player` contest the objective?
+export function playerContestsObjective(state: GameState, player: PlayerId, obj: Objective): boolean {
+  return Object.values(state.units).some((u) => u.player === player && u.location === 'board' && unitContestsObjective(state, u.id, obj))
+}
+
+// CITIES-AB-2: objective id -> the player it is consecrated for (kept in mission.custom so the frozen GameState type is unchanged)
+export function consecratedMap(state: GameState): Record<string, PlayerId> {
+  return (state.mission.custom.consecrated as Record<string, PlayerId> | undefined) ?? {}
+}
+// the objectives consecrated for `player` that they still control (consecration ends the moment the enemy takes control)
+export function consecratedFor(state: GameState, player: PlayerId): Objective[] {
+  const map = consecratedMap(state)
+  return liveObjectives(state).filter((o) => map[o.id] === player && o.controller === player)
+}
 
 // ---------- declared rolls ----------
 // The roll an activated ability declared: abilities.ts passes it in `use.roll` when the descriptor has a `roll`; otherwise the hook

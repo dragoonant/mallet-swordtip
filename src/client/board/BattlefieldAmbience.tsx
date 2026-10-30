@@ -1,4 +1,4 @@
-// Distant war around the board: artillery flashes beyond the edges and the occasional drifting flare, so
+// Distant war around the board (Realm of Fire): cannon flashes beyond the edges and the occasional drifting ember-burst, so
 // the scene isn't static. Purely visual (Math.random, never the engine rng). A FIXED pool of always-mounted
 // point lights (2 artillery + 2 flare) sits at intensity 0 while idle and is mutated through refs in useFrame —
 // mounting/unmounting lights, or hiding one, changes the light count and recompiles every material.
@@ -23,9 +23,9 @@ const FLARE_DECAY = 2
 
 const FLARE_RISE_S = 1.6
 const FLARE_TYPES = [
-  { color: '#ff4a3a', gain: 2.2 }, // red reads dim per unit of intensity, so it gets more
-  { color: '#5cff7a', gain: 1.4 },
-  { color: '#e8f0ff', gain: 1 },
+  { color: '#ff4a2a', gain: 2.2 }, // red reads dim per unit of intensity, so it gets more
+  { color: '#ff9a30', gain: 1.5 }, // Aqshy: rising embers and fire-bursts, no green or blue flares
+  { color: '#ffd27a', gain: 1.1 },
 ] as const
 
 type Mode = 'off' | 'normal' | 'demo'

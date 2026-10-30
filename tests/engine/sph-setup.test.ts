@@ -4,6 +4,7 @@ import {
   createEngine, DEFAULT_MODULES, registerDataBundle, setupModule,
   type Action, type DeployUnitAction, type EngineApi, type GameState, type PendingDecision, type StepResult,
 } from '../../src/engine'
+import { suggestDeployment } from '../../src/engine/setup'
 import { aosBundle, aosPingPhases, makeAosPlayer, makeAosSetup } from '../fixtures'
 
 // real setup + deployment modules, ping phases for the battle
@@ -133,3 +134,51 @@ describe('spearhead pre-battle (WP3)', () => {
     expect(engine.validate(state, place(2))).not.toBeNull()
   })
 })
+
+describe('deployment suggestion', () => {
+  afterEach(() => registerDataBundle(null))
+
+  const asAction = (r: StepResult, sug: NonNullable<ReturnType<typeof suggestDeployment>>): DeployUnitAction => {
+    const pending = r.pending as Extract<PendingDecision, { kind: 'deployUnit' }>
+    return { type: 'deployUnit', player: pending.player, decisionId: pending.id, unitId: sug.unitId, placements: sug.placements }
+  }
+
+  it('SPH-011 suggests the biggest waiting unit first, in a spot the engine accepts, with room left for the rest', () => {
+    const engine = realSetupEngine()
+    const r = engine.createGame(preFilled(), 'sph-suggest', aosBundle)
+    const sug = suggestDeployment(r.state)!
+    expect(sug.unitId).toBe('A:cannon') // the 120 x 92 mm oval has the biggest base
+    expect(sug.fitsAll).toBe(true)
+    expect(sug.order).toHaveLength(4)
+    expect(sug.order[0]).toBe('A:cannon')
+    expect(engine.validate(r.state, asAction(r, sug))).toBeNull()
+  })
+
+  it('SPH-011 following the suggestions deploys both whole armies with nobody boxed out, however the order starts', () => {
+    const engine = realSetupEngine()
+    let r = engine.createGame(preFilled(), 'sph-suggest-2', aosBundle)
+    // start with a unit that is NOT the biggest: the plan still has to fit the rest
+    const smallFirst = suggestDeployment(r.state, 'A:guard')!
+    expect(smallFirst.unitId).toBe('A:guard')
+    expect(smallFirst.fitsAll).toBe(true)
+    let guard = 0
+    let useSmall = true
+    while (r.pending?.kind === 'deployUnit' && guard++ < 20) {
+      const sug = (useSmall ? suggestDeployment(r.state, 'A:guard') : suggestDeployment(r.state))!
+      useSmall = false
+      expect(sug, `no suggestion for ${r.pending.player}`).not.toBeNull()
+      expect(sug.fitsAll).toBe(true)
+      r = engine.step(r.state, asAction(r, sug))
+      expect(r.rejection ?? null).toBeNull()
+    }
+    expect(Object.values(r.state.units).filter((u) => u.location === 'board')).toHaveLength(8)
+  })
+
+  it('SPH-011 gives nothing outside deployment or for a unit that is not waiting', () => {
+    const engine = realSetupEngine()
+    const r = engine.createGame(preFilled(), 'sph-suggest-3', aosBundle)
+    expect(suggestDeployment({ ...r.state, phase: 'movement' })).toBeNull()
+    expect(suggestDeployment(r.state, 'nope')).toBeNull()
+  })
+})
+

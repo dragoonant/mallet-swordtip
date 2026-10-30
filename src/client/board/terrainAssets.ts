@@ -11,6 +11,8 @@ export interface PbrUrls {
   map: string
   normalMap: string
   roughnessMap: string
+  /** Glowing parts of the mat (the lava seams of the Realm of Fire mats); absent on plain PBR sets. */
+  emissiveMap?: string
 }
 
 export interface Battlefield {
@@ -26,17 +28,17 @@ const battlefield = (id: string, name: string): Battlefield => ({
     map: BASE + `battlefield/${id}/diff.jpg`,
     normalMap: BASE + `battlefield/${id}/nor.jpg`,
     roughnessMap: BASE + `battlefield/${id}/rough.jpg`,
+    emissiveMap: BASE + `battlefield/${id}/emis.jpg`,
   },
 })
 
-/** Non-tiling 44:30 ground textures, each stretched once across the whole board. */
+/** Non-tiling 30:22 ground mats, each stretched once across the whole board. Baked by art/board-textures/gen_aqshy.py:
+ *  the Realm of Fire (scorched earth, ash drifts, glowing lava seams). The 40k grim-industrial mats were retired
+ *  from the picker; their files stay in public/assets/terrain/battlefield/ for the 42k fork. */
 export const BATTLEFIELDS: readonly Battlefield[] = [
-  battlefield('aerialrock', 'Rocky Plateau'),
-  battlefield('dirt', 'Scorched Dirt'),
-  battlefield('dryrocks', 'Dry Rubble'),
-  battlefield('rocks08', 'Broken Stone'),
-  battlefield('crackmud', 'Cracked Mud'),
-  battlefield('laterite', 'Red Laterite'),
+  battlefield('aqshy', 'Aqshy Scorchlands'),
+  battlefield('basalt', 'Basalt Flats'),
+  battlefield('ashlands', 'Ember Ashlands'),
 ]
 
 export const BRICK_URLS: PbrUrls = {
@@ -70,6 +72,7 @@ export interface PbrTextures {
   map: THREE.Texture
   normalMap: THREE.Texture
   roughnessMap: THREE.Texture
+  emissiveMap?: THREE.Texture
 }
 
 /** Loads a {map,normalMap,roughnessMap} set, tags the diffuse map sRGB, and enables repeat
@@ -115,14 +118,17 @@ export function polygonFootprintSize(polygon: { x: number; z: number }[]): { wid
 /** Loads one battlefield's texture set for stretching once over the board: repeat 1, clamped edges,
  *  sRGB diffuse. (Separate from useTiledPBR, which sets RepeatWrapping on the shared cached textures.) */
 export function useBattlefieldPBR(urls: PbrUrls, anisotropy?: number): PbrTextures {
-  const [map, normalMap, roughnessMap] = useTexture([urls.map, urls.normalMap, urls.roughnessMap])
-  map.colorSpace = THREE.SRGBColorSpace // albedo is sRGB; normal + roughness stay linear (NoColorSpace)
+  const list = urls.emissiveMap ? [urls.map, urls.normalMap, urls.roughnessMap, urls.emissiveMap] : [urls.map, urls.normalMap, urls.roughnessMap]
+  const [map, normalMap, roughnessMap, emissiveMap] = useTexture(list)
+  map.colorSpace = SRGB
+  if (emissiveMap) emissiveMap.colorSpace = SRGB // emissive colour is authored in sRGB like the albedo
   normalMap.colorSpace = roughnessMap.colorSpace = THREE.NoColorSpace
-  for (const t of [map, normalMap, roughnessMap]) {
+  for (const t of emissiveMap ? [map, normalMap, roughnessMap, emissiveMap] : [map, normalMap, roughnessMap]) {
     t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping
     t.repeat.set(1, 1)
     if (anisotropy) t.anisotropy = anisotropy
     t.needsUpdate = true
   }
-  return { map, normalMap, roughnessMap }
+  return { map, normalMap, roughnessMap, emissiveMap }
 }
+const SRGB = THREE.SRGBColorSpace

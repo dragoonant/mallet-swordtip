@@ -3,6 +3,8 @@
 // than importing that JSON so the client bundle gets typo-safe autocomplete and has no runtime
 // dependency on a build-tool file. If the manifest ever gains/removes an id, mirror the change here.
 
+import { AOS_MUSIC_IDS, AOS_SFX_IDS, AOS_STINGER_IDS, soundFile, type AosSoundId } from './aos'
+
 export type SfxId =
   | 'bolter-burst'
   | 'shoota-spray'
@@ -145,7 +147,7 @@ export type StingerId =
 
 export type MusicId = 'ambient-battlefield-loop' | StingerId
 
-export type SoundId = SfxId | VoiceId | MusicId
+export type SoundId = SfxId | VoiceId | MusicId | AosSoundId
 
 export type SoundChannel = 'sfx' | 'voice' | 'music'
 
@@ -161,13 +163,13 @@ export const STINGER_IDS: readonly StingerId[] = [
   'stinger-xenos-horizon',
 ]
 
-export const MUSIC_IDS: readonly MusicId[] = ['ambient-battlefield-loop', ...STINGER_IDS]
-export const LOOPING_SOUNDS: ReadonlySet<SoundId> = new Set<SoundId>(['ambient-battlefield-loop'])
+export const MUSIC_IDS: readonly SoundId[] = ['ambient-battlefield-loop', ...STINGER_IDS, ...AOS_MUSIC_IDS]
+export const LOOPING_SOUNDS: ReadonlySet<SoundId> = new Set<SoundId>(['ambient-battlefield-loop', 'aos-ambient-bed'])
 /** Music is streamed through <audio> elements, never decoded into memory. */
 export const STREAMED_SOUNDS: ReadonlySet<SoundId> = new Set<SoundId>(MUSIC_IDS)
 
 export function channelFor(id: SoundId): SoundChannel {
-  if ((MUSIC_IDS as readonly string[]).includes(id)) return 'music'
+  if (STREAMED_SOUNDS.has(id)) return 'music'
   if (id.startsWith('narr-')) return 'voice'
   return 'sfx'
 }
@@ -304,9 +306,22 @@ export const SFX_IDS: readonly SfxId[] = [
   'wpn-brutal-assault-weapon',
 ]
 
-export const ALL_SOUND_IDS: readonly SoundId[] = [...SFX_IDS, ...VOICE_IDS, ...MUSIC_IDS]
+export const ALL_SOUND_IDS: readonly SoundId[] = [...SFX_IDS, ...AOS_SFX_IDS, ...VOICE_IDS, ...MUSIC_IDS]
 
-/** public/audio/<id>.mp3, respecting Vite's base path (e.g. '/mallet-swordtip/' in production). */
+/** The Spearhead stinger pool (the 42k sci-fi stingers stay out of it). */
+export { AOS_STINGER_IDS }
+
+/** Decoded up front once audio unlocks: the Spearhead set plus the shared UI/dice/hit sounds. The ~120 old per-weapon
+ *  sounds stay lazy (a sound played before it has decoded loads and plays when ready), so a phone does not fetch them all. */
+export const PRELOAD_IDS: readonly SoundId[] = [
+  ...AOS_SFX_IDS,
+  'dice-rattle', 'dice-land', 'hit-impact', 'armour-save-clank', 'model-death', 'wpn-slugga', 'cp-gained-click',
+  'stratagem-whoosh', 'battle-shock-sting', 'vehicle-explosion', 'ui-click', 'ui-error',
+  ...VOICE_IDS,
+]
+
+/** public/audio/<file>.mp3, respecting Vite's base path (e.g. '/mallet-swordtip/' in production). An `aos-` id
+ *  resolves to its own file when generated, else to the mapped 42k file (see aos.ts). */
 export function audioUrl(id: SoundId): string {
-  return `${import.meta.env.BASE_URL}audio/${id}.mp3`
+  return `${import.meta.env.BASE_URL}audio/${soundFile(id)}.mp3`
 }
