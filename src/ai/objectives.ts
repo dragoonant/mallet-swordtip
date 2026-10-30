@@ -76,9 +76,9 @@ export interface ObjectiveChange {
 
 // VP-ish worth of the end-of-turn control picture after `change`, from `player`'s side: what the turn's scorer collects counts in
 // full and the other side's tally at half (it gets a turn to answer before it scores). Compare two calls, never read one alone.
-export function objectiveVp(state: GameState, player: PlayerId, change: ObjectiveChange = {}): number {
-  const b = boardOf(state)
-  if (b.ids.length === 0) return 0
+const winnerOf = (l: Record<PlayerId, number>, sticky: PlayerId | null): PlayerId | null => (l.A > l.B ? 'A' : l.B > l.A ? 'B' : sticky)
+
+function levelsAfter(state: GameState, b: ObjBoard, change: ObjectiveChange): Record<ObjectiveId, Record<PlayerId, number>> {
   const levels: Record<ObjectiveId, Record<PlayerId, number>> = {}
   for (const id of b.ids) levels[id] = { ...b.levels[id] }
   if (change.unitId && change.placements) {
@@ -95,6 +95,23 @@ export function objectiveVp(state: GameState, player: PlayerId, change: Objectiv
       if (next) levels[next.obj][u.player] += next.oc
     }
   }
+  return levels
+}
+
+// who controls each live objective at the end of the turn if `change` happens (same model as objectiveVp; army hints use it for
+// the cards that name one objective)
+export function controlAfter(state: GameState, change: ObjectiveChange = {}): Record<ObjectiveId, PlayerId | null> {
+  const b = boardOf(state)
+  const levels = levelsAfter(state, b, change)
+  const out: Record<ObjectiveId, PlayerId | null> = {}
+  for (const id of b.ids) out[id] = winnerOf(levels[id], b.ctl[id])
+  return out
+}
+
+export function objectiveVp(state: GameState, player: PlayerId, change: ObjectiveChange = {}): number {
+  const b = boardOf(state)
+  if (b.ids.length === 0) return 0
+  const levels = levelsAfter(state, b, change)
   if (change.removed) {
     const u = state.units[change.removed.unitId]
     const cur = b.contrib.get(change.removed.unitId)
@@ -103,8 +120,7 @@ export function objectiveVp(state: GameState, player: PlayerId, change: Objectiv
   let mine = 0, theirs = 0
   const foe = other(player)
   for (const id of b.ids) {
-    const l = levels[id]
-    const to = l[player] > l[foe] ? player : l[foe] > l[player] ? foe : b.ctl[id]
+    const to = winnerOf(levels[id], b.ctl[id])
     if (to === player) mine++
     else if (to === foe) theirs++
   }

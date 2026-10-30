@@ -10,6 +10,7 @@ import { applyGlbPaint } from './glbPaint'
 import { paintKey, type ArmyPaint } from './paint'
 import type { Pose } from './types'
 import { GLB_FIGURE_ADJUST } from './glbModels'
+import { loadedGlbScene } from './glbLoader'
 
 /** Fits a GLB instance to its datasheet: the baked `base` disc is stretched to the datasheet's base radii (so an oval
  *  baked the wrong way round, or a round disc under an oval-based unit, matches the footprint the rules use) and the
@@ -48,6 +49,31 @@ export function glbFigureHeight(object: Object3D): number | undefined {
   object.updateWorldMatrix(true, true)
   const box = new Box3().setFromObject(figure)
   return box.isEmpty() ? undefined : box.max.y
+}
+
+const drawnHeightCache = new Map<string, number>()
+
+/** How tall the drawn GLB for `slug` really stands above its base's ground (GLB_FIGURE_ADJUST scale applied), in inches, or
+ *  undefined while it is loading / has no figure node. Unit name tags sit above this instead of the engine's model height,
+ *  which is a rules number (line of sight) and for the monster mounts is up to 2" taller than the sculpt. */
+export function drawnGlbHeight(slug: string | undefined): number | undefined {
+  if (!slug) return undefined
+  const hit = drawnHeightCache.get(slug)
+  if (hit !== undefined) return hit
+  const scene = loadedGlbScene(slug)
+  if (!scene) return undefined
+  const top = glbFigureHeight(scene)
+  if (top === undefined) return undefined
+  const base = scene.getObjectByName('base') as Mesh | undefined
+  let baseTop = 0
+  if (base) {
+    if (!base.geometry.boundingBox) base.geometry.computeBoundingBox()
+    baseTop = base.geometry.boundingBox?.max.y ?? 0
+  }
+  const scale = GLB_FIGURE_ADJUST[slug]?.scale ?? 1
+  const h = Math.max(0, baseTop + (top - baseTop) * scale)
+  drawnHeightCache.set(slug, h)
+  return h
 }
 
 export function GlbBody({ object, slug, radiusX, radiusZ, pose, seed, faction, paint }: { object: Object3D; slug?: string; radiusX: number; radiusZ: number; pose: Pose; seed: number; faction: string; paint?: ArmyPaint }) {

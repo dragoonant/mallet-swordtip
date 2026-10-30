@@ -2,7 +2,7 @@
 // `null` until it is ready (or forever if it failed) and keep drawing the procedural figure meanwhile.
 // Geometry, materials and textures are shared by every instance — `cloneGlb` only clones the node
 // tree, not the GPU resources.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Mesh, type Object3D } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -12,6 +12,7 @@ import { trackFigureLoad } from './loadTracker'
 type Entry = { status: 'loading' | 'ready' | 'failed'; scene?: Object3D }
 const cache = new Map<string, Entry>()
 const listeners = new Set<() => void>()
+let loadVersion = 0 // bumps every time a GLB settles, so label placement can re-measure
 
 export const glbUrl = (slug: string) => `${import.meta.env.BASE_URL}assets/models/${slug}.glb`
 
@@ -34,7 +35,7 @@ function request(slug: string): Entry {
       .catch(() => {
         entry.status = 'failed'
       })
-      .finally(() => listeners.forEach((l) => l()))
+      .finally(() => { loadVersion++; listeners.forEach((l) => l()) })
     trackFigureLoad(load)
   } catch {
     entry.status = 'failed'
@@ -67,4 +68,19 @@ export function useGlbInstance(slug: string | undefined): Object3D | null {
   }, [slug, gl, invalidate])
   const scene = entry?.status === 'ready' ? entry.scene : undefined
   return useMemo(() => (scene ? cloneSkinned(scene) : null), [scene])
+}
+
+/** The shared (never mutated) scene of a slug's GLB once it has loaded, else undefined. Read-only measuring only. */
+export function loadedGlbScene(slug: string): Object3D | undefined {
+  const e = cache.get(slug)
+  return e?.status === 'ready' ? e.scene : undefined
+}
+
+/** Changes whenever a figure GLB finishes loading: lets a component re-measure what is drawn. */
+export function useGlbLoadVersion(): number {
+  return useSyncExternalStore(
+    (cb) => { listeners.add(cb); return () => { listeners.delete(cb) } },
+    () => loadVersion,
+    () => 0,
+  )
 }

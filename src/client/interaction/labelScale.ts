@@ -114,6 +114,27 @@ export function coveredByHud(rect: ScreenRect, zones: ScreenRect[], frac = 0.3):
   return zones.some((z) => intersectionArea(rect, z) / area > frac)
 }
 
+/** Share of the rect (sampled on a small grid) whose topmost hit-testable element belongs to the HUD overlay layer
+ *  (App.tsx marks it data-hud-layer). Works for every panel on desktop without a list of selectors: a panel that takes
+ *  pointer events is what actually hides a label drawn beneath it. Labels and the canvas themselves do not count. */
+export function hudCoverFraction(rect: ScreenRect, cols = 4, rows = 3): number {
+  if (typeof document === 'undefined' || typeof document.elementsFromPoint !== 'function') return 0
+  if (rectArea(rect) <= 0) return 0
+  let covered = 0
+  let total = 0
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const x = rect.l + ((i + 0.5) / cols) * (rect.r - rect.l)
+      const y = rect.t + ((j + 0.5) / rows) * (rect.b - rect.t)
+      if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) continue
+      total++
+      const top = document.elementsFromPoint(x, y)[0]
+      if (top && top.closest('[data-hud-layer]')) covered++
+    }
+  }
+  return total === 0 ? 0 : covered / total
+}
+
 /** Fades `el` in/out with a short transition (used by the compact label culling). */
 export function setCullOpacity(el: HTMLElement | null | undefined, opacity: number): void {
   if (!el) return

@@ -20,6 +20,7 @@ import { kharadronAbilityTiming, kharadronActivationBonus, kharadronDeployBonus,
 import { slavesFreeRetreatAvailable } from '../engine/factions/slaves'
 import { citiesHoldWeight } from '../engine/factions/cities'
 import { extraMoveCandidates } from './moves'
+import { underdogCardChase, underdogExposure, underdogObjectiveScale } from './underdogs'
 import { objectiveVp } from './objectives'
 import {
   bestRangedRangeOfUnit, expectedAttack, hasAnyMeleeWeapon, hasAnyRangedWeapon, isGunline,
@@ -255,6 +256,7 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
     if (before && after && before.dist > 3) score += Math.max(0, before.dist - after.dist) * Math.min(before.weight, after.weight) * 0.15
   }
   const enemy = nearestEnemyFromPoint(state, player, center)
+  let chargeNowP = 0
   if (enemy) {
     if (hasAnyMeleeWeapon(state, unitId)) {
       // a charge must end within 1/2" (CORE-9.4), so what it needs is the model-to-model gap minus 1/2"; a unit that ran or
@@ -264,7 +266,8 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
       const chargeNow = state.phase === 'movement' && mt !== 'advance' && (mt !== 'fallBack' || retreatsAndCharges(state, unitId)) && !hookService.chargeForbidden(state, unitId)
       const gap = placementGapTo(state, placements, enemy.unitId)
       const trade = chargeTrade(state, player, unitId, enemy.unitId)
-      if (chargeNow) score += chargeProb(Math.ceil(Math.max(0, gap - 0.5))) * trade * (hammer ? 1 : 0.6)
+      if (chargeNow) chargeNowP = chargeProb(Math.ceil(Math.max(0, gap - 0.5)))
+      if (chargeNow) score += chargeNowP * trade * (hammer ? 1 : 0.6)
       else if (!final) score += chargeProb(Math.ceil(Math.max(0, gap - 0.5 - stats0(state, unitId).M))) * trade * (hammer ? 0.35 : 0.2)
     }
     if (hasAnyRangedWeapon(state, unitId)) {
@@ -273,9 +276,15 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
     }
   }
   if (bonusEngage) score += countEngagedAfter(state, unitId, placements) * 3
+  // army hints (src/ai/underdogs.ts, Slaves only): what ending a move here leaves the unit open to in the enemy's next turn, and
+  // the battle tactics in hand it completes
+  else {
+    if (!final) score -= underdogExposure(state, player, unitId, placements, chargeNowP)
+    score += underdogCardChase(state, player, unitId, placements)
+  }
   // who holds what at the end of the turn if the unit ends here: stepping on a circle pays only when its Control flips or keeps it
   // (steal an enemy marker it out-numbers, hold the one the enemy is on), and the hold-more point counts (src/ai/objectives.ts)
-  score += VP_W * (final ? 2.5 : 1) * objectiveVp(state, player, { unitId, placements })
+  score += VP_W * (final ? 2.5 : 1) * objectiveVp(state, player, { unitId, placements }) * (underdogObjectiveScale(state, player) ?? 1)
   return score
 }
 
@@ -392,6 +401,8 @@ function scoreDeployUnit(state: GameState, player: PlayerId, action: DeployUnitA
   const shooter = hasAnyRangedWeapon(state, action.unitId) && !meleeOnly
   let score = deployObjectivePull(state, player, action.unitId, center, shooter ? 0.3 : 1)
   score -= (threats ? threatFrom(threats, center) : threatAt(state, player, center)) * 2
+  // army hint (src/ai/underdogs.ts, Slaves only): the shooting this set-up spot is open to
+  score -= underdogExposure(state, player, action.unitId, action.placements, 0, true)
   const zoneCentroid = polyCentroid(deploymentZone(state, other(player)))
   if (meleeOnly) {
     const dToEnemy = Math.hypot(center.x - zoneCentroid.x, center.z - zoneCentroid.z)

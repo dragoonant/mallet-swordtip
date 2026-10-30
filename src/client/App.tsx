@@ -195,7 +195,7 @@ export function App() {
       <PresentationDirector />
       <Scene />
       {spike && <PerfOverlay />}
-      <div style={overlayLayer}>
+      <div style={overlayLayer} data-hud-layer="">
         <Hud />
         <UnitCard />
         {compact ? (

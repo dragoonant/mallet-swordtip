@@ -11,8 +11,11 @@ import { useFormFactor } from '../ui/formFactor'
 import { useUiStore } from '../ui/uiStore'
 import { useGameStore } from '../store/game'
 import { isPlacementDecision } from './decisions'
+import { drawnGlbHeight } from '../figures/GlbBody'
+import { glbSlugFor } from '../figures/glbModels'
+import { useGlbLoadVersion } from '../figures/glbLoader'
 import {
-  COMPACT_LABEL_WIDTH_FRAC, CULL_INTERVAL_MS, DESKTOP_LABEL_MAX, LABEL_DISTANCE_FACTOR, OVERLAP_FADE_OPACITY, coveredByHud, hudZoneRects,
+  COMPACT_LABEL_WIDTH_FRAC, CULL_INTERVAL_MS, DESKTOP_LABEL_MAX, LABEL_DISTANCE_FACTOR, OVERLAP_FADE_OPACITY, coveredByHud, hudCoverFraction, hudZoneRects,
   intersectionArea, rectArea, setCullOpacity, useLabelClamp, type ScreenRect,
 } from './labelScale'
 
@@ -180,6 +183,31 @@ function CompactLabelCuller() {
   return null
 }
 
+// Desktop. In a close or steeply tilted view a tag can land under the top bar, the prompt or the card hand, where it would
+// show as a clipped sliver behind the panel. A few times a second, any label block mostly under a HUD panel fades out and
+// comes back when the camera moves it clear. DOM reads on a timer only; no React state.
+const DESKTOP_HUD_COVER = 0.25
+function DesktopLabelHudFader() {
+  useEffect(() => {
+    const tick = () => {
+      for (const [, e] of labelRegistry) {
+        if (!(e.tagWrap?.isConnected || e.rowWrap?.isConnected)) continue
+        const rect = unionRect([e.tagWrap?.querySelector('[data-testid]'), e.rowWrap?.querySelector('[data-testid]')])
+        if (!rect) continue
+        const o = hudCoverFraction({ l: rect.l, t: rect.t, r: rect.r, b: rect.b }) > DESKTOP_HUD_COVER ? 0 : 1
+        setCullOpacity(e.tagWrap, o)
+        setCullOpacity(e.rowWrap, o)
+      }
+    }
+    const timer = window.setInterval(tick, CULL_INTERVAL_MS)
+    return () => {
+      window.clearInterval(timer)
+      for (const [, e] of labelRegistry) for (const el of [e.tagWrap, e.rowWrap]) if (el) el.style.opacity = ''
+    }
+  }, [])
+  return null
+}
+
 function distanceTo(camera: Camera, a: [number, number, number]): number {
   const p = camera.position
   return Math.hypot(p.x - a[0], p.y - a[1], p.z - a[2])
@@ -188,19 +216,22 @@ function distanceTo(camera: Camera, a: [number, number, number]): number {
 export function UnitLabels() {
   const state = useDisplayState()
   const { compact } = useFormFactor()
+  useGlbLoadVersion() // re-place the tags when a sculpt finishes loading
   if (!state) return null
   const units = Object.values(state.units).filter((u) => u.location === 'board')
 
   return (
     <>
       <LabelLayoutDriver compact={compact} />
-      {compact && <CompactLabelCuller />}
+      {compact ? <CompactLabelCuller /> : <DesktopLabelHudFader />}
       {units.map((unit) => {
         const models = unit.models.map((id) => state.models[id]).filter((m): m is NonNullable<typeof m> => !!m)
         if (models.length === 0) return null
         const cx = models.reduce((sum, m) => sum + m.pos.x, 0) / models.length
         const cz = models.reduce((sum, m) => sum + m.pos.z, 0) / models.length
-        const topY = Math.max(...models.map((m) => m.pos.y + m.height)) + 0.25
+        // the tag rides the sculpt actually drawn (a GLB's real height), not the engine's rules height: the monster mounts
+        // are 1.5-2.4" tall as drawn but model.height is larger, which left the tag floating well above the head
+        const topY = Math.max(...models.map((m) => m.pos.y + (drawnGlbHeight(glbSlugFor(unit.datasheetId, m.datasheetModelId, m.id)) ?? m.height))) + 0.25
         const wounds = models.reduce((sum, m) => sum + m.woundsRemaining, 0)
         const color = unit.battleShocked ? SHOCK_COLOR : unit.player === 'A' ? colors.playerA : colors.playerB
         return (

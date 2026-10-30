@@ -179,7 +179,18 @@ function resolveDeploy(
   const unit = state.units[action.unitId]
   if (!unit) return { rejection: { code: 'E_SCHEMA', reason: `unknown unit ${action.unitId}` } }
   if (action.toReserves) return { rejection: { code: 'E_NOT_AN_OPTION', reason: 'units cannot be put in reserve at deployment (only units that arrive by an ability start there)' } }
-  return resolveDeployCore(state, pending.player, unit.id, action.placements, pending.constraints, [])
+  const core = resolveDeployCore(state, pending.player, unit.id, action.placements, pending.constraints, [])
+  if (core.rejection || pending.window !== 'deployment.unit') return core
+  // F11: setting up is on the ground, so no base may sit over (or under) another one already set up, whatever the heights say.
+  // basesOverlap lets models on different floors share a footprint, which is right once the battle is on but is how a Hero
+  // ended up drawn on top of a small unit in a crowded strip.
+  const standing = [...boardModelsOf(state, pending.player), ...boardModelsOf(state, otherPlayer(pending.player))]
+  for (const r of core.resolved) {
+    const f: Footprint = { pos: r.to, facing: r.facing, base: r.model.base }
+    const hit = standing.find((o) => basesOverlap(f, { pos: o.pos, facing: o.facing, base: o.base }, Infinity))
+    if (hit) return { rejection: { code: 'E_OVERLAP', reason: `${r.model.id} would stand on top of ${hit.id}`, details: { modelId: r.model.id, other: hit.id } } }
+  }
+  return core
 }
 
 // the geometry half of resolveDeploy; `extraFriendly` are models treated as already standing there (suggestDeployment plans several units ahead)

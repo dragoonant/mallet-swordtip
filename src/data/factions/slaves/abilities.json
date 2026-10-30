@@ -115,11 +115,11 @@
   {
     "id": "slaves.ability.champion-of-raids",
     "name": "Champion of Raids",
-    "text": "Just before your charge phase (at the end of your movement phase), pick another friendly unit wholly within 12\" of the bearer. It can re-roll its charge rolls for the rest of the turn.",
+    "text": "As your charge phase begins, pick another friendly unit wholly within 12\" of the bearer. Until the turn ends, that unit may re-roll its charge rolls.",
     "trigger": "activated",
     "timing": {
       "kind": "phase",
-      "phase": "movement",
+      "phase": "charge",
       "whose": "your"
     },
     "scope": {
@@ -142,6 +142,7 @@
     "params": {
       "range": 12,
       "wholly": true,
+      "window": "phaseStart",
       "priority": "P1"
     }
   },
