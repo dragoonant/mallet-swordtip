@@ -54,10 +54,23 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
 - QA on the built site (`vite preview --port 4433`): hotseat, bot and bot-as-Ironjawz games reach the end screen in 4 rounds
   with no console errors; `client-ux-shots.spec.ts` (auto-place, auto-deploy, rings) and the iPhone 15 Pro spec pass. No fixes needed.
 
+## F6 (2026-10-30): Slaves to Darkness and Fyreslayers
+- Both armies are playable (start screen has four crests): Darkoath Raiders (Oaths of Darkness, Rage of Arkhar, Fearless Invaders,
+  four enhancements) and Saga Axeband (Awaken the Runes, Magmic Tunnels, Fyresteel Throwing Axes, four enhancements), with MGSD GLBs
+  for every unit. Engine tests are named STD-* and FYR-* after their spec Test IDs.
+- QA on the built site (port 4443): `tests/e2e/f6-armies.spec.ts` plays Slaves (human) vs the Fyreslayers bot and Fyreslayers
+  (human) vs the Cities bot to the end screen in 4 rounds, no console errors or failed requests; shots in `e2e-out/f6/`
+  (`abilities/` holds the prompts that offered each new ability). Seen working in prompts: Oaths of Darkness, Rage of Arkhar,
+  Awaken the Runes (rune choice), Magmic Tunnels, Too Stubborn to Die. Not reached by the click-first-option bot: Fearless
+  Invaders and Fyresteel Throwing Axes (not the default regiment pick), Horn of Grimnir.
+- Fix: a unit fielded more than once now gets a letter (Vulkite Berzerkers A to D, Freeguild Steelhelms A/B, Ardboyz A/B) in
+  `state.ts`; before, four identical "Activate Vulkite Berzerkers" buttons could not be told apart.
+
 ## Next
 - Balance: Ironjawz still win about 4 of 5 AI-vs-AI games (32/40). Use `tools/balance-stats.ts` to see where Cities lose damage
   (Steelhelm and Cavalier charges, Cannon uptime) and tune unit stats or the Cities AI.
-- Build a third faction from the new specs (Slaves to Darkness or Fyreslayers): data JSON, `src/engine/factions/*.ts`, figures.
+- Balance the two new armies with `tools/balance-stats.ts` (Slaves vs Fyreslayers AI games), then the Cities/Ironjawz gap.
+- Add a regiment-ability / enhancement picker test pass for Fearless Invaders and Fyresteel Throwing Axes (the QA bot only takes the default).
 - Ghyran side is data only (no Ghyran battleplan file), so only the Aqshy side is playable.
 - Phone: the board is small while a prompt is open and unit tags crowd the objective labels; hide tags during placement.
 - Ship: push to `main`; Pages deploys `dist/` at https://dragoonant.github.io/mallet-swordtip/.

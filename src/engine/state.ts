@@ -555,6 +555,10 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
     const patrolUnits: (PatrolUnitData & { fromSplit: boolean })[] = patrol.units.filter((pu) => !skippedRefs.has(pu.ref)).flatMap((pu): (PatrolUnitData & { fromSplit: boolean })[] => (split.has(pu.ref) && pu.patrolSquads
       ? pu.patrolSquads.map((part) => ({ ref: part.ref, datasheet: pu.datasheet, size: part.size, wargear: part.wargear, fromSplit: true, ...(pu.enhancement ? { enhancement: pu.enhancement } : {}) }))
       : [{ ...pu, fromSplit: false }]))
+    // units fielded more than once (four Vulkite Berzerkers, two Ardboyz) get a letter so prompts and labels tell them apart
+    const dsTotal = new Map<string, number>()
+    for (const pu of patrolUnits) dsTotal.set(pu.datasheet, (dsTotal.get(pu.datasheet) ?? 0) + 1)
+    const dsSeen = new Map<string, number>()
     for (const pu of patrolUnits) {
       if (refs.has(pu.ref)) throw new EngineInvariantError(`patrol '${patrol.id}': duplicate unit ref '${pu.ref}'`)
       refs.add(pu.ref)
@@ -597,10 +601,13 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
           modelIds.push(id)
         }
       })
+      const nth = dsSeen.get(pu.datasheet) ?? 0
+      dsSeen.set(pu.datasheet, nth + 1)
+      const unitLabel = (dsTotal.get(pu.datasheet) ?? 1) > 1 && !pu.fromSplit ? `${ds.name} ${String.fromCharCode(65 + nth)}` : ds.name
       const isWarlord = pu.ref === patrol.warlord
       if (isWarlord) warlordUnitId = unitId
       units[unitId] = {
-        id: unitId, player: pid, ref: pu.ref, datasheetId: ds.id, name: ds.name, models: modelIds, startingStrength: modelIds.length,
+        id: unitId, player: pid, ref: pu.ref, datasheetId: ds.id, name: unitLabel, models: modelIds, startingStrength: modelIds.length,
         location: 'reserves', attachedLeaderId: null, bodyguardUnitId: null, battleShocked: false, battleShockExpiresRound: null,
         turn: emptyTurnState(), effects: [], enhancementId: null, isWarlord, deepStrikeWith: null, destroyedBy: null, destroyedModels: [],
         ...aosUnitFields(),
