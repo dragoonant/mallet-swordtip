@@ -24,17 +24,20 @@ export type DecisionId = string
 // ---------- phases and steps ----------
 export type Phase = 'setup' | 'deployment' | 'command' | 'movement' | 'shooting' | 'charge' | 'fight' | 'ended'
 
-export type SetupStep = 'rollOffSides' | 'chooseSides' | 'deploy' | 'rollOffFirstTurn' | 'preBattle'
-export type CommandStep = 'command' | 'battleShock' | 'scoring'
-export type MovementStep = 'select' | 'declare' | 'move' | 'reinforcements'
-export type ShootingStep = 'selectUnit' | 'declareTargets' | 'resolve' | 'hazardous'
-export type ChargeStep = 'declare' | 'roll' | 'overwatch' | 'move'
+// AoS aliases (13-port-plan PORT-0.3): 'command' = Hero phase, 'fight' = Combat phase. Start/End of Turn are windows
+// (turn.start, turn.end.*), not phases (PORT-0.8).
+export type SetupStep = 'rollOffSides' | 'chooseSides' | 'deploy' | 'rollOffFirstTurn' | 'preBattle' | 'firstTurn'
+export type CommandStep = 'command' | 'battleShock' | 'scoring' | 'activeAbilities' | 'opponentAbilities'
+export type MovementStep = 'select' | 'declare' | 'move' | 'reinforcements' | 'abilities'
+export type ShootingStep = 'selectUnit' | 'declareTargets' | 'resolve' | 'hazardous' | 'enemyAbilities'
+export type ChargeStep = 'declare' | 'roll' | 'overwatch' | 'move' | 'abilities'
 export type FightStep = 'fightsFirst' | 'remaining'
 export type FightSubStep = 'select' | 'pileIn' | 'declareTargets' | 'attacks' | 'deferred' | 'consolidate'
 export type PhaseStep = SetupStep | CommandStep | MovementStep | ShootingStep | ChargeStep | FightStep | 'none'
 
+// 'advance' = Run (CORE-6.2), 'fallBack' = Retreat (CORE-6.3)
 export type MoveType = 'normal' | 'advance' | 'fallBack' | 'stationary'
-export type OutOfPhaseMove = 'charge' | 'pileIn' | 'consolidate' | 'surge' | 'scouts' | 'reinforcements'
+export type OutOfPhaseMove = 'charge' | 'pileIn' | 'consolidate' | 'surge' | 'scouts' | 'reinforcements' | 'abilityMove'
 export type AttackKind = 'ranged' | 'melee'
 
 // ---------- geometry ----------
@@ -43,6 +46,7 @@ export interface ModelBase { shape: 'round' | 'oval'; radius: number; radius2?: 
 export type Path = Vec3[]
 
 // ---------- runtime data (resolved from DataBundle at createGame) ----------
+// skill = Hit (N+). AoS: wound = Wound (N+), rend = Rend (positive worsens the save); S / AP are 40k only (0 for AoS data)
 export interface RuntimeWeapon {
   id: WeaponId
   name: string
@@ -55,10 +59,16 @@ export interface RuntimeWeapon {
   D: DiceExpr
   abilities: WeaponAbility[]
   profileGroup: Id | null
+  wound: RollTarget
+  rend: number
 }
 
+// data Stats with the 40k-only T / Ld defaulted to 0 and the AoS ward / noSave resolved (13-port-plan §2.1)
+export interface RuntimeStats extends Stats { T: number; Ld: RollTarget; ward: RollTarget | null; noSave: boolean }
+
 export interface RuntimeAbility extends AbilityDescriptor {
-  source: 'datasheet' | 'leader' | 'enhancement' | 'core' | 'stratagem'
+  // regiment: the player's chosen regiment ability; battleTrait: an army-wide battle trait (Spearhead, 13-port-plan §3.3)
+  source: 'datasheet' | 'leader' | 'enhancement' | 'core' | 'stratagem' | 'regiment' | 'battleTrait'
   // set when scope.who === 'bearer' (enhancements): the one model the effect applies to
   bearerModelId: ModelId | null
 }
@@ -69,7 +79,7 @@ export interface RuntimeModelProfile {
   champion: boolean
   base: ModelBase
   height: number
-  stats: Stats
+  stats: RuntimeStats
   weapons: WeaponId[]
   // model-only keywords (Composition.keywords, e.g. a Command Squad's CHARACTER/OFFICER sergeant); absent for most models
   keywords?: Keyword[]
@@ -81,7 +91,7 @@ export interface RuntimeDatasheet {
   faction: Id
   keywords: Keyword[]
   factionKeywords: Keyword[]
-  stats: Stats
+  stats: RuntimeStats
   invuln: RollTarget | null
   models: RuntimeModelProfile[]
   abilities: AbilityId[]
@@ -90,6 +100,10 @@ export interface RuntimeDatasheet {
   damaged: { threshold: number; effect: EffectList } | null
   // SDC E1 (additive, optional): Transport data (DatasheetData.transport); absent = not a transport
   transport?: { capacity: number; keywords?: Keyword[]; excludeKeywords?: Keyword[]; firingDeck?: number }
+  // AoS warscroll (DatasheetData.spearhead ?? false)
+  spearhead: boolean
+  // CORE-1.6: horizontal coherency range (DatasheetData.coherencyRange ?? 0.5); optional so hand-built test datasheets stay valid
+  coherencyRange?: number
 }
 
 export type RuntimeStratagem = StratagemData
@@ -125,6 +139,9 @@ export interface Objective {
   // Proper Lootin' is per army: players who have already looted this marker
   lootedBy: PlayerId[]
   tag: string | null
+  // Spearhead: objective circle radius (contested by base overlap, SPH-6.2) and display name (SPH-6.5)
+  radius: number
+  name: string | null
 }
 
 // ---------- units and models ----------
@@ -166,8 +183,15 @@ export interface UnitTurnState {
   foughtThisPhase: boolean
   surgeMovedThisPhase: boolean
   arrivedThisTurn: boolean
+  // AoS: Strike-first / Strike-last
   fightsFirst: boolean
   fightsLast: boolean
+  // AoS: the raw 2D6 charge roll before modifiers (IJZ-E5); chargeRoll holds the modified total
+  chargeRollUnmodified: number | null
+  // AoS: a CORE ability was used by this unit this phase (CORE-3.4)
+  usedCoreThisPhase: boolean
+  // AoS: activated abilities this unit used this phase (Rule of One, CORE-3.3)
+  abilitiesUsedThisPhase: Id[]
 }
 
 export interface ActiveEffect {
@@ -208,10 +232,22 @@ export interface Unit {
   // snapshot of every model removed from this unit, oldest first (filled by state.removeModel); Reanimation Protocols
   // (docs/spec/factions/necrons.md NEC-2.4) puts the most recent one back. Saves from before M10 lack the field.
   destroyedModels: Model[]
+  // ---- AoS (13-port-plan §2.1) ----
+  // the ability that brings this unit on from reserve (PatrolUnitData.reserve.ability); null = deploys normally
+  reserveArrival: AbilityId | null
+  // when the unit was last set up on the battlefield (CORE-6.13 "set up this turn"); null = at deployment / never
+  setUpTurn: { round: number; player: PlayerId } | null
+  // SPH-12 Call for Reinforcements (P1): the unit this one replaces / this unit has been replaced
+  replacementOf: UnitId | null
+  replaced: boolean
+  // SPH-2.7 tokens (P2)
+  tokens: Record<string, number>
 }
 
 // ---------- players ----------
 export interface StratagemUse { stratagemId: StratagemId; round: number; turn: PlayerId; phase: Phase }
+// one use of an activated ability (abilities.ts records them for limits; PORT-0.7)
+export interface AbilityUseRecord { abilityId: AbilityId; unitId: UnitId | null; round: number; turn: PlayerId; phase: Phase }
 
 export interface Player {
   id: PlayerId
@@ -239,6 +275,15 @@ export interface Player {
   secondaryState: Record<string, unknown>
   // Adepta Sororitas Acts of Faith (E1): the player's pool of Miracle dice
   miracle: MiracleState
+  // ---- Spearhead (13-port-plan §2.1) ----
+  // the player's territory on the deployment map ('A' / 'B' keys of MissionData.territories / deploymentZones)
+  territory: 'A' | 'B'
+  // the chosen regiment ability (player-wide), null = none
+  regimentAbilityId: Id | null
+  // battle traits of the army (attached to every unit)
+  battleTraitIds: Id[]
+  // activated-ability uses (limits, Rule of One)
+  abilityUses: AbilityUseRecord[]
 }
 
 // values 1..6, pool order = gain order; spentThisPhase = units that made an Act of Faith this phase (reset at phase end)
@@ -354,6 +399,8 @@ export type RollPurpose =
   | 'hit' | 'wound' | 'save' | 'damage' | 'attacks' | 'fnp' | 'charge' | 'advance' | 'battleShock'
   | 'desperateEscape' | 'hazardous' | 'deadlyDemise' | 'mortal' | 'rollOff' | 'firstTurn' | 'mission' | 'ability'
   | 'stratagem' | 'random'
+  // AoS: priority roll (CORE-4.9), Retreat D3 mortal damage (CORE-6.3)
+  | 'priority' | 'retreat'
 
 export interface RollModifier { source: string; value: number }
 
@@ -486,6 +533,10 @@ export type ChooseOptionTopic =
   | 'chooseSide' | 'battleShockOrder' | 'desperateEscapeCasualty' | 'coherencyCull' | 'saveType'
   | 'meleeWeapon' | 'weaponProfile' | 'oathTarget' | 'waaagh' | 'razeObjective' | 'recoverObjective'
   | 'reserveArrival' | 'leaderAttach' | 'hazardousCasualty' | 'rerollOffer' | 'fixRollOffer' | 'miracleDie' | 'abilityChoice' | 'stompTarget' | 'bagTarget' | 'treasureObjective' | 'other'
+  // Spearhead (13-port-plan §2.1). firstTurn / priorityChoice: options 'A' | 'B' = the player who takes the first turn
+  // (core handler in reducer.ts); abilityUse / abilityTarget / abilityMode: abilities.ts; the last three are P1/P2
+  | 'chooseAttacker' | 'armyOptions' | 'battlefieldSide' | 'deploymentMap' | 'placeTerrain' | 'firstTurn' | 'priorityChoice'
+  | 'abilityUse' | 'abilityTarget' | 'abilityMode' | 'pileInTarget' | 'contestedObjective' | 'discardTactics' | 'scoreTactics'
 export interface ChooseOptionDecision extends DecisionBase {
   kind: 'chooseOption'
   // rerollOffer: data = { rollId, dieIndexes: number[], needed?, purpose?, key? } (R-6.24); options = reroll / keep; the
@@ -518,6 +569,8 @@ export type RejectionCode =
   | 'E_WRONG_DECISION' | 'E_WRONG_PLAYER' | 'E_NOT_AN_OPTION' | 'E_OUT_OF_RANGE' | 'E_COHERENCY' | 'E_OVERLAP'
   | 'E_ENGAGEMENT' | 'E_NO_LOS' | 'E_NOT_IN_RANGE' | 'E_INVALID_TARGET' | 'E_INSUFFICIENT_CP' | 'E_STRATAGEM_USED'
   | 'E_PASS_NOT_ALLOWED' | 'E_GAME_OVER' | 'E_SCHEMA'
+  // AoS: outside friendly territory / illegal while in combat / ability already used (limit)
+  | 'E_TERRITORY' | 'E_IN_COMBAT' | 'E_ABILITY_USED'
 
 export interface Rejection { code: RejectionCode; reason: string; details?: Record<string, unknown> }
 
@@ -535,12 +588,15 @@ export interface PlayerSetup {
   faction: Id
   patrolId: Id
   enhancementId: Id
+  // Spearhead: the chosen regiment ability (one of the army's regimentAbilities); absent = the army's default one
+  regimentAbilityId?: Id
   // required when the enhancement data has `choice` (Tellyporta: one BOYZ unit of this player); createGame throws EngineInvariantError otherwise
   enhancementChoice?: { unitRef: string }
-  secondaryId: Id
-  attachments: { leaderRef: string; bodyguardRef: string }[]
-  reserves: string[]
-  battleReadyVp: number
+  // 40k only (optional since the Spearhead port; absent = the patrol's default secondary or none, [], [], 0)
+  secondaryId?: Id
+  attachments?: { leaderRef: string; bodyguardRef: string }[]
+  reserves?: string[]
+  battleReadyVp?: number
   // E5 Patrol Squads: patrol unit refs to split into their `patrolSquads` parts at Declare Battle Formations
   splitUnits?: string[]
   // SDC E1 Transports (additive, optional): units that start the battle embarked in a friendly Transport (Declare Battle
@@ -559,8 +615,14 @@ export interface GameSetup {
   terrainLayoutId: Id
   players: Record<PlayerId, PlayerSetup>
   sides: { attacker: PlayerId } | 'rollOff'
+  // Spearhead: a PlayerId pre-fills the round-1 first-turn choice (SPH-8.3); 'rollOff' = the attacker is asked (topic firstTurn)
   firstTurn: PlayerId | 'rollOff'
   dataVersion: string
+  // Spearhead pre-fills (SPH-16.5); absent mode = spearhead from now on. A filled field skips its pre-battle decision.
+  mode?: 'spearhead'
+  side?: 'aqshy' | 'ghyran'
+  deploymentMap?: Id
+  defenderTerritory?: 'A' | 'B'
 }
 
 // tabled: neither player has a model on the battlefield nor one that can still arrive → battle ends at once on VP (R-12.6)
@@ -607,6 +669,13 @@ export interface GameState {
   log: ActionLogEntry[]
   hash: string
   result: GameResult | null
+  // ---- Spearhead (13-port-plan §2.1) ----
+  // twist deck (SPH-9.4); always empty today (no card data)
+  twist: { deck: Id[]; current: Id | null; drawn: Id[] }
+  // SPH-8.4: the player with fewer VP at the start of this round; null = tied / round 1
+  underdog: PlayerId | null
+  // SPH-8.3 / CORE-4.9 / SPH-8.5 for the current round: priority roll (null in round 1), who seized, double turn
+  priority: { rolls: Record<PlayerId, number> | null; seized: PlayerId | null; doubleTurn: boolean }
 }
 
 // what a Decider sees: redacted state plus the last rejection of its own action

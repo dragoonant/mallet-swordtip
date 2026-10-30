@@ -18,6 +18,15 @@ export interface SidesChosen extends EventBase { type: 'SidesChosen'; attacker: 
 export interface FirstTurnChosen extends EventBase { type: 'FirstTurnChosen'; first: PlayerId }
 export interface UnitDeployed extends EventBase { type: 'UnitDeployed'; unitId: UnitId; toReserves: boolean }
 
+// Spearhead round start (SPH-8.2–8.5; 13-port-plan §2.3). Round 1 emits only FirstTurnChosen; rounds 2+ emit PriorityRolled
+// (after the winner's choice, so firstPlayer is known), then FirstTurnChosen, then InitiativeSeized when it applies.
+// winner: null on a tie (chooser = whoever went first last round); doubleTurn: the new first player took the second turn last round
+export interface PriorityRolled extends EventBase { type: 'PriorityRolled'; rolls: Record<PlayerId, number>; winner: PlayerId | null; chooser: PlayerId; firstPlayer: PlayerId; doubleTurn: boolean }
+// SPH-8.4 (`underdog`, not `player`: EventBase.player is the envelope)
+export interface UnderdogDetermined extends EventBase { type: 'UnderdogDetermined'; underdog: PlayerId | null }
+// SPH-8.5: envelope `player` = the player who seized the initiative
+export interface InitiativeSeized extends EventBase { type: 'InitiativeSeized' }
+
 // command
 export interface CpChanged extends EventBase { type: 'CpChanged'; delta: number; total: number; source: string }
 export interface BattleShockTested extends EventBase { type: 'BattleShockTested'; unitId: UnitId; roll: number; ld: number; passed: boolean }
@@ -56,6 +65,11 @@ export interface WoundRolled extends EventBase { type: 'WoundRolled'; attack: At
 export interface AttackAllocated extends EventBase { type: 'AttackAllocated'; attack: AttackRollContext; modelId: ModelId; cover: boolean }
 export interface SaveRolled extends EventBase { type: 'SaveRolled'; attack: AttackRollContext; modelId: ModelId; kind: 'armour' | 'invuln' | 'none'; die: number; final: number; needed: number; saved: boolean; rollId?: string; dieIndex?: number }
 export interface DamageApplied extends EventBase { type: 'DamageApplied'; unitId: UnitId; modelId: ModelId; amount: number; mortal: boolean; woundsRemaining: number; source: AttackRollContext | { abilityId: Id } | { stratagemId: StratagemId } }
+// AoS damage pool (CORE-13): one per target unit after an attack's damage is allocated; points = damage points in the pool,
+// warded = points cancelled by ward rolls, slain = models slain. Ward rolls themselves reuse FeelNoPainRolled.
+export interface DamagePoolResolved extends EventBase { type: 'DamagePoolResolved'; unitId: UnitId; points: number; warded: number; slain: number }
+// SPH-12 (P1): a replacement unit was set up for a destroyed Reinforcements unit
+export interface UnitReplaced extends EventBase { type: 'UnitReplaced'; unitId: UnitId; replacementOf: UnitId }
 export interface FeelNoPainRolled extends EventBase { type: 'FeelNoPainRolled'; unitId: UnitId; modelId: ModelId; die: number; needed: number; ignored: boolean }
 // byModelId: the attacking model for ranged/melee kills; null for mortal wounds, Deadly Demise, coherency culls
 export interface ModelDestroyed extends EventBase { type: 'ModelDestroyed'; unitId: UnitId; modelId: ModelId; byPlayer: PlayerId | null; byUnitId: UnitId | null; byModelId: ModelId | null; kind: AttackKind | 'mortal' | 'other' }
@@ -108,6 +122,7 @@ export interface DecisionRequested extends EventBase { type: 'DecisionRequested'
 
 export type GameEvent =
   | GameCreated | RoundStarted | RoundEnded | TurnStarted | PhaseStarted | PhaseEnded | GameEnded | SidesChosen | FirstTurnChosen | UnitDeployed
+  | PriorityRolled | UnderdogDetermined | InitiativeSeized | DamagePoolResolved | UnitReplaced
   | CpChanged | BattleShockTested | BattleShocked | BattleShockRecovered | OathTargetChosen | WaaaghCalled
   | MoveDeclared | UnitMoved | UnitAdvanced | UnitFellBack | UnitRemainedStationary | DesperateEscapeRolled | ReinforcementsArrived | UnitRemovedFromBattlefield | UnitLostInReserves | CoherencyCulled
   | AttackSequenceStarted | TargetsDeclared | HitRolled | WoundRolled | AttackAllocated | SaveRolled | DamageApplied | FeelNoPainRolled

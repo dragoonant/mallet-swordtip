@@ -6,12 +6,19 @@ import { surfaceY } from './terrain'
 import type { Board, Model, ModelBase, ModelId, MoveConstraints, Objective, Path, Rejection, Vec3 } from './types'
 
 export const EPS = 1e-6
-export const ENGAGEMENT_H = 1
-export const ENGAGEMENT_V = 5
-export const COHERENCY_H = 2
-export const COHERENCY_V = 5
-export const OBJECTIVE_RANGE = 3
-export const OBJECTIVE_MARKER_RADIUS = 40 / 25.4 / 2
+// AoS (13-port-plan §1.1, names kept per PORT-0.3): "engagement range" = combat range, 3" horizontally, unlimited
+// vertically (CORE-1.4). Pure range only: the visibility half of "in combat" (CORE-1.5) is los.inCombat (WP4).
+export const ENGAGEMENT_H = 3
+export const ENGAGEMENT_V = Infinity
+// coherency ½" horizontally, height ignored (CORE-1.6); 7+ models need 2 neighbours (CORE-1.7)
+export const COHERENCY_H = 0.5
+export const COHERENCY_V = Infinity
+// a charge must end within ½" of a visible enemy model (CORE-9.2)
+export const CHARGE_END = 0.5
+// Spearhead objectives (SPH-6.2): circles of radius 3", contested while a base touches or overlaps the circle, so the
+// default range beyond the marker edge is 0 (missions may still override both via objectiveRange / objectiveMarkerRadius)
+export const OBJECTIVE_RANGE = 0
+export const OBJECTIVE_MARKER_RADIUS = 3
 export const MM_PER_INCH = 25.4
 export const EDGE_SAMPLES = 32
 
@@ -209,7 +216,7 @@ export function inBaseContact(a: Footprint, b: Footprint, tolerance = 0.01): boo
   return verticalGap(a, b) <= 0.25 + EPS && horizontalGap(a, b) <= tolerance
 }
 
-// ---------- engagement range (R-2.3) ----------
+// ---------- combat range (CORE-1.4; kept under the 40k "engagement range" names) ----------
 export function withinEngagementRange(a: Footprint, b: Footprint): boolean {
   if (farApart(a, b, ENGAGEMENT_H)) return false
   return horizontalGap(a, b) <= ENGAGEMENT_H + EPS && verticalGap(a, b) <= ENGAGEMENT_V + EPS
@@ -228,20 +235,21 @@ export function anyWithinEngagementRange(m: Footprint, others: Footprint[]): boo
 // ---------- coherency (R-2.5, R-2.7) ----------
 export function coherencyNeighboursNeeded(modelCount: number): number { return modelCount >= 7 ? 2 : 1 }
 
-export function inCoherencyRange(a: Footprint, b: Footprint): boolean {
-  if (farApart(a, b, COHERENCY_H)) return false
-  return horizontalGap(a, b) <= COHERENCY_H + EPS && verticalGap(a, b) <= COHERENCY_V + EPS
+// `range` = horizontal coherency range (warscroll coherencyRange, CORE-1.6; default ½")
+export function inCoherencyRange(a: Footprint, b: Footprint, range = COHERENCY_H): boolean {
+  if (farApart(a, b, range)) return false
+  return horizontalGap(a, b) <= range + EPS && verticalGap(a, b) <= COHERENCY_V + EPS
 }
 
-// every model within 2" horizontally / 5" vertically of ≥1 other (≥2 others for 7+ models) AND the unit forms one
-// connected group through those links [interp: R-2.6 / MEAS-014 — a 3 + 2 split is not coherent]; ≤ 1 model always is
-export function isCoherent(models: Footprint[]): boolean {
+// CORE-1.6/1.7: every model within coherency range (½" horizontally, height ignored) of ≥1 other (≥2 others for 7+
+// models) AND the unit forms one connected group through those links (MEAS-014/015); ≤ 1 model always is (MEAS-016)
+export function isCoherent(models: Footprint[], range = COHERENCY_H): boolean {
   if (models.length <= 1) return true
   const need = coherencyNeighboursNeeded(models.length)
   const links: number[][] = models.map(() => [])
   for (let i = 0; i < models.length; i++) {
     for (let j = i + 1; j < models.length; j++) {
-      if (inCoherencyRange(models[i], models[j])) { links[i].push(j); links[j].push(i) }
+      if (inCoherencyRange(models[i], models[j], range)) { links[i].push(j); links[j].push(i) }
     }
   }
   if (links.some((l) => l.length < need)) return false
@@ -255,7 +263,7 @@ export function isCoherent(models: Footprint[]): boolean {
 }
 
 // the connected coherency groups of a unit (largest first); used by the end-of-turn cull to show what would remain
-export function coherencyGroups(models: Footprint[]): number[][] {
+export function coherencyGroups(models: Footprint[], range = COHERENCY_H): number[][] {
   const groups: number[][] = []
   const seen = new Set<number>()
   for (let start = 0; start < models.length; start++) {
@@ -263,7 +271,7 @@ export function coherencyGroups(models: Footprint[]): number[][] {
     const group = [start]
     seen.add(start)
     for (let k = 0; k < group.length; k++) {
-      for (let j = 0; j < models.length; j++) if (!seen.has(j) && inCoherencyRange(models[group[k]], models[j])) { seen.add(j); group.push(j) }
+      for (let j = 0; j < models.length; j++) if (!seen.has(j) && inCoherencyRange(models[group[k]], models[j], range)) { seen.add(j); group.push(j) }
     }
     groups.push(group)
   }
@@ -365,6 +373,8 @@ export interface PlacementCheckInput {
   fly?: boolean
   // models of `mustEndInEngagementWith` units, keyed by unit id (only needed when that constraint is used)
   engagementTargets?: Record<string, Model[]>
+  // warscroll coherency range (RuntimeDatasheet.coherencyRange, CORE-1.6); default ½"
+  coherencyRange?: number
 }
 
 export interface ResolvedPlacement { model: Model; from: Vec3; to: Vec3; facing: number; path: Path; distance: number }
@@ -423,7 +433,7 @@ export function checkPlacements(input: PlacementCheckInput): { rejection: Reject
     const marker: Footprint = { pos: mt.pos, facing: 0, base: { shape: 'round', radius: mt.radius } }
     if (!finals.some((f) => horizontalGap(f, marker) <= 0.05 + EPS)) return { rejection: { code: 'E_NOT_AN_OPTION', reason: 'one model must touch the Cult Ambush marker' } }
   }
-  if (constraints.coherency && !isCoherent(finals)) return { rejection: { code: 'E_COHERENCY', reason: 'unit would end out of coherency' } }
+  if (constraints.coherency && !isCoherent(finals, input.coherencyRange)) return { rejection: { code: 'E_COHERENCY', reason: 'unit would end out of coherency' } }
   return { rejection: null, resolved }
 }
 

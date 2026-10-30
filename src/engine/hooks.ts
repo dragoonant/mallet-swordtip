@@ -4,6 +4,7 @@ import type {
   AbilityId, AttackKind, DiceRoll, GameState, Id, ModelId, MoveType, OutOfPhaseMove, Phase, PlayerId, RollPurpose,
   RuntimeWeapon, StratagemId, UnitId, ObjectiveId,
 } from './types'
+import type { EngineContext } from './modules'
 
 export type HookName =
   | 'onPhaseStart' | 'onPhaseEnd' | 'onTurnStart' | 'onTurnEnd' | 'onCommandPhase'
@@ -12,6 +13,8 @@ export type HookName =
   | 'onAttackCount' | 'onHitRoll' | 'onWoundRoll' | 'onSaveRoll' | 'onDamageRoll' | 'onFeelNoPainRoll'
   | 'onDamage' | 'onModelDestroyed' | 'onUnitDestroyed' | 'onDeployment' | 'onReinforcements'
   | 'onObjectiveControl' | 'onStatQuery' | 'onEligibility'
+  // AoS (P1): an activated ability was declared (reaction trigger, e.g. A Proper Ruckus)
+  | 'onAbilityDeclared'
 
 // where an effect comes from, for logging and once-per limits
 export interface EffectSource {
@@ -63,14 +66,19 @@ export interface AttackRollHookContext extends HookContextBase { hook: 'onHitRol
 export interface DamageHookContext extends HookContextBase { hook: 'onDamage'; attack: AttackContext | null; targetUnitId: UnitId; targetModelId: ModelId; damage: number; mortal: boolean }
 export interface DestroyedHookContext extends HookContextBase { hook: 'onModelDestroyed' | 'onUnitDestroyed'; destroyedUnitId: UnitId; destroyedModelId: ModelId | null; byUnitId: UnitId | null; byModelId: ModelId | null; kind: AttackKind | 'mortal' | 'other' }
 export interface DeploymentHookContext extends HookContextBase { hook: 'onDeployment' | 'onReinforcements'; deployingUnitId: UnitId }
-export interface ObjectiveHookContext extends HookContextBase { hook: 'onObjectiveControl'; objectiveId: ObjectiveId; levels: Record<PlayerId, number> }
+// AoS (IJZ-5.4.1, CORE-17.4): asked per contesting unit with `contestingUnitId` + its summed `controlScore`; a StatModifierResult
+// adjusts that unit's score (the caller floors it at 1). Without contestingUnitId it is the legacy per-objective call.
+export interface ObjectiveHookContext extends HookContextBase { hook: 'onObjectiveControl'; objectiveId: ObjectiveId; levels: Record<PlayerId, number>; contestingUnitId?: UnitId | null; controlScore?: number }
 export interface StatQueryHookContext extends HookContextBase { hook: 'onStatQuery'; queryUnitId: UnitId; queryModelId: ModelId | null; weapon: RuntimeWeapon | null; stat: NonNullable<Effect['modifyStat']>['stat'] }
-export interface EligibilityHookContext extends HookContextBase { hook: 'onEligibility'; queryUnitId: UnitId; check: 'shoot' | 'charge' | 'fightFirst' | 'stationaryBonus' | 'surge' }
+// AoS: 'contest' = may contest objectives (IJZ-5.4.1); 'strikeFirst' = alias of fightFirst for new data
+export interface EligibilityHookContext extends HookContextBase { hook: 'onEligibility'; queryUnitId: UnitId; check: 'shoot' | 'charge' | 'fightFirst' | 'stationaryBonus' | 'surge' | 'contest' | 'strikeFirst' }
+export interface AbilityDeclaredHookContext extends HookContextBase { hook: 'onAbilityDeclared'; use: AbilityUse }
 
 export type HookContext =
   | PhaseHookContext | BattleShockHookContext | AdvanceRollHookContext | ChargeRollHookContext | MoveHookContext | ChargeHookContext
   | UnitSelectedHookContext | TargetsDeclaredHookContext | AttacksAllocatedHookContext | AttackCountHookContext | AttackRollHookContext
   | DamageHookContext | DestroyedHookContext | DeploymentHookContext | ObjectiveHookContext | StatQueryHookContext | EligibilityHookContext
+  | AbilityDeclaredHookContext
 
 export type HookContextFor<K extends HookName> = Extract<HookContext, { hook: K }>
 
@@ -125,16 +133,44 @@ export type HookResultFor<K extends HookName> =
     : K extends 'onDamage' ? DamageModifierResult | EffectRequest
     : K extends 'onEligibility' ? EligibilityResult
     : K extends 'onMove' ? MoveModifierResult | EffectRequest
+    : K extends 'onObjectiveControl' ? StatModifierResult | EffectRequest
     : EffectRequest
 
 export type HookFn<K extends HookName = HookName> = (ctx: HookContextFor<K>) => HookResultFor<K> | HookResultFor<K>[] | void
 
-// bespoke `code` hook, registered by name in src/engine/hooks/registry.ts; `estimate` feeds the AI damage calculator
+// one use of an activated ability (PORT-0.7): built by abilities.ts after Declare (targets, mode, the declared roll) and
+// handed to CodeHook.activate.resolve
+export interface AbilityUse {
+  abilityId: AbilityId
+  // the unit using the ability; null for player-wide abilities (regiment abilities, battle traits without a unit)
+  unitId: UnitId | null
+  player: PlayerId
+  targetUnitIds: UnitId[]
+  modeId: string | null
+  // the declared roll (AbilityDescriptor.roll), null when the ability declares none
+  roll: DiceRoll | null
+}
+
+// the contract abilities.ts calls for an activated ability whose descriptor `code` names this hook (13-port-plan §2.4)
+export interface ActivatedAbilityHook {
+  // extra gate on top of timing / limits (e.g. "a unit that has not charged"); `use` holds what is known at the time
+  canUse(state: GameState, unitId: UnitId | null, use: Partial<AbilityUse>): boolean
+  // legal targets (the declare step offers them as abilityTarget options); absent = no targets
+  targets?(state: GameState, unitId: UnitId | null): UnitId[]
+  // "choose one" modes (abilityMode options); absent = descriptor.modes or none
+  modes?: { id: string; label: string }[]
+  // apply the effect (emit events, grant effects, queue mortal damage …)
+  resolve(ctx: EngineContext, use: AbilityUse): void
+}
+
+// bespoke `code` hook, registered by name in src/engine/code-hooks.ts; `estimate` feeds the AI damage calculator
 export interface CodeHook<K extends HookName = HookName> {
   name: string
   hook: K
   run: HookFn<K>
   estimate?: (ctx: HookContextFor<K>) => Partial<Record<'hitMod' | 'woundMod' | 'saveMod' | 'damageMult' | 'attacksDelta', number>>
+  // AoS activated ability (PORT-0.7)
+  activate?: ActivatedAbilityHook
 }
 export type HookRegistry = Record<string, CodeHook>
 
@@ -165,6 +201,8 @@ export const TRIGGER_HOOK: Record<Trigger, HookName> = {
   deployment: 'onDeployment',
   reinforcements: 'onReinforcements',
   objectiveControl: 'onObjectiveControl',
+  // never dispatched: activated abilities are run by abilities.ts (hooks-impl skips `activated` descriptors)
+  activated: 'onAbilityDeclared',
 }
 
 // which hooks each Effect key is evaluated at, independent of the descriptor's trigger (e.g. `always` + invuln)

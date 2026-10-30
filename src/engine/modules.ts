@@ -20,6 +20,7 @@ import type { WeaponService } from './weapons'
 import type { TransportService } from './transports'
 import type { ObjectiveService } from './objectives'
 import type { MissionService } from './missions'
+import type { AbilityService } from './abilities'
 
 // event without the envelope the reducer fills in (seq, round, turn, phase; player defaults to the active player)
 export type EventInput = { [E in GameEvent as E['type']]: Omit<E, keyof EventBase> & { player?: PlayerId } }[GameEventType]
@@ -57,7 +58,8 @@ export interface EngineContext {
   // progress markers (state.phaseState.marks, reset when a phase is entered): true the first time `key` is seen
   once(key: string): boolean
   marked(key: string): boolean
-  // player orderings for windows (00-arch §3 / R-11.5)
+  // player orderings for windows (00-arch §3). AoS: active player first, always (CORE-3.2) — `defensive` is kept for the
+  // 42k call sites and now returns the active-first order as well
   order: {
     active(): PlayerId[]
     first(): PlayerId[]
@@ -102,6 +104,8 @@ export interface Services {
   transports: TransportService
   objectives: ObjectiveService
   missions: MissionService
+  // AoS activated abilities (PORT-0.7): src/engine/abilities.ts
+  abilities: AbilityService
 }
 
 export type BattlePhase = Exclude<Phase, 'ended'>

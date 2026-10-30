@@ -197,7 +197,7 @@ function defaultAttachments(bundle: DataBundle, patrol: CombatPatrolData): Playe
 /** After a setup-time split the parent ref no longer exists, so its leaders move onto the halves (one leader per half, R-10.1):
  *  leaders already attached to the parent first, then any unattached leader whose datasheet may join the squad's datasheet. */
 function remapSplitAttachments(bundle: DataBundle, patrol: CombatPatrolData, attachments: PlayerSetup['attachments'], splitRefs: string[]): PlayerSetup['attachments'] {
-  let out = [...attachments]
+  let out = [...(attachments ?? [])]
   for (const parentRef of splitRefs) {
     const parent = patrol.units.find((u) => u.ref === parentRef)
     const parts = parent?.patrolSquads

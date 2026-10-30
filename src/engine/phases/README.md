@@ -6,9 +6,14 @@ the frozen contracts (`types.ts`, `actions.ts`, `events.ts`, `hooks.ts`, `rng.ts
 interfaces in `modules.ts`; extend the interface declared in **your own** file if you need more methods (other modules
 import those types, so keep additions backwards compatible).
 
-Specs: `docs/spec/00-architecture.md` (contract), `10-rules-core.md` (rules, `R-x.y`), `11-combat-patrol.md`,
-`12-rules-test-checklist.md` (test ids), `60-testing.md`. Fixtures for tests: `tests/fixtures/` (synthetic factions
-`red`/`blu`, `makeSetup`, `makeEngine`, `scriptedModule`, `recordingStratagems`, `placeUnit`, `createContext`).
+Specs (AoS 4 Spearhead port): `docs/spec/00-architecture.md` (contract), `10-rules-core.md` (core rules, `CORE-x.y`),
+`11-spearhead.md` (`SPH-x.y`), `docs/spec/factions/*` (`CITIES-*`, `IJZ-*`), `13-engine-port-plan.md` (port decisions
+PORT-0.x, alias table, per-file verdicts, work packages), `12-rules-test-checklist.md` (test ids). **Every test is named
+with its checklist / rule id** (`it('SHOOT-010 …')`, `it('IJZ-5.2.1 …')`), one id per `it`. Fixtures: `tests/fixtures/aos.ts`
+(checklist units Guard, Brute, Boss, Knight, Cannon, Hawk; armies `fx.order.army` / `fx.chaos.army`; battleplan
+`fx.mission` 30" x 22"; layouts `fx.terrain.open` / `fx.terrain.standard`; `makeAosSetup`, `aosState`, `aosPingEngine`,
+`autoDeployAos`, `withAosBundle`) plus the generic helpers in `tests/fixtures/modules.ts` (`pingModule`, `scriptedModule`,
+`recordingStratagems`, `autoplay`). The 40k `red`/`blu` fixtures stay until WP8.
 
 ## 1. Ownership
 
@@ -42,7 +47,8 @@ step(state, action, rng?)
 | `pending.kind` | owner |
 |---|---|
 | `stratagemWindow`, `reactionWindow`, `commandReroll` | `services.stratagems` |
-| `chooseOption` topic `coherencyCull` | core (R-2.6 cull) |
+| `chooseOption` topics `firstTurn`, `priorityChoice` | core (reducer `turnOrderHandler`) |
+| `chooseOption` topics `abilityUse`, `abilityTarget`, `abilityMode` | `services.abilities.handler` |
 | `chooseOption` topics `oathTarget`, `waaagh`, `abilityChoice` | `services.hooks.handler` |
 | `chooseOption` topics `razeObjective`, `recoverObjective`, `stompTarget`, `bagTarget` | `services.missions.handler` |
 | everything else (incl. `chooseOption` other topics, `confirm`) | the phase module of `state.phase` (`setup`/`deployment` → `setupModule`) |
@@ -62,11 +68,18 @@ loop:
                                 r === 'pending' → a decision must be pending, else EngineInvariantError
 ```
 
-Core transition after a phase body (`state.step === 'none'`):
-`phase.end` window (active, then opponent) → tabled check → next phase, or after Fight: coherency cull (R-2.6) →
-`turn.end` window → objectives/turn-end hooks/effects → next player's turn (skipped when `missions.playerHasForces`
-says no, R-12.6) → `round.end` window (first-turn player, then second) → `RoundEnded` → round 5 or tabled: `battle.end`
-window → `GameEnded`; else `RoundStarted` → `round.start` window → `TurnStarted` → Command phase.
+Core transition after a phase body (`state.step === 'none'`), Spearhead (SPH-8, PORT-0.8):
+`phase.end` window (active, then opponent) → next phase, or after Combat (`fight`) the end of turn: `turn.end.abilities`
+window + `abilities.runWindow('endOfTurn')` (active, then opponent) → `objectives.evaluateControl(ctx, 'turnEnd')` →
+`turn.end.control` → `turn.end.scoring` (missions score here) → `turn.end.afterScoring` → `onTurnEnd` hooks, `turnEnd`
+effects expire → the other player's turn (always: a tabled player still takes empty turns, SPH-11.3), or after the
+second turn `round.end` window + `abilities.runWindow('endOfRound')` (second-turn player first) → `RoundEnded` → after
+round `mission.data.rounds` (4) `battle.end` → `GameEnded`; else the next round. Round start: `RoundStarted` → first
+turn (round 1: `GameSetup.firstTurn` pre-fill or chooseOption topic `firstTurn` to the attacker; rounds 2+: priority roll,
+one D6 per player, topic `priorityChoice` to the winner / on a tie the previous first player) → `UnderdogDetermined` →
+twist draw (empty-deck guard) → `round.start` window + `abilities.runWindow('startOfRound')` → round 1 only:
+`evaluateControl(ctx, 'turnStart')` → `TurnStarted` → `turn.start` window + `abilities.runWindow('startOfTurn')` →
+Hero phase (`command`). No coherency cull, no CP, no battle-shock, no phase-end control evaluation.
 
 Entering a phase (`enterPhase`): `state.phase`, `state.step = 'none'`, fresh `phaseState` (marks, windows, attack …
 all reset), per-phase unit/model flags reset (`shotThisPhase`, `foughtThisPhase`, `surgeMovedThisPhase`,
@@ -174,3 +187,56 @@ movementModule.enter(ctx); movementModule.advance(ctx)
 
 Name tests with the checklist ids (`it('MOVE-003 …')`), one id per `it`, and put fixtures under `tests/fixtures/`.
 `npx vitest run tests/engine/<yours>.test.ts` plus `npm run typecheck` before you return.
+
+## 7. Wave 2 notes (Spearhead port, left by WP1)
+
+What the core now provides and where each Wave 2 package plugs in. Contracts: 00-architecture §2–§5, §7, §10.
+
+- **Order is active player first, always** (CORE-3.2). `ctx.order.defensive()` returns the active-first order now; new
+  code should just use `ctx.order.active()`.
+- **Activated abilities — `services.abilities` (`abilities.ts`, WP3 fills the stub).** `runWindow(ctx, window, player,
+  key?)` is re-entrant and returns `true` while a decision is pending. `AbilityWindow` = `'hero' | 'movement' |
+  'shooting' | 'charge' | 'fight' | 'startOfTurn' | 'endOfTurn' | 'startOfRound' | 'endOfRound' | 'deployment'`. The
+  reducer already calls it for `startOfTurn` (key `turn:<round>:<active>`), `endOfTurn` (same key), `startOfRound` and
+  `endOfRound` (key `round:<round>`), active/first player then the other. Phase modules call it themselves: WP3 hero
+  (`activeAbilities` → `opponentAbilities` steps), WP4 movement / charge (`'abilities'` step, both players), WP5 shooting
+  (`'enemyAbilities'` step, opponent) and fight (first, both players). Topics `abilityUse` / `abilityTarget` /
+  `abilityMode` are routed to `abilityService.handler` in `DEFAULT_MODULES.topics`. The faction side is
+  `CodeHook.activate` (`hooks.ts` `ActivatedAbilityHook`: `canUse`, `targets?`, `modes?`, `resolve(ctx, use: AbilityUse)`),
+  looked up by the descriptor's `code` in `codeHooks` (WP7 spreads `citiesHooks` / `ironjawzHooks` from
+  `factions/{cities,ironjawz}.ts` into it). Record uses in `Player.abilityUses`, `UnitTurnState.abilitiesUsedThisPhase`
+  and `usedCoreThisPhase` (both reset by the core at every phase start). Descriptors with `trigger: 'activated'` are
+  skipped by the hook dispatcher, so they never fire as passives.
+- **Army-wide sources.** `Player.battleTraitIds` and `Player.regimentAbilityId` (resolved in `createGameState`, default
+  regiment = the `default: true` entry) are hook sources on every unit of the army (`hooks-impl.ts` `sourcesFor`).
+  Passive ones work as plain descriptors; activated ones go through `abilities.ts`.
+- **Objectives (WP3).** Contest = base touches the circle: `withinObjectiveRange(model, obj, y, 0, obj.radius)`
+  (`Objective.radius`, defaults `OBJECTIVE_RANGE = 0`, `OBJECTIVE_MARKER_RADIUS = 3`). Per-unit score:
+  `hookService.unitControlScore(ctx, unitId, objectiveId, summedControl)` (folds `onObjectiveControl` StatModifierResults,
+  floor 1, CORE-17.4); contest filter: `hookService.contestAllowed(state, unitId)` (WP7 adds `denyContest?(state, entry,
+  unitId)` to `EngineCodeHook` for IJZ-5.4.1). The core calls `evaluateControl(ctx, 'turnStart')` exactly once (start of
+  round 1, after Start of Battle Round) and `evaluateControl(ctx, 'turnEnd')` once per turn (before `turn.end.control`);
+  nowhere else. `ControlMoment` is WP3's to extend.
+- **Scoring (WP3).** The reducer never opens `turn.end`; Spearhead data scoring rules carry `when: 'turn.end'`
+  (13-port-plan §3.5), so `missions` must score them at the `turn.end.scoring` window (`onWindow`), active player only.
+  Round-4 reserve destruction (CORE-4.14) belongs in `missions.onWindow('round.start', '4')`. `finalResult` = more VP
+  wins, else draw; the reducer ends the battle after `mission.data.rounds` and never calls `isTabled` /
+  `playerHasForces`.
+- **Setup (WP3).** The reducer raises the round-1 first-turn choice itself (topic `firstTurn`, attacker = the player
+  with `side: 'attacker'`); the setup module must not roll for first turn. `assignSides` now also sets
+  `Player.territory` (defender = `GameSetup.defenderTerritory ?? 'B'`); `deploymentZone(state, p)` reads
+  `deploymentZones[territory]`, `territoryOf(state, p)` reads `MissionData.territories`. Skip units with
+  `unit.reserveArrival` in deployment. Set `unit.setUpTurn` when a unit is set up mid-battle (CORE-6.13).
+- **Geometry (WP4/5).** `ENGAGEMENT_H = 3`, `ENGAGEMENT_V = Infinity` (combat range, pure range — add visibility in
+  `los.inCombat`), `COHERENCY_H = 0.5`, `isCoherent(models, range?)`, `PlacementCheckInput.coherencyRange?` (pass
+  `datasheet.coherencyRange`), `CHARGE_END = 0.5`.
+- **Weapons / stats (WP5).** `RuntimeWeapon.wound` / `rend` are filled (40k data: wound 4, rend = −AP), `S` / `AP` are 0
+  for AoS data. `modelStats` returns `RuntimeStats` (`ward: RollTarget | null`, `noSave`, `T` / `Ld` = 0). Emit
+  `DamagePoolResolved` per target unit. `attack.ts` line ~189 builds a `RuntimeWeapon` literal that now needs `wound` /
+  `rend` (typecheck error until WP5 replaces it).
+- **Round state.** `GameState.priority { rolls, seized, doubleTurn }` (reset every round; `seized` drives the SPH-10.4
+  tactic penalty later), `GameState.underdog`, `GameState.twist`. New rejections: `E_TERRITORY`, `E_IN_COMBAT`,
+  `E_ABILITY_USED`; new roll purposes `priority`, `retreat`.
+- **Gone from the core:** Miracle dice, Pain tokens, Shadow of Chaos, Cult Ambush, Teleport Assault strand check,
+  deferred removals, the end-of-turn coherency cull, phase-end objective control. The files still exist (dormant) until
+  WP8; do not call them from new code.

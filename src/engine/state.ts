@@ -5,7 +5,7 @@ import type {
 } from '../data/types'
 import type { CoreAbilityName } from '../data/types'
 import { parseDiceExpr } from './dice'
-import { mmToInch, transformPolygon } from './geometry'
+import { mmToInch, OBJECTIVE_MARKER_RADIUS, transformPolygon } from './geometry'
 import { hookService } from './hooks-impl'
 import { otherPlayer, type EngineContext } from './modules'
 import { createRng } from './rng'
@@ -13,7 +13,7 @@ import { transportService } from './transports'
 import {
   EngineInvariantError,
   type Board, type GameSetup, type GameState, type Model, type ModelId, type Objective, type PhaseState, type Player,
-  type PlayerId, type Polygon, type RuntimeAbility, type RuntimeDatasheet, type RuntimeModelProfile, type RuntimeWeapon,
+  type PlayerId, type Polygon, type RuntimeAbility, type RuntimeDatasheet, type RuntimeModelProfile, type RuntimeStats, type RuntimeWeapon,
   type TerrainPiece, type Unit, type UnitId, type UnitTurnState, type Vec3,
 } from './types'
 
@@ -27,7 +27,18 @@ export function emptyTurnState(): UnitTurnState {
   return {
     moveType: null, advanceRoll: null, chargedThisTurn: false, chargeRoll: null, shotThisPhase: false, foughtThisPhase: false,
     surgeMovedThisPhase: false, arrivedThisTurn: false, fightsFirst: false, fightsLast: false,
+    chargeRollUnmodified: null, usedCoreThisPhase: false, abilitiesUsedThisPhase: [],
   }
+}
+
+// AoS unit fields (13-port-plan §2.1) for a unit built outside createGameState
+export function aosUnitFields(): Pick<Unit, 'reserveArrival' | 'setUpTurn' | 'replacementOf' | 'replaced' | 'tokens'> {
+  return { reserveArrival: null, setUpTurn: null, replacementOf: null, replaced: false, tokens: {} }
+}
+
+// data Stats -> RuntimeStats: 40k-only T / Ld default to 0, ward / noSave resolved (PORT-0.3)
+export function runtimeStats(st: Stats): RuntimeStats {
+  return { ...st, T: st.T ?? 0, Ld: st.Ld ?? 0, ward: st.ward ?? null, noSave: st.noSave ?? false }
 }
 
 export function unitIdFor(player: PlayerId, ref: string): UnitId { return `${player}:${ref}` }
@@ -164,7 +175,7 @@ export function modelProfile(state: GameState, model: Model): RuntimeModelProfil
   return p
 }
 
-export function modelStats(state: GameState, model: Model): Stats { return modelProfile(state, model).stats }
+export function modelStats(state: GameState, model: Model): RuntimeStats { return modelProfile(state, model).stats }
 
 // C1: keywords of one model = datasheet keywords + faction keywords + the model's own composition keywords
 export function modelKeywordsOf(state: GameState, modelId: ModelId): string[] {
@@ -278,6 +289,7 @@ export function spawnUnitCopy(state: GameState, sourceUnitId: UnitId, modelCount
     id, player: src.player, ref: `${src.ref}~${made + 1}`, datasheetId: src.datasheetId, name: src.name, models: modelIds, startingStrength: modelCount,
     location: 'reserves', attachedLeaderId: null, bodyguardUnitId: null, battleShocked: false, battleShockExpiresRound: null,
     turn: emptyTurnState(), effects: [], enhancementId: null, isWarlord: false, deepStrikeWith: null, destroyedBy: null, destroyedModels: [],
+    ...aosUnitFields(),
   }
   state.units[id] = unit
   return unit
@@ -314,7 +326,7 @@ export function spawnDestroyedUnitCopy(ctx: EngineContext, sourceUnitId: UnitId)
     id: newId, player: src.player, ref: `${src.ref}~${n}`, datasheetId: src.datasheetId, name: src.name, models: modelIds,
     startingStrength: src.startingStrength, location: 'reserves', attachedLeaderId: null, bodyguardUnitId: null, battleShocked: false,
     battleShockExpiresRound: null, turn: emptyTurnState(), effects: [], enhancementId: null, isWarlord: false, deepStrikeWith: null,
-    destroyedBy: null, destroyedModels: [],
+    destroyedBy: null, destroyedModels: [], ...aosUnitFields(),
   }
   s.units[newId] = unit
   ctx.emit({ type: 'UnitDeployed', unitId: newId, toReserves: true, player: src.player })
@@ -332,20 +344,31 @@ export function modelHasAttacked(state: GameState, modelId: ModelId): boolean {
 }
 
 // P4: sides chosen → player.side, objective homes (mission 'A' = attacker, 'B' = defender)
+// Spearhead: territories follow; the defender takes GameSetup.defenderTerritory (default 'B'), the attacker the other one
 export function assignSides(state: GameState, attacker: PlayerId): void {
   const defender = otherPlayer(attacker)
   state.players[attacker].side = 'attacker'
   state.players[defender].side = 'defender'
+  const defTerritory = state.setup.defenderTerritory ?? 'B'
+  state.players[defender].territory = defTerritory
+  state.players[attacker].territory = defTerritory === 'A' ? 'B' : 'A'
   for (const o of state.mission.data.objectives) {
     const obj = state.objectives[o.id]
     if (obj) obj.home = o.home === 'A' ? attacker : o.home === 'B' ? defender : null
   }
 }
 
+// the deploy area of the player's territory (SPH-7.2: territory minus the 6" strip, from mission data)
 export function deploymentZone(state: GameState, player: PlayerId): Polygon {
-  const side = state.players[player].side
-  if (!side) throw new EngineInvariantError('deploymentZone: sides not chosen yet')
-  return side === 'attacker' ? state.mission.data.deploymentZones.A : state.mission.data.deploymentZones.B
+  const p = state.players[player]
+  if (!p.side) throw new EngineInvariantError('deploymentZone: sides not chosen yet')
+  return state.mission.data.deploymentZones[p.territory]
+}
+
+// the player's whole territory (SPH-1.4); missions without territories fall back to the deploy area
+export function territoryOf(state: GameState, player: PlayerId): Polygon {
+  const t = state.players[player].territory
+  return state.mission.data.territories?.[t] ?? state.mission.data.deploymentZones[t]
 }
 
 // ---------- createGameState ----------
@@ -369,14 +392,19 @@ function validateDescriptorDice(d: AbilityDescriptor): void {
   }
 }
 
+// AoS: wound / rend from data; 40k data (no wound) gets wound 4 and rend = -AP so it still resolves (PORT-0.1)
 function toRuntimeWeapon(w: WeaponData): RuntimeWeapon {
   parseDiceExpr(w.A)
   parseDiceExpr(w.D)
   for (const a of w.abilities) if (a.value !== undefined) parseDiceExpr(a.value)
-  if (typeof w.S !== 'number') {
+  if (w.S !== undefined && typeof w.S !== 'number') {
     throw new EngineInvariantError(`weapon ${w.id}: S '${w.S}' is not supported (10th edition has no user Strength characteristic)`, { code: 'E_SCHEMA', id: w.id })
   }
-  return { id: w.id, name: w.name, kind: w.type, range: w.range, A: w.A, skill: w.skill, S: w.S, AP: w.AP, D: w.D, abilities: w.abilities, profileGroup: w.profileGroup ?? null }
+  const AP = w.AP ?? 0
+  return {
+    id: w.id, name: w.name, kind: w.type, range: w.range, A: w.A, skill: w.skill, S: w.S ?? 0, AP, D: w.D, abilities: w.abilities,
+    profileGroup: w.profileGroup ?? null, wound: w.wound ?? 4, rend: w.rend ?? (AP < 0 ? -AP : 0),
+  }
 }
 
 function toRuntimeDatasheet(ds: DatasheetData, abilityIds: string[], leaderEffectIds: string[]): RuntimeDatasheet {
@@ -386,16 +414,18 @@ function toRuntimeDatasheet(ds: DatasheetData, abilityIds: string[], leaderEffec
     champion: c.champion ?? false,
     base: { shape: c.base.shape, radius: mmToInch(c.base.mm) / 2, ...(c.base.mm2 !== undefined ? { radius2: mmToInch(c.base.mm2) / 2 } : {}) },
     height: DEFAULT_HEIGHT_BY_ARCHETYPE[c.figure?.archetype ?? ds.figure.archetype] ?? 1.6,
-    stats: { ...ds.stats, ...(c.statsOverride ?? {}) },
+    stats: runtimeStats({ ...ds.stats, ...(c.statsOverride ?? {}) }),
     weapons: [...c.weapons.default],
     ...(c.keywords && c.keywords.length > 0 ? { keywords: [...c.keywords] } : {}),
   }))
   return {
-    id: ds.id, name: ds.name, faction: ds.faction, keywords: ds.keywords, factionKeywords: ds.factionKeywords, stats: ds.stats,
+    id: ds.id, name: ds.name, faction: ds.faction, keywords: ds.keywords, factionKeywords: ds.factionKeywords, stats: runtimeStats(ds.stats),
     invuln: ds.invuln ?? null, models, abilities: abilityIds, coreAbilities: ds.coreAbilities,
     leader: ds.leader ? { attachTo: ds.leader.attachTo, effects: leaderEffectIds } : null,
     damaged: ds.damaged ?? null,
     ...(ds.transport ? { transport: { ...ds.transport } } : {}),
+    spearhead: ds.spearhead ?? false,
+    ...(ds.coherencyRange !== undefined ? { coherencyRange: ds.coherencyRange } : {}),
   }
 }
 
@@ -476,11 +506,25 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
     if (patrol.faction !== faction.id) throw new EngineInvariantError(`patrol '${patrol.id}' does not belong to faction '${faction.id}'`)
     if (!faction.combatPatrols.includes(patrol.id)) throw new EngineInvariantError(`faction '${faction.id}' does not list patrol '${patrol.id}'`)
     if (!patrol.enhancements.some((e) => e.id === ps.enhancementId)) throw new EngineInvariantError(`enhancement '${ps.enhancementId}' is not offered by patrol '${patrol.id}'`)
-    const secondary = patrol.secondaries.find((s) => s.id === ps.secondaryId)
-    if (!secondary) throw new EngineInvariantError(`secondary '${ps.secondaryId}' is not offered by patrol '${patrol.id}'`)
-    secondaries[pid] = secondary.scoring
+    // 40k secondary: optional since the Spearhead port (absent -> the patrol's default one, or none)
+    const secondary = ps.secondaryId !== undefined
+      ? patrol.secondaries.find((s) => s.id === ps.secondaryId)
+      : (patrol.secondaries.find((s) => s.default) ?? patrol.secondaries[0] ?? null)
+    if (secondary === undefined) throw new EngineInvariantError(`secondary '${ps.secondaryId}' is not offered by patrol '${patrol.id}'`)
+    secondaries[pid] = secondary?.scoring ?? []
     for (const sid of patrol.stratagems) stratagems[sid] = req(bundle.stratagems, sid, 'stratagem')
     const armyRuleId = addAbility(patrol.armyRule ?? faction.armyRule, 'core')
+    // Spearhead army options (13-port-plan §3.4): battle traits on every unit, the chosen regiment ability player-wide
+    const battleTraitIds = (patrol.battleTraits ?? []).map((id) => addAbility(id, 'battleTrait'))
+    const regiments = patrol.regimentAbilities ?? []
+    let regimentAbilityId: string | null = null
+    if (ps.regimentAbilityId !== undefined) {
+      if (!regiments.some((r) => r.id === ps.regimentAbilityId)) throw new EngineInvariantError(`regiment ability '${ps.regimentAbilityId}' is not offered by army '${patrol.id}'`)
+      regimentAbilityId = addAbility(ps.regimentAbilityId, 'regiment')
+    } else {
+      const def = regiments.find((r) => r.default) ?? regiments[0]
+      if (def) regimentAbilityId = addAbility(def.id, 'regiment')
+    }
     // Orders (Astra Militarum Voice of Command) are ability records that sit on no datasheet and are only granted as ActiveEffects
     for (const orderId of (abilities[armyRuleId].params?.orderIds as string[] | undefined) ?? []) addAbility(orderId, 'core')
 
@@ -555,7 +599,12 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
         id: unitId, player: pid, ref: pu.ref, datasheetId: ds.id, name: ds.name, models: modelIds, startingStrength: modelIds.length,
         location: 'reserves', attachedLeaderId: null, bodyguardUnitId: null, battleShocked: false, battleShockExpiresRound: null,
         turn: emptyTurnState(), effects: [], enhancementId: null, isWarlord, deepStrikeWith: null, destroyedBy: null, destroyedModels: [],
+        ...aosUnitFields(),
+        // AoS reserve units (Ere We Go): never deployed; brought on by their arrival ability (setup skips them)
+        reserveArrival: pu.reserve?.ability ?? null,
+        tokens: { ...(pu.tokens ?? {}) },
       }
+      if (pu.reserve) addAbility(pu.reserve.ability, 'datasheet')
     }
     if (!warlordUnitId) throw new EngineInvariantError(`patrol '${patrol.id}': warlord ref '${patrol.warlord}' not found`)
 
@@ -585,7 +634,7 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
     }
 
     // leader attachments (R-10.1)
-    for (const att of ps.attachments) {
+    for (const att of ps.attachments ?? []) {
       if (skippedRefs.has(att.leaderRef) || skippedRefs.has(att.bodyguardRef)) continue
       const leader = units[unitIdFor(pid, att.leaderRef)]
       const bodyguard = units[unitIdFor(pid, att.bodyguardRef)]
@@ -600,16 +649,17 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
 
     // reserves (CP-1.9: Deep Strike is the only route, or a Tellyporta pairing): existence is checked here, the Deep Strike
     // check runs once the state exists (C1: a hook-granted Deep Strike needs the enhancement abilities on state.abilities)
-    for (const ref of ps.reserves) {
+    for (const ref of ps.reserves ?? []) {
       if (skippedRefs.has(ref)) continue
       if (!units[unitIdFor(pid, ref)]) throw new EngineInvariantError(`reserves unit '${ref}' not found for player ${pid}`)
     }
 
     players[pid] = {
       id: pid, name: ps.name, faction: faction.id, patrolId: patrol.id, stratagemIds: [...patrol.stratagems], side: null, cp: 0, vp: 0, vpBySource: {}, cpGainedThisRound: 0,
-      stratagemUses: [], oncePerBattleUsed: [], enhancementId: enh.id, secondaryId: secondary.id, warlordUnitId, oathTargetUnitId: null,
+      stratagemUses: [], oncePerBattleUsed: [], enhancementId: enh.id, secondaryId: secondary?.id ?? '', warlordUnitId, oathTargetUnitId: null,
       waaagh: { used: false, activeRound: null }, commandRerollLocked: false, battleReadyVp: ps.battleReadyVp ?? 0, secondaryState: {},
       miracle: { dice: [], spentThisPhase: [] },
+      territory: pid, regimentAbilityId, battleTraitIds, abilityUses: [],
     }
   }
 
@@ -618,6 +668,7 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
     objectives[o.id] = {
       id: o.id, pos: { x: o.x, z: o.z }, home: null, controller: null, securedBy: null, stickyBy: null, claimedBy: null,
       controllerAtTurnStart: null, removed: false, used: false, lootedBy: [], tag: null,
+      radius: o.radius ?? mission.objectiveMarkerRadius ?? OBJECTIVE_MARKER_RADIUS, name: o.name ?? null,
     }
   }
 
@@ -651,10 +702,13 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
     log: [],
     hash: '',
     result: null,
+    twist: { deck: [], current: null, drawn: [] },
+    underdog: null,
+    priority: { rolls: null, seized: null, doubleTurn: false },
   }
   // reserves (CP-1.9 / C1): Deep Strike (datasheet, pairing, or hook-granted) is the only route
   for (const pid of ['A', 'B'] as PlayerId[]) {
-    for (const ref of setup.players[pid].reserves) {
+    for (const ref of setup.players[pid].reserves ?? []) {
       const u = state.units[unitIdFor(pid, ref)]
       if (u && !(hasDeepStrike(state, u.id) || u.deepStrikeWith !== null)) throw new EngineInvariantError(`unit '${ref}' cannot start in Reserves (no Deep Strike)`)
     }
@@ -667,7 +721,7 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
       if (!passenger) throw new EngineInvariantError(`embarked: unit '${e.unitRef}' not found for player ${pid}`)
       if (!transport) throw new EngineInvariantError(`embarked: transport '${e.transportRef}' not found for player ${pid}`)
       if (!datasheets[transport.datasheetId].transport) throw new EngineInvariantError(`embarked: '${e.transportRef}' is not a Transport`)
-      if (setup.players[pid].reserves.includes(e.unitRef) || setup.players[pid].reserves.includes(e.transportRef)) throw new EngineInvariantError(`embarked: '${e.unitRef}' / '${e.transportRef}' cannot also start in Reserves`)
+      if ((setup.players[pid].reserves ?? []).includes(e.unitRef) || (setup.players[pid].reserves ?? []).includes(e.transportRef)) throw new EngineInvariantError(`embarked: '${e.unitRef}' / '${e.transportRef}' cannot also start in Reserves`)
       if (!transportService.canCarry(state, passenger.id, transport.id)) throw new EngineInvariantError(`embarked: '${e.unitRef}' cannot be carried by '${e.transportRef}' (keywords or capacity)`)
       transportService.embark(state, passenger.id, transport.id)
     }

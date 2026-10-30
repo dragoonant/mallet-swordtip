@@ -25,8 +25,7 @@ import { weaponService } from './weapons'
 import { transportService } from './transports'
 import { objectiveService } from './objectives'
 import { missionService } from './missions'
-import { answerMiracleReroll, miracleHandler } from './miracle'
-import { fixRollHandler } from './fix-roll'
+import { abilityService } from './abilities'
 
 export * from './types'
 export * from './actions'
@@ -41,11 +40,10 @@ export {
   emptyPhaseState, emptyTurnState, hashState, canonicalJson, cloneForStep, unitModels, unitModelsForCoherency, unitsOf,
   boardUnitsOf, boardModelsOf, enemyModelsOnBoard, datasheetOf, modelProfile, modelStats, keywordsOf, modelKeywordsOf, hasKeyword, setModelPos,
   spawnUnitCopy, spawnDestroyedUnitCopy, recordModelAttacked, modelHasAttacked,
-  removeModel, assignSides, deploymentZone, unitIdFor, modelIdFor, createGameState,
+  removeModel, assignSides, deploymentZone, territoryOf, runtimeStats, aosUnitFields, unitIdFor, modelIdFor, createGameState,
 } from './state'
 export { createEngine, registerDataBundle, getDataBundle, checkActionShape, advanceGame, createContext, requireUnit } from './reducer'
 export { rollOff, setupModule } from './setup'
-export * from './miracle'
 export type { TerrainService } from './terrain'
 export type { LosService } from './los'
 export type { HookService, HookData } from './hooks-impl'
@@ -59,6 +57,8 @@ export type { WeaponService } from './weapons'
 export type { TransportService } from './transports'
 export type { ObjectiveService, ControlMoment } from './objectives'
 export type { MissionService } from './missions'
+export type { AbilityService, AbilityWindow, UsableAbility } from './abilities'
+export { abilityService } from './abilities'
 export type { StepResult, EngineApi, UndoOptions } from './reducer'
 export { ENGINE_VERSION, majorVersion } from './version'
 
@@ -75,6 +75,7 @@ export const DEFAULT_SERVICES: Services = {
   transports: transportService,
   objectives: objectiveService,
   missions: missionService,
+  abilities: abilityService,
 }
 
 export const DEFAULT_MODULES: ModuleTable = {
@@ -91,20 +92,16 @@ export const DEFAULT_MODULES: ModuleTable = {
   topics: {
     oathTarget: hookService.handler,
     waaagh: hookService.handler,
-    abilityChoice: {
-      validate: (state, action, pending) => hookService.handler.validate?.(state, action, pending) ?? null,
-      handle(ctx, action, pending) {
-        if (pending.kind === 'chooseOption' && pending.context.data.code === 'saintlyRelicReroll') return answerMiracleReroll(ctx, action, pending)
-        return hookService.handler.handle(ctx, action, pending)
-      },
-    },
+    abilityChoice: hookService.handler,
     razeObjective: missionService.handler,
     recoverObjective: missionService.handler,
     stompTarget: missionService.handler,
     bagTarget: missionService.handler,
     treasureObjective: missionService.handler,
-    miracleDie: miracleHandler,
-    fixRollOffer: fixRollHandler,
+    // AoS activated abilities (PORT-0.7); firstTurn / priorityChoice are answered by the reducer core
+    abilityUse: abilityService.handler,
+    abilityTarget: abilityService.handler,
+    abilityMode: abilityService.handler,
   },
 }
 

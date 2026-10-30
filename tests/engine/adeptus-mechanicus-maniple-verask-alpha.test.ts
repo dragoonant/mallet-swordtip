@@ -1004,7 +1004,7 @@ describe('AI (MVA-019)', () => {
     let r = createGame(setup, 'mva21', bundle)
     // no workaround: neither seat's Dunecrawler is set aside in Reserves
     for (const p of ['A', 'B'] as PlayerId[]) expect(r.state.setup.players[p].reserves, p).toEqual([])
-    for (const u of Object.values(r.state.units)) expect(u.location === 'reserves' && r.state.setup.players[u.player].reserves.includes(u.ref), u.id).toBe(false)
+    for (const u of Object.values(r.state.units)) expect(u.location === 'reserves' && r.state.setup.players[u.player].reserves!.includes(u.ref), u.id).toBe(false)
 
     // advance to the first deployment decision and probe it with hand-made placements
     let steps = 0

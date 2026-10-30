@@ -24,8 +24,12 @@ export type TimingWindowId =
   | 'attack.modelDestroyed'
   | 'any.unitDestroyed' | 'any.rollMade'
   | 'phase.end' | 'turn.end' | 'round.end' | 'battle.end'
+  // Spearhead (13-port-plan PORT-0.8): Start of Turn window and the SPH-8.6 end-of-turn sequence; `turn.end` is kept but never opened
+  | 'turn.start' | 'turn.end.abilities' | 'turn.end.control' | 'turn.end.scoring' | 'turn.end.afterScoring'
 
-export interface Stats { M: number; T: number; Sv: RollTarget; W: number; Ld: RollTarget; OC: number }
+// AoS aliases (PORT-0.3): W = Health, Sv = Save, OC = Control. T / Ld are 40k-only (optional; 0 at runtime).
+// ward: Ward (N+), CORE-13.2; noSave: Save '-' (CORE-11.7). null is accepted for ward so RuntimeStats stays assignable.
+export interface Stats { M: number; T?: number; Sv: RollTarget; W: number; Ld?: RollTarget; OC: number; ward?: RollTarget | null; noSave?: boolean }
 export type PartialStats = Partial<Stats>
 
 // oval: `mm` runs front-to-back (along facing), `mm2` side-to-side — a walker like the Dreadknight sits across its oval (mm < mm2)
@@ -40,6 +44,8 @@ export type WeaponAbilityName =
   | 'ASSAULT' | 'HEAVY' | 'RAPID_FIRE' | 'TORRENT' | 'BLAST' | 'SUSTAINED_HITS' | 'LETHAL_HITS'
   | 'DEVASTATING_WOUNDS' | 'ANTI' | 'TWIN_LINKED' | 'LANCE' | 'MELTA' | 'IGNORES_COVER' | 'INDIRECT_FIRE'
   | 'PISTOL' | 'HAZARDOUS' | 'PRECISION' | 'EXTRA_ATTACKS' | 'ONE_SHOT' | 'PSYCHIC' | 'CUSTOM'
+  // AoS (13-port-plan §3.2). 'ANTI' is reused as Anti-X (+1 Rend) with `keyword` ('@charged' = target charged this turn)
+  | 'CRIT_2_HITS' | 'CRIT_AUTO_WOUND' | 'CRIT_MORTAL' | 'CHARGE_DAMAGE' | 'COMPANION' | 'SHOOT_IN_COMBAT'
 
 export interface WeaponAbility { ability: WeaponAbilityName; value?: DiceExpr; keyword?: Keyword; ref?: Id }
 
@@ -146,7 +152,8 @@ export type EffectList = Effect | Effect[]
 export interface Scope { who: 'self' | 'bearer' | 'target' | 'attacker' | 'friendly' | 'enemy'; within?: number; keyword?: Keyword }
 // untilEndOfRound = until the start of the next battle round (engine expires.kind 'roundEnd')
 export type Duration = 'instant' | 'untilEndOfPhase' | 'untilEndOfTurn' | 'untilNextTurn' | 'untilEndOfRound' | 'battle'
-export type Limit = 'oncePerBattle' | 'oncePerRound' | 'oncePerTurn' | 'oncePerPhase'
+// oncePerTurnArmy: once per turn for the whole army (CORE-3.3 Rule of One style limits on activated abilities)
+export type Limit = 'oncePerBattle' | 'oncePerRound' | 'oncePerTurn' | 'oncePerPhase' | 'oncePerTurnArmy'
 
 export type Trigger =
   | 'always' | 'phaseStart' | 'phaseEnd' | 'turnStart' | 'turnEnd' | 'commandPhase' | 'battleShockTest'
@@ -154,6 +161,17 @@ export type Trigger =
   | 'targetsDeclared' | 'attacksAllocated' | 'hitRoll' | 'woundRoll' | 'saveRoll' | 'damageRoll'
   | 'feelNoPainRoll' | 'damageApplied' | 'modelDestroyed' | 'unitDestroyed' | 'deployment'
   | 'reinforcements' | 'objectiveControl'
+  // AoS: the descriptor is an activated ability run by src/engine/abilities.ts (PORT-0.7), never by the hook dispatcher
+  | 'activated'
+
+// AoS ability timing (13-port-plan §3.3). Phase names are the internal ones: 'command' = Hero phase, 'fight' = Combat phase.
+export type AbilityWhose = 'your' | 'enemy' | 'any'
+export type AbilityTiming =
+  | { kind: 'passive' }
+  | { kind: 'phase'; phase: 'command' | 'movement' | 'shooting' | 'charge' | 'fight'; whose: AbilityWhose }
+  | { kind: 'startOfTurn' | 'endOfTurn' | 'startOfRound' | 'endOfRound' | 'deployment'; whose: AbilityWhose }
+  | { kind: 'reaction'; trigger: 'youDeclared' | 'opponentDeclaredAttack'; abilityId?: Id } // P1
+export type AbilityKeyword = 'CORE' | 'ATTACK' | 'MOVE' | 'RUN' | 'CHARGE' | 'SPELL' | 'PRAYER' | 'UNLIMITED'
 
 export interface AbilityDescriptor {
   id: Id
@@ -167,6 +185,20 @@ export interface AbilityDescriptor {
   limit?: Limit
   code?: string
   params?: Record<string, unknown>
+  // ---- AoS additions (13-port-plan §3.3), all optional; absent `timing` = legacy 40k trigger-driven descriptor ----
+  timing?: AbilityTiming
+  keywords?: AbilityKeyword[]
+  // targets picked at Declare; the code hook may refine them
+  declare?: TargetSpec[]
+  // the declared roll, e.g. D6 succeeding on 2+
+  roll?: { dice: DiceExpr; succeedOn: RollTarget }
+  // "choose one" effects
+  modes?: { id: Id; name: string; text: string }[]
+  // first battle round the ability may be used in (Ere We Go: 3)
+  fromRound?: number
+  // spells / prayers (P2)
+  castingValue?: number
+  chantingValue?: number
 }
 export type AbilityRef = Id | AbilityDescriptor
 
@@ -216,12 +248,16 @@ export interface WeaponData {
   range: number
   A: DiceExpr
   skill: RollTarget | null
-  S: number | 'user' | 'user+1' | 'user+2' | 'userx2'
-  AP: number
+  // 40k only; optional for AoS weapons (0 at runtime)
+  S?: number | 'user' | 'user+1' | 'user+2' | 'userx2'
+  AP?: number
   D: DiceExpr
   abilities: WeaponAbility[]
   profileGroup?: Id
   figure?: { part: Id; hands?: 1 | 2 }
+  // AoS: Wound (N+) and Rend (positive number = worsens the save); required by the schema when the datasheet is `spearhead`
+  wound?: RollTarget
+  rend?: number
 }
 
 // datasheet.schema.json
@@ -259,8 +295,15 @@ export interface DatasheetData {
   leader?: { attachTo: Id[]; effects: AbilityRef[] }
   damaged?: { threshold: number; effect: EffectList }
   transport?: TransportData
-  points: { models: number; points: number }[]
+  points?: { models: number; points: number }[]
   figure: FigureSpec
+  // AoS warscroll (13-port-plan §3.1)
+  spearhead?: boolean
+  // CORE-1.6: a longer coherency range than ½" (MEAS-013)
+  coherencyRange?: number
+  // P2: Wizard / Priest power level
+  wizard?: number
+  priest?: number
 }
 
 // stratagem.schema.json
@@ -322,6 +365,10 @@ export interface PatrolUnitData {
   patrolSquads?: { ref: string; size: number; wargear: { modelId: string; count: number; weapons: Id[] }[] }[]
   attachTo?: string
   enhancement?: Id
+  // AoS: the unit starts in reserve and arrives through this ability (Ironjawz Ere We Go)
+  reserve?: { ability: Id }
+  // SPH-2.7 (P2)
+  tokens?: Record<string, number>
 }
 export interface SecondaryData { id: Id; name: string; text: string; default: boolean; scoring: ScoringRule[] }
 export interface CombatPatrolData {
@@ -335,7 +382,14 @@ export interface CombatPatrolData {
   stratagems: Id[]
   enhancements: { id: Id; default: boolean }[]
   secondaries: SecondaryData[]
+  // = the Spearhead general (PORT-0.3)
   warlord: string
+  // Spearhead army (13-port-plan §3.4): a CombatPatrolData with mode 'spearhead'
+  mode?: 'spearhead'
+  // ability ids attached to every unit of the army
+  battleTraits?: Id[]
+  // exactly 2 when mode = 'spearhead'; the chosen one is player-wide (Player.regimentAbilityId)
+  regimentAbilities?: { id: Id; default: boolean }[]
 }
 
 // mission.schema.json
@@ -343,10 +397,14 @@ export interface MissionData {
   id: Id
   name: string
   text?: string
-  format: 'combatPatrol' | 'incursion' | 'strikeForce'
+  format: 'combatPatrol' | 'incursion' | 'strikeForce' | 'spearhead'
   board: { w: number; h: number }
+  // Spearhead: the SPH-7.2 deploy area (territory minus the 6" strip), keyed by territory
   deploymentZones: { A: Polygon; B: Polygon }
-  objectives: { id: string; x: number; z: number; home?: 'A' | 'B' }[]
+  // Spearhead: radius = objective circle radius (default objectiveMarkerRadius), name = display name (SPH-6.5)
+  objectives: { id: string; x: number; z: number; home?: 'A' | 'B'; radius?: number; name?: string }[]
+  // Spearhead: the two territories of the deployment map (friendly-territory tests, SPH-1.4)
+  territories?: { A: Polygon; B: Polygon }
   objectiveRange?: number
   objectiveMarkerRadius?: number
   rounds: number

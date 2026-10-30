@@ -171,6 +171,8 @@ export const ROLL_PURPOSE_LABEL: Record<RollPurpose, string> = {
   mission: 'Mission',
   ability: 'Ability',
   stratagem: 'Stratagem',
+  priority: 'Priority',
+  retreat: 'Retreat',
   random: 'Random',
 }
 

@@ -14,16 +14,13 @@
 import type { Condition, CoreAbility, DiceExpr, Effect, Scope, StatName, TimingWindowId, Trigger, WeaponAbility } from '../data/types'
 import { codeHooks, type EngineCodeHook } from './code-hooks'
 import { clampStat, parseDiceExpr, rollSum } from './dice'
-import { miracleGate, substitutionEligible } from './miracle'
 import { withinObjectiveRange, OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE } from './geometry'
 import {
   TRIGGER_HOOK,
   type AttackContext, type EffectRequest, type EffectSource, type HookContext, type HookContextBase, type HookContextFor, type HookName,
   type HookRegistry, type HookResult, type HookResultFor, type RollContext,
 } from './hooks'
-import { frozenClosestEligible, snapshotClosestEligible } from './factions/tyranids'
 import { leaderService } from './leaders'
-import { shadowBattleShockModifiers } from './shadow'
 import type { DecisionHandler, EngineContext, WindowTrigger } from './modules'
 import { keywordsOf, modelKeywordsOf, modelStats, mortalCredit, unitModels } from './state'
 import type { ActiveEffect, DiceRoll, GameState, ModelId, PlayerId, RuntimeAbility, RuntimeWeapon, Unit, UnitId } from './types'
@@ -102,7 +99,16 @@ export interface HookQueries {
   overwatchForbiddenAgainst(state: GameState, targetUnitId: UnitId): boolean
   // chaos-daemons E3: a forbid:'overwatch' effect (Empyric Predators) is active on any half of the unit: it cannot Fire Overwatch
   overwatchForbidden(state: GameState, unitId: UnitId): boolean
+  // AoS CORE-17.4 / IJZ-5.4.1: one contesting unit's control score on an objective. `base` = summed Control of its contesting
+  // models; onObjectiveControl results (StatModifierResult: delta / set / cap / halve) adjust it; never below 1.
+  unitControlScore(ctx: EngineContext, unitId: UnitId, objectiveId: string, base: number): number
+  // AoS IJZ-5.4.1 (You Messin'?): false when some source's code hook `denyContest(state, entry, unitId)` returns true
+  // (WP7 adds `denyContest?` to EngineCodeHook); objectives then drop the unit from the contest
+  contestAllowed(state: GameState, unitId: UnitId): boolean
 }
+
+// AoS contest filter a code hook may carry (read structurally so code-hooks.ts can add it to EngineCodeHook later)
+interface ContestFilter { denyContest?(state: GameState, entry: HookSourceEntry, unitId: UnitId): boolean }
 export interface HookService extends Partial<HookQueries> {}
 
 // ---------- sources ----------
@@ -145,7 +151,8 @@ export function sourcesFor(state: GameState): HookSourceEntry[] {
     const ds = state.datasheets[unit.datasheetId]
     if (!ds) continue
     const fromAbility = (a: RuntimeAbility | undefined, kind: EffectSource['kind'], bearer: ModelId | null, defaultWho: Scope['who']) => {
-      if (!a) return
+      // AoS activated abilities are run by abilities.ts (PORT-0.7), never by the hook dispatcher
+      if (!a || a.trigger === 'activated') return
       out.push({
         source: { kind, id: a.id, unitId: unit.id, modelId: bearer },
         holderUnitId: unit.id, bearerModelId: bearer, trigger: a.trigger, when: a.when ?? null, effects: asList(a.effect),
@@ -156,6 +163,10 @@ export function sourcesFor(state: GameState): HookSourceEntry[] {
       for (const id of ds.abilities) fromAbility(state.abilities[id], 'ability', null, 'self')
       if (unit.bodyguardUnitId && ds.leader) for (const id of ds.leader.effects) fromAbility(state.abilities[id], 'ability', null, 'self')
       for (const a of enhancements) if (unit.models.includes(a.bearerModelId as ModelId)) fromAbility(a, 'enhancement', a.bearerModelId, 'bearer')
+      // Spearhead (13-port-plan §3.3): battle traits and the chosen regiment ability sit on every unit of the army
+      const owner = state.players[unit.player]
+      for (const id of owner?.battleTraitIds ?? []) fromAbility(state.abilities[id], 'ability', null, 'self')
+      if (owner?.regimentAbilityId) fromAbility(state.abilities[owner.regimentAbilityId], 'ability', null, 'self')
       // Damaged (datasheet.damaged, NEC-032): while a model has at most `threshold` wounds left its own rolls carry the effect
       if (ds.damaged) {
         for (const id of unit.models) {
@@ -274,8 +285,7 @@ export function evaluateCondition(env: ConditionEnv, c: Condition | null | undef
   if (c.targetBelowHalf !== undefined && !(attack && leaderService.isBelowHalfStrength(state, attack.targetUnitId) === c.targetBelowHalf)) return false
   if (c.targetIsClosestEligible !== undefined) {
     if (!attack) return false
-    // TYR-5.2: fixed when the unit declared its targets (snapshotClosestEligible); the live board only when no declaration was recorded
-    const closest = frozenClosestEligible(state, attack.attackerUnitId, attack.kind) ?? leaderService.closestEligibleTargets(state, attack.attackerUnitId, attack.kind)
+    const closest = leaderService.closestEligibleTargets(state, attack.attackerUnitId, attack.kind)
     if (closest.includes(leaderService.canonicalUnitId(state, attack.targetUnitId)) !== c.targetIsClosestEligible) return false
   }
   if (c.targetOnObjective !== undefined && !(attack && unitOnObjective(state, attack.targetUnitId) === c.targetOnObjective)) return false
@@ -626,10 +636,6 @@ export const hookService: HookService & HookQueries = {
   run(ctx, hook, data) {
     const s = ctx.state
     const d = data as unknown as Data
-    if (hook === 'onTargetsDeclared') {
-      const td = data as unknown as { attackerUnitId: UnitId; targetUnitIds?: UnitId[]; kind: 'ranged' | 'melee' }
-      snapshotClosestEligible(ctx, td.attackerUnitId, td.kind, td.targetUnitIds)
-    }
     for (const { source, result } of hookService.collect(ctx, hook, data)) {
       if ((result as HookResult).kind === 'request') hookService.apply(ctx, source, result as EffectRequest)
     }
@@ -936,7 +942,7 @@ export const hookService: HookService & HookQueries = {
     } else if (rolls.some((r) => r.autoFail)) {
       passed = false
     } else {
-      const modifiers = [...(modifier !== 0 ? [{ source, value: modifier }] : []), ...results.filter((r) => r.result.kind === 'roll' && (r.result as { modifier?: number }).modifier).map((r) => ({ source: r.source.id, value: (r.result as { modifier: number }).modifier })), ...shadowBattleShockModifiers(s, unitId)] // chaos-daemons E2: Shadow of Chaos +1 / -1
+      const modifiers = [...(modifier !== 0 ? [{ source, value: modifier }] : []), ...results.filter((r) => r.result.kind === 'roll' && (r.result as { modifier?: number }).modifier).map((r) => ({ source: r.source.id, value: (r.result as { modifier: number }).modifier }))]
       // Tyranid Synapse: sources may add dice (the highest single contribution applies), RollModifierResult.extraDice
       let extraDice = Math.max(0, ...rolls.map((r) => r.extraDice ?? 0))
       for (const entry of sourcesFor(s)) {
@@ -944,37 +950,13 @@ export const hookService: HookService & HookQueries = {
         if (spec?.battleShockDice) extraDice = Math.max(extraDice, spec.battleShockDice(s, unitId, entry))
       }
       const spec = { purpose: 'battleShock', player: unit.player, count: 2 + extraDice, mode: 'sum', modifiers, unitId, commandRerollable: false, needed: ld } as const
-      // ADE-2.2: a Battle-shock 2D6 may take one Miracle die. The Command-phase test is re-entrant (rollOnce). A test forced by an
-      // ability / stratagem is a one-shot call: it parks its parameters in a `bsresume:` mark, opens the `miracleDie` decision, and
-      // the Miracle handler re-invokes this function once answered (the done mark then feeds `substitute`). When another decision
-      // is already pending the test rolls straight through (RULING in docs/needs-rules-check.md).
+      // 40k Battle-shock (dormant in Spearhead: no Leadership, no battle-shock step). The Command-phase test is re-entrant.
       let roll: DiceRoll | null
       if (source === 'command') {
         roll = ctx.rollOnce(`battleShock:${unitId}:${source}`, spec)
         if (!roll) return 'pending'
       } else {
-        const key = `battleShock:${unitId}:${source}`
-        const marks = s.phaseState.marks
-        const done = marks.some((m) => m.startsWith(`miracle:${key}=`))
-        let substitute: number[] | null = null
-        if (done || !s.pending) {
-          const gate = miracleGate(ctx, key, spec)
-          if (gate === 'pending') {
-            marks.push(`bsresume:${key}=${unitId}|${source}|${modifier}`)
-            return 'pending'
-          }
-          substitute = gate
-        } else if (s.pending?.kind === 'chooseOption' && s.pending.context.topic === 'miracleDie'
-          && substitutionEligible(s, { purpose: 'battleShock', player: unit.player, unitId, sides: 6 })) {
-          // RC-ADE-23: another unit's Miracle offer is open; queue this test, the Miracle handler runs it once that one is answered
-          marks.push(`bsqueue:${unitId}|${source}|${modifier}`)
-          return 'pending'
-        }
-        roll = ctx.roll(substitute ? { ...spec, substitute } : spec)
-        // a finished gate must not leak into a later test with the same source this phase
-        for (let i = marks.length - 1; i >= 0; i--) {
-          if (marks[i].startsWith(`miracle:${key}=`) || marks[i].startsWith(`bsresume:${key}=`) || marks[i] === `miracleAsk:${key}`) marks.splice(i, 1)
-        }
+        roll = ctx.roll(spec)
       }
       total = rollSum(roll)
       passed = total >= ld
@@ -992,6 +974,32 @@ export const hookService: HookService & HookQueries = {
       ctx.emit({ type: 'BattleShocked', unitId, player: unit.player })
     }
     return passed
+  },
+
+  unitControlScore(ctx, unitId, objectiveId, base) {
+    const s = ctx.state
+    const unit = s.units[unitId]
+    const levels: Record<PlayerId, number> = { A: 0, B: 0 }
+    if (unit) levels[unit.player] = base
+    let score = base
+    let cap: number | null = null
+    for (const { result } of hookService.collect(ctx, 'onObjectiveControl', { objectiveId, levels, contestingUnitId: unitId, controlScore: base })) {
+      if (result.kind !== 'stat') continue
+      if (result.set !== undefined) score = result.set
+      if (result.halve) score = Math.ceil(score / 2)
+      if (result.delta !== undefined) score += result.delta
+      if (result.cap !== undefined) cap = cap === null ? result.cap : Math.min(cap, result.cap)
+    }
+    if (cap !== null) score = Math.min(score, cap)
+    return Math.max(1, score)
+  },
+
+  contestAllowed(state, unitId) {
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code) as (ContestFilter & object) | null
+      if (spec?.denyContest && spec.denyContest(state, entry, unitId)) return false
+    }
+    return true
   },
 
   leadershipTest(ctx, unitId, source, modifier = 0) {

@@ -1,8 +1,13 @@
 # 00 — Architecture
 
 Source of truth for module boundaries, the engine contract, the decision model and determinism.
-Rules content lives in 10/11/12; data shapes in 20; figures 30; AI 40; client 50; testing 60.
-`src/engine/types.ts` is the code form of §3–§7 and must not diverge from this file.
+Rules content (Age of Sigmar 4 Spearhead port): `10-rules-core.md` (CORE-x.y), `11-spearhead.md` (SPH-x.y), the faction
+specs in `factions/`, and `13-engine-port-plan.md` (how the inherited 40k engine is turned into the Spearhead engine:
+PORT-0.x decisions, alias table, work packages). Test checklist: `12-rules-test-checklist.md`; checklist ids are the
+spec rule ids (PORT-0.9) and every engine test is named with one (`it('ROUND-004 …')`). Data shapes in 20; figures 30;
+AI 40; client 50; testing 60. `src/engine/types.ts` is the code form of §3–§7 and must not diverge from this file.
+**Contracts change additively during the port (PORT-0.1):** no member of a frozen union/interface is removed or
+renamed; new members are optional or new union literals; removals happen in the cleanup package (WP8).
 
 ## 1. Modules
 
@@ -21,6 +26,16 @@ Path aliases: `@engine/*`, `@ai/*`, `@data/*`, `@client/*`, `@assets/*`. Enforce
 Dependency direction: `data ← engine ← ai ← client`, `assets ← client`. Engine and ai are headless and run unchanged in the headless simulator (`npm run sim`) and in a web worker.
 
 ## 2. Engine contract
+
+Spearhead additions to the contract (13-port-plan §2, all additive): `GameSetup.mode?: 'spearhead'` (absent = spearhead
+from now on) and the pre-fills `side?: 'aqshy' | 'ghyran'`, `deploymentMap?`, `defenderTerritory?: 'A' | 'B'`
+(terrain pre-fill = `terrainLayoutId`; a pre-filled field skips its SPH-4 decision). `GameSetup.firstTurn` = a PlayerId
+pre-fills the round-1 first-turn choice; `'rollOff'` makes the reducer ask the attacker. `PlayerSetup.regimentAbilityId?`
+(absent = the army's default regiment ability); `secondaryId`, `attachments`, `reserves`, `battleReadyVp` are optional
+(40k only). `createGame` attaches the army's `battleTraits` (source `'battleTrait'`) and the regiment ability (source
+`'regiment'`, `Player.regimentAbilityId`) and hook-dispatches both on every unit of the army; the enhancement goes on
+the general (= warlord); units with `PatrolUnitData.reserve` start in reserve with `Unit.reserveArrival` set.
+`ENGINE_VERSION` is 2.0.0 (42k saves are refused).
 
 ```ts
 step(state: GameState, action: Action, rng?: Rng): StepResult
@@ -72,14 +87,14 @@ interface PendingDecision {
 | `declareMove` | active | move type (normal/advance/fallBack/stationary) for the activated unit; the Advance die is rolled on accept; then window `movement.moveStarted` opens |
 | `moveUnit` | active | model positions for the declared move type |
 | `declareTargets` | active | per-weapon target unit ids |
-| `allocateAttack` | defender | model id to take the next unsaved wound (only when a choice exists) |
+| `allocateAttack` | defender | 40k only — **never raised** in Spearhead (damage is allocated automatically, CORE-13.4) |
 | `declareCharge` | active | charging unit, target unit ids |
 | `chargeMove` | active | model positions after successful roll |
-| `pileIn` / `consolidate` | fighting player | model positions |
+| `pileIn` / `consolidate` | fighting player | model positions (`consolidate` is **never raised** in Spearhead) |
 | `chooseFightUnit` | alternating | unit id |
 | `stratagemWindow` | the player the window is offered to | stratagem id + targets, or pass |
 | `reactionWindow` | reacting player | Fire Overwatch / Heroic Intervention / Rapid Ingress / Counter-offensive as `useStratagem` actions, or pass (10-rules R-11.5) |
-| `chooseOption` | any | generic enumerated choice (side, oath target, Waaagh!, `rerollOffer` per 10-rules R-6.24, mission picks, …) |
+| `chooseOption` | any | generic enumerated choice (side, oath target, Waaagh!, `rerollOffer` per 10-rules R-6.24, mission picks, …). Spearhead topics (13-port-plan §2.1): `chooseAttacker`, `armyOptions`, `battlefieldSide`, `deploymentMap`, `placeTerrain` (SPH-4, setup module), `firstTurn` (round 1: the attacker picks who goes first) and `priorityChoice` (rounds 2+: the priority-roll winner, on a tie the previous first player) — both answered by the reducer core, options `'A'` / `'B'` = the player who takes the first turn —, `abilityUse` / `abilityTarget` / `abilityMode` (activated abilities, `abilities.ts`), `pileInTarget`, `contestedObjective`, `discardTactics`, `scoreTactics` (last three P1/P2) |
 | `commandReroll` | either | use CP reroll on the roll just made, or pass |
 | `confirm` | any | acknowledge (battle-shock result, end of game) — `options` = [ok] |
 
@@ -129,7 +144,9 @@ d6 each die has to reach. New optional state: `AttackGroup.batch`/`runLead`, `Cu
 
 Stratagem and reaction interrupt windows are ordinary `PendingDecision`s of kind `stratagemWindow`/`reactionWindow` offered to the *reacting* player. The engine opens a window only when the reacting player has ≥1 affordable, legal stratagem for that `TimingWindowId` (or a legal reaction); otherwise it skips the window and emits no decision. This keeps human play snappy and bounds AI decisions.
 
-Window ordering when both players could act in the same window: active player first, then the opponent (a fresh `PendingDecision` each) — except the defensive windows `shooting.targetsDeclared` and `fight.targetsDeclared`, where the player whose unit was targeted goes first (10-rules R-11.5). Outside a turn (`round.*`, `battle.end`) the first-turn player goes first **[interp: replaces the R-1.3 roll-off; no conflicting simultaneous triggers exist in scope]**.
+Window ordering when both players could act in the same window: **active player first, then the opponent, always** (CORE-3.2; a fresh `PendingDecision` each). The 40k defender-first rule for targeted windows is gone: `ctx.order.defensive()` now returns the active-first order. Outside a turn the first-turn player goes first (`round.start`, `battle.end`); `round.end` runs active (= second-turn) player first (SPH-8.7).
+
+**Activated abilities (PORT-0.7).** Every "Your / Enemy / Any <phase>", Start / End of Turn, Start / End of Round and deployment ability is run by one service, `services.abilities` (`src/engine/abilities.ts`): `runWindow(ctx, window, player, key?)` offers `chooseOption` topic `abilityUse` until the player passes, then `abilityTarget` / `abilityMode`, the declared roll, then the code hook's `activate.resolve(ctx, use: AbilityUse)` (`hooks.ts`). Descriptors with `trigger: 'activated'` are never dispatched by the hook service.
 
 ### Decider
 
@@ -146,41 +163,43 @@ The game loop (client `GameRunner`, or `tools/sim`) is: `pending = result.pendin
 
 ## 4. Timing windows
 
-Shared enum used by engine (to open windows), data (stratagem `window`), AI and UI. Prefix = phase.
+Shared enum used by engine (to open windows), data (stratagem / scoring `when`), AI and UI. Prefix = phase. Internal phase
+ids stay 40k (PORT-0.3): `command.*` = **Hero phase**, `fight.*` = **Combat phase**. Every row's order is **active player
+first** unless stated. Rows marked *kept* stay in the type but the Spearhead engine never opens them:
+`command.battleShock`, `movement.moveStarted`, `charge.declared`, `charge.moveStarted`, `charge.moveEnded`,
+`fight.beforeConsolidate`, `turn.end`.
 
 | TimingWindowId | Opened for | Notes |
 |---|---|---|
-| `deployment.unit` | active | per unit placement |
-| `round.start` | first-turn player, then second | before either turn: Waaagh! call, Stomp 'Em pick, Bag the Big 'Un pick (round 1), Archeotech marker selection (rounds 3–5); `ScoringRule.when` may use it |
-| `command.start` | active, then opponent | before CP gain |
-| `command.battleShock` | active | before tests are taken |
-| `command.end` | active, then opponent | after battle-shock; primary/secondary scoring and end-of-command stratagems |
+| `deployment.unit` | deploying player | per unit placement |
+| `round.start` | first-turn player, then second | SPH-8.2 step ⑤, after the first-turn choice / priority roll, the underdog and the twist draw (empty-deck guard): Start of Battle Round abilities (`abilities.runWindow('startOfRound')`). In round 1 objective control is evaluated once afterwards (CORE-4.13, SPH-6.4) |
+| `turn.start` | active, then opponent | Start of Turn (CORE-4.17), before the Hero phase; `abilities.runWindow('startOfTurn')` |
+| `command.start` | active, then opponent | start of the Hero phase (no CP gain, no battle-shock) |
+| `command.end` | active, then opponent | end of the Hero phase |
 | `movement.start` | active, then opponent | |
-| `movement.moveStarted` | opponent | after `declareMove` (type chosen, Advance rolled), before placements: Fire Overwatch "starts a move" |
-| `movement.unitMoved` | active, then opponent | after each unit's move; opponent: Fire Overwatch "ends a move" |
-| `movement.reinforcements` | active, then opponent | after each reserves arrival; opponent: Fire Overwatch "set up" |
+| `movement.unitMoved` | active, then opponent | after each unit's move |
+| `movement.reinforcements` | active, then opponent | after each reserve arrival |
 | `movement.end` | active, then opponent | |
 | `shooting.start` | active, then opponent | |
-| `shooting.unitSelected` | active, then opponent | after a unit is chosen to shoot, before targets are declared (Dark Pacts, Sacrificial Dagger); never for Fire Overwatch |
-| `shooting.targetsDeclared` | opponent, then active | after targets declared, before hits are rolled (defensive stratagems) |
+| `shooting.unitSelected` | active, then opponent | after a unit is chosen to shoot, before targets are declared |
+| `shooting.targetsDeclared` | active, then opponent | after targets declared, before hits are rolled |
 | `shooting.attacksResolved` | active, then opponent | after one unit finished shooting |
 | `charge.start` | active, then opponent | |
-| `charge.declared` | opponent | after targets declared, before the roll; no core or patrol stratagem uses it (kept for data) |
-| `charge.rolled` | active | after 2D6, before move (rerolls) |
-| `charge.moveStarted` | opponent | after a successful roll, before the charge move: Fire Overwatch; afterwards R-8.4 feasibility is re-checked and the charge may fail |
-| `charge.moveEnded` | opponent, then active | Heroic Intervention (opponent, `reactionWindow`); Tank Shock (active, `stratagemWindow`) |
+| `charge.rolled` | active | after 2D6, before move (re-rolls) |
 | `fight.start` | active, then opponent | |
-| `fight.unitSelected` | owner of unit, then opponent | before pile-in |
-| `fight.targetsDeclared` | opponent of the fighting unit, then owner | after melee targets declared (FightSubStep `declareTargets`), before attacks: Gene-wrought Resilience, Tough as Squig-hide |
-| `fight.beforeConsolidate` | active player, then opponent (`ctx.order.active()`) | once per normal fight activation, after the unit's attacks and deferred deaths and before its Consolidation move (World Eaters Unstoppable Fury); not opened for Total Carnage / Daemonic Fervour deferred models |
-| `fight.attacksResolved` | owner, then opponent | after consolidation; Counter-offensive (opponent, `reactionWindow`) |
-| `attack.modelDestroyed` | owner of the destroyed model, then opponent | once the damage of the attack that destroyed an enemy-attacked model has fully resolved, before the next attack is allocated (Violent Unbinding); see `pendingDeathReaction` |
-| `any.unitDestroyed` | owner of destroyed unit, then opponent | |
-| `any.rollMade` | roller | command re-roll window; only opened when CP ≥ 1 |
-| `phase.end` | active, then opponent | end of every phase (both turns); used by scoring rules, rarely by stratagems |
-| `turn.end` | active, then opponent | after the Fight phase and the coherency cull |
-| `round.end` | first-turn player, then second | after the second turn's `turn.end`; Stomp 'Em scoring; `untilEndOfRound` effects expire after it |
-| `battle.end` | first-turn player, then second | after round 5's `round.end` (or immediately when tabled): end-of-battle VP (Archeotech, Sweeping Raid, Bag the Big 'Un); then `GameEnded` |
+| `fight.unitSelected` | active, then opponent | before pile-in |
+| `fight.targetsDeclared` | active, then opponent | after melee targets declared, before attacks |
+| `fight.attacksResolved` | active, then opponent | after one unit fought |
+| `attack.modelDestroyed` | active, then opponent | once the damage of the attack that slew a model has resolved |
+| `any.unitDestroyed` | active, then opponent | |
+| `any.rollMade` | roller | only for re-roll abilities (no Command Re-roll, no CP in Spearhead; P1 Glimmering) |
+| `phase.end` | active, then opponent | end of every phase |
+| `turn.end.abilities` | active, then opponent | SPH-8.6 ①: End of Turn abilities (`abilities.runWindow('endOfTurn')`) |
+| `turn.end.control` | active, then opponent | SPH-8.6 ②: objective control is evaluated (`objectives.evaluateControl(ctx, 'turnEnd')`) just before this window opens |
+| `turn.end.scoring` | active, then opponent | SPH-8.6 ③: the active player scores (`missions.onWindow`) |
+| `turn.end.afterScoring` | active, then opponent | SPH-8.6 ④: effects timed "after VP are scored" |
+| `round.end` | second-turn (active) player, then first | SPH-8.7: End of Battle Round abilities (`abilities.runWindow('endOfRound')`); `untilEndOfRound` effects expire after it |
+| `battle.end` | first-turn player, then second | after round 4's `round.end` (the battle never ends early, SPH-11.3); then `GameEnded` |
 
 ## 5. Actions and events
 
@@ -191,7 +210,10 @@ Event families (all events carry `seq`, `turn`, `phase`, `player`):
 | Family | Events |
 |---|---|
 | game | `GameCreated`, `RoundStarted`, `RoundEnded`, `TurnStarted`, `PhaseStarted`, `PhaseEnded`, `GameEnded` |
-| command | `CpChanged`, `BattleShockTested`, `BattleShocked`, `BattleShockRecovered` |
+| round start (Spearhead, SPH-8.2–8.5) | `FirstTurnChosen` { first } (every round), `PriorityRolled` { rolls, winner (null on a tie), chooser, firstPlayer, doubleTurn } (rounds 2+, emitted with the choice), `InitiativeSeized` (envelope `player` = the seizer), `UnderdogDetermined` { underdog } |
+| damage (AoS, CORE-13) | `DamagePoolResolved` { unitId, points, warded, slain }; ward rolls reuse `FeelNoPainRolled`, returned models reuse `ModelReturned`, activated abilities reuse `AbilityTriggered` |
+| reinforcements (P1, SPH-12) | `UnitReplaced` { unitId, replacementOf } |
+| command | `CpChanged`, `BattleShockTested`, `BattleShocked`, `BattleShockRecovered` — **not emitted** in Spearhead (no CP, no battle-shock) |
 | movement | `MoveDeclared` (moveType), `UnitMoved` (moveType, path per model), `UnitAdvanced` (roll; after any halve/modify effects), `UnitFellBack`, `ReinforcementsArrived` (`via`: `'deepStrike' | 'strategicReserves' | 'rapidIngress' | 'nextWave' | 'teleportAssault'` — additive member `'teleportAssault'` (Grey Knights Teleport Assault arrival: Deep Strike constraints, any round) plus the new event `UnitRemovedFromBattlefield` { unitId, source } (a unit sent to Reserves by an ability; record store in `Player.secondaryState.teleportAssault`, src/engine/teleport.ts); additive member `'nextWave'`: Astra Militarum Send in the Next Wave, a spawned unit set up within 9" of its owner's battlefield edge outside Engagement Range) |
 | shooting/fight | `AttackSequenceStarted`, `TargetsDeclared`, `HitRolled`, `WoundRolled`, `SaveRolled`, `DamageApplied`, `FeelNoPainRolled`, `ModelDestroyed`, `UnitDestroyed` (both carry `byUnitId` **and** `byModelId`; null for mortal wounds / culls (Deadly Demise names the exploding model, its unit and owner: `AttackSequenceState.mortalQueue[].by`, RC-072) — Wrath of the Emperor and Bag the Big 'Un key on the model), `AttackSequenceEnded` |
 | charge | `ChargeDeclared`, `ChargeRolled`, `ChargeFailed`, `ChargeMoved`, `PiledIn`, `Consolidated` |
@@ -217,7 +239,7 @@ Events are the only channel to the UI (zustand store subscribes) and the dice lo
 | Replay | `replay(setup, seed, log)` must reproduce `state.hash` at every seq. CI runs this on every recorded sim game. |
 | Save | `SaveFile { version: 1, engineVersion, setup, seed, actions, finalHash }`. Load = replay (a save made with a `ScriptedRng` override replays only with the same override). Optional `snapshot` for fast resume; a mismatch between snapshot hash and replay hash is a hard error. |
 | Undo (hotseat) | replay to `seq - 1`. Vs AI: undo allowed only for actions that emitted no `DiceRolled` event (prevents re-rolling by undo). |
-| Versioning | `engineVersion` semver (1.0.0 since M9: fast-rolled attack dice changed RNG draw order); a save with a different major is refused. Data files carry `dataVersion`; the hash includes it. |
+| Versioning | `engineVersion` semver (2.0.0 since the Spearhead port; 1.x = Mallet 42k); a save with a different major is refused. Data files carry `dataVersion`; the hash includes it. |
 
 ## 7. Space and models
 
@@ -225,10 +247,15 @@ Events are the only channel to the UI (zustand store subscribes) and the dice lo
 |---|---|
 | Unit of length | 1.0 = 1 inch, everywhere (engine, data, client). Millimetre base sizes are converted once at data load (`mm / 25.4`). |
 | Axes | Y up. Board plane is XZ. Right-handed (Three.js convention). |
-| Board | 44 × 30: x ∈ [−22, 22] (long edge), z ∈ [−15, 15]. Origin at centre. Player A's long table edge is z = −15, B's is z = +15 unless the mission says otherwise. |
-| Facing | radians around Y; cosmetic only (no facing rules in 10th). |
+| Board | Spearhead realm battlefield 30 × 22: x ∈ [−15, 15] (long edge), z ∈ [−11, 11]. Origin at centre. Territories (`MissionData.territories`, keyed `'A'` / `'B'` = `Player.territory`) and deploy areas (`deploymentZones`, same keys) come from the battleplan. |
+| Facing | radians around Y; cosmetic only (no facing rules). |
 | Model | `{ id, unitId, datasheetModelId, pos: {x,y,z}, facing, base: { shape:'round'\|'oval', radius, radius2? }, height, woundsRemaining, flags }`. `pos` is the base centre at ground contact; `y` = terrain surface height under the base. |
-| Base-to-base distance | horizontal gap `h = max(0, dist2D(a,b) − ra − rb)` (oval: ellipse gap approximated by sampled edge points), vertical gap `v = |ya − yb|`; reported distance = `sqrt(h² + v²)`. Engagement range test uses `h ≤ 1 && v ≤ 5` (10-rules defines). |
+| Base-to-base distance | horizontal gap `h = max(0, dist2D(a,b) − ra − rb)` (oval: ellipse gap approximated by sampled edge points), vertical gap `v = |ya − yb|`; reported distance = `sqrt(h² + v²)`. |
+| Combat range | `h ≤ 3`, unlimited vertically (CORE-1.4); kept under the 40k names `ENGAGEMENT_H = 3`, `ENGAGEMENT_V = Infinity`, `withinEngagementRange` (pure range). "In combat" (CORE-1.5) = combat range **and** mutual visibility: `los.inCombat` |
+| Coherency | ½" horizontally, height ignored (`COHERENCY_H = 0.5`, `isCoherent(models, range?)`; warscroll `coherencyRange` overrides, CORE-1.6); 7+ models need 2 neighbours; one connected group (CORE-1.7) |
+| Charge end | within ½" of a visible enemy model (`CHARGE_END = 0.5`, CORE-9.2) |
+| Objectives | circles of radius 3" (`Objective.radius`, default `OBJECTIVE_MARKER_RADIUS = 3`), contested while a base touches or overlaps the circle (`OBJECTIVE_RANGE = 0`, SPH-6.2); `Objective.name` for display |
+| AoS aliases (PORT-0.3) | Phase `command` = Hero, `fight` = Combat; MoveType `advance` = Run, `fallBack` = Retreat; `Stats.W/Sv/OC` = Health/Save/Control (`T`, `Ld` optional in data, 0 at runtime in `RuntimeStats`); `RuntimeWeapon.skill` = Hit, new `wound`/`rend`; `FEEL_NO_PAIN` / `'fnp'` / `onFeelNoPainRoll` / `FeelNoPainRolled` = Ward; `fightsFirst/fightsLast` = Strike-first/-last; `arrivedThisTurn` = set up this turn; `CombatPatrolData` / `patrols` / `Player.patrolId` = Spearhead army; `warlord` = general; `MissionData` with `format: 'spearhead'` = battleplan |
 | Sample points for LoS | base centre at heights {0.2, height/2, height} plus 4 base-edge points at height/2; details in 11-rules. |
 | Terrain | polygons in XZ with height; ruins have wall segments (thin boxes) used by raycasts. |
 | Precision | positions rounded to 1/1000 inch on write to keep hashes stable across platforms. |
@@ -270,6 +297,8 @@ Programmer errors (corrupt state, missing datasheet) throw `EngineInvariantError
 | memory | `GameState` JSON < 200 KB; event log for a full game < 5 MB |
 
 ## 10. Settled items
+
+- Spearhead port (13-engine-port-plan): contracts change additively (PORT-0.1) and 40k ids are aliased, not renamed (PORT-0.2, alias table PORT-0.3 in §7). Additions made in WP1: `types.ts` — steps `SetupStep 'firstTurn'`, `CommandStep 'activeAbilities' | 'opponentAbilities'`, `MovementStep` / `ChargeStep 'abilities'`, `ShootingStep 'enemyAbilities'`, `OutOfPhaseMove 'abilityMove'`; `RuntimeStats` (= data `Stats` with `T`, `Ld`, `ward`, `noSave` resolved) on `RuntimeDatasheet.stats` / `RuntimeModelProfile.stats`; `RuntimeWeapon.wound` / `rend`; `RuntimeDatasheet.spearhead` (+ optional `coherencyRange`); `RuntimeAbility.source += 'regiment' | 'battleTrait'`; `Objective.radius` / `name`; `UnitTurnState.chargeRollUnmodified` / `usedCoreThisPhase` / `abilitiesUsedThisPhase`; `Unit.reserveArrival` / `setUpTurn` / `replacementOf` / `replaced` / `tokens`; `Player.territory` / `regimentAbilityId` / `battleTraitIds` / `abilityUses` (`AbilityUseRecord`); `GameState.twist` / `underdog` / `priority`; the `PlayerSetup` / `GameSetup` fields of §2; the `ChooseOptionTopic`s of §3; `RollPurpose 'priority' | 'retreat'`; `RejectionCode 'E_TERRITORY' | 'E_IN_COMBAT' | 'E_ABILITY_USED'`. `events.ts` — the §5 Spearhead events (the existing `FirstTurnChosen { first }` is reused). `hooks.ts` — `HookName 'onAbilityDeclared'` (+ `AbilityDeclaredHookContext`), `AbilityUse`, `ActivatedAbilityHook`, `CodeHook.activate?`, `EligibilityHookContext.check += 'contest' | 'strikeFirst'`, `ObjectiveHookContext.contestingUnitId? / controlScore?` with `StatModifierResult` answers for `onObjectiveControl`, `TRIGGER_HOOK.activated`. `modules.ts` — `Services.abilities: AbilityService`. `src/data/types.ts` — the 13-port-plan §3 data additions (optional `Stats.T/Ld`, `ward`, `noSave`; `WeaponData.wound/rend`, optional `S/AP`; AoS `WeaponAbilityName`s; `AbilityTiming`, descriptor `timing/keywords/declare/roll/modes/fromRound/castingValue/chantingValue`, `Trigger 'activated'`, `Limit 'oncePerTurnArmy'`; `DatasheetData.spearhead/coherencyRange/wizard/priest`, optional `points`; `CombatPatrolData.mode/battleTraits/regimentAbilities`; `PatrolUnitData.reserve/tokens`; `MissionData.format 'spearhead'`, `objectives[].radius/name`, `territories`; the `turn.start` / `turn.end.*` `TimingWindowId`s). `index.ts` no longer re-exports `miracle.ts`; the `miracleDie` / `fixRollOffer` topics are no longer routed.
 
 - LoS sample point set and ruins "wholly within": 10-rules §3.
 - `reactionWindow` vs `stratagemWindow` and window ordering: 10-rules R-11.5.

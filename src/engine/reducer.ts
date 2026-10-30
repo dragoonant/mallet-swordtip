@@ -1,28 +1,22 @@
-// Reducer core (W1-A): step / validate / legalActions / replay / view / save / load / undo, the EngineContext handed to
-// modules, the phase-turn-round state machine with its auto-advance loop, generic action validation and rejection,
-// the action log and state hash. Module contract: src/engine/phases/README.md.
+// Reducer core (W1-A, Spearhead port WP1): step / validate / legalActions / replay / view / save / load / undo, the
+// EngineContext handed to modules, the round-turn-phase state machine with its auto-advance loop (SPH-8, PORT-0.8),
+// generic action validation and rejection, the action log and state hash. Module contract: src/engine/phases/README.md.
 import type { DataBundle, DiceExpr, TimingWindowId } from '../data/types'
 import type { Action, ActionType, ModelPlacement } from './actions'
 import { applyReroll, makeRoll, parseDiceExpr, rollSum, type RollSpec } from './dice'
 import type { ActionRejected, EventBase, GameEvent } from './events'
-import { isCoherent } from './geometry'
 import {
   isBattlePhase, nextPhase, otherPlayer, type BattlePhase, type DecisionHandler, type DecisionSpec, type EngineContext,
   type EventInput, type ModuleTable, type PhaseModule, type WindowTrigger,
 } from './modules'
-import { flushDeferredRemovals } from './deferred'
-import { onCultAmbushUnitDestroyed, raisePendingCultAmbushMarker } from './cult-ambush'
-import { onPainEvent, startBattlePain } from './pain'
-import { hasShadowOfChaos, onShadowBattleShock, refreshShadow } from './shadow'
-import { clearActsOfFaithPhase, miracleGate, offerMiracleRerolls, onOwnUnitDestroyed, runActsOfFaithTurnStart, STRANDS_OF_FATE_CODE, unitHasStrandsOfFate } from './miracle'
+import type { AbilityWindow } from './abilities'
 import { restoreRng, type Rng } from './rng'
-import { cloneForStep, createGameState, emptyPhaseState, emptyTurnState, hashState, removeModel, unitModelsForCoherency } from './state'
+import { cloneForStep, createGameState, emptyPhaseState, emptyTurnState, hashState } from './state'
 import {
   EngineInvariantError,
   type DecisionOption, type DiceRoll, type GameResult, type GameSetup, type GameState, type PendingDecision, type PlayerId,
   type PlayerView, type Rejection, type SaveFile, type Unit,
 } from './types'
-import { destroyStrandedTeleports } from './teleport'
 import { ENGINE_VERSION, majorVersion } from './version'
 
 export interface StepResult {
@@ -79,12 +73,6 @@ function makeContext(draft: GameState, rng: Rng, modules: ModuleTable, rt: StepR
     emit(e) {
       const { player, ...rest } = e
       rt.events.push({ ...(rest as object), ...envelope(player) } as GameEvent)
-      // E1: a destroyed ADEPTA SORORITAS unit earns its owner a Miracle die, wherever the event is emitted
-      if (e.type === 'UnitDestroyed') { onOwnUnitDestroyed(ctx, e.unitId); onCultAmbushUnitDestroyed(ctx, e.unitId) } // GSC: Cult Ambush roll
-      // Drukhari Power from Pain: the opponent of a destroyed unit / a unit failing a Battle-shock test gains a Pain token
-      if (e.type === 'UnitDestroyed' || (e.type === 'BattleShockTested' && !e.passed)) onPainEvent(ctx, e)
-      // Chaos Daemons Shadow of Chaos: Daemonic Manifestation (own test passed) / Daemonic Terror (enemy test failed)
-      if (e.type === 'BattleShockTested') onShadowBattleShock(ctx, e)
     },
     roll(spec) {
       const id = `r:${++s.rollCounter}`
@@ -92,10 +80,6 @@ function makeContext(draft: GameState, rng: Rng, modules: ModuleTable, rt: StepR
       s.phaseState.lastRoll = roll
       rt.diceRollIds.push(id)
       ctx.emit({ type: 'DiceRolled', roll, player: spec.player })
-      // E1: a Miracle die replaced the first dice of this roll (the die itself left the pool when it was chosen)
-      for (const v of (spec.substitute ?? []).slice(0, roll.dice.length)) {
-        ctx.emit({ type: 'MiracleDieSpent', player: spec.player, value: v, mode: 'substitute', unitId: spec.unitId ?? null, rollId: id, purpose: spec.purpose, source: spec.unitId && unitHasStrandsOfFate(s, spec.unitId) ? STRANDS_OF_FATE_CODE : 'actsOfFaith' })
-      }
       return roll
     },
     rollExpr(expr: DiceExpr, spec) {
@@ -110,9 +94,7 @@ function makeContext(draft: GameState, rng: Rng, modules: ModuleTable, rt: StepR
       const prefix = `roll:${key}=`
       let rollId = marks().find((m) => m.startsWith(prefix))?.slice(prefix.length) ?? null
       if (rollId === null) {
-        const gate = miracleGate(ctx, key, spec)
-        if (gate === 'pending') return null
-        const roll = ctx.roll(gate ? { ...spec, substitute: gate } : spec)
+        const roll = ctx.roll(spec)
         rollId = roll.id
         marks().push(prefix + rollId)
       }
@@ -144,8 +126,6 @@ function makeContext(draft: GameState, rng: Rng, modules: ModuleTable, rt: StepR
       return pending
     },
     window(id, key, order, trigger) {
-      // E-PEN1: queued Saintly Relic re-roll offers come first (idempotent: re-entered after each answer)
-      if (!s.pending && offerMiracleRerolls(ctx, id, key)) return true
       const occurrence = `window:${id}|${key}`
       if (ctx.once(occurrence)) {
         services.missions.onWindow(ctx, id, key, trigger)
@@ -169,7 +149,8 @@ function makeContext(draft: GameState, rng: Rng, modules: ModuleTable, rt: StepR
     order: {
       active: () => [s.activePlayer, otherPlayer(s.activePlayer)],
       first: () => [s.firstPlayer, otherPlayer(s.firstPlayer)],
-      defensive: (owner) => [owner, otherPlayer(owner)],
+      // AoS: active player first, always (CORE-3.2); the target owner no longer goes first
+      defensive: () => [s.activePlayer, otherPlayer(s.activePlayer)],
       only: (p) => [p],
     },
     opponentOf: otherPlayer,
@@ -326,53 +307,74 @@ function defaultLegalActions(pending: PendingDecision): Action[] | null {
   return out
 }
 
-// ---------- core-owned decisions ----------
-function coherencyCullHandler(): DecisionHandler {
+// ---------- core-owned decisions: who takes the first turn (SPH-8.3, CORE-4.9/4.10, SPH-8.5) ----------
+// topics 'firstTurn' (round 1, the attacker chooses) and 'priorityChoice' (rounds 2+, the priority-roll winner chooses; on
+// a tie whoever went first last round). Options are 'A' | 'B' = the player who takes the first turn.
+const firstTurnMark = (round: number): string => `firstTurn:${round}`
+
+function attackerOf(s: GameState): PlayerId {
+  if (s.players.A.side === 'attacker') return 'A'
+  if (s.players.B.side === 'attacker') return 'B'
+  return typeof s.setup.sides === 'object' ? s.setup.sides.attacker : 'A'
+}
+
+function applyFirstTurn(ctx: EngineContext, chooser: PlayerId, first: PlayerId): void {
+  const s = ctx.state
+  const prevFirst = s.firstPlayer
+  const rolls = s.priority.rolls
+  if (s.round > 1 && rolls) {
+    const winner: PlayerId | null = rolls.A > rolls.B ? 'A' : rolls.B > rolls.A ? 'B' : null
+    // CORE-4.10: the player who went second last round goes first now
+    const doubleTurn = first !== prevFirst
+    // SPH-8.5: that player won the priority roll and chose to go first (a tie, or the old first player choosing second, is no seize)
+    const seized = winner !== null && winner === chooser && winner !== prevFirst && first === winner ? winner : null
+    s.priority.doubleTurn = doubleTurn
+    s.priority.seized = seized
+    s.firstPlayer = first
+    ctx.emit({ type: 'PriorityRolled', rolls: { ...rolls }, winner, chooser, firstPlayer: first, doubleTurn, player: chooser })
+    ctx.emit({ type: 'FirstTurnChosen', first, player: chooser })
+    if (seized) ctx.emit({ type: 'InitiativeSeized', player: seized })
+  } else {
+    s.firstPlayer = first
+    ctx.emit({ type: 'FirstTurnChosen', first, player: chooser })
+  }
+  s.phaseState.marks.push(firstTurnMark(s.round))
+}
+
+function raiseFirstTurnChoice(ctx: EngineContext, topic: 'firstTurn' | 'priorityChoice', chooser: PlayerId): void {
+  const s = ctx.state
+  const opp = otherPlayer(chooser)
+  ctx.decide({
+    kind: 'chooseOption', player: chooser, window: 'round.start', canPass: false,
+    context: { topic, unitId: null, abilityId: null, data: { round: s.round, rolls: s.priority.rolls, previousFirst: s.round > 1 ? s.firstPlayer : null } },
+    options: [
+      { id: chooser, label: 'Take the first turn', action: { type: 'chooseOption', player: chooser, decisionId: '', optionId: chooser } },
+      { id: opp, label: 'Give the first turn to the opponent', action: { type: 'chooseOption', player: chooser, decisionId: '', optionId: opp } },
+    ],
+  })
+}
+
+function turnOrderHandler(): DecisionHandler {
   return {
     handle(ctx, action, pending) {
-      if (action.type !== 'chooseOption' || pending.kind !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'coherency cull expects chooseOption' }
-      const modelId = action.optionId
-      const model = ctx.state.models[modelId]
-      if (!model) return { code: 'E_NOT_AN_OPTION', reason: `model ${modelId} no longer exists` }
-      const unitId = model.unitId
-      const destroyed = removeModel(ctx.state, modelId)
-      ctx.emit({ type: 'CoherencyCulled', unitId, modelIds: [modelId], player: pending.player })
-      ctx.emit({ type: 'ModelDestroyed', unitId, modelId, byPlayer: null, byUnitId: null, byModelId: null, kind: 'other', player: pending.player })
-      ctx.services.missions.modelDestroyed?.(ctx, { unitId, modelId, byPlayer: null, byUnitId: null, byModelId: null })
-      if (destroyed) ctx.emit({ type: 'UnitDestroyed', unitId, byPlayer: null, byUnitId: null, byModelId: null, kind: 'other', player: pending.player })
+      if (action.type !== 'chooseOption' || pending.kind !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'first-turn choice expects chooseOption' }
+      if (action.optionId !== 'A' && action.optionId !== 'B') return { code: 'E_NOT_AN_OPTION', reason: 'answer with the player who takes the first turn' }
+      applyFirstTurn(ctx, pending.player, action.optionId)
     },
   }
 }
 
-// R-2.6: at the end of every turn each unit out of coherency loses models (owner's choice) until it is coherent.
-// Attached units are checked as one; leaders (bodyguardUnitId set) are covered by their bodyguard's check.
-function coherencyCull(ctx: EngineContext): boolean {
-  const s = ctx.state
-  for (const unit of Object.values(s.units)) {
-    if (unit.location !== 'board' || unit.bodyguardUnitId) continue
-    const models = unitModelsForCoherency(s, unit.id)
-    if (isCoherent(models)) continue
-    ctx.decide({
-      kind: 'chooseOption',
-      player: unit.player,
-      window: 'turn.end',
-      canPass: false,
-      context: { topic: 'coherencyCull', unitId: unit.id, abilityId: null, data: { modelIds: models.map((m) => m.id) } },
-      options: models.map((m) => ({ id: m.id, label: `remove ${m.id}`, action: { type: 'chooseOption', player: unit.player, decisionId: '', optionId: m.id } })),
-    })
-    return true
-  }
-  return false
-}
-
 // ---------- state machine ----------
-function ownerOf(state: GameState, pending: PendingDecision, modules: ModuleTable, core: { cull: DecisionHandler }): DecisionHandler {
+type CoreHandlers = { turnOrder: DecisionHandler }
+
+function ownerOf(state: GameState, pending: PendingDecision, modules: ModuleTable, core: CoreHandlers): DecisionHandler {
   switch (pending.kind) {
     case 'stratagemWindow': case 'reactionWindow': case 'commandReroll':
       return modules.services.stratagems
     case 'chooseOption': {
-      if (pending.context.topic === 'coherencyCull') return core.cull
-      const h = modules.topics[pending.context.topic]
+      const topic = pending.context.topic
+      if (topic === 'firstTurn' || topic === 'priorityChoice') return core.turnOrder
+      const h = modules.topics[topic]
       if (h) return h
       break
     }
@@ -387,6 +389,8 @@ function resetPhaseFlags(s: GameState): void {
     u.turn.shotThisPhase = false
     u.turn.foughtThisPhase = false
     u.turn.surgeMovedThisPhase = false
+    u.turn.usedCoreThisPhase = false
+    u.turn.abilitiesUsedThisPhase = []
   }
   for (const m of Object.values(s.models)) m.flags.allocatedThisPhase = false
 }
@@ -404,16 +408,14 @@ function enterPhase(ctx: EngineContext, modules: ModuleTable, phase: BattlePhase
   if (s.step === 'none') throw new EngineInvariantError(`phase module ${mod.name}.enter must set state.step`, { phase })
 }
 
+// SPH-6.4: objective control is NOT evaluated at phase end (only at the start of round 1 and in turn.end.control)
 function finishPhaseBody(ctx: EngineContext, modules: ModuleTable, mod: PhaseModule): void {
   const s = ctx.state
   mod.exit?.(ctx)
-  flushDeferredRemovals(ctx)
   if (isBattlePhase(s.phase)) {
     modules.services.hooks.run(ctx, 'onPhaseEnd', {})
-    modules.services.objectives.evaluateControl(ctx, 'phaseEnd')
     modules.services.effects.expire(ctx, 'phaseEnd', null)
   }
-  clearActsOfFaithPhase(s)
   ctx.emit({ type: 'PhaseEnded' })
   s.step = 'none'
 }
@@ -428,15 +430,20 @@ function endBattle(ctx: EngineContext, modules: ModuleTable, reason: GameResult[
   s.step = 'none'
 }
 
-function endBattleChain(ctx: EngineContext, modules: ModuleTable, reason: GameResult['reason']): void {
-  const s = ctx.state
-  if (ctx.once('battleEnd')) s.phaseState.marks.push(`battleEndReason:${reason}`)
-  const stored = s.phaseState.marks.find((m) => m.startsWith('battleEndReason:'))?.slice('battleEndReason:'.length) as GameResult['reason'] | undefined
-  destroyStrandedTeleports(ctx) // GRE-2.4: Teleport Assault units still off-board are lost before battle.end scoring
+// SPH-11.3: the battle only ends after the last round (no early end when a player is tabled)
+function endBattleChain(ctx: EngineContext, modules: ModuleTable): void {
+  ctx.once('battleEnd')
   if (ctx.window('battle.end', 'battle', ctx.order.first())) return
-  endBattle(ctx, modules, stored ?? reason)
+  endBattle(ctx, modules, 'vp')
 }
 
+// offer activated abilities of `window` to each player in `order` (abilities.ts); true when a decision is pending
+function abilityWindows(ctx: EngineContext, modules: ModuleTable, window: AbilityWindow, order: PlayerId[], key: string): boolean {
+  for (const p of order) if (modules.services.abilities.runWindow(ctx, window, p, key)) return true
+  return !!ctx.state.pending
+}
+
+// CORE-4.16/4.17: Start of Turn window (active player, then opponent), then the Hero phase
 function startTurn(ctx: EngineContext, modules: ModuleTable, player: PlayerId): void {
   const s = ctx.state
   if (ctx.once('turnStarted')) {
@@ -444,29 +451,84 @@ function startTurn(ctx: EngineContext, modules: ModuleTable, player: PlayerId): 
     for (const u of Object.values(s.units)) u.turn = emptyTurnState()
     ctx.emit({ type: 'TurnStarted' })
     modules.services.effects.expire(ctx, 'nextOwnTurn', player)
-    modules.services.objectives.evaluateControl(ctx, 'turnStart')
     modules.services.hooks.run(ctx, 'onTurnStart', {})
-    runActsOfFaithTurnStart(ctx)
   }
   if (s.pending) return
+  if (ctx.window('turn.start', 'turn', ctx.order.active())) return
+  if (abilityWindows(ctx, modules, 'startOfTurn', ctx.order.active(), `turn:${s.round}:${s.activePlayer}`)) return
   enterPhase(ctx, modules, 'command')
 }
 
+// SPH-8.2 start of battle round: ① first turn (round 1: attacker's choice; later: priority roll) ② underdog ③ twist
+// (empty-deck guard, CARD-005) ④ battle tactics (P2, no cards) ⑤ round.start window + Start of Battle Round abilities,
+// then (round 1 only) objective control (CORE-4.13, SPH-6.4), then the first turn
 function startRoundChain(ctx: EngineContext, modules: ModuleTable): void {
   const s = ctx.state
-  const missions = modules.services.missions
   if (ctx.once('roundStart')) {
     s.round += 1
     for (const p of Object.values(s.players)) p.cpGainedThisRound = 0
+    s.priority = { rolls: null, seized: null, doubleTurn: false }
     ctx.emit({ type: 'RoundStarted' })
   }
-  if (s.round === 1 && ctx.once('pain:battleStart')) startBattlePain(ctx) // Drukhari Power from Pain: each player starts with a token
+  // ① who takes the first turn
+  if (!ctx.marked(firstTurnMark(s.round))) {
+    if (s.pending) return
+    if (s.round === 1) {
+      const attacker = attackerOf(s)
+      if (s.setup.firstTurn !== 'rollOff') applyFirstTurn(ctx, attacker, s.setup.firstTurn)
+      else { raiseFirstTurnChoice(ctx, 'firstTurn', attacker); return }
+    } else {
+      if (ctx.once(`priority:${s.round}`)) {
+        const a = ctx.roll({ purpose: 'priority', player: 'A', commandRerollable: false })
+        const b = ctx.roll({ purpose: 'priority', player: 'B', commandRerollable: false })
+        s.priority.rolls = { A: a.final[0], B: b.final[0] }
+      }
+      const rolls = s.priority.rolls as Record<PlayerId, number>
+      const chooser: PlayerId = rolls.A > rolls.B ? 'A' : rolls.B > rolls.A ? 'B' : s.firstPlayer
+      raiseFirstTurnChoice(ctx, 'priorityChoice', chooser)
+      return
+    }
+  }
+  // ② underdog (SPH-8.4): fewer VP at this moment; tied (always in round 1) = none
+  if (ctx.once(`underdog:${s.round}`)) {
+    const { A, B } = s.players
+    s.underdog = A.vp < B.vp ? 'A' : B.vp < A.vp ? 'B' : null
+    ctx.emit({ type: 'UnderdogDetermined', underdog: s.underdog, player: s.firstPlayer })
+  }
+  // ③ twist (SPH-9.1/9.4): one card from the deck; an empty deck draws nothing (CARD-005)
+  if (ctx.once(`twist:${s.round}`)) {
+    const next = s.twist.deck.length > 0 ? s.twist.deck[0] : null
+    if (next !== null) {
+      s.twist = { deck: s.twist.deck.slice(1), current: next, drawn: [...s.twist.drawn, next] }
+    } else {
+      s.twist = { ...s.twist, current: null }
+    }
+  }
+  // ⑤ Start of Battle Round (first-turn player first, CORE-4.12)
   if (ctx.window('round.start', `${s.round}`, ctx.order.first())) return
-  const first = s.firstPlayer
-  const second = otherPlayer(first)
-  const startWith = missions.playerHasForces(s, first) ? first : missions.playerHasForces(s, second) ? second : null
-  if (startWith === null) { endBattleChain(ctx, modules, 'tabled'); return }
-  startTurn(ctx, modules, startWith)
+  if (abilityWindows(ctx, modules, 'startOfRound', ctx.order.first(), `round:${s.round}`)) return
+  if (s.round === 1 && ctx.once('control:round1')) modules.services.objectives.evaluateControl(ctx, 'turnStart')
+  if (s.pending) return
+  startTurn(ctx, modules, s.firstPlayer)
+}
+
+// SPH-8.6 end of turn: ① End of Turn abilities (active, then opponent) ② objective control ③ the active player scores
+// (missions.onWindow at turn.end.scoring) ④ after-scoring effects. Returns true while a decision is pending.
+function endTurnChain(ctx: EngineContext, modules: ModuleTable): boolean {
+  const s = ctx.state
+  const services = modules.services
+  if (ctx.window('turn.end.abilities', 'turn', ctx.order.active())) return true
+  if (abilityWindows(ctx, modules, 'endOfTurn', ctx.order.active(), `turn:${s.round}:${s.activePlayer}`)) return true
+  if (ctx.once('turnEnd:control')) services.objectives.evaluateControl(ctx, 'turnEnd')
+  if (s.pending) return true
+  if (ctx.window('turn.end.control', 'turn', ctx.order.active())) return true
+  if (ctx.window('turn.end.scoring', 'turn', ctx.order.active())) return true
+  if (ctx.window('turn.end.afterScoring', 'turn', ctx.order.active())) return true
+  if (ctx.once('turnEnd')) {
+    services.hooks.run(ctx, 'onTurnEnd', {})
+    services.effects.expire(ctx, 'turnEnd', s.activePlayer)
+  }
+  return !!s.pending
 }
 
 // runs whenever state.step === 'none' (a phase body has finished); re-entrant via marks and keyed windows
@@ -474,35 +536,29 @@ function transition(ctx: EngineContext, modules: ModuleTable): void {
   const s = ctx.state
   const services = modules.services
   if (ctx.marked('turnStarted')) { startTurn(ctx, modules, s.activePlayer); return }
-  if (ctx.marked('battleEnd')) { endBattleChain(ctx, modules, 'vp'); return }
+  if (ctx.marked('battleEnd')) { endBattleChain(ctx, modules); return }
   if (ctx.marked('roundStart')) { startRoundChain(ctx, modules); return }
   if (s.phase === 'setup') { enterPhase(ctx, modules, 'deployment'); return }
   if (s.phase === 'deployment') { startRoundChain(ctx, modules); return }
 
   if (ctx.window('phase.end', s.phase, ctx.order.active())) return
-  if (services.missions.isTabled(s)) { endBattleChain(ctx, modules, 'tabled'); return }
   const next = nextPhase(s.phase)
   if (next) { enterPhase(ctx, modules, next as BattlePhase); return }
 
-  // end of the turn (after the Fight phase): R-2.6 cull, turn.end, then the next turn / round end
-  if (coherencyCull(ctx)) return
-  if (ctx.window('turn.end', 'turn', ctx.order.active())) return
-  if (ctx.once('turnEnd')) {
-    services.objectives.evaluateControl(ctx, 'turnEnd')
-    services.hooks.run(ctx, 'onTurnEnd', {})
-    services.effects.expire(ctx, 'turnEnd', s.activePlayer)
-  }
-  if (s.pending) return
-  const nextPlayer = otherPlayer(s.activePlayer)
-  const roundOver = s.activePlayer !== s.firstPlayer || !services.missions.playerHasForces(s, nextPlayer)
-  if (!roundOver) { startTurn(ctx, modules, nextPlayer); return }
-  if (ctx.window('round.end', `${s.round}`, ctx.order.first())) return
+  // end of the turn (after the Combat phase)
+  if (endTurnChain(ctx, modules)) return
+  // SPH-11.3: a tabled player still takes (empty) turns, so the round always has two turns
+  if (s.activePlayer === s.firstPlayer) { startTurn(ctx, modules, otherPlayer(s.activePlayer)); return }
+  // SPH-8.7 / CORE-4.15 end of battle round: the active (second-turn) player first
+  const roundOrder = ctx.order.active()
+  if (ctx.window('round.end', `${s.round}`, roundOrder)) return
+  if (abilityWindows(ctx, modules, 'endOfRound', roundOrder, `round:${s.round}`)) return
   if (ctx.once('roundEnd')) {
     services.effects.expire(ctx, 'roundEnd', null)
     ctx.emit({ type: 'RoundEnded' })
   }
   if (s.pending) return
-  if (s.round >= s.mission.data.rounds || services.missions.isTabled(s)) { endBattleChain(ctx, modules, services.missions.isTabled(s) ? 'tabled' : 'vp'); return }
+  if (s.round >= s.mission.data.rounds) { endBattleChain(ctx, modules); return }
   startRoundChain(ctx, modules)
 }
 
@@ -513,13 +569,8 @@ export function advanceGame(ctx: EngineContext, modules: ModuleTable): void {
   for (let i = 0; i < MAX_ADVANCE_ITERATIONS; i++) {
     if (s.pending) return
     if (s.phase === 'ended') return
-    // Genestealer Cults: a successful Cult Ambush roll queued a marker placement; ask for it before the phase module goes on
-    if (raisePendingCultAmbushMarker(ctx)) return
     if (s.step === 'none') { transition(ctx, modules); continue }
     const mod = modules.phases[s.phase as BattlePhase]
-    // Chaos Daemons Shadow of Chaos: record the areas at the start of every battle phase, before its start window
-    // (only when some player has the ability, so other games write nothing and replay hashes stay unchanged)
-    if (isBattlePhase(s.phase) && (hasShadowOfChaos(s, 'A') || hasShadowOfChaos(s, 'B')) && ctx.once(`shadow:${s.round}:${s.activePlayer}:${s.phase}`)) refreshShadow(ctx)
     if (isBattlePhase(s.phase) && ctx.window(`${s.phase}.start` as TimingWindowId, 'start', ctx.order.active())) continue
     const r = mod.advance(ctx)
     if (r === 'done') { finishPhaseBody(ctx, modules, mod); continue }
@@ -530,7 +581,7 @@ export function advanceGame(ctx: EngineContext, modules: ModuleTable): void {
 
 // ---------- engine factory ----------
 export function createEngine(modules: ModuleTable): EngineApi {
-  const core = { cull: coherencyCullHandler() }
+  const core: CoreHandlers = { turnOrder: turnOrderHandler() }
 
   function finalize(draft: GameState, rng: Rng, prev: GameState | null, action: Action | null, rt: StepRuntime): void {
     draft.rng = rng.serialize()
@@ -623,7 +674,7 @@ export function createEngine(modules: ModuleTable): EngineApi {
     const redacted = inDeployment
       ? { ...state, setup: { ...state.setup, players: { ...state.setup.players, [opp]: { ...oppSetup, reserves: [] } } } }
       : state
-    return { player, state: redacted, hidden: { opponentReserveCount: inDeployment ? oppSetup.reserves.length : 0 }, lastRejection: null }
+    return { player, state: redacted, hidden: { opponentReserveCount: inDeployment ? (oppSetup.reserves ?? []).length : 0 }, lastRejection: null }
   }
 
   function save(state: GameState): SaveFile {

@@ -186,7 +186,7 @@ function targetedWeapon(ctx: EngineContext, a: AttackSequenceState, attackerMode
 // a shapeless AttackContext for mortal-wound sources with no originating weapon attack (Deadly Demise, generic
 // ability mortal wounds): only used to query Feel No Pain, which never reads `weapon` fields in this fixture set.
 function nullAttackContext(targetUnitId: UnitId, targetModelId: ModelId): AttackContext {
-  const placeholderWeapon: RuntimeWeapon = { id: '', name: '', kind: 'ranged', range: 0, A: 0, skill: null, S: 0, AP: 0, D: 0, abilities: [], profileGroup: null }
+  const placeholderWeapon: RuntimeWeapon = { id: '', name: '', kind: 'ranged', range: 0, A: 0, skill: null, S: 0, AP: 0, wound: 4, rend: 0, D: 0, abilities: [], profileGroup: null }
   return {
     kind: 'ranged', overwatch: false, attackerUnitId: targetUnitId, attackerModelId: '', weapon: placeholderWeapon,
     targetUnitId, targetModelId, range: Infinity, halfRange: false, inCover: false, charged: false, oathTarget: false,
