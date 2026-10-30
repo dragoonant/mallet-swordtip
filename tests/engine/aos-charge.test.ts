@@ -169,4 +169,20 @@ describe('aos charge (WP4)', () => {
     for (const a of legal) expect(chargeModule.validate?.(h.state, a, p)).toBeNull()
     expect(neededChargeDistance(h.state, 'A:guard', [])).toBeCloseTo(7 - GUARD_R - BRUTE_R - 0.5, 2)
   })
+
+  it('CHARGE-008 a wide line whose flank models are blocked by a friendly unit still gets a legal charge move (models move one by one)', () => {
+    const h = harness([5, 5])
+    trim(h.state, 'A:guard', 4)
+    trim(h.state, 'B:brute', 1)
+    const step = 2 * GUARD_R + 0.3
+    placeUnit(h.state, 'A:guard', [0, 1, 2, 3].map((i) => [(i - 1.5) * step, -6] as [number, number]))
+    placeUnit(h.state, 'B:brute', [[0, 0]])
+    placeUnit(h.state, 'A:knight', [[-1.5 * step, -3.2]]) // right in front of the left half of the line
+    chargeModule.enter(h.ctx)
+    const p = startCharge(h)
+    const legal = chargeModule.legalActions?.(h.state, p) ?? []
+    const moves = legal.filter((a) => a.type === 'chargeMove')
+    expect(moves.length).toBeGreaterThan(0)
+    for (const a of moves) expect(chargeModule.validate?.(h.state, a, p)).toBeNull()
+  })
 })

@@ -63,6 +63,16 @@ function segmentBlocked(state: GameState, p1: Vec3, p2: Vec3, toModelId: ModelId
   return false
 }
 
+// terrain only (walls, crates; no models): is the segment p1 -> p2 clear? For planners judging fire lanes before anyone is
+// standing at the far end (AI deployment of a war machine)
+export function terrainLineClear(state: GameState, p1: Vec3, p2: Vec3): boolean {
+  for (const p of Object.values(state.board.pieces)) {
+    for (const w of p.walls) if (wallCrosses3D(w, p1, p2)) return false
+    if (p.kind === 'crate' && crateBlocks(p, p1, p2)) return false
+  }
+  return true
+}
+
 function anyClearPair(state: GameState, from: Model, to: Model): boolean {
   const exclude = new Set<UnitId>(leaderService.halves(state, from.unitId))
   const fromPts = losService.samplePoints(from), toPts = losService.samplePoints(to)

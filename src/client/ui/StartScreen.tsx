@@ -2,6 +2,7 @@
 // Sigmar Castelite Company or Ironjawz Bigmob), its regiment ability and enhancement, a bot or a second seat on this
 // device, and Start. The battleplan is fixed (Fire and Jade, Aqshy side, standard terrain), so it is shown, not chosen.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
+import { FactionCrest } from './FactionCrest'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { loadBundle } from '../../data'
 import type { DataBundle } from '../../data/types'
@@ -120,10 +121,10 @@ const pickItem: CSSProperties = { display: 'flex', flexDirection: 'column', alig
 const pickName: CSSProperties = { fontWeight: 700, fontSize: 13 }
 const pickText: CSSProperties = { fontSize: 11.5, color: 'inherit', opacity: 0.78, fontWeight: 400 }
 
-function FactionCard({ name, active, onPick, testId }: { name: string; active: boolean; onPick: () => void; testId?: string }) {
+function FactionCard({ id, name, active, onPick, testId }: { id: string; name: string; active: boolean; onPick: () => void; testId?: string }) {
   return (
     <button type="button" data-testid={testId} style={{ ...(active ? buttonActive : buttonBase), ...factionCard }} aria-pressed={active} onClick={onPick}>
-      <span style={factionBadge} aria-hidden="true">{name.charAt(0)}</span>
+      <span style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={52} /></span>
       <span>{name}</span>
     </button>
   )
@@ -320,7 +321,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         <div style={label}>Your Army</div>
         <div style={factionGrid} data-testid="setup-patrol-A">
           {factions.map((f) => (
-            <FactionCard key={f.id} testId={`setup-army-A-${f.id}`} name={f.label} active={f.id === factionId} onPick={() => setFaction(f.id)} />
+            <FactionCard key={f.id} id={f.id} testId={`setup-army-A-${f.id}`} name={f.label} active={f.id === factionId} onPick={() => setFaction(f.id)} />
           ))}
         </div>
         {activeFaction?.blurb && <p style={blurb}>{activeFaction.blurb}</p>}
@@ -358,7 +359,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         <div style={label}>Opponent's Army</div>
         <div style={factionGrid} data-testid="setup-opponent-faction">
           {factions.map((f) => (
-            <FactionCard key={f.id} testId={`setup-army-B-${f.id}`} name={f.label} active={f.id === opponentFaction} onPick={() => setOpponentFaction(f.id)} />
+            <FactionCard key={f.id} id={f.id} testId={`setup-army-B-${f.id}`} name={f.label} active={f.id === opponentFaction} onPick={() => setOpponentFaction(f.id)} />
           ))}
         </div>
         {opponentActive?.blurb && <p style={blurb}>{opponentActive.blurb}</p>}

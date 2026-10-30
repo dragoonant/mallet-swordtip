@@ -11,7 +11,7 @@
 // Charging grants no Strike-first (CORE-10.9). Overwatch, Heroic Intervention and Tank Shock are gone.
 import { rollSum } from '../dice'
 import {
-  CHARGE_END, EPS, baseEdgePoints, checkPlacements, distance, emptyMoveConstraints, horizontalGap, pathCrossesModels,
+  CHARGE_END, EPS, baseEdgePoints, basesOverlap, checkPlacements, distance, emptyMoveConstraints, horizontalGap, pathCrossesModels,
   pointInPolygon, pointToPolygonEdge, whollyOnBoard, whollyWithinPolygon, withinEngagementRange, samplePath,
   type Footprint, type ResolvedPlacement,
 } from '../geometry'
@@ -189,38 +189,125 @@ function ringPoint(e: Model, m: Model, angle: number, gap: number): Vec3 {
   return at(hi)
 }
 
-// rigid translations of the whole unit that bring its nearest model to ~½" of one of the nearest enemy models, approached
-// from several angles; the first `limit` that pass the full validation are returned
+// candidate charge moves: the unit's nearest model (or, failing that, the next nearest) ends ~½" from one of the nearest enemy
+// models, approached from several angles. Each end point is tried first as a rigid slide of the whole unit, then as a
+// per-model fit (fitChargeAround: every other model finds its own spot and path). The first `limit` that pass the full
+// validation are returned.
 function legalChargeMoves(state: GameState, unitId: UnitId, roll: number, limit = 1): ModelPlacement[][] {
   const geo = chargeGeometry(state, unitId)
   if (geo.models.length === 0 || geo.enemies.length === 0) return []
   const out: ModelPlacement[][] = []
   const tried = new Set<string>()
+  const coherency = datasheetOf(state, unitId).coherencyRange ?? 0.5
+  const offer = (placements: ModelPlacement[] | null): boolean => {
+    if (!placements) return false
+    const key = JSON.stringify(placements)
+    if (tried.has(key)) return false
+    tried.add(key)
+    if (chargeMoveRejection(state, unitId, roll, placements) !== null) return false
+    out.push(placements)
+    return out.length >= limit
+  }
   const nearestEnemies = [...geo.enemies]
     .map((e) => ({ e, gap: Math.min(...geo.models.map((m) => horizontalGap(m, e))) }))
     .sort((a, b) => a.gap - b.gap)
     .slice(0, 6)
   for (const { e } of nearestEnemies) {
-    const m = [...geo.models].sort((a, b) => horizontalGap(a, e) - horizontalGap(b, e))[0]
-    const base = Math.atan2(m.pos.z - e.pos.z, m.pos.x - e.pos.x)
-    for (const phi of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.8, -1.8]) {
-      for (const gap of [0.4, 0.2, 0.05]) {
-        const p = ringPoint(e, m, base + phi, gap)
-        const dx = p.x - m.pos.x, dz = p.z - m.pos.z
-        if (Math.hypot(dx, dz) > roll - 0.02) continue
-        const placements = translatePlacements(geo.models, dx, dz).map((pl) => {
-          const model = geo.models.find((x) => x.id === pl.modelId) as Model
-          return { ...pl, pos: { ...pl.pos, y: settleY(state, model, pl.pos.x, pl.pos.z, model.pos.y) } }
-        })
-        const key = JSON.stringify(placements)
-        if (tried.has(key)) continue
-        tried.add(key)
-        if (chargeMoveRejection(state, unitId, roll, placements) === null) {
-          out.push(placements)
-          if (out.length >= limit) return out
+    const leads = [...geo.models].sort((a, b) => horizontalGap(a, e) - horizontalGap(b, e)).slice(0, 2)
+    for (const m of leads) {
+      const base = Math.atan2(m.pos.z - e.pos.z, m.pos.x - e.pos.x)
+      for (const phi of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.8, -1.8, 2.4, -2.4]) {
+        for (const gap of [0.4, 0.2, 0.05]) {
+          const p = ringPoint(e, m, base + phi, gap)
+          const dx = p.x - m.pos.x, dz = p.z - m.pos.z
+          if (Math.hypot(dx, dz) > roll - 0.02) continue
+          const rigid = translatePlacements(geo.models, dx, dz).map((pl) => {
+            const model = geo.models.find((x) => x.id === pl.modelId) as Model
+            return { ...pl, pos: { ...pl.pos, y: settleY(state, model, pl.pos.x, pl.pos.z, model.pos.y) } }
+          })
+          if (offer(rigid)) return out
+          // a rigid slide of a wide unit (a line of cavalry ovals) often rams a flank model into the enemy or a friendly unit,
+          // or its straight path is blocked: keep this end point for the lead and fit everything else in model by model
+          if (offer(fitChargeAround(state, geo, m, { x: p.x, y: m.pos.y, z: p.z }, roll, coherency))) return out
         }
       }
     }
+  }
+  return out
+}
+
+// a model's way to `to`: the straight line, else a one-bend detour around whatever is in the way; null when nothing fits the roll
+function chargePath(state: GameState, geo: ChargeGeometry, m: Model, to: Vec3, roll: number, blockers: Footprint[]): Vec3[] | null {
+  const fp: Footprint = { pos: to, facing: m.facing, base: m.base }
+  const ok = (path: Vec3[]): boolean => {
+    let len = 0
+    for (let i = 1; i < path.length; i++) len += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z)
+    if (len > roll - 0.02) return false
+    if (!geo.fly && pathCrossesModels(fp, path, blockers)) return false
+    for (let i = 1; i < path.length - 1; i++) if (!whollyOnBoard({ pos: path[i], facing: m.facing, base: m.base }, state.board)) return false
+    return !terrainService.crossesImpassable(state, m, path)
+  }
+  const straight = [m.pos, to]
+  if (ok(straight)) return straight
+  const dx = to.x - m.pos.x, dz = to.z - m.pos.z
+  const len = Math.hypot(dx, dz)
+  if (len < 0.05) return null
+  const px = -dz / len, pz = dx / len
+  for (const along of [0.5, 0.3, 0.7]) {
+    for (const side of [1, -1, 2, -2, 3, -3, 4.5, -4.5]) {
+      const w: Vec3 = { x: m.pos.x + dx * along + px * side, y: m.pos.y, z: m.pos.z + dz * along + pz * side }
+      const path = [m.pos, w, to]
+      if (ok(path)) return path
+    }
+  }
+  return null
+}
+
+// per-model charge fit (CORE-6.6: each model moves its own path, the unit ends coherent). The lead model goes to `leadTo`; the
+// others, nearest first, take the first spot that is within the roll, overlaps nothing, has a clear path (chargePath) and sits
+// within coherency of a model already placed. Spots tried: the lead's slide (scaled down), then slots touching an already
+// placed model or an enemy model nearby, closest to the enemy first. Null when some model has no spot.
+function fitChargeAround(state: GameState, geo: ChargeGeometry, lead: Model, leadTo: Vec3, roll: number, coherency: number): ModelPlacement[] | null {
+  const blockers: Footprint[] = [...geo.enemies, ...geo.otherFriendly]
+  const fits = (m: Model, c: Vec3, placed: Model[]): ModelPlacement | null => {
+    if (Math.hypot(c.x - m.pos.x, c.z - m.pos.z) > roll - 0.02) return null
+    const fp: Footprint = { pos: c, facing: m.facing, base: m.base }
+    if (!whollyOnBoard(fp, state.board)) return null
+    if (blockers.some((b) => basesOverlap(fp, b)) || placed.some((q) => basesOverlap(fp, q))) return null
+    if (placed.length > 0 && !placed.some((q) => horizontalGap(fp, q) <= coherency - 0.02)) return null
+    const to: Vec3 = { x: c.x, y: settleY(state, m, c.x, c.z, m.pos.y), z: c.z }
+    if (!terrainService.canEndAt(state, m, to).ok) return null
+    const path = chargePath(state, geo, m, to, roll, blockers)
+    return path ? { modelId: m.id, pos: to, facing: m.facing, path } : null
+  }
+  const first = fits(lead, leadTo, [])
+  if (!first) return null
+  const placed: Model[] = [{ ...lead, pos: first.pos }]
+  const out: ModelPlacement[] = [first]
+  if (geo.models.length === 1) return out
+  const dx = leadTo.x - lead.pos.x, dz = leadTo.z - lead.pos.z
+  const enemyGap = (f: Footprint): number => { let g = Infinity; for (const e of geo.enemies) g = Math.min(g, horizontalGap(f, e)); return g }
+  const others = geo.models.filter((x) => x.id !== lead.id).sort((a, b) => horizontalGap(a, lead) - horizontalGap(b, lead))
+  const near = geo.enemies.filter((e) => horizontalGap({ pos: leadTo, facing: lead.facing, base: lead.base }, e) <= 6)
+  for (const m of others) {
+    const cands: Vec3[] = []
+    for (const t of [1, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1, 0]) cands.push({ x: m.pos.x + dx * t, y: m.pos.y, z: m.pos.z + dz * t })
+    const slots: { pos: Vec3; gap: number }[] = []
+    const ring = (anchor: Model, gap: number): void => {
+      for (let i = 0; i < 16; i++) {
+        const pos = ringPoint(anchor, m, (i / 16) * Math.PI * 2, gap)
+        slots.push({ pos, gap: enemyGap({ pos, facing: m.facing, base: m.base }) })
+      }
+    }
+    for (const q of placed) ring({ ...m, pos: q.pos, base: q.base, facing: q.facing }, Math.min(0.3, coherency * 0.6))
+    for (const e of near) ring(e, 0.3)
+    slots.sort((a, b) => a.gap - b.gap)
+    cands.push(...slots.map((sl) => sl.pos))
+    let got: ModelPlacement | null = null
+    for (const c of cands) if ((got = fits(m, c, placed))) break
+    if (!got) return null
+    placed.push({ ...m, pos: got.pos })
+    out.push(got)
   }
   return out
 }

@@ -8,7 +8,7 @@ import { useGameStore } from '../store/game'
 import { useCaughtUp, useDisplayState } from '../presentation/presentedStore'
 import { useUiStore } from './uiStore'
 import { modelsAnchor } from '../interaction/geometry'
-import { isPlacementDecision } from '../interaction/decisions'
+import { usesFormationShape } from '../interaction/decisions'
 import { MissionPanel } from './MissionPanel'
 import { vpSplit } from './cardInfo'
 import { Tooltip } from './Tooltip'
@@ -17,6 +17,7 @@ import { PHASE_NAME } from './phaseNames'
 import { BATTLEFIELDS } from '../board/terrainAssets'
 import { cameraNudge } from '../board/touchCamera'
 import { useFormFactor } from './formFactor'
+import { FactionCrest } from './FactionCrest'
 import { COMPACT_BAR_PX, useCompactSheets, type SheetId } from './compactSheets'
 import { buttonBase, buttonPrimary, colors, fontStack, mutedText, panel } from './theme'
 
@@ -483,7 +484,7 @@ export function Hud() {
   // same horizontal centre as this hint — when both are showing, the picker sat visually on top with
   // the hint peeking out from behind its edges instead of being fully hidden. Same "is the picker
   // showing" condition FormationPicker.tsx itself uses (isDeploy || isMove), so the two never disagree.
-  const pickerOpen = !!pending && pending.player !== botSeat && ((pending.kind === 'deployUnit' && !!deployTargetUnitId) || isPlacementDecision(pending))
+  const pickerOpen = !!pending && pending.player !== botSeat && ((pending.kind === 'deployUnit' && !!deployTargetUnitId) || usesFormationShape(pending))
   const activeTitle = `Active: ${state.players[state.activePlayer].name}${state.activePlayer === state.firstPlayer ? ' (went first)' : ''}${thinking ? ' — thinking…' : ''}`
 
   return (
@@ -553,8 +554,9 @@ function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
   // `data-hud-badge` lets App.tsx's right rail (Dice Log + tray) measure the B badge and sit under it.
   return (
     <div style={badge} data-hud-badge={id}>
-      <div style={{ color, fontWeight: 700, fontSize: 13 }}>
-        {p.name} ({id})
+      <div style={{ color, fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <FactionCrest faction={p.faction} size={22} />
+        <span>{p.name} ({id})</span>
       </div>
       {state.underdog === id && (
         <div style={{ fontSize: 12, color: colors.muted }} data-testid={`hud-underdog-${id}`}>Underdog</div>

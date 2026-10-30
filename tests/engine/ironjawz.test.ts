@@ -148,6 +148,15 @@ describe('registry', () => {
   })
 })
 
+describe('IJZ-E shipped data', () => {
+  it('IJZ-3.1 IJZ-4.1 IJZ-4.4 the gated passives carry their effect in the shipped data (the code hooks only gate it)', () => {
+    const byId = (id: string) => (abilitiesJson as unknown as AbilityDescriptor[]).find((a) => a.id === id)
+    expect(byId('ironjawz.ability.natural-disaster')?.effect).toEqual(PATCHES['ironjawz.ability.natural-disaster'].effect)
+    expect(byId('ironjawz.ability.mega-bossy')?.effect).toEqual(PATCHES['ironjawz.ability.mega-bossy'].effect)
+    expect(byId('ironjawz.ability.amberbone-whetstone')?.effect).toEqual(PATCHES['ironjawz.ability.amberbone-whetstone'].effect)
+  })
+})
+
 describe('IJZ-3.1 Natural Disaster', () => {
   it('IJZ-3.1 an unmodified charge roll of 8+ gives the unit +1 Attacks on its melee weapons for the rest of the turn', () => {
     const s = game()

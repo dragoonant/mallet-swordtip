@@ -84,6 +84,8 @@ export function aosWeaponSound(weaponId: string, weaponName = '', melee = true):
 export interface SoundLookup {
   weapon(weaponId: string): WeaponData | undefined
   factionOfUnit(unitId: string): string
+  /** Datasheet keywords of a unit (CAVALRY, INFANTRY ...); optional so older callers and tests need not supply it. */
+  keywordsOfUnit?(unitId: string): readonly string[]
 }
 
 /** Every weapon in the bundle has its own sound (public/audio/wpn-<slug>.mp3). A weapon id matches the
@@ -530,6 +532,15 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
     case 'DeadlyDemiseRolled':
       return event.exploded ? [{ id: 'vehicle-explosion' }] : []
 
+    // A move under way: hooves for riders, a tramp of plate for foot soldiers. Quiet on purpose; one sound per move.
+    case 'UnitMoved': {
+      if (Object.keys(event.paths ?? {}).length === 0) return []
+      const kw = lookup?.keywordsOfUnit?.(event.unitId) ?? []
+      if (kw.includes('CAVALRY')) return [{ id: 'aos-horse-gallop', opts: { volume: 0.55 } }]
+      if (kw.includes('INFANTRY')) return [{ id: 'aos-armoured-march', opts: { volume: 0.5 } }]
+      return []
+    }
+
     // Cities charge on horse with a roar of men, Ironjawz stomp in bellowing.
     case 'ChargeDeclared': {
       if (lookup?.factionOfUnit(event.unitId) === 'ironjawz') return [{ id: 'aos-orruk-stomp' }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }]
@@ -575,6 +586,11 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
     default:
       return []
   }
+}
+
+/** A swing that found nothing: one soft whoosh for a whole batch of hit rolls when any of its dice missed (never one per die). */
+export function missWhooshFor(rolls: readonly GameEvent[]): EventSound[] {
+  return rolls.some((e) => e.type === 'HitRolled' && !e.hit) ? [{ id: 'aos-miss-whoosh', opts: { volume: 0.7 } }] : []
 }
 
 /** Plays every sound mapped from a batch of events (e.g. the events a single step() call returned)

@@ -8,8 +8,8 @@ import {
   type PendingDecision, type PlayerId, type StepResult, type UnitId,
 } from '../../src/engine'
 import {
-  TACTIC_NAMES, TWIST_NAMES, cardHandler, cardsRoundEnd, cardsRoundStart, commandWindow, maySeizerDraw, reactionWindow,
-  scoreTacticsStep, tacticMet, twistAfterScoring, twistTurnScoring,
+  TACTIC_NAMES, TWIST_NAMES, cardHandler, cardsRoundEnd, cardsRoundStart, commandWindow, expireCardFlags, maySeizerDraw,
+  officersOrderCard, reactionWindow, scoreTacticsStep, setOfficersOrder, tacticMet, twistAfterScoring, twistTurnScoring,
 } from '../../src/engine/cards'
 import { cardHitRule, cardWard } from '../../src/engine/cardFlags'
 import { hookService } from '../../src/engine/hooks-impl'
@@ -442,5 +442,45 @@ describe('hidden information (SPH-3.5, SPH-10.7)', () => {
     const s = dealt()
     s.cards!.tactics.B.discard = ['card.tactic.raid']
     expect(view(s, 'A').state.cards!.tactics.B.discard).toEqual(['card.tactic.raid'])
+  })
+})
+
+describe("CITIES-BT-1 The Officer's Order (card side)", () => {
+  it("CITIES-BT-1 the set-aside card's command is free: the card goes back to hand, not to the discard pile, and is locked for that phase", () => {
+    const s = dealt()
+    hand(s, 'B', ['card.tactic.war-of-attrition'])
+    setOfficersOrder(s, 'B', 'card.tactic.war-of-attrition')
+    const { ctx, events } = ctxFor(s)
+    expect(commandWindow(ctx, 'hero', 'B')).toBe(true)
+    answer(ctx, 'card.tactic.war-of-attrition|B:brute')
+    expect(s.units['B:brute'].turn.fightsFirst).toBe(true)
+    expect(s.cards!.tactics.B.hand).toEqual(['card.tactic.war-of-attrition'])
+    expect(s.cards!.tactics.B.discard).toEqual([])
+    expect(officersOrderCard(s, 'B')).toBeNull()
+    // revealed: the summary names the card
+    const used = events.find((e) => e.type === 'TacticCommandUsed') as { summary: string } | undefined
+    expect(used?.summary).toContain("The Officer's Order")
+    // not again in the phase it came back
+    expect(commandWindow(ctx, 'hero', 'B', 'hero:again')).toBe(false)
+    // a normal card again from the next battle round: using it now discards it
+    s.round = 2
+    expect(commandWindow(ctx, 'hero', 'B', 'hero:r2')).toBe(true)
+    answer(ctx, 'card.tactic.war-of-attrition|B:brute')
+    expect(s.cards!.tactics.B.discard).toEqual(['card.tactic.war-of-attrition'])
+  })
+
+  it("CITIES-BT-1 an unused set-aside card stays hidden from the opponent and returns at the end of its owner's turn", () => {
+    const s = dealt()
+    hand(s, 'A', ['card.tactic.raid', 'card.tactic.hold-ground'])
+    setOfficersOrder(s, 'A', 'card.tactic.hold-ground')
+    const seen = view(s, 'B').state.mission.custom.officersOrder as Record<string, string>
+    expect(seen.A).toBe('hidden:hand:1')
+    s.activePlayer = 'B'
+    expireCardFlags(s, 'turn')
+    expect(officersOrderCard(s, 'A')).toBe('card.tactic.hold-ground')
+    s.activePlayer = 'A'
+    expireCardFlags(s, 'turn')
+    expect(officersOrderCard(s, 'A')).toBeNull()
+    expect(s.cards!.tactics.A.hand).toEqual(['card.tactic.raid', 'card.tactic.hold-ground'])
   })
 })

@@ -116,6 +116,9 @@ interface UiState {
   glowModelIds: readonly string[]
   /** For `deployUnit`: which of context.unitIds the player is currently placing (palette selection). */
   deployTargetUnitId: string | null
+  /** "Auto-deploy rest" is running for this seat: every deploy decision of theirs is answered with suggestDeployment. */
+  autoDeployFor: string | null
+  setAutoDeployFor(seat: string | null): void
   draft: PlacementDraft | null
   /** A suggested-placement option's would-be result, shown as a ghost marker while its button is
    *  hovered — never dispatched, purely a preview (src/client/ui/DecisionPrompt.tsx). */
@@ -222,6 +225,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   hoveredObjectiveId: null,
   glowModelIds: [],
   deployTargetUnitId: null,
+  autoDeployFor: null,
+  setAutoDeployFor: (seat) => set({ autoDeployFor: seat }),
   draft: null,
   previewDraft: null,
   movePreview: null,
@@ -313,6 +318,7 @@ export const useUiStore = create<UiState>((set, get) => ({
       hoveredObjectiveId: null,
       glowModelIds: [],
       deployTargetUnitId: null,
+      autoDeployFor: null,
       draft: null,
       previewDraft: null,
       movePreview: null,

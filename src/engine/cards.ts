@@ -165,9 +165,36 @@ export function cardsTurnStart(s: GameState): void {
 }
 
 export function expireCardFlags(s: GameState, until: CardFlag['until']): void {
+  // CITIES-BT-1: a card set aside by The Officer's Order that was neither used nor scored goes back at the end of its owner's turn
+  if (until === 'turn') clearOfficersOrder(s, s.activePlayer)
   const c = s.cards
   if (!c || c.flags.length === 0) return
   c.flags = c.flags.filter((f) => f.until !== until)
+}
+
+// ---------- CITIES-BT-1 The Officer's Order: one battle tactic card set aside per battle round ----------
+// Kept in mission.custom (types.ts is a frozen contract): officersOrder[player] = the set-aside card (it stays in the hand, so
+// scoring and command offers see it), officersLock[player] = the card whose command came back this phase and cannot be used
+// again until the phase changes.
+interface OfficersLock { cardId: Id; round: number; turn: PlayerId; phase: string }
+const officersMap = (s: GameState): Partial<Record<PlayerId, Id>> => (s.mission.custom.officersOrder as Partial<Record<PlayerId, Id>> | undefined) ?? {}
+export function officersOrderCard(s: GameState, p: PlayerId): Id | null {
+  const id = officersMap(s)[p]
+  return id && s.cards?.tactics[p].hand.includes(id) ? id : null
+}
+export function setOfficersOrder(s: GameState, p: PlayerId, cardId: Id): void {
+  s.mission.custom = { ...s.mission.custom, officersOrder: { ...officersMap(s), [p]: cardId } }
+}
+export function clearOfficersOrder(s: GameState, p: PlayerId): void {
+  const m = officersMap(s)
+  if (m[p] === undefined) return
+  const next = { ...m }
+  delete next[p]
+  s.mission.custom = { ...s.mission.custom, officersOrder: next }
+}
+function officersLocked(s: GameState, p: PlayerId, cardId: Id): boolean {
+  const l = (s.mission.custom.officersLock as Partial<Record<PlayerId, OfficersLock>> | undefined)?.[p]
+  return !!l && l.cardId === cardId && l.round === s.round && l.turn === s.activePlayer && l.phase === s.phase
 }
 
 function addFlag(s: GameState, f: Omit<CardFlag, 'round' | 'value' | 'unitId' | 'objectiveId'> & Partial<Pick<CardFlag, 'value' | 'unitId' | 'objectiveId'>>): void {
@@ -833,11 +860,14 @@ function offersFor(s: GameState, p: PlayerId, slots: CommandSlot[], cc: CommandC
   const c = s.cards
   if (!c) return []
   const out: Offer[] = []
+  const setAside = officersOrderCard(s, p)
   for (const cardId of c.tactics[p].hand) {
     const def = COMMANDS[cardId]
     if (!def || !slots.includes(def.slot) || !whoseOk(s, p, def.whose)) continue
+    if (officersLocked(s, p, cardId)) continue
     for (const t of def.targets(s, p, cc)) {
-      const keep = tacticOdds(s, p, cardId)
+      // a set-aside card (CITIES-BT-1) comes back after its command, so using it costs nothing
+      const keep = cardId === setAside ? -0.2 : tacticOdds(s, p, cardId)
       out.push({
         id: `${cardId}|${t}`, cardId, target: t,
         label: `${TACTIC_NAMES[cardId].command} (${TACTIC_NAMES[cardId].name}): ${def.label ? def.label(s, t) : unitName(s, t)}`,
@@ -860,11 +890,22 @@ function useCommand(ctx: EngineContext, p: PlayerId, cardId: Id, target: string,
   const s = ctx.state
   const c = cardsOf(s)
   const piles = c.tactics[p]
-  piles.hand = piles.hand.filter((id) => id !== cardId)
-  piles.discard = [...piles.discard, cardId]
+  // CITIES-BT-1: the set-aside card is shown to the opponent and goes back into the hand instead of the discard pile
+  const officers = officersOrderCard(s, p) === cardId
+  if (officers) {
+    clearOfficersOrder(s, p)
+    s.mission.custom = {
+      ...s.mission.custom,
+      officersLock: { ...((s.mission.custom.officersLock as Record<string, OfficersLock> | undefined) ?? {}), [p]: { cardId, round: s.round, turn: s.activePlayer, phase: s.phase } },
+    }
+  } else {
+    piles.hand = piles.hand.filter((id) => id !== cardId)
+    piles.discard = [...piles.discard, cardId]
+  }
   const def = COMMANDS[cardId]
   const unitId = target.includes('>') ? target.split('>')[0] : s.units[target] ? target : null
-  ctx.emit({ type: 'TacticCommandUsed', cardId, unitId, summary: `${TACTIC_NAMES[cardId]?.command ?? cardId}: ${def.label ? def.label(s, target) : unitName(s, target)}`, player: p })
+  const tail = officers ? ` (The Officer's Order: ${cardName(cardId)} returns to hand)` : ''
+  ctx.emit({ type: 'TacticCommandUsed', cardId, unitId, summary: `${TACTIC_NAMES[cardId]?.command ?? cardId}: ${def.label ? def.label(s, target) : unitName(s, target)}${tail}`, player: p })
   return def.resolve(ctx, p, target, cc, cardId)
 }
 
@@ -1097,6 +1138,7 @@ function handle(ctx: EngineContext, action: Action, pending: PendingDecision): R
       if (!piles.hand.includes(id) || !tacticMet(s, p, id)) return { code: 'E_NOT_AN_OPTION', reason: `${id} cannot be scored now` }
       piles.hand = piles.hand.filter((x) => x !== id)
       piles.scored = [...piles.scored, id]
+      if (officersMap(s)[p] === id) clearOfficersOrder(s, p)
       ctx.emit({ type: 'TacticScored', cardId: id, vp: 1, player: p })
       awardVp(ctx, p, 1, id)
       return
@@ -1147,7 +1189,11 @@ export function redactCards(state: GameState, viewer: PlayerId): GameState {
       } as CardsState['tactics'],
     }
     : undefined
-  return { ...state, cards, twist: { ...state.twist, deck: hide(state.twist.deck, 'twist') } }
+  // CITIES-BT-1: which card is set aside is public, its face is not
+  const aside = officersMap(state)[opp]
+  const idx = aside && c ? c.tactics[opp].hand.indexOf(aside) : -1
+  const mission = aside ? { ...state.mission, custom: { ...state.mission.custom, officersOrder: { ...officersMap(state), [opp]: idx >= 0 ? `hidden:hand:${idx}` : null } } } : state.mission
+  return { ...state, mission, cards, twist: { ...state.twist, deck: hide(state.twist.deck, 'twist') } }
 }
 
 export function twistFlagSummary(s: GameState): { kind: CardFlagKind; label: string }[] {

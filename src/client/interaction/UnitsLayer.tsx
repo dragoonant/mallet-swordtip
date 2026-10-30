@@ -11,7 +11,9 @@ import { useFrame } from '@react-three/fiber'
 import type { Group } from 'three'
 import { Figure, type FigureAction } from '../figures'
 import { requestFrame } from '../figures/anim'
-import { SelectionRing, TargetRing, LosMarker } from '../board'
+import { LosMarker } from '../board'
+import { UnitRing, ringColor } from './UnitRing'
+import { baseSemiAxes } from './baseMarker'
 import { useGameStore } from '../store/game'
 import { useCaughtUp, useDisplayState } from '../presentation/presentedStore'
 import { useUiStore } from '../ui/uiStore'
@@ -79,6 +81,11 @@ interface UnitModelProps {
   z: number
   rotationY: number
   baseRadius: number
+  /** the base's semi-axes: the unit rings follow its true (oval) shape */
+  ringRx: number
+  ringRz: number
+  /** the pending decision belongs to the other seat: this unit is a target, not one of mine */
+  enemyTarget: boolean
   action: FigureAction | undefined
   isSelected: boolean
   isClickable: boolean
@@ -135,15 +142,17 @@ const UnitModel = memo(function UnitModel(p: UnitModelProps) {
               rotationY={p.rotationY}
               moving={moving}
               action={p.action}
-              selected={p.isSelected}
-              highlighted={p.isClickable}
-              hovered={p.isHovered || p.isHoveredModel}
               glowing={p.isGlowing}
               onClick={onClick}
             />
           </group>
-          {p.isSelected && <SelectionRing pos={LOCAL_ORIGIN} baseRadius={p.baseRadius} />}
-          {p.isClickable && <TargetRing pos={LOCAL_ORIGIN} baseRadius={p.baseRadius} />}
+          {(p.isHovered || p.isHoveredModel) ? (
+            <UnitRing kind="hover" axes={{ rx: p.ringRx, rz: p.ringRz }} facing={p.rotationY} color={ringColor(p.seat, p.enemyTarget)} />
+          ) : p.isSelected ? (
+            <UnitRing kind="selected" axes={{ rx: p.ringRx, rz: p.ringRz }} facing={p.rotationY} color={ringColor(p.seat, false)} />
+          ) : p.isClickable ? (
+            <UnitRing kind="clickable" axes={{ rx: p.ringRx, rz: p.ringRz }} facing={p.rotationY} color={ringColor(p.seat, p.enemyTarget)} />
+          ) : null}
           {p.los && <LosMarker pos={LOCAL_ORIGIN} baseRadius={p.baseRadius} status={p.los} />}
         </>
       )}
@@ -215,6 +224,9 @@ export function UnitsLayer() {
                   z={m.pos.z}
                   rotationY={rotationY}
                   baseRadius={m.base.radius}
+                  ringRx={baseSemiAxes(m.base).rx}
+                  ringRz={baseSemiAxes(m.base).rz}
+                  enemyTarget={isClickable && !!pending && pending.player !== unit.player}
                   action={action}
                   isSelected={isSelected}
                   isClickable={isClickable}

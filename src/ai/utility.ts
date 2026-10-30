@@ -11,8 +11,10 @@ import {
 } from '../engine'
 import { createRng, restoreRng, type Rng } from '../engine/rng'
 import { deployTerrainBlock } from '../engine/terrain'
+import { terrainLineClear } from '../engine/los'
+import { tacticOdds } from '../engine/cards'
 import {
-  bestRangedRangeOfUnit, expectedAttack, hasAnyMeleeWeapon, hasAnyRangedWeapon,
+  bestRangedRangeOfUnit, expectedAttack, hasAnyMeleeWeapon, hasAnyRangedWeapon, isGunline,
   sumExpectedAttacks, threatAt, threatFrom, threatSources, type ThreatSource, unitMeleeDamage, unitRangedDamage, unitValue,
 } from './expected'
 import { buildFormation, shapeRoleScore, shapesForRole, type FormationModel, type FormationRole, type FormationShape } from './formations'
@@ -159,7 +161,13 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
   if (placements.length === 0) return 0
   const center = placementsCenter(placements)
   let score = objectivePull(state, player, center)
-  score -= threatAt(state, player, center) * 2
+  // a melee unit (the hammer: knights, the general) wants to end where it can charge next turn, so enemy reach worries it far
+  // less than it worries a gun crew or a line holder; without this the threat term (every enemy's whole value) pins a
+  // melee army's hammer in its own deployment zone for the whole game
+  const nearest = nearestEnemyUnit(state, player, unitId)
+  const hammer = !isGunline(state, unitId) && hasAnyMeleeWeapon(state, unitId) && nearest !== null
+    && unitMeleeDamage(state, unitId, nearest.unitId, { charged: true }) >= unitMeleeDamage(state, nearest.unitId, unitId, {}) * 0.8
+  score -= threatAt(state, player, center) * (hammer ? 0.7 : 2)
   // objectivePull's gradient is gentle at range (by design, so a unit doesn't panic-sprint from 20" out) and
   // threatAt already grows the moment a unit enters any enemy's threat radius, so early on a unit can find every
   // reachable placement scores about the same (or worse) than just not moving at all — it "freezes" in its
@@ -176,7 +184,7 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
   if (enemy) {
     if (hasAnyMeleeWeapon(state, unitId)) {
       const needed = Math.max(0, Math.ceil(enemy.gap - ENGAGEMENT_H))
-      score += chargeProb(needed) * unitValue(state, enemy.unitId) * 0.05
+      score += chargeProb(needed) * unitValue(state, enemy.unitId) * (hammer ? 0.1 : 0.05)
     }
     if (hasAnyRangedWeapon(state, unitId)) {
       const range = bestRangedRangeOfUnit(state, unitId)
@@ -262,6 +270,12 @@ function scoreDeclareMove(state: GameState, player: PlayerId, action: DeclareMov
     (o) => !o.removed && DEFAULT_SERVICES.objectives.controller(state, o.id) === player
       && objectiveScoreWeight(state, player, o.id) > 1 && models.some((m) => withinObjectiveRange(m, o)),
   )
+  const holdNeeded = Object.values(state.objectives).some((o) => {
+    if (o.removed || DEFAULT_SERVICES.objectives.controller(state, o.id) !== player || !models.some((m) => withinObjectiveRange(m, o))) return false
+    const others = boardUnitsOf(state, player).some((u) => u.id !== unitId && unitModels(state, u.id).some((m) => withinObjectiveRange(m, o)))
+    const enemyNear = boardModelsOf(state, other(player)).some((m) => Math.hypot(m.pos.x - o.pos.x, m.pos.z - o.pos.z) <= 14)
+    return enemyNear && !others
+  })
   let nearestUnheld = Infinity
   let nearestValuableUnheld = Infinity
   for (const o of Object.values(state.objectives)) {
@@ -288,11 +302,24 @@ function scoreDeclareMove(state: GameState, player: PlayerId, action: DeclareMov
   // an enemy to measure against and the unit is not already in Engagement Range (then it is Fall Back vs stay).
   const meleeLeaning = melee && enemy !== null && gap > ENGAGEMENT_H
     && unitMeleeDamage(state, unitId, enemy.unitId, {}) > unitRangedDamage(state, unitId, enemy.unitId, {})
+  // a war machine (gunline): with a target in range it stands and fires, the more so when moving would cost it a profile
+  // (Shot and Shell: no Cannonball after a Move ability)
+  const gun = isGunline(state, unitId)
+  const gunTarget = gun && boardUnitsOf(state, other(player)).some((e) => unitRangedDamage(state, unitId, e.id, { inRangeOnly: true }) > 0)
+  let losesProfile = false
+  if (gun) {
+    const unit = state.units[unitId]
+    const moved = { ...state, units: { ...state.units, [unitId]: { ...unit, turn: { ...unit.turn, moveType: 'normal' as const } } } } as GameState
+    losesProfile = models.some((m) => m.weapons.some((w) => state.weapons[w]?.kind === 'ranged'
+      && DEFAULT_SERVICES.weapons.isAvailable(state, m.id, w) && !DEFAULT_SERVICES.weapons.isAvailable(moved, m.id, w)))
+  }
   switch (action.moveType) {
     case 'stationary': {
       let s = 1.0
+      if (gunTarget) s += losesProfile ? 6 : 4
       if (ranged && canShootFromHere) s += 2.5 * heavyShare
-      if (onControlledValuableObjective) s += 1.5
+      // control is sticky (CORE-17.5): staying pays only when this unit is the one keeping an enemy off a marker it holds
+      if (onControlledValuableObjective) s += holdNeeded ? 1.5 : 0.4
       if (ranged && !melee && canShootFromHere) s += 1.5
       if (!canShootFromHere && !onControlledValuableObjective) s -= 1.5
       if (meleeLeaning) s -= 1.0
@@ -302,13 +329,15 @@ function scoreDeclareMove(state: GameState, player: PlayerId, action: DeclareMov
       // Normal moves keep full shooting eligibility (only Advance/Fall Back forfeit it), so a ranged unit loses
       // nothing by repositioning toward a valuable objective while still able to shoot this turn.
       let s = 2.0
-      if (melee && gap > stats.M + ENGAGEMENT_H && gap <= stats.M + 12) s += 1.0
+      if (gunTarget && losesProfile) s -= 3
+      if (melee && !gun && gap > stats.M + ENGAGEMENT_H && gap <= stats.M + 12) s += 1.0
       else if (meleeLeaning && gap > stats.M + 12) s += 0.5 // still closing: next turn's charge starts from here
       if (nearestUnheldTarget <= stats.M + 6) s += 1.5
       return s
     }
     case 'advance': {
       let s = 1.0
+      if (gunTarget) s -= 4
       if (nearestUnheldTarget > stats.M && nearestUnheldTarget <= stats.M + 3.5) s += 3.0
       if (melee && gap > stats.M && gap <= stats.M + 10.5) s += 1.5
       // forfeits shooting this turn — which costs a hammer unit little
@@ -362,9 +391,16 @@ function scoreDeclareTargets(state: GameState, pending: PendingDecision, action:
 
 
 function scoreChooseUnitToActivate(state: GameState, player: PlayerId, pending: PendingDecision, action: Action): number {
-  if (action.type === 'pass') return -1000
+  // Spearhead charges have no declare step (CORE-9.4): picking the unit in the charge phase IS the charge, so the charge
+  // trade is judged here and passing ends the phase once nothing left is worth the dice
+  const charging = pending.kind === 'chooseUnitToActivate' && pending.context.phase === 'charge'
+  if (action.type === 'pass') return charging ? CHARGE_PASS : -1000
   if (action.type !== 'chooseUnitToActivate' || pending.kind !== 'chooseUnitToActivate') return 0
   const unitId = action.unitId
+  if (charging) {
+    const targets = boardUnitsOf(state, other(player)).map((u) => u.id).filter((id) => minGapBetweenUnits(state, unitId, id) <= 12.5)
+    return scoreDeclareCharge(state, player, pending, { type: 'declareCharge', player, decisionId: pending.id, unitId, targetUnitIds: targets } as DeclareChargeAction)
+  }
   if (pending.context.phase === 'shooting') {
     let best = 0
     for (const enemy of boardUnitsOf(state, other(player))) best = Math.max(best, unitRangedDamage(state, unitId, enemy.id) * unitValue(state, enemy.id) * 0.02)
@@ -452,6 +488,8 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
     // only cheap (1 W, 5+ or worse save), short-ranged mobs are screening-line material
     if (g.models.length >= 8 && stats.W === 1 && stats.Sv >= 5 && (rangeOf === null || rangeOf <= 18) && !heavy) shapes = [...shapes, 'line']
     const meleeOnly = hasAnyMeleeWeapon(state, g.unitId) && !hasAnyRangedWeapon(state, g.unitId)
+    const gun = !arrival && isGunline(state, g.unitId)
+    const gunRange = gun ? (bestRangedRangeOfUnit(state, g.unitId) ?? 0) : 0
     // a long oval base (Rockgrinder, 150x90 mm) is deeper than a 5" zone when it faces the enemy: also try it side-on
     const oval = g.models.some((m) => m.base.radius2 !== undefined && Math.abs(m.base.radius - m.base.radius2) > 0.2)
     let unitBest = -Infinity
@@ -481,7 +519,8 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
             if (!feet.every((f, i) => { const m = state.models[g.models[i].id]; return !m || deployTerrainBlock(state, m, f.pos, f.facing) === null })) continue
             const action: DeployUnitAction = { type: 'deployUnit', player, decisionId: pending.id, unitId: g.unitId, placements }
             let score = scoreDeployUnit(state, player, action, threats) + shapeRoleScore(shape === 'line' ? 'screen' : role, shape)
-            if (role === 'ranged') { score += Math.min(dEnemy, 36) * 0.03; if (inTerrain) score += 0.8 }
+            if (gun) score += Math.min(dEnemy, 36) * 0.05 + fireLanes(state, player, { x, z }, gunRange)
+            else if (role === 'ranged') { score += Math.min(dEnemy, 36) * 0.03; if (inTerrain) score += 0.8 }
             else if (role === 'melee' && !meleeOnly) score += Math.max(0, 36 - dEnemy) * 0.02
             if (arrival && role !== 'ranged') score += Math.max(0, 24 - dEnemy) * 0.05
             score += rng.next() * 0.6
@@ -502,25 +541,56 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
   return null
 }
 
+// a war machine's deployment: how many objectives and enemy set-up spots it could fire at from here without a wall in the way
+function fireLanes(state: GameState, player: PlayerId, at: { x: number; z: number }, range: number): number {
+  if (range <= 0) return 0
+  const from = { x: at.x, y: 1.2, z: at.z }
+  let lanes = 0
+  const look = (p: { x: number; z: number }, w: number): void => {
+    if (Math.hypot(p.x - at.x, p.z - at.z) > range) return
+    if (terrainLineClear(state, from, { x: p.x, y: 0.8, z: p.z })) lanes += w
+  }
+  for (const o of Object.values(state.objectives)) if (!o.removed) look(o.pos, 1)
+  const enemyModels = boardModelsOf(state, other(player))
+  if (enemyModels.length > 0) for (const m of enemyModels) look(m.pos, 0.3)
+  else {
+    try { for (const p of deploymentZone(state, other(player))) look({ x: (p.x * 2 + at.x) / 3, z: (p.z * 2 + at.z) / 3 }, 0.3) } catch { /* sides unset */ }
+  }
+  return lanes * 0.8
+}
+
 // Charge: no targets are declared in Spearhead (CORE-9.4), so the bot weighs the nearest candidate it could reach.
+const CHARGE_PASS = 0.3
+
 function scoreDeclareCharge(state: GameState, player: PlayerId, pending: PendingDecision, action: DeclareChargeAction | { type: 'pass' }): number {
-  if (action.type === 'pass') return 0.3
+  if (action.type === 'pass') return CHARGE_PASS
   const unitId = action.unitId
   const targets = action.targetUnitIds.length > 0 ? action.targetUnitIds : pending.kind === 'declareCharge' ? pending.context.candidateTargets : []
   if (targets.length === 0) return 0.4
+  // a gunline unit stuck in combat cannot shoot next turn (CORE-8.3) unless its gun has Shoot in Combat: it does not charge
+  if (isGunline(state, unitId) && !unitModels(state, unitId).some((m) => m.weapons.some((w) => state.weapons[w]?.kind === 'ranged' && state.weapons[w].abilities.some((a) => a.ability === 'SHOOT_IN_COMBAT')))) return -2
   const isLoneHero = hasKeyword(state, unitId, 'HERO') && unitModels(state, unitId).length <= 1
   const riskMult = isLoneHero ? 1.6 : 1.0
+  // a unit standing on an objective risks charging off it; it needs a clearly good trade to go
+  const onObjective = Object.values(state.objectives).some((o) => !o.removed && unitModels(state, unitId).some((m) => withinObjectiveRange(m, o)))
   let best = -Infinity
+  // after the charge, does this unit strike first (For Sigmar, Charge!, Unleashed Rage)? Then what it kills cannot hit back
+  const unit = state.units[unitId]
+  const charged = { ...state, units: { ...state.units, [unitId]: { ...unit, turn: { ...unit.turn, chargedThisTurn: true } } } } as GameState
+  const strikeFirst = !!DEFAULT_SERVICES.hooks.eligibilityFor?.(charged, unitId, 'fightFirst')
   for (const targetId of targets) {
     const gap = minGapBetweenUnits(state, unitId, targetId)
     const needed = Math.max(0, gap - 0.5)
     const dmg = unitMeleeDamage(state, unitId, targetId, { charged: true })
-    const ret = unitMeleeDamage(state, targetId, unitId, {})
-    const payoff = dmg * unitValue(state, targetId) * 0.02 - ret * unitValue(state, unitId) * 0.02 * riskMult
+    const wounds = unitModels(state, targetId).reduce((a, m) => a + m.woundsRemaining, 0)
+    let ret = unitMeleeDamage(state, targetId, unitId, {})
+    if (strikeFirst && wounds > 0) ret *= Math.max(0, 1 - dmg / wounds)
+    // the enemy swings at this unit sooner or later whether it charges or not: only part of the return blow is the charge's cost
+    const payoff = dmg * unitValue(state, targetId) * 0.02 - ret * unitValue(state, unitId) * 0.02 * riskMult * 0.7
     const p = chargeProb(Math.ceil(needed))
     best = Math.max(best, p * payoff - (1 - p) * 0.4)
   }
-  return best
+  return onObjective ? best - 0.6 : best
 }
 
 const CARD_TOPICS: ReadonlySet<string> = new Set(['twistPick', 'discardTactics', 'scoreTactics', 'tacticCommand'])
@@ -550,11 +620,11 @@ function scoreChooseOption(state: GameState, player: PlayerId, pending: PendingD
     case 'pileInTarget': {
       // a target is always better than backing out: pick the most valuable unit (friendly buffs and enemy debuffs alike)
       const unitId = hintUnitId ?? (state.units[action.optionId] ? action.optionId : null)
-      if (unitId && state.units[unitId]) return 1 + unitValue(state, unitId) * 0.03
+      if (unitId && state.units[unitId]) return 1 + unitValue(state, unitId) * 0.03 + abilityTargetBonus(state, player, pending, unitId)
       return declining ? -1 : 0.5
     }
     case 'abilityMode':
-      return declining ? -1 : 0.5
+      return declining ? -1 : 0.5 + abilityModeBonus(state, pending, action.optionId)
     case 'contestedObjective': {
       const o = state.objectives[action.optionId]
       return o ? objectiveScoreWeight(state, player, o.id) : 0
@@ -567,6 +637,51 @@ function scoreChooseOption(state: GameState, player: PlayerId, pending: PendingD
   return score
 }
 
+const contestsObjective = (state: GameState, unitId: UnitId): boolean =>
+  Object.values(state.objectives).some((o) => !o.removed && unitModels(state, unitId).some((m) => withinObjectiveRange(m, o)))
+
+// the unit an ability being declared has picked (abilities.ts keeps the selection in a phase mark keyed by the window key)
+function selectedAbilityTarget(state: GameState, pending: PendingDecision): UnitId | null {
+  const k = ((pending as { context?: { data?: { k?: unknown } } }).context?.data?.k)
+  if (typeof k !== 'string') return null
+  const prefix = `abil:sel:${k}=`
+  const mark = state.phaseState.marks.find((m) => m.startsWith(prefix))
+  if (!mark) return null
+  try { return (JSON.parse(mark.slice(prefix.length)) as { target?: UnitId }).target ?? null } catch { return null }
+}
+
+// what makes one target better than another for the abilities whose value is not just "the biggest unit"
+function abilityTargetBonus(state: GameState, player: PlayerId, pending: PendingDecision, unitId: UnitId): number {
+  const abilityId = (pending as { context?: { abilityId?: string | null } }).context?.abilityId
+  const code = abilityId ? state.abilities[abilityId]?.code : undefined
+  const unit = state.units[unitId]
+  if (!unit) return 0
+  if (code === 'citiesIronweldDiscipline') {
+    // the Cannon fires at it: expected damage, not size
+    let best = 0
+    for (const u of boardUnitsOf(state, player)) if (isGunline(state, u.id)) best = Math.max(best, unitRangedDamage(state, u.id, unitId, { inRangeOnly: true }) * unitValue(state, unitId) * 0.02)
+    return best * 3
+  }
+  if (code === 'citiesDecisiveCommander' && unit.player === player) {
+    // a unit missing models (On Your Feet!) or holding an objective (Yield No Quarter!) gains the most
+    return (unit.startingStrength - unit.models.length) * 0.4 + (contestsObjective(state, unitId) ? 0.8 : 0)
+  }
+  return 0
+}
+
+function abilityModeBonus(state: GameState, pending: PendingDecision, optionId: string): number {
+  const abilityId = (pending as { context?: { abilityId?: string | null } }).context?.abilityId
+  // The Officer's Order: set aside the card least likely to be scored, so its command is the one that comes free
+  if (abilityId && state.abilities[abilityId]?.code === 'citiesOfficersOrder') return 0.5 - tacticOdds(state, pending.player, optionId)
+  const target = selectedAbilityTarget(state, pending)
+  if (!target || !state.units[target]) return 0
+  const key = optionId.toLowerCase().replace(/[^a-z]/g, '')
+  const unit = state.units[target]
+  if (key.includes('feet')) return Math.min(3, unit.startingStrength - unit.models.length) * 0.5
+  if (key.includes('yield')) return contestsObjective(state, target) ? 1.2 : 0.2
+  return 0
+}
+
 function scoreAction(state: GameState, player: PlayerId, pending: PendingDecision, action: Action): number {
   switch (pending.kind) {
     case 'deployUnit': return action.type === 'deployUnit' ? scoreDeployUnit(state, player, action) : 0
@@ -575,7 +690,8 @@ function scoreAction(state: GameState, player: PlayerId, pending: PendingDecisio
     case 'moveUnit': return action.type === 'moveUnit' ? scorePosition(state, player, action.unitId, action.placements, false) : 0
     case 'declareTargets': return action.type === 'declareTargets' ? scoreDeclareTargets(state, pending, action) : 0
     case 'declareCharge': return action.type === 'declareCharge' || action.type === 'pass' ? scoreDeclareCharge(state, player, pending, action as DeclareChargeAction | { type: 'pass' }) : 0
-    case 'chargeMove': return action.type === 'chargeMove' ? scorePosition(state, player, action.unitId, action.placements, true) : 0
+    // passing a charge move after a good roll throws the charge away (and the Core slot with it): only when no move is offered
+    case 'chargeMove': return action.type === 'chargeMove' ? 100 + scorePosition(state, player, action.unitId, action.placements, true) : 0
     case 'pileIn': return action.type === 'pileIn' ? scorePosition(state, player, action.unitId, action.placements, true) : 0
     case 'consolidate': return action.type === 'consolidate' ? scorePosition(state, player, action.unitId, action.placements, true) : 0
     case 'chooseFightUnit': return scoreChooseFightUnit(state, player, action)

@@ -9,6 +9,8 @@ import { useDisplayState } from '../presentation/presentedStore'
 import { colors, fontStack } from '../ui/theme'
 import { useFormFactor } from '../ui/formFactor'
 import { useUiStore } from '../ui/uiStore'
+import { useGameStore } from '../store/game'
+import { isPlacementDecision } from './decisions'
 import {
   COMPACT_LABEL_WIDTH_FRAC, CULL_INTERVAL_MS, DESKTOP_LABEL_MAX, LABEL_DISTANCE_FACTOR, OVERLAP_FADE_OPACITY, coveredByHud, hudZoneRects,
   intersectionArea, rectArea, setCullOpacity, useLabelClamp, type ScreenRect,
@@ -130,6 +132,10 @@ function CompactLabelCuller() {
     const tick = () => {
       const zones = hudZoneRects()
       const selected = useUiStore.getState().selectedUnitId
+      // Placing or moving a unit on a phone: the board is small and the name tags crowd the objective labels, so the
+      // tags step aside until the prompt closes (the icon rows stay).
+      const { pending, botSeat } = useGameStore.getState()
+      const placing = !!pending && pending.player !== botSeat && (pending.kind === 'deployUnit' || isPlacementDecision(pending))
       const live: { id: string; rect: ScreenRect; dist: number; tag?: HTMLElement | null; row?: HTMLElement | null }[] = []
       for (const [id, e] of labelRegistry) {
         if (!(e.tagWrap?.isConnected || e.rowWrap?.isConnected)) continue
@@ -142,6 +148,10 @@ function CompactLabelCuller() {
         live.push({ id, rect: r, dist, tag: e.tagWrap, row: e.rowWrap })
       }
       // Highest priority first: the selected unit, then nearest to the camera.
+      if (placing) {
+        for (const u of live) { setCullOpacity(u.tag, 0); setCullOpacity(u.row, 1) }
+        return
+      }
       live.sort((x, y) => (x.id === selected ? -1 : y.id === selected ? 1 : x.dist - y.dist))
       const kept: ScreenRect[] = []
       for (const u of live) {

@@ -8,7 +8,7 @@ import { useGameStore } from '../store/game'
 import { useUiStore } from './uiStore'
 import {
   FORMATION_HINTS, FORMATION_KEYS, FORMATION_LABELS, FORMATION_ORDER, ROTATE_STEP_RAD,
-  formationPlacementsForUnit, isPlacementDecision, normalizeAngle, placementInfo, type FormationKind,
+  formationPlacementsForUnit, usesFormationShape, normalizeAngle, placementInfo, type FormationKind,
 } from '../interaction'
 import { buttonActive, buttonBase, colors, fontStack, mutedText, panel } from './theme'
 import { Tooltip } from './Tooltip'
@@ -128,7 +128,7 @@ export function FormationPicker() {
 
   const active = !!state && !!pending && pending.player !== botSeat
   const isDeploy = active && pending!.kind === 'deployUnit' && !!deployTargetUnitId
-  const isMove = active && isPlacementDecision(pending)
+  const isMove = active && usesFormationShape(pending)
   const show = isDeploy || isMove
   const perModelDraft = !!pending && (pending.kind === 'pileIn' || pending.kind === 'consolidate')
   const wrapRef = useRef<HTMLDivElement>(null)

@@ -77,6 +77,12 @@ export function isPlacementDecision(pending: PendingDecision | null): boolean {
   return !!pending && placementInfo(pending) !== null
 }
 
+/** The formation bar (Line / Ranks / Phalanx ...) applies where a whole unit is laid out in a shape: a normal or charge move.
+ *  Pile in and consolidate are per-model nudges of up to 3", so a shape would only mislead there. */
+export function usesFormationShape(pending: PendingDecision | null): boolean {
+  return isPlacementDecision(pending) && pending!.kind !== 'pileIn' && pending!.kind !== 'consolidate'
+}
+
 /** Ranged declareTargets (normal shooting and Overwatch) is answered in the weapon panel; melee targeting
  *  keeps the one-click flow. */
 export function opensWeaponPanel(pending: PendingDecision): boolean {

@@ -19,7 +19,8 @@
 //  citiesBrazier                    enhancement, end of any turn: return D3 slain models to a Steelhelms unit within params.range (3").
 //  citiesGlimmering                 enhancement: a battle-long active effect on the bearer's unit (ensureEffects) whose `produce`
 //        answers hit / wound / save rolls with a one-die re-roll, once per phase (phase mark `glim:used`).
-// Still parked (registered with canUse false): citiesOfficersOrder (needs battle tactic cards, P2).
+//  citiesOfficersOrder (BT-1)       start of each battle round: set one battle tactic card in hand aside (the mode is the card);
+//        cards.ts keeps it (officersOrderCard) and makes its command free: used, it returns to the hand, locked for the phase.
 import type { AbilityUse, ActivatedAbilityHook } from '../hooks'
 import type { EngineCodeHook } from '../code-hooks'
 import type { DiceExpr } from '../../data/types'
@@ -30,6 +31,7 @@ import { attackService } from '../attack'
 import { effectService } from '../effects'
 import { weaponService } from '../weapons'
 import { buildShootingWeaponEntries, unitEligibleToShoot } from '../phases/shooting'
+import { cardName, officersOrderCard, setOfficersOrder } from '../cards'
 import type { EngineContext } from '../modules'
 import {
   announce, consecratedFor, consecratedMap, declaredRoll, enemiesInCombat, healUnit, inCombat, inflictMortal, isDamaged, isDatasheet, liveObjectives, onBoard, paramOf, paramsByCode, playerContestsObjective,
@@ -41,11 +43,21 @@ const noop = () => undefined
 const CODE_DECISIVE = 'citiesDecisiveCommander'
 const CANNONBALL = 'cities.weapon.great-cannon-cannonball'
 
-// P1 stub: the ability is registered so data may name it, but it can never be used yet
-const parked = (name: string): EngineCodeHook => ({
-  name, kind: 'ability', hook: 'onAbilityDeclared', run: noop,
-  activate: { canUse: () => false, resolve: noop },
-})
+// ---------- CITIES-BT-1 The Officer's Order ----------
+const officersHand = (state: GameState, player: PlayerId | undefined): string[] => (player ? state.cards?.tactics[player]?.hand ?? [] : [])
+const officersActivate: ActivatedAbilityHook & { modesFor?(state: GameState, unitId: UnitId | null, player: PlayerId): { id: string; label: string }[] } = {
+  canUse: (state, _unitId, use) => officersHand(state, use.player).length > 0 && !officersOrderCard(state, use.player as PlayerId),
+  modesFor: (state, _unitId, player) => officersHand(state, player).map((id) => ({ id, label: `Set aside ${cardName(id)}` })),
+  resolve(ctx, use) {
+    const hand = officersHand(ctx.state, use.player)
+    const cardId = use.modeId && hand.includes(use.modeId) ? use.modeId : hand[0]
+    if (!cardId) return
+    setOfficersOrder(ctx.state, use.player, cardId)
+    // the opponent learns that a card was set aside, not which one
+    announce(ctx, use, null, "The Officer's Order: a battle tactic card is set aside; its command is free this round")
+  },
+}
+const citiesOfficersOrder: EngineCodeHook = { name: 'citiesOfficersOrder', kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: officersActivate }
 
 // the mode id as data spells it (on-your-feet, onYourFeet, "On Your Feet!") -> a canonical key
 const modeKey = (id: string | null): 'feet' | 'yield' | null => {
@@ -351,6 +363,5 @@ const num = (v: unknown, fallback: number): number => (typeof v === 'number' ? v
 export const citiesHooks: Record<string, EngineCodeHook> = {
   citiesForSigmarCharge, citiesDecisiveCommander, citiesDevastatingCharge, citiesShotAndShell, citiesFlask,
   citiesConsecrateTheLand, citiesIronweldDiscipline, citiesBrazier, citiesGlimmering,
-  // P2: needs the battle tactic cards, which the engine does not have yet
-  citiesOfficersOrder: parked('citiesOfficersOrder'),
+  citiesOfficersOrder,
 }

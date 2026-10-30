@@ -75,6 +75,15 @@
     },
     "duration": "untilEndOfTurn",
     "code": "ironjawzNaturalDisaster",
+    "effect": {
+      "when": {
+        "weaponType": "melee"
+      },
+      "modifyStat": {
+        "stat": "A",
+        "value": 1
+      }
+    },
     "params": {
       "minUnmodified": 8,
       "extraAttacks": 1,
@@ -109,6 +118,15 @@
       "who": "bearer"
     },
     "code": "ironjawzAmberbone",
+    "effect": {
+      "when": {
+        "weaponType": "melee"
+      },
+      "modifyStat": {
+        "stat": "AP",
+        "value": -1
+      }
+    },
     "params": {
       "weaponType": "melee",
       "setRend": 2
@@ -161,6 +179,12 @@
     },
     "duration": "untilEndOfTurn",
     "code": "ironjawzMegaBossy",
+    "effect": {
+      "modifyRoll": {
+        "roll": "charge",
+        "value": 1
+      }
+    },
     "params": {
       "requires": "bearerCharged",
       "range": 12,

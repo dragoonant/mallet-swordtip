@@ -24,7 +24,7 @@ import { announcementHoldMs, clearAnnouncement, holdAnnouncement, type Announcem
 import { playRoll, rerollTrayShown, type RollRequest } from '../dice'
 import { vfx } from '../vfx'
 import { planVolleys, type StruckModel } from './volleys'
-import { audio, playEventSounds, type SoundLookup } from '../audio'
+import { audio, missWhooshFor, playEventSounds, type SoundLookup } from '../audio'
 import { colors } from '../ui/theme'
 import { dieTarget } from '../ui/eventSummary'
 
@@ -777,6 +777,10 @@ function soundLookup(state: GameState, bundle: DataBundle | null): SoundLookup {
   return {
     weapon: (weaponId) => bundle?.weapons[weaponId],
     factionOfUnit: (unitId) => factionOf(state, unitId),
+    keywordsOfUnit: (unitId) => {
+      const u = state.units[unitId]
+      return (u && state.datasheets[u.datasheetId]?.keywords) || []
+    },
   }
 }
 
@@ -979,6 +983,7 @@ async function playBatchBody(from: GameState, to: GameState, events: GameEvent[]
         }
         // A held save's clank (or the thud of a failed one) waits for its shot to land.
         if (!(deferred && event.type === 'SaveRolled')) playEventSounds(audio, [event], humanSeat, lookup)
+        if (event.type === 'HitRolled') for (const w of missWhooshFor(group)) audio.play(w.id, w.opts)
         const req = usePresentationSettings.getState().diceOn ? groupRequest(to, group) : null
         if (req) await whilePlaying(() => playRoll(req))
       }

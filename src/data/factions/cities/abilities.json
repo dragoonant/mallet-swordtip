@@ -32,6 +32,9 @@
       "kind": "passive"
     },
     "code": "citiesForSigmarCharge",
+    "effect": {
+      "fightsFirst": true
+    },
     "scope": {
       "who": "self"
     },

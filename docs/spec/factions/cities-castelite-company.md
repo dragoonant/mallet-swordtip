@@ -157,10 +157,12 @@ flavour only; Consecrate the Land is a normal ability, not a prayer.)
 
 ## 7. Engine notes
 
-1. **Battle-tactic card set-aside (CITIES-BT-1):** needs a per-player "set-aside" slot on battle tactic
-   cards, hidden-info handling (opponent sees which card, not its face), a "command from card is free
-   and card returns to hand" path, a "not usable again this phase" lock, and an end-of-turn auto-return.
-   Depends on the Spearhead battle-tactic deck/command system existing in the core engine.
+1. **Battle-tactic card set-aside (CITIES-BT-1), implemented:** the army ability (start of each battle
+   round, once per round) picks a card in hand as its mode. `src/engine/cards.ts` keeps the choice in
+   `mission.custom.officersOrder` (the card stays in the hand, so scoring and command offers still see it).
+   Using its command does not discard it: the card is revealed in the event summary, goes back to the
+   hand and is locked for the rest of that phase. Scoring it clears the set-aside; otherwise it lapses at
+   the end of its owner's turn. `redactCards` shows the opponent only which hand slot is set aside.
 2. **Return slain models** (Decisive Commander *On Your Feet!*, Brazier of Holy Flame): needs a
    per-unit slain-model count capped at starting size and a placement step (returned models set up in
    coherency, within the unit's combat range rules per core). *On Your Feet!* requires target not in
@@ -180,7 +182,8 @@ flavour only; Consecrate the Land is a normal ability, not a prayer.)
    Shoot use; the AI/UI must pick one, and the engine must track whether the unit used a Move ability
    this turn (normal move, run, retreat, charge all count as Move abilities per core).
 8. **Strike-first for charged Cavalry (CITIES-RA-1):** conditional keyword grant keyed on a per-turn
-   "charged" flag.
+   "charged" flag. The descriptor must carry `effect: { fightsFirst: true }` (the code hook only gates
+   it); the shipped data lacked it until the balance audit, so the ability did nothing in play.
 9. **Glimmering:** a per-phase, single-use re-roll token for the general covering hit, wound, or save
    rolls; requires a re-roll prompt for a single die.
 10. **Weapon abilities used:** Shoot in Combat, Companion, Charge (+1 Damage) — core weapon abilities;

@@ -14,6 +14,7 @@ import { effectService } from '../../src/engine/effects'
 import { hookService } from '../../src/engine/hooks-impl'
 import { objectiveService } from '../../src/engine/objectives'
 import { weaponService } from '../../src/engine/weapons'
+import { officersOrderCard } from '../../src/engine/cards'
 import type { AbilityDescriptor, DatasheetData, DataBundle, EnhancementData, FactionData, WeaponData } from '../../src/data/types'
 import { aosState, makeAosPlayer, withAosBundle } from '../fixtures'
 import abilitiesJson from '../../src/data/factions/cities/abilities.json'
@@ -136,13 +137,37 @@ describe('registry', () => {
     }
   })
 
-  it('CITIES-P2 the Officers Order (battle tactic cards) is still parked and can never be used', () => {
+})
+
+describe("CITIES-BT-1 The Officer's Order", () => {
+  const withHand = (s: GameState, ids: string[]): void => {
+    const piles = (hand: string[]) => ({ deck: [], hand, discard: [], scored: [] })
+    s.cards = { tactics: { A: piles(ids), B: piles([]) } } as unknown as GameState['cards']
+  }
+
+  it("CITIES-BT-1 needs a battle tactic card in hand and is offered once at the start of the battle round", () => {
     const s = game()
-    expect(codeHooks.citiesOfficersOrder.activate!.canUse(s, 'A:marshal', {})).toBe(false)
+    expect(codeHooks.citiesOfficersOrder.activate!.canUse(s, null, { player: 'A' })).toBe(false)
+    withHand(s, ['card.tactic.raid', 'card.tactic.hold-ground'])
+    expect(codeHooks.citiesOfficersOrder.activate!.canUse(s, null, { player: 'A' })).toBe(true)
+    const ctx = ctxFor(s, [])
+    const topics = useOnce(ctx, 'startOfRound', 'A', 'cities.ability.the-officers-order', { mode: 'hold-ground' })
+    expect(topics).toContain('abilityMode')
+    expect(officersOrderCard(s, 'A')).toBe('card.tactic.hold-ground')
+    // the announcement does not name the card
+    const ann = eventsOf(ctx, 'AbilityTriggered').map((e) => (e as { summary: string }).summary).join(' ')
+    expect(ann).not.toContain('Hold')
+    // once per battle round, and never while a card is already set aside
+    expect(abilityService.usable(s, 'A', 'startOfRound').some((u) => u.abilityId === 'cities.ability.the-officers-order')).toBe(false)
   })
 })
 
 describe('CITIES-RA-1 For Sigmar, Charge!', () => {
+  it('CITIES-RA-1 the shipped data carries the Strike-first effect the code hook gates', () => {
+    const a = (abilitiesJson as unknown as AbilityDescriptor[]).find((x) => x.id === 'cities.ability.for-sigmar-charge')
+    expect(a?.effect).toEqual({ fightsFirst: true })
+  })
+
   it('CITIES-RA-1 Cavalry that charged this turn have Strike-first; others and uncharged Cavalry do not', () => {
     const s = game()
     const strikeFirst = (id: UnitId) => hookService.eligibilityFor!(s, id, 'fightFirst')

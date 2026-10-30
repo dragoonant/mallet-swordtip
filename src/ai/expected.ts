@@ -3,7 +3,8 @@
 // then the target's Save worsened by Rend (no floor, +1 cap on bonuses), then Ward per damage point. Crit abilities
 // and Anti-X are approximated; there is no points data at runtime so "value" comes from stats.
 import { diceExprMean } from '../engine/dice'
-import { boardModelsOf, hasKeyword, keywordsOf, modelStats, unitModels } from '../engine/state'
+import { boardModelsOf, boardUnitsOf, hasKeyword, keywordsOf, modelStats, unitModels } from '../engine/state'
+import { horizontalGap } from '../engine/geometry'
 import { weaponService } from '../engine/weapons'
 import type { GameState, ModelId, PlayerId, UnitId, WeaponId } from '../engine/types'
 
@@ -118,6 +119,9 @@ export function bestMeleeWeapon(state: GameState, modelId: ModelId): WeaponId | 
   return best
 }
 
+// the longest-ranged ranged weapon the model can use right now (ties: more Attacks x Damage). Range, not raw output, picks
+// it: a war machine whose long profile and short profile hit about as hard (Great Cannon: Cannonball 24" vs Grapeshot 12")
+// otherwise reads as a 12" gun, walks into charge range to use it and never shoots again.
 export function bestRangedWeapon(state: GameState, modelId: ModelId): { weaponId: WeaponId; range: number } | null {
   const model = state.models[modelId]
   if (!model) return null
@@ -125,8 +129,8 @@ export function bestRangedWeapon(state: GameState, modelId: ModelId): { weaponId
   let bestScore = -Infinity
   for (const wid of model.weapons) {
     const w = weaponService.effectiveWeapon(state, modelId, wid)
-    if (w.kind !== 'ranged') continue
-    const score = diceExprMean(w.A) * diceExprMean(w.D)
+    if (w.kind !== 'ranged' || !weaponService.isAvailable(state, modelId, wid)) continue
+    const score = w.range * 100 + diceExprMean(w.A) * diceExprMean(w.D)
     if (score > bestScore) { bestScore = score; best = { weaponId: wid, range: w.range } }
   }
   return best
@@ -159,23 +163,54 @@ export function threatAt(state: GameState, forPlayer: PlayerId, pos: { x: number
   return threatFrom(threatSources(state, forPlayer), pos)
 }
 
-// each living model swings / fires its single best weapon of that kind at the target unit
+// melee: every living model attacks with all of its melee weapons (CORE-11: a mount's Companion hooves strike as well)
 export function unitMeleeDamage(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId, opts: AttackOptions = {}): number {
   let total = 0
   for (const m of unitModels(state, attackerUnitId)) {
-    const wid = bestMeleeWeapon(state, m.id)
-    if (wid) total += expectedAttack(state, m.id, wid, targetUnitId, opts).damage
+    for (const wid of m.weapons) if (state.weapons[wid]?.kind === 'melee') total += expectedAttack(state, m.id, wid, targetUnitId, opts).damage
   }
   return total
 }
 
-export function unitRangedDamage(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId, opts: AttackOptions = {}): number {
+// each living model fires its best usable ranged weapon at the target (out of range or not: callers judge range); with
+// `inRangeOnly` a weapon only counts when the target is within its range of that model right now
+export function unitRangedDamage(state: GameState, attackerUnitId: UnitId, targetUnitId: UnitId, opts: AttackOptions & { inRangeOnly?: boolean } = {}): number {
   let total = 0
+  const targets = unitModels(state, targetUnitId)
   for (const m of unitModels(state, attackerUnitId)) {
-    const best = bestRangedWeapon(state, m.id)
-    if (best) total += expectedAttack(state, m.id, best.weaponId, targetUnitId, opts).damage
+    let best = 0
+    const gap = opts.inRangeOnly ? Math.min(...targets.map((t) => horizontalGap(m, t))) : 0
+    for (const wid of m.weapons) {
+      const w = state.weapons[wid]
+      if (!w || w.kind !== 'ranged' || !weaponService.isAvailable(state, m.id, wid)) continue
+      if (opts.inRangeOnly && weaponService.effectiveWeapon(state, m.id, wid).range < gap) continue
+      best = Math.max(best, expectedAttack(state, m.id, wid, targetUnitId, opts).damage)
+    }
+    total += best
   }
   return total
+}
+
+// a unit whose guns out-hit its melee by a wide margin (the Great Cannon): it should stand and shoot, not charge or wander
+export function isGunline(state: GameState, unitId: UnitId): boolean {
+  if (!hasAnyRangedWeapon(state, unitId)) return false
+  const player = state.units[unitId]?.player
+  if (!player) return false
+  let ranged = 0, melee = 0
+  for (const e of boardUnitsOf(state, player === 'A' ? 'B' : 'A')) {
+    ranged = Math.max(ranged, unitRangedDamage(state, unitId, e.id))
+    melee = Math.max(melee, unitMeleeDamage(state, unitId, e.id))
+  }
+  if (ranged === 0 && melee === 0) {
+    // nobody on the table yet (deployment): compare raw weapon output
+    for (const m of unitModels(state, unitId)) for (const wid of m.weapons) {
+      const w = state.weapons[wid]
+      if (!w) continue
+      const v = diceExprMean(w.A) * diceExprMean(w.D) * ((7 - (w.skill ?? 4)) / 6) * ((7 - w.wound) / 6)
+      if (w.kind === 'ranged') ranged = Math.max(ranged, v); else melee += v
+    }
+  }
+  return ranged > melee * 2
 }
 
 export function bestRangedRangeOfUnit(state: GameState, unitId: UnitId): number | null {

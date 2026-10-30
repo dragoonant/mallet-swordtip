@@ -159,5 +159,9 @@ Also carries the battle-trait reserve rule and ability IJZ-2.1.
   the core rules); mortal damage (Shield Bash).
 - **IJZ-E10 Objective contest filter (IJZ-5.4.1).** The objective-control step must drop enemy units
   with base Health 1–2 that are in combat with the Brutes unit; it does not change their Control value.
+- **IJZ-E12 Gated passives carry their effect in data.** Natural Disaster (`modifyStat A +1`, melee),
+  Mega Bossy (`modifyRoll charge +1`) and Amberbone Whetstone (`modifyStat AP -1` on the Rend 1 Boss-choppa,
+  i.e. Rend 2) are descriptors whose code hook only gates the effect; the shipped data lacked the effects
+  until the balance audit, so none of the three did anything in play.
 - **IJZ-E11 Shield Bash counting.** Counts Ardboyz models within 3" of the target (not within 1"),
   rolled at the declaration moment.

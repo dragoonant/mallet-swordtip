@@ -30,7 +30,7 @@ export {
   audioUrl,
 } from './manifest'
 export type { SoundId, SfxId, VoiceId, MusicId, StingerId, SoundChannel } from './manifest'
-export { soundsForEvent, playEventSounds, endGameVoiceLine } from './eventSounds'
+export { soundsForEvent, missWhooshFor, playEventSounds, endGameVoiceLine } from './eventSounds'
 export type { SoundLookup } from './eventSounds'
 export type { EventSound } from './eventSounds'
 export { useAudioSettings } from './useAudioSettings'
