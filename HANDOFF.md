@@ -8,7 +8,7 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
 - F0 done: forked from `dragoonant/mallet-42k` at `2ee8fd2`, renamed (package, Vite base
   `/mallet-swordtip/`, titles, PWA manifest, localStorage keys now `swordtip:*` / `swordtip.*`
   so saves never collide with 42k on the shared `dragoonant.github.io` origin).
-- Live: https://dragoonant.github.io/mallet-swordtip/ (the 42k game, renamed, until F4).
+- Live: https://dragoonant.github.io/mallet-swordtip/ (Spearhead build since F4).
 - JSON schema `$id`s still read `https://mallet42k.dev/...` — internal identifiers, left alone.
 
 ## F4 cards (2026-10-29): twist and battle tactic cards
@@ -40,12 +40,24 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
   `tests/e2e/cards-shots.spec.ts`. Run: `npm run build && npx vite preview --port 4423`, then
   `PW_BASE_URL=http://localhost:4423/mallet-swordtip/ npx playwright test <spec> --project=chromium`. A full game takes 6-7 minutes.
 
+## F5 (2026-10-30): polish, balance pass, asset prune, next faction specs
+- client-ux: deploy panel has "Auto-place" (chosen or biggest waiting unit, first legal spot) and "Auto-deploy rest"; unit rings
+  are thin player-coloured ellipses; start screen shows faction crests (`FactionCrest.tsx`); dead 40k prompt code removed from
+  `DecisionPrompt.tsx`; formation bar and phone tag fixes; move sounds.
+- balance-ai: charges fit model by model, the utility AI weighs charges when picking units, Cannon AI, missing Cities/Ironjawz
+  ability effects, Officer's Order on. `npx tsx tools/balance-stats.ts [games] [seed]` prints per-unit damage, charges, card use
+  and the win split (20 games seed 7: cities 4, ironjawz 15, 1 draw). `npm run sim -- --games 40 --seed 3 --ai`: ironjawz 32,
+  cities 7, 1 draw, 0 violations. Still lopsided.
+- Unused 40k models pruned from `public/assets/models`.
+- New faction specs (not built): `docs/spec/factions/slaves-to-darkness.md` (Darkoath Raiders) and `fyreslayers.md`.
+  Local audio tools in `tools/local-audio/`.
+- QA on the built site (`vite preview --port 4433`): hotseat, bot and bot-as-Ironjawz games reach the end screen in 4 rounds
+  with no console errors; `client-ux-shots.spec.ts` (auto-place, auto-deploy, rings) and the iPhone 15 Pro spec pass. No fixes needed.
+
 ## Next
-- Balance: simulated AI-vs-AI games favour Ironjawz heavily (25 of 30 in the cards stage). Check the Cities AI and the unit stats.
+- Balance: Ironjawz still win about 4 of 5 AI-vs-AI games (32/40). Use `tools/balance-stats.ts` to see where Cities lose damage
+  (Steelhelm and Cavalier charges, Cannon uptime) and tune unit stats or the Cities AI.
+- Build a third faction from the new specs (Slaves to Darkness or Fyreslayers): data JSON, `src/engine/factions/*.ts`, figures.
 - Ghyran side is data only (no Ghyran battleplan file), so only the Aqshy side is playable.
-- Phone: the board is small while a prompt is open and unit tags crowd the objective labels; consider hiding tags during placement.
-- `public/assets/models` still holds ~270 MB of 40k models that nothing references; prune before the next Pages deploy if size matters.
-- The hover highlight ring on a unit activation is a very thick white ellipse; thin it.
-- Dead 40k decision-topic hints (Waaagh, Oath of Moment, Stratagem offers) remain in `DecisionPrompt.tsx`; they never fire in Spearhead.
-- Officer's Order (CITIES-BT-1) is still off in the engine.
+- Phone: the board is small while a prompt is open and unit tags crowd the objective labels; hide tags during placement.
 - Ship: push to `main`; Pages deploys `dist/` at https://dragoonant.github.io/mallet-swordtip/.
