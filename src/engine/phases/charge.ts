@@ -10,6 +10,7 @@
 // enemy fails at once (the "stay" is automatic, no decision is raised).
 // Charging grants no Strike-first (CORE-10.9). Overwatch, Heroic Intervention and Tank Shock are gone.
 import { rollSum } from '../dice'
+import { applyAbilityRerolls } from '../rerolls'
 import {
   CHARGE_END, EPS, baseEdgePoints, basesOverlap, checkPlacements, distance, emptyMoveConstraints, horizontalGap, pathCrossesModels,
   pointInPolygon, pointToPolygonEdge, whollyOnBoard, whollyWithinPolygon, withinEngagementRange, samplePath,
@@ -359,8 +360,11 @@ function driveCharge(ctx: EngineContext): 'pending' | 'progress' {
   s.step = 'roll'
   if (charge.roll === null) {
     // Grasping Vines (cards): an ensnared unit rolls one fewer dice
-    const roll = ctx.rollOnce(`charge:${unitId}`, { purpose: 'charge', player: unit.player, sides: 6, count: cardChargeDice(s, unitId), mode: 'sum', unitId })
+    let roll = ctx.rollOnce(`charge:${unitId}`, { purpose: 'charge', player: unit.player, sides: 6, count: cardChargeDice(s, unitId), mode: 'sum', unitId })
     if (roll === null) return 'pending'
+    // ability re-rolls of a charge roll that falls short (STD-ENH-3 Champion of Raids; rerolls.ts)
+    const short = neededChargeDistance(s, unitId)
+    if (short !== null) roll = applyAbilityRerolls(ctx, 'onChargeRoll', { chargingUnitId: unitId, targetUnitIds: charge.targetUnitIds }, roll, Math.ceil(short - chargeRollModifier(ctx, charge, roll) - EPS))
     const raw = rollSum(roll)
     const total = Math.max(0, raw + chargeRollModifier(ctx, charge, roll))
     charge.roll = [roll.dice[0] ?? 0, roll.dice[1] ?? 0]

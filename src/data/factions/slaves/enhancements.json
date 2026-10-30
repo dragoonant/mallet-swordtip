@@ -1,0 +1,38 @@
+[
+  {
+    "id": "slaves.enh.bloodthirsty-blade",
+    "faction": "slaves",
+    "name": "Bloodthirsty Blade",
+    "text": "The general's Rune-etched Axe has Rend 2.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaves.ability.bloodthirsty-blade"
+  },
+  {
+    "id": "slaves.enh.godshadow-talisman",
+    "faction": "slaves",
+    "name": "Godshadow Talisman",
+    "text": "The general has Ward (4+).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaves.ability.godshadow-talisman"
+  },
+  {
+    "id": "slaves.enh.champion-of-raids",
+    "faction": "slaves",
+    "name": "Champion of Raids",
+    "text": "In your charge phase, another friendly unit wholly within 12\" of the general can re-roll its charge rolls for the rest of the turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaves.ability.champion-of-raids"
+  },
+  {
+    "id": "slaves.enh.fell-ritualist",
+    "faction": "slaves",
+    "name": "Fell Ritualist",
+    "text": "While the general is on the battlefield, each time you draw battle tactic cards you may draw 1 extra, then put 1 card from your hand on the bottom of your deck.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaves.ability.fell-ritualist"
+  }
+]

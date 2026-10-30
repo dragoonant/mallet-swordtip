@@ -1,0 +1,52 @@
+[
+  {
+    "id": "fyreslayers.unit.vulkite-berzerkers",
+    "faction": "fyreslayers",
+    "name": "Vulkite Berzerkers",
+    "keywords": [
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "FYRESLAYERS"
+    ],
+    "stats": {
+      "M": 4,
+      "W": 2,
+      "Sv": 6,
+      "OC": 1,
+      "ward": 6
+    },
+    "composition": [
+      {
+        "modelId": "vulkite",
+        "name": "Vulkite Berzerker",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "fyreslayers.weapon.fyresteel-handaxes"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "fyreslayers.ability.whirlwind-of-destruction"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

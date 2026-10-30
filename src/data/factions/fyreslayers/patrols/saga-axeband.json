@@ -1,0 +1,72 @@
+{
+  "id": "fyreslayers.army.saga-axeband",
+  "faction": "fyreslayers",
+  "name": "Saga Axeband",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "battlesmith",
+      "datasheet": "fyreslayers.unit.battlesmith",
+      "size": 1
+    },
+    {
+      "ref": "hearthguard",
+      "datasheet": "fyreslayers.unit.hearthguard-berzerkers",
+      "size": 5
+    },
+    {
+      "ref": "vulkite-a",
+      "datasheet": "fyreslayers.unit.vulkite-berzerkers",
+      "size": 5
+    },
+    {
+      "ref": "vulkite-b",
+      "datasheet": "fyreslayers.unit.vulkite-berzerkers",
+      "size": 5
+    },
+    {
+      "ref": "vulkite-c",
+      "datasheet": "fyreslayers.unit.vulkite-berzerkers",
+      "size": 5
+    },
+    {
+      "ref": "vulkite-d",
+      "datasheet": "fyreslayers.unit.vulkite-berzerkers",
+      "size": 5
+    }
+  ],
+  "warlord": "battlesmith",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "fyreslayers.ability.awaken-the-runes"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "fyreslayers.ability.magmic-tunnels",
+      "default": true
+    },
+    {
+      "id": "fyreslayers.ability.fyresteel-throwing-axes",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "fyreslayers.enh.too-stubborn-to-die",
+      "default": true
+    },
+    {
+      "id": "fyreslayers.enh.horn-of-grimnir",
+      "default": false
+    },
+    {
+      "id": "fyreslayers.enh.spirit-of-grimnir",
+      "default": false
+    },
+    {
+      "id": "fyreslayers.enh.powerful-presence",
+      "default": false
+    }
+  ]
+}

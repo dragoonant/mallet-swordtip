@@ -539,6 +539,8 @@ export type ChooseOptionTopic =
   | 'abilityUse' | 'abilityTarget' | 'abilityMode' | 'pileInTarget' | 'contestedObjective' | 'discardTactics' | 'scoreTactics'
   // Spearhead cards (SPH-3, SPH-9, SPH-10; src/engine/cards.ts): a twist's pick, and a battle tactic card's command
   | 'twistPick' | 'tacticCommand'
+  // STD-ENH-4 (cards.ts): draw an extra battle tactic card (yes / pass), then put one hand card on the bottom of the deck
+  | 'extraTactic' | 'bottomTactic'
 export interface ChooseOptionDecision extends DecisionBase {
   kind: 'chooseOption'
   // rerollOffer: data = { rollId, dieIndexes: number[], needed?, purpose?, key? } (R-6.24); options = reroll / keep; the
@@ -685,7 +687,10 @@ export interface GameState {
 
 // ---------- Spearhead cards (src/engine/cards.ts) ----------
 // one player's battle tactic cards (SPH-10.7): deck order hidden, hand hidden from the opponent, discard and scored piles public
-export interface TacticPiles { deck: Id[]; hand: Id[]; discard: Id[]; scored: Id[] }
+// oath / fulfilled (STD-BT-1 Oaths of Darkness, src/engine/cards.ts): `oath` = the hand card shown to the opponent as this turn's
+// oath (public; cleared at the end of the turn); `fulfilled` = scored oath cards set to one side, public, outside the hand limit,
+// whose commands stay usable (used = discarded). Optional so older states stay valid.
+export interface TacticPiles { deck: Id[]; hand: Id[]; discard: Id[]; scored: Id[]; oath?: Id | null; fulfilled?: Id[] }
 
 // what a twist pick or a card command left on the table. `until`: when it lapses (end of the phase, turn or battle round)
 export type CardFlagKind =

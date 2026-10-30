@@ -11,8 +11,13 @@ const mission: MissionData = bundle.missions['sph-fire-and-jade-aqshy-horizontal
 const layout = bundle.terrainLayouts['sph-fire-and-jade-standard']
 
 describe('Spearhead armies (SPH-2)', () => {
-  it('SPH-2.1 both armies ship, each with a general that is one of its units', () => {
-    expect(armies.map((a) => a.id).sort()).toEqual(['cities.army.castelite-company', 'ironjawz.army.bigmob'])
+  it('SPH-2.1 all armies ship, each with a general that is one of its units', () => {
+    expect(armies.map((a) => a.id).sort()).toEqual([
+      'cities.army.castelite-company',
+      'fyreslayers.army.saga-axeband',
+      'ironjawz.army.bigmob',
+      'slaves.army.darkoath-raiders',
+    ])
     for (const a of armies) expect(a.units.some((u) => u.ref === a.warlord)).toBe(true)
   })
 

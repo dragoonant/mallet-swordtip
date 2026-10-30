@@ -138,6 +138,8 @@ export interface Effect {
   shootAfterFallBack?: true
   chargeAfterAdvance?: true
   chargeAfterFallBack?: true
+  // AoS Retreat: the unit suffers no mortal damage when it retreats (Fearless Invaders, STD-RA-2); checked by phases/movement.ts
+  noRetreatDamage?: true
   stealth?: true
   lethalOn?: RollTarget
   // AP improves by this much for an attack whose unmodified wound roll was a critical wound
@@ -149,7 +151,9 @@ export interface Effect {
 export type EffectList = Effect | Effect[]
 
 // bearer = the single model carrying the ability (enhancement default); self = the whole unit (attached unit included)
-export interface Scope { who: 'self' | 'bearer' | 'target' | 'attacker' | 'friendly' | 'enemy'; within?: number; keyword?: Keyword }
+// wholly (friendly / enemy with `within`): the other unit counts only while every one of its models is wholly within `within`
+// inches of the holder (AoS "wholly within"); the holder itself always counts
+export interface Scope { who: 'self' | 'bearer' | 'target' | 'attacker' | 'friendly' | 'enemy'; within?: number; wholly?: true; keyword?: Keyword }
 // untilEndOfRound = until the start of the next battle round (engine expires.kind 'roundEnd')
 export type Duration = 'instant' | 'untilEndOfPhase' | 'untilEndOfTurn' | 'untilNextTurn' | 'untilEndOfRound' | 'battle'
 // oncePerTurnArmy: once per turn for the whole army (CORE-3.3 Rule of One style limits on activated abilities)

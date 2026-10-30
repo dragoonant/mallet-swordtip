@@ -1,0 +1,53 @@
+[
+  {
+    "id": "slaves.unit.darkoath-warqueen",
+    "faction": "slaves",
+    "name": "Darkoath Warqueen",
+    "keywords": [
+      "HERO",
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "CHAOS",
+      "SLAVES TO DARKNESS"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 5,
+      "Sv": 5,
+      "OC": 2,
+      "ward": 5
+    },
+    "composition": [
+      {
+        "modelId": "warqueen",
+        "name": "Darkoath Warqueen",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "slaves.weapon.rune-etched-axe"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "slaves.ability.oath-of-supremacy"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

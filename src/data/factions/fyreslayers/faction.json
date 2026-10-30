@@ -1,0 +1,17 @@
+{
+  "id": "fyreslayers",
+  "name": "Fyreslayers",
+  "factionKeyword": "FYRESLAYERS",
+  "armyRule": "fyreslayers.ability.saga-axeband",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#c8531a",
+    "secondary": "#2e2a28",
+    "trim": "#d9a521",
+    "metal": "#b07d2b",
+    "decal": "#f0dfb8"
+  },
+  "combatPatrols": [
+    "fyreslayers.army.saga-axeband"
+  ]
+}

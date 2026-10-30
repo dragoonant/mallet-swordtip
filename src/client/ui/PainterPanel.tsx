@@ -16,6 +16,10 @@ export interface PainterFaction {
 
 /** One representative model per army for the preview (datasheet id + model type). */
 const PREVIEW: Record<string, { datasheetId: string; modelId?: string }> = {
+  cities: { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm' },
+  ironjawz: { datasheetId: 'ironjawz.unit.ardboyz', modelId: 'ardboy' },
+  slaves: { datasheetId: 'slaves.unit.darkoath-warqueen', modelId: 'warqueen' },
+  fyreslayers: { datasheetId: 'fyreslayers.unit.vulkite-berzerkers', modelId: 'vulkite' },
   sm: { datasheetId: 'sm.terminator-squad', modelId: 'sergeant' },
   ork: { datasheetId: 'ork.boyz', modelId: 'boss-nob' },
   necrons: { datasheetId: 'nec.necron-warriors' },

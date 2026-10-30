@@ -1,0 +1,246 @@
+[
+  {
+    "id": "slaves.ability.darkoath-raiders",
+    "name": "Darkoath Raiders",
+    "text": "Army marker for the Darkoath Raiders. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "slaves.ability.oaths-of-darkness",
+    "name": "Oaths of Darkness",
+    "text": "Once per turn, in your hero phase, show one battle tactic card from your hand: it is your oath this turn. If you score it, the oath is fulfilled: the card is set aside instead of discarded, its command stays usable, and it does not count toward your hand of 3. Using its command before scoring discards it as usual. An unfulfilled oath just stops being your oath at the end of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "limit": "oncePerTurnArmy",
+    "code": "slavesOathsOfDarkness",
+    "params": {
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "slaves.ability.rage-of-arkhar",
+    "name": "Rage of Arkhar",
+    "text": "Once per turn, in any combat phase, pick a friendly unit that is in combat. For the rest of the turn its melee weapons have +1 Attacks and +1 Rend. Companion weapons are not affected.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "limit": "oncePerTurnArmy",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "state": "inEngagement"
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "slavesRageOfArkhar",
+    "params": {
+      "extraAttacks": 1,
+      "extraRend": 1,
+      "weaponType": "melee",
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "slaves.ability.fearless-invaders",
+    "name": "Fearless Invaders",
+    "text": "Once per turn, in your movement phase, pick a friendly unit that is in combat. If it retreats this turn, it suffers no mortal damage from the retreat, and it can still charge later in the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "movement",
+      "whose": "your"
+    },
+    "limit": "oncePerTurnArmy",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "state": "inEngagement"
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "slavesFearlessInvaders",
+    "params": {
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "slaves.ability.bloodthirsty-blade",
+    "name": "Bloodthirsty Blade",
+    "text": "The bearer's Rune-etched Axe has Rend 2.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "effect": {
+      "when": {
+        "weaponId": "slaves.weapon.rune-etched-axe"
+      },
+      "modifyStat": {
+        "stat": "AP",
+        "value": -1
+      }
+    }
+  },
+  {
+    "id": "slaves.ability.godshadow-talisman",
+    "name": "Godshadow Talisman",
+    "text": "The bearer has Ward (4+).",
+    "trigger": "feelNoPainRoll",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "effect": {
+      "feelNoPain": 4
+    }
+  },
+  {
+    "id": "slaves.ability.champion-of-raids",
+    "name": "Champion of Raids",
+    "text": "In your charge phase, pick another friendly unit wholly within 12\" of the bearer. It can re-roll its charge rolls for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "charge",
+      "whose": "your"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "slavesChampionOfRaids",
+    "params": {
+      "range": 12,
+      "wholly": true,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "slaves.ability.fell-ritualist",
+    "name": "Fell Ritualist",
+    "text": "Each time you draw battle tactic cards while the bearer is on the battlefield, you may draw 1 extra card, then put 1 battle tactic card from your hand on the bottom of your battle tactic deck.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "slavesFellRitualist",
+    "params": {
+      "extraCards": 1
+    }
+  },
+  {
+    "id": "slaves.ability.oath-of-supremacy",
+    "name": "Oath of Supremacy",
+    "text": "In your hero phase, pick a friendly unit wholly within 12\" of your general (this unit may pick itself). Until the start of your next turn, add 1 to hit rolls for attacks made by the target.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "duration": "untilNextTurn",
+    "code": "slavesOathOfSupremacy",
+    "params": {
+      "range": 12,
+      "wholly": true,
+      "hitBonus": 1,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "slaves.ability.visions-of-glory",
+    "name": "Visions of Glory",
+    "text": "In your hero phase, if this unit still has its Godspeaker, roll 8 dice. For each 4+, until the start of your next turn you can re-roll 1 hit roll, 1 wound roll, 1 run roll or 1 save roll for this unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "duration": "untilNextTurn",
+    "code": "slavesVisionsOfGlory",
+    "params": {
+      "dice": 8,
+      "succeedOn": 4,
+      "godspeakerModel": "godspeaker",
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "slaves.ability.swift-attackers",
+    "name": "Swift Attackers",
+    "text": "Subtract 1 from hit rolls for shooting attacks that target this unit.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "stealth": true
+    }
+  },
+  {
+    "id": "slaves.ability.glorious-death",
+    "name": "Glorious Death",
+    "text": "Each time a model in this unit is slain by a combat attack while it was in combat with the attacking unit, roll a dice. On a 5+, the attacking unit suffers 1 mortal damage once that Fight ability has finished resolving.",
+    "trigger": "modelDestroyed",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "slavesGloriousDeath",
+    "params": {
+      "succeedOn": 5,
+      "mortal": 1,
+      "range": 3
+    }
+  }
+]

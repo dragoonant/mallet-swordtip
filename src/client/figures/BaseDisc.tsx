@@ -2,13 +2,44 @@
 // root, never baked into the figure body, and are the only client-only geometry here — the
 // engine only ever sees the base's mm/shape via Model.base, never these meshes.
 import { GCylinder, StdMat } from './shared'
-import { DoubleSide, type Mesh, type MeshBasicMaterial } from 'three'
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, type Mesh, type MeshBasicMaterial } from 'three'
 import { useFrame } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { PaintColors } from './types'
 import type { ResolvedBase } from './paint'
 
 export const BASE_THICKNESS = 0.12
+
+/** Width of the team rim around a GLB figure's own base, in inches. It is built in world units, not scaled with the base
+ *  group, so a big oval (the 120x92mm cannon) gets the same thin line as a 25mm round. */
+export const RIM_WIDTH = 0.07
+const RIM_GAP = 0.025
+
+/** A flat elliptical band just outside the base edge with a constant width (a scaled RingGeometry would be wider on big bases). */
+function ThinRim({ radiusX, radiusZ, color }: { radiusX: number; radiusZ: number; color: string }) {
+  const geometry = useMemo(() => {
+    const SEGMENTS = 64
+    const pos: number[] = []
+    const idx: number[] = []
+    for (let i = 0; i < SEGMENTS; i++) {
+      const a = (i / SEGMENTS) * Math.PI * 2
+      const c = Math.cos(a), sn = Math.sin(a)
+      pos.push(c * (radiusX + RIM_GAP), 0, sn * (radiusZ + RIM_GAP), c * (radiusX + RIM_GAP + RIM_WIDTH), 0, sn * (radiusZ + RIM_GAP + RIM_WIDTH))
+      const j = (i + 1) % SEGMENTS
+      idx.push(i * 2, i * 2 + 1, j * 2, i * 2 + 1, j * 2 + 1, j * 2)
+    }
+    const g = new BufferGeometry()
+    g.setAttribute('position', new Float32BufferAttribute(pos, 3))
+    g.setIndex(idx)
+    return g
+  }, [radiusX, radiusZ])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  return (
+    <mesh position={[0, 0.004, 0]} geometry={geometry}>
+      <meshBasicMaterial color={color} side={DoubleSide} />
+    </mesh>
+  )
+}
 
 /** Prompt-hover ring: wide, white and pulsing, so it can't be mistaken for the amber "clickable" ring
  *  or the cyan selection ring — this is the one that answers "which unit is this button?". The demand
@@ -53,13 +84,10 @@ export function BaseDisc({
   baseStyle?: ResolvedBase | null
 }) {
   return (
+    <>
+    {glbBody && <ThinRim radiusX={radiusX} radiusZ={radiusZ} color={colors.primary} />}
     <group scale={[radiusX, 1, radiusZ]}>
-      {glbBody ? (
-        <mesh position={[0, 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.0, 1.12, 32]} />
-          <meshBasicMaterial color={colors.secondary} side={DoubleSide} />
-        </mesh>
-      ) : (
+      {!glbBody && (
         <>
           <mesh position={[0, BASE_THICKNESS / 2, 0]}>
             <GCylinder args={[1, 1, BASE_THICKNESS, 24]} />
@@ -86,5 +114,6 @@ export function BaseDisc({
         </mesh>
       )}
     </group>
+    </>
   )
 }

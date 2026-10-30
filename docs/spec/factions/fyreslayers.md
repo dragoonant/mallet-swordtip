@@ -248,3 +248,23 @@ no GW logos, no copied icons (our god-symbol is an original flaming anvil-and-be
 | `fyr-hearthguard` | Hearthguard Berzerkers | 1 (×5) | 32 round | No | A true MGSD chibi duardin bodyguard, 2.5 heads tall with an enormous head in a tall bronze dragon-snouted helm with a flame-orange crest, stubby legs, holding a long two-handed poleaxe whose blade glows like hot metal, bare chest with molten-gold rune inlays and a heavy gold belt. |
 | `fyr-vulkite` | Vulkite Berzerkers | 1 (×20) | 32 round | No | A true MGSD chibi duardin berserker, 2.5 heads tall with a giant head, wild flame-orange beard and mohawk crest bursting from a small bronze helm, stubby legs in a mid-leap pose, a short glowing hand-axe in each fist, ruddy bare torso etched with blazing gold runes. |
 | `fyr-vulkite-karl` (optional) | Vulkite Berzerkers (unit leader look) | 1 (×4, one per unit) | 32 round | No | The same MGSD chibi berserker with a taller fan-shaped crest, a gold face-mask visor and a bigger notched axe, so each Vulkite unit has a visible leader; skip if the pipeline is short on time (rules do not use a champion). |
+
+---
+
+## 11. Implementation notes (shipped)
+
+Data: `src/data/factions/fyreslayers/` (warscrolls, weapons, abilities, enhancements, patrol `fyreslayers.army.saga-axeband`).
+Hooks: `src/engine/factions/fyreslayers.ts`, registered in `code-hooks.ts` as `...fyreslayersHooks`. Tests: `tests/engine/fyreslayers.test.ts`,
+`tests/data/fyreslayers.test.ts` (one test per FYR- id above). Figures are placeholders (`generic-infantry` kit) until the figure agent lands.
+
+- **Runes** live in the Awaken the Runes descriptor (`params.runes`: standard and enhanced effect lists), so the numbers are data. Used runes are
+  kept in `mission.custom.fyrRunes[player]`. The pick is the ability mode; for the AI the modes are ordered Zeal, Fury, Searing Heat, Fiery
+  Determination (the first mode wins ties). Spirit of Grimnir re-rolls any non-6 once, automatically.
+- **Magmic Tunnels** uses two prompts: the target step picks the first unit, the mode step the optional second one (`none` = only the first).
+  `requestRedeploy` (redeploy.ts) then asks for a spot per unit; the options are sorted closest-to-the-enemy first, which is what the AI takes.
+  The lifted units are not marked "set up this turn" (the set-up is outside any turn).
+- **Throwing Axes**: one use makes every eligible unit throw, each at the visible enemy within 10" with the fewest wounds left (ties by unit id).
+- **Plant the Icon** is a granted aura on the Battlesmith (`feelNoPain 5`, friendly, within 12, wholly, until end of turn), so the range is read at
+  every ward roll. The AI uses it at the first hero phase it is offered (it has no notion of saving it for a fight).
+- **Duty Unto Death** is code (`adjustFeelNoPain`): no data scope can name "the general".
+- Sim defaults: regiment Magmic Tunnels and Too Stubborn to Die are the defaults; the sim's variant games use Throwing Axes and Powerful Presence.

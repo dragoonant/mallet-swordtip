@@ -1,0 +1,54 @@
+[
+  {
+    "id": "fyreslayers.unit.battlesmith",
+    "faction": "fyreslayers",
+    "name": "Battlesmith",
+    "keywords": [
+      "HERO",
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "FYRESLAYERS"
+    ],
+    "stats": {
+      "M": 4,
+      "W": 5,
+      "Sv": 5,
+      "OC": 5,
+      "ward": 6
+    },
+    "composition": [
+      {
+        "modelId": "battlesmith",
+        "name": "Battlesmith",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "fyreslayers.weapon.ancestral-battle-axe"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "fyreslayers.ability.icon-of-grimnir",
+      "fyreslayers.ability.plant-the-icon"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

@@ -16,7 +16,7 @@
 // anything cleverer is the player's own placement, validated by `pileInRejection`.
 import { commandWindow } from '../cards'
 import type { Action, ModelPlacement, WeaponTarget } from '../actions'
-import { attackService, enemyUnitsInCombat, isInCombat, rollAttackCount } from '../attack'
+import { attackService, drainAfterFightMortal, enemyUnitsInCombat, isInCombat, rollAttackCount } from '../attack'
 import {
   basesOverlap, checkPlacements, distance, emptyMoveConstraints, ENGAGEMENT_H, EPS, horizontalGap, isCoherent, pathCrossesModels,
   whollyOnBoard, type Footprint,
@@ -399,7 +399,7 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
   const fight = s.phaseState.fight as FightState
   const unitId = fight.currentUnitId as UnitId
   const unit = s.units[unitId]
-  if (!unit || unit.location !== 'board') { finishUnit(ctx, unitId, unit?.player ?? s.activePlayer); return 'progress' }
+  if (!unit || unit.location !== 'board') { drainAfterFightMortal(ctx); finishUnit(ctx, unitId, unit?.player ?? s.activePlayer); return 'progress' }
 
   if (!ctx.marked(`fi:selWindow:${unitId}`)) {
     if (ctx.window('fight.unitSelected', unitId, ctx.order.active(), { unitId })) return 'pending'
@@ -421,6 +421,8 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
     }
     if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
   }
+  // STD-AB-4 Glorious Death: mortal damage held back during the attacks lands once this Fight ability has fully resolved
+  drainAfterFightMortal(ctx)
   finishUnit(ctx, unitId, unit.player)
   return 'progress'
 }

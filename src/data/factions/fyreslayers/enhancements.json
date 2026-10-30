@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fyreslayers.enh.too-stubborn-to-die",
+    "faction": "fyreslayers",
+    "name": "Too Stubborn to Die",
+    "text": "At the start of any turn, the general heals D3 damage.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fyreslayers.ability.too-stubborn-to-die"
+  },
+  {
+    "id": "fyreslayers.enh.horn-of-grimnir",
+    "name": "Horn of Grimnir",
+    "faction": "fyreslayers",
+    "text": "In your hero phase, if the general is not in combat, roll a dice for each friendly unit that has lost models. On a 3+ one slain model comes back.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fyreslayers.ability.horn-of-grimnir"
+  },
+  {
+    "id": "fyreslayers.enh.spirit-of-grimnir",
+    "faction": "fyreslayers",
+    "name": "Spirit of Grimnir",
+    "text": "You may re-roll the activation roll of Awaken the Runes.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fyreslayers.ability.spirit-of-grimnir"
+  },
+  {
+    "id": "fyreslayers.enh.powerful-presence",
+    "faction": "fyreslayers",
+    "name": "Powerful Presence",
+    "text": "The general's Control characteristic is 3 higher.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fyreslayers.ability.powerful-presence"
+  }
+]

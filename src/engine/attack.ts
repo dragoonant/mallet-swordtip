@@ -18,7 +18,7 @@ import { clampHitWoundModifier, clampStat, netSaveModifier, parseDiceExpr } from
 import type { AttackRollContext } from './events'
 import { coherencyGroups, distance, ENGAGEMENT_H, EPS, horizontalGap, isCoherent } from './geometry'
 import type { AttackContext, RollModifierResult } from './hooks'
-import { hookService } from './hooks-impl'
+import { codeHookFor, hookService } from './hooks-impl'
 import { cardChargeDamage, cardHitRule, cardIgnoresRend, cardSaveModifier, cardWard, cardWoundModifier } from './cardFlags'
 import { losService } from './los'
 import type { AdvanceResult, DecisionHandler, EngineContext } from './modules'
@@ -452,6 +452,13 @@ function wardThreshold(ctx: EngineContext, unitId: UnitId, rep: Model, mortal: b
     if (r.result.feelNoPain !== undefined) best = best === null ? r.result.feelNoPain : Math.min(best, r.result.feelNoPain)
     if (r.result.modifier) modifier += r.result.modifier
   }
+  // code-hook wards that no data scope can express (FYR-AB-3 Duty Unto Death: the general's Ward 5+ while near the Hearthguard).
+  // EngineCodeHook.adjustFeelNoPain is asked for every source on the board; only the best ward applies (CORE-13.2)
+  const adj = hookService.feelNoPainAdjust(s, rep.id, best)
+  if (adj) {
+    if (adj.threshold !== null) best = best === null ? adj.threshold : Math.min(best, adj.threshold)
+    modifier += adj.modifier
+  }
   // cards: Eroding Miasma / Fight to the Last / Shield of Thorns
   return cardWard(s, unitId, best === null ? null : { needed: best, modifier: Math.max(-1, Math.min(1, modifier)) })
 }
@@ -641,6 +648,7 @@ export const attackService: AttackService = {
     const nowDestroyed = removeModel(s, modelId)
     ctx.emit({ type: 'ModelDestroyed', unitId: unit.id, modelId, byPlayer: by.player, byUnitId: by.unitId, byModelId: by.modelId, kind: by.kind })
     ctx.services.hooks.run(ctx, 'onModelDestroyed', { destroyedUnitId: unit.id, destroyedModelId: modelId, byUnitId: by.unitId, byModelId: by.modelId, kind: by.kind })
+    ownModelSlain(ctx, unit, by)
     const ms = ctx.services.missions as unknown as { modelDestroyed?: (c: EngineContext, i: object) => void }
     ms.modelDestroyed?.(ctx, { unitId: unit.id, modelId, byPlayer: by.player, byUnitId: by.unitId, byModelId: by.modelId })
     if (nowDestroyed) destroyUnitTail(ctx, unit, by)
@@ -668,6 +676,53 @@ export const attackService: AttackService = {
     a.targets = [...a.targets, ...targets]
     a.targetUnitIds = [...new Set(a.targets.map((t) => t.targetUnitId))]
   },
+}
+
+// ---------- death triggers of the slain model's own unit (STD-AB-4 Glorious Death) ----------
+// EngineCodeHook.onOwnModelSlain runs for the datasheet abilities of the unit a model was slain from (plus its player's battle
+// traits / regiment ability), also when that model was the unit's last: the ordinary onModelDestroyed dispatch skips wiped units.
+// `model` is the snapshot taken at removal (position and wounds at the moment it was slain).
+function ownModelSlain(ctx: EngineContext, unit: Unit, by: DestroyedBy): void {
+  const s = ctx.state
+  const model = unit.destroyedModels?.[unit.destroyedModels.length - 1]
+  if (!model) return
+  const ds = s.datasheets[unit.datasheetId]
+  const owner = s.players[unit.player]
+  const ids = [...(ds?.abilities ?? []), ...(owner?.battleTraitIds ?? []), ...(owner?.regimentAbilityId ? [owner.regimentAbilityId] : [])]
+  const seen = new Set<string>()
+  for (const id of ids) {
+    const ab = s.abilities[id]
+    if (!ab || seen.has(id)) continue
+    seen.add(id)
+    const spec = codeHookFor(ab.code)
+    spec?.onOwnModelSlain?.(ctx, { ability: ab, unitId: unit.id, model, by })
+  }
+}
+
+// ---------- mortal damage held until a Fight ability has resolved (STD-AB-4 Glorious Death) ----------
+// A hook queues mortal damage here during a combat attack sequence; phases/fight.ts drains it once the fighting unit's whole
+// Fight activation is over (after the fight.attacksResolved window), through the ordinary damage sequence (ward applies).
+export interface DeferredMortal { targetUnitId: UnitId; count: number; source: string; player: PlayerId }
+const AFTER_FIGHT = 'afterFight:'
+
+export function deferMortalAfterFight(state: GameState, d: DeferredMortal): void {
+  if (d.count > 0) state.phaseState.marks.push(AFTER_FIGHT + JSON.stringify(d))
+}
+
+export function pendingAfterFightMortal(state: GameState): DeferredMortal[] {
+  return state.phaseState.marks.filter((m) => m.startsWith(AFTER_FIGHT)).map((m) => JSON.parse(m.slice(AFTER_FIGHT.length)) as DeferredMortal)
+}
+
+// resolves every held entry (one pool per entry, in queue order); targets no longer on the board are skipped
+export function drainAfterFightMortal(ctx: EngineContext): void {
+  const s = ctx.state
+  const list = pendingAfterFightMortal(s)
+  if (list.length === 0) return
+  s.phaseState.marks = s.phaseState.marks.filter((m) => !m.startsWith(AFTER_FIGHT))
+  for (const d of list) {
+    if (s.units[d.targetUnitId]?.location !== 'board') continue
+    attackService.queueMortalWounds(ctx, d.targetUnitId, d.count, d.source, false)
+  }
 }
 
 // ---------- 42k compatibility surface (WP8 deletes the importers) ----------

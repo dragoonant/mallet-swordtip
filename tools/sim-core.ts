@@ -49,10 +49,23 @@ function playerSetup(bundle: DataBundle, patrolId: string, name: string, variant
   return { name, faction: patrol.faction, patrolId, enhancementId: enh.id, ...(reg ? { regimentAbilityId: reg.id } : {}) }
 }
 
-export function makeSimSetup(bundle: DataBundle, gameIndex: number, dataVersion: string): GameSetup {
-  const patrols = Object.keys(bundle.patrols).sort()
+// every pairing of two different Spearhead armies in the bundle (sorted ids), so a new army in data joins the sim with no edit.
+// `only`: restrict to these army (patrol) or faction ids (sim --armies a,b); one id plays itself only when it is the only match.
+export function simPairings(bundle: DataBundle, only?: string[]): [string, string][] {
+  let patrols = Object.keys(bundle.patrols).filter((id) => (bundle.patrols[id].mode ?? 'spearhead') === 'spearhead').sort()
+  if (only && only.length > 0) patrols = patrols.filter((id) => only.includes(id) || only.includes(bundle.patrols[id].faction))
+  if (patrols.length === 1) return [[patrols[0], patrols[0]]]
   if (patrols.length < 2) throw new Error('sim: need two armies in the data bundle')
-  const [p0, p1] = gameIndex % 2 === 0 ? [patrols[0], patrols[1]] : [patrols[1], patrols[0]]
+  const out: [string, string][] = []
+  for (let i = 0; i < patrols.length; i++) for (let j = i + 1; j < patrols.length; j++) out.push([patrols[i], patrols[j]])
+  return out
+}
+
+// game g: pairing floor(g / 4) (cycling), seats swapped on odd games, the last regiment / enhancement on games 2-3 of each block
+export function makeSimSetup(bundle: DataBundle, gameIndex: number, dataVersion: string, only?: string[]): GameSetup {
+  const pairs = simPairings(bundle, only)
+  const [a, b] = pairs[Math.floor(gameIndex / 4) % pairs.length]
+  const [p0, p1] = gameIndex % 2 === 0 ? [a, b] : [b, a]
   const variant = gameIndex % 4 >= 2
   const missionId = bundle.missions[MISSION] ? MISSION : Object.keys(bundle.missions)[0]
   const layoutId = bundle.missions[missionId].terrainLayouts[0]
@@ -109,9 +122,9 @@ function choose(rand: () => number, pending: PendingDecision, legal: Action[]): 
   return legal[Math.floor(rand() * legal.length)]
 }
 
-export async function runGame(bundle: DataBundle, baseSeed: string | number, gameIndex: number, dataVersion: string, ai = false): Promise<GameRun> {
+export async function runGame(bundle: DataBundle, baseSeed: string | number, gameIndex: number, dataVersion: string, ai = false, only?: string[]): Promise<GameRun> {
   const seed = `sim-${baseSeed}-${gameIndex}`
-  const setup = makeSimSetup(bundle, gameIndex, dataVersion)
+  const setup = makeSimSetup(bundle, gameIndex, dataVersion, only)
   const factions = { A: setup.players.A.faction, B: setup.players.B.faction } as Record<PlayerId, string>
   const rand = botRng(seed)
   const violations: Violation[] = []

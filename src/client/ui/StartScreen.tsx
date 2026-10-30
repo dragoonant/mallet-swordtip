@@ -1,5 +1,5 @@
 // Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (Cities of
-// Sigmar Castelite Company or Ironjawz Bigmob), its regiment ability and enhancement, a bot or a second seat on this
+// Sigmar, Ironjawz, Slaves to Darkness or Fyreslayers; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
 // device, and Start. The battleplan is fixed (Fire and Jade, Aqshy side, standard terrain), so it is shown, not chosen.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
 import { FactionCrest } from './FactionCrest'
@@ -17,7 +17,12 @@ import { buttonActive, buttonBase, buttonDanger, buttonPrimary, colors, fontStac
 const FACTION_BLURBS: Record<string, string> = {
   cities: 'Frontier soldiers of the human cities: drilled spearmen, hard-riding cavalry and a heavy cannon, led by a cavalry marshal who rallies the charge.',
   ironjawz: 'Iron-clad orruk warbands: huge brutes and armoured boyz who smash through anything in reach, with a pack of heavies that crashes in late from nowhere.',
+  slaves: 'Oath-sworn raiders from the wild north: a fearless queen, shrieking savagers and fast riders who swear to win glory by deed, and fight harder when they keep their word.',
+  fyreslayers: 'Stout gold-hungry duardin berserkers wreathed in rune-fire: fast on the charge, hard to put down, and able to burrow out of one place and into another.',
 }
+
+// Preferred card order on the start screen (anything else follows, in data order).
+const FACTION_ORDER = ['cities', 'ironjawz', 'slaves', 'fyreslayers']
 
 // Own-words one-liners for the regiment abilities and enhancements shown on the cards; the full rules text from the data is the
 // tooltip. An id without an entry here falls back to its data text.
@@ -26,6 +31,18 @@ const OPTION_BLURBS: Record<string, string> = {
   'cities.ability.ironweld-discipline': 'In your opponent\'s shooting phase your cannon may fire too, on a 3+.',
   'ironjawz.ability.natural-disaster': 'A charge roll of 8+ (before bonuses) gives that unit +1 Attacks on its melee weapons.',
   'ironjawz.ability.a-proper-ruckus': 'Once per battle, the free 3" move of Mighty Destroyers is offered to every unit at once.',
+  'slaves.ability.rage-of-arkhar': "Once a turn, one unit in combat swings harder: +1 Attacks and +1 Rend on its melee weapons (a mount's hooves excepted).",
+  'slaves.ability.fearless-invaders': 'Once a turn, a unit in combat can retreat without the mortal damage, and may still charge afterwards.',
+  'slaves.enh.bloodthirsty-blade': "Your general's rune-etched axe has Rend 2.",
+  'slaves.enh.godshadow-talisman': 'Your general shrugs off damage on a 4+ (Ward).',
+  'slaves.enh.champion-of-raids': 'In your charge phase, another unit within 12" of your general may re-roll its charges.',
+  'slaves.enh.fell-ritualist': 'While your general lives, each time you draw tactic cards you draw 1 extra, then tuck 1 card under your deck.',
+  'fyreslayers.ability.magmic-tunnels': 'Once per battle, at the start of round 1, lift up to 2 units off the board and set them down anywhere, clear of the enemy.',
+  'fyreslayers.ability.fyresteel-throwing-axes': 'Once a turn, units not in combat hurl axes at a visible enemy within 10": on a 4+ it takes D3 mortal damage.',
+  'fyreslayers.enh.too-stubborn-to-die': 'At the start of any turn, your general heals D3 damage.',
+  'fyreslayers.enh.horn-of-grimnir': 'In your hero phase, if your general is not in combat, a unit that has lost models may get one back on a 3+ (rolled per unit).',
+  'fyreslayers.enh.spirit-of-grimnir': 'You may re-roll the roll that wakes a rune each turn.',
+  'fyreslayers.enh.powerful-presence': 'Your general counts as Control +3 on objectives.',
   'cities.enh.flask-of-lethisian-darkwater': 'Once per battle, your general heals D6 damage.',
   'cities.enh.heirloom-blade': 'Your general\'s longsword hits harder against armour: +1 Rend.',
   'cities.enh.brazier-of-holy-flame': 'At the end of any turn, up to D3 fallen Steelhelms stand up near your general.',
@@ -106,9 +123,10 @@ const label: CSSProperties = { fontSize: 12, textTransform: 'uppercase', letterS
 const row: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
 const input: CSSProperties = { ...buttonBase, flex: 1, cursor: 'text' }
 const blurb: CSSProperties = { ...mutedText, marginTop: -8 }
-const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }
-const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 8, fontSize: 13, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
-const factionBadge: CSSProperties = { width: 64, height: 64, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }
+// Four armies sit in one row where the column allows (about 330px+), else two by two; never a lone orphan card.
+const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))', gap: 6 }
+const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 4px', fontSize: 11.5, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
+const factionBadge: CSSProperties = { width: 52, height: 52, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }
 const saveCard: CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '10px 14px', borderRadius: 6, border: `1px solid ${colors.accent}`, background: 'rgba(255,255,255,0.05)' }
 const noticeText: CSSProperties = { flex: 'none', margin: 0, padding: '8px 12px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'rgba(255,255,255,0.05)', fontSize: 13, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between' }
 const confirmBackdrop: CSSProperties = { position: 'fixed', inset: 0, zIndex: 20, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }
@@ -124,7 +142,7 @@ const pickText: CSSProperties = { fontSize: 11.5, color: 'inherit', opacity: 0.7
 function FactionCard({ id, name, active, onPick, testId }: { id: string; name: string; active: boolean; onPick: () => void; testId?: string }) {
   return (
     <button type="button" data-testid={testId} style={{ ...(active ? buttonActive : buttonBase), ...factionCard }} aria-pressed={active} onClick={onPick}>
-      <span style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={52} /></span>
+      <span style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={44} /></span>
       <span>{name}</span>
     </button>
   )
@@ -240,7 +258,8 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
   const factions = useMemo<FactionChoice[]>(() => {
     if (!bundle) return []
     const ids = [...new Set(spearheadArmies(bundle).map((p) => p.faction))]
-    return ids.map((id) => ({ id, label: bundle.factions[id]?.name ?? id, blurb: FACTION_BLURBS[id] ?? '' }))
+    const rank = (id: string) => { const i = FACTION_ORDER.indexOf(id); return i < 0 ? FACTION_ORDER.length : i }
+    return ids.map((id) => ({ id, label: bundle.factions[id]?.name ?? id, blurb: FACTION_BLURBS[id] ?? '' })).sort((a, b) => rank(a.id) - rank(b.id))
   }, [bundle])
   const factionId = resolveFactionId(faction)
   const activeFaction = factions.find((f) => f.id === factionId)

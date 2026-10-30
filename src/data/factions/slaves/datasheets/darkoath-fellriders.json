@@ -1,0 +1,54 @@
+[
+  {
+    "id": "slaves.unit.darkoath-fellriders",
+    "faction": "slaves",
+    "name": "Darkoath Fellriders",
+    "keywords": [
+      "CAVALRY",
+      "REINFORCEMENTS"
+    ],
+    "factionKeywords": [
+      "CHAOS",
+      "SLAVES TO DARKNESS"
+    ],
+    "stats": {
+      "M": 12,
+      "W": 3,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "fellrider",
+        "name": "Darkoath Fellrider",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "oval",
+          "mm": 60,
+          "mm2": 35
+        },
+        "weapons": {
+          "default": [
+            "slaves.weapon.fellrider-blades",
+            "slaves.weapon.warsteeds-hooves"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "slaves.ability.swift-attackers"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

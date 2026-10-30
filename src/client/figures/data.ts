@@ -214,6 +214,14 @@ const KNOWN_KIT: Record<string, KitId> = {
   'ironjawz.unit.brute-ragerz': 'ork-deff-dread',
   'ironjawz.unit.ardboyz': 'ork-boy',
   'ironjawz.unit.brutes': 'ork-warboss',
+  // Slaves to Darkness and Fyreslayers: stand-ins used only while a GLB is missing or loading (the GLBs are the real figures).
+  'slaves.unit.darkoath-warqueen': 'we-berzerker-champion',
+  'slaves.unit.darkoath-savagers': 'we-berzerker',
+  'slaves.unit.darkoath-marauders': 'csm-cultist',
+  'slaves.unit.darkoath-fellriders': 'cdm-bloodcrusher',
+  'fyreslayers.unit.battlesmith': 'lov-kahl',
+  'fyreslayers.unit.hearthguard-berzerkers': 'lov-beserk',
+  'fyreslayers.unit.vulkite-berzerkers': 'lov-beserk',
 }
 
 /** Models of a mixed unit that look different from the rest of it (a flamer sister is not a rifle sister), keyed
@@ -649,6 +657,12 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   'ironjawz.unit.ardboyz': 1.2,
   'cities.unit.freeguild-cavaliers': 1.9,
   'cities.unit.freeguild-cavalier-marshal': 2.0,
+  // Darkoath: the Warqueen a head above her raiders, the Fellriders mounted on a 60x35mm oval; Fyreslayers are short and stocky.
+  'slaves.unit.darkoath-warqueen': 1.2,
+  'slaves.unit.darkoath-fellriders': 1.5,
+  'fyreslayers.unit.battlesmith': 1.0,
+  'fyreslayers.unit.hearthguard-berzerkers': 1.0,
+  'fyreslayers.unit.vulkite-berzerkers': 0.95,
   // Space Wolves: the Invictor Tactical Warsuit is a tall bipedal walker on a 90mm base.
   'sw.invictor-tactical-warsuit': 2.4,
   'sw.battle-leader-thoryk': 1.2,

@@ -16,6 +16,7 @@
 import { commandWindow, rallyAfterRetreat, retreatDamageWaived } from '../cards'
 import { centroid, filterValid, formationPlacements, optionActions, repairCoherency, translatePlacements, unitVector } from './legal'
 import { rollSum } from '../dice'
+import { RUN_REROLL_BELOW, applyAbilityRerolls } from '../rerolls'
 import {
   EPS, checkPlacements, dist2D, emptyMoveConstraints, pathCrossesModels, pivotCost as pivotCostFor,
   samplePath, whollyOnBoard, withinEngagementRange, type Footprint, type ResolvedPlacement,
@@ -208,6 +209,10 @@ export function defaultOverwatchSelection(_state: GameState, all: DeclaredTarget
 export function unitMovesThroughModels(state: GameState, unitId: UnitId): boolean {
   return effectService.activeFor(state, unitId).some((e) => (Array.isArray(e.effect) ? e.effect : [e.effect]).some((x) => (x as Record<string, unknown>).moveThroughModels === true))
 }
+// Effect.noRetreatDamage (STD-RA-2 Fearless Invaders): an active effect on the unit waives the Retreat mortal damage
+export function unitIgnoresRetreatDamage(state: GameState, unitId: UnitId): boolean {
+  return effectService.activeFor(state, unitId).some((e) => (Array.isArray(e.effect) ? e.effect : [e.effect]).some((x) => (x as Record<string, unknown>).noRetreatDamage === true))
+}
 
 // ---------- move declaration ----------
 function canRetreat(state: GameState, unitId: UnitId): boolean {
@@ -281,8 +286,10 @@ function doDeclare(ctx: EngineContext): 'pending' | 'move' | 'select' {
   unit.turn.usedCoreThisPhase = true // CORE-3.4: one Core ability per unit per phase
   // Run: D6 added to Move (CORE-6.2)
   if (unit.turn.moveType === 'advance' && unit.turn.advanceRoll === null) {
-    const roll = ctx.rollOnce(`advance:${unitId}`, { purpose: 'advance', player: unit.player, sides: 6, count: 1, mode: 'sum', unitId })
+    let roll = ctx.rollOnce(`advance:${unitId}`, { purpose: 'advance', player: unit.player, sides: 6, count: 1, mode: 'sum', unitId })
     if (roll === null) return 'pending'
+    // ability re-rolls of a low run roll (STD-AB-2 Visions of Glory; rerolls.ts)
+    roll = applyAbilityRerolls(ctx, 'onAdvanceRoll', { movingUnitId: unitId }, roll, RUN_REROLL_BELOW)
     const run = hookService.advanceRollFor(s, unitId, rollSum(roll))
     for (const id of leaderService.halves(s, unitId)) s.units[id].turn.advanceRoll = run
     ctx.emit({ type: 'UnitAdvanced', unitId, roll: run, player: unit.player })
@@ -294,8 +301,8 @@ function doDeclare(ctx: EngineContext): 'pending' | 'move' | 'select' {
       if (roll === null) return 'pending'
       ctx.once(`mv:retreatRolled:${unitId}`)
       ctx.emit({ type: 'UnitFellBack', unitId, player: unit.player })
-      // Fall Back and Rally (battle tactic command): the retreat costs no mortal damage
-      const damage = retreatDamageWaived(s, unitId) ? 0 : rollSum(roll)
+      // Fall Back and Rally (battle tactic command) or an Effect.noRetreatDamage: the retreat costs no mortal damage
+      const damage = retreatDamageWaived(s, unitId) || unitIgnoresRetreatDamage(s, unitId) ? 0 : rollSum(roll)
       if (damage > 0) attackService.queueMortalWounds(ctx, unitId, damage, 'retreat', false)
     }
     if (drainAttack(ctx) === 'pending') return 'pending'
@@ -369,8 +376,10 @@ function eligibleArrivals(state: GameState, player: PlayerId): UnitId[] {
   return out.sort()
 }
 
-function arrivalConstraints(state: GameState, unitId: UnitId) {
-  const p = arrivalParams(state, unitId) as ArrivalParams
+// the set-up rules a reserve arrival (and an out-of-phase redeploy, FYR-RA-1 Magmic Tunnels via src/engine/redeploy.ts) follows
+export interface SetUpParams { minEnemyDistance: number; anywhere: boolean }
+
+export function setUpConstraints(state: GameState, unitId: UnitId, p: SetUpParams) {
   const player = state.units[unitId].player
   return emptyMoveConstraints(9999, {
     region: p.anywhere ? null : deploymentZone(state, player),
@@ -378,7 +387,19 @@ function arrivalConstraints(state: GameState, unitId: UnitId) {
   })
 }
 
+function arrivalConstraints(state: GameState, unitId: UnitId) {
+  return setUpConstraints(state, unitId, arrivalParams(state, unitId) as ArrivalParams)
+}
+
 function resolveArrival(state: GameState, unitId: UnitId, placements: ModelPlacement[]):
+  { rejection: Rejection } | { rejection: null; resolved: ResolvedPlacement[] } {
+  return resolveSetUp(state, unitId, placements, arrivalParams(state, unitId) as ArrivalParams)
+}
+
+// validates a whole-unit set-up: every model placed, on the board, clear of every other model (the unit's own current
+// positions do not count, so a unit on the board can be lifted and set up again), more than minEnemyDistance from enemies,
+// coherent, legal terrain-wise. Reserve arrival and redeploys share it.
+export function resolveSetUp(state: GameState, unitId: UnitId, placements: ModelPlacement[], p: SetUpParams):
   { rejection: Rejection } | { rejection: null; resolved: ResolvedPlacement[] } {
   const models = unitModels(state, unitId)
   const player = state.units[unitId].player
@@ -386,8 +407,8 @@ function resolveArrival(state: GameState, unitId: UnitId, placements: ModelPlace
   const provided = new Set(placements.map((p) => p.modelId))
   for (const id of needed) if (!provided.has(id)) return { rejection: { code: 'E_OUT_OF_RANGE', reason: `arrival must place every model of ${unitId}`, details: { missing: id } } }
   const result = checkPlacements({
-    unitModels: models, placements, constraints: arrivalConstraints(state, unitId),
-    otherFriendly: boardModelsOf(state, player), enemies: enemyModelsOnBoard(state, player), board: state.board,
+    unitModels: models, placements, constraints: setUpConstraints(state, unitId, p),
+    otherFriendly: boardModelsOf(state, player).filter((m) => m.unitId !== unitId), enemies: enemyModelsOnBoard(state, player), board: state.board,
     coherencyRange: datasheetOf(state, unitId).coherencyRange,
   })
   if (result.rejection) return result

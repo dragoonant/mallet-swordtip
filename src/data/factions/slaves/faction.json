@@ -1,0 +1,17 @@
+{
+  "id": "slaves",
+  "name": "Slaves to Darkness",
+  "factionKeyword": "SLAVES TO DARKNESS",
+  "armyRule": "slaves.ability.darkoath-raiders",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#7a1f26",
+    "secondary": "#3a3430",
+    "trim": "#b8863b",
+    "metal": "#5a5650",
+    "decal": "#d8cdb4"
+  },
+  "combatPatrols": [
+    "slaves.army.darkoath-raiders"
+  ]
+}

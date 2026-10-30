@@ -216,3 +216,27 @@ eight-pointed stars, no GW sigils — use original jagged scratch-runes instead.
 Champion/musician/standard models in the plastic kits are not separate figures here: the Spearhead gives
 them no distinct rules, and only the Godspeaker matters to a mechanic (Visions of Glory), so it gets its own
 model so players can see whether it is still alive.
+
+---
+
+## 10. As built (engine notes)
+
+Data lives in `src/data/factions/slaves/` (faction, weapons, abilities, enhancements, 4 datasheets, patrol
+`slaves.army.darkoath-raiders`); hooks in `src/engine/factions/slaves.ts`, registered in `code-hooks.ts`. Tests:
+`tests/data/slaves.test.ts` (STD-ROSTER-1, STD-WS-1) and `tests/engine/slaves.test.ts` (every other id). The
+rules above were re-checked against the PDF: no numbers needed fixing. Choices the spec left open:
+
+- **Savagers' models** are listed Savager ×9 then Godspeaker (`champion: true`), so a Godspeaker is removed last when damage
+  is allocated by list order. Bases are 28.5 mm for Savagers and Marauders, 32 mm for the Warqueen, 60×35 oval for Fellriders.
+- **Companion** (Rage of Arkhar): the engine already returns a Companion weapon as printed, and the effect also carries a
+  `not: { weaponAbility: 'COMPANION' }` condition, so the Hooves never gain Attacks or Rend.
+- **Oaths of Darkness** modes list the hand best-first by `tacticOdds`; the AI takes the first of equally scored modes, so it
+  swears on the card it is likeliest to score. The announcement names the card (it is shown to the opponent).
+- **Visions of Glory** keeps a ledger in `mission.custom.visions` keyed by the granted effect's id. A roll with several failing
+  dice and enough re-rolls left spends one re-roll per failing die and re-rolls them all; otherwise it re-rolls one die.
+  Approximation: failing is judged from the roll's own modifiers, so a later +1 (Oath of Supremacy) can leave a re-roll spent
+  on a die that would have passed anyway.
+- **Glorious Death** judges "in combat with the attacking unit" once per Fight (first model slain, whole unit still in place,
+  mark `glory:<victim>><attacker>` for the phase), so models slain after the near ones are gone still count.
+- **Regiment / enhancement defaults:** Rage of Arkhar and Bloodthirsty Blade. The sim's variant games use the last of each
+  list (Fearless Invaders, Fell Ritualist).

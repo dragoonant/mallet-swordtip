@@ -1,0 +1,78 @@
+[
+  {
+    "id": "slaves.weapon.rune-etched-axe",
+    "name": "Rune-etched Axe",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  },
+  {
+    "id": "slaves.weapon.darkoath-weapons",
+    "name": "Darkoath Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  },
+  {
+    "id": "slaves.weapon.fellrider-blades",
+    "name": "Fellrider Blades",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "CHARGE_DAMAGE"
+      }
+    ]
+  },
+  {
+    "id": "slaves.weapon.warsteeds-hooves",
+    "name": "Warsteed's Hooves",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 5,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "COMPANION"
+      }
+    ]
+  },
+  {
+    "id": "slaves.weapon.raider-weapons",
+    "name": "Raider Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  }
+]

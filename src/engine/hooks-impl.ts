@@ -21,6 +21,7 @@ import {
   type HookRegistry, type HookResult, type HookResultFor, type RollContext,
 } from './hooks'
 import { leaderService } from './leaders'
+import { unitWhollyWithin } from './effects'
 import { cardStatChange } from './cardFlags'
 import type { DecisionHandler, EngineContext, WindowTrigger } from './modules'
 import { keywordsOf, modelKeywordsOf, modelStats, mortalCredit, unitModels } from './state'
@@ -440,7 +441,10 @@ function scopeMatches(state: GameState, entry: HookSourceEntry, party: Party | '
       if (!other || (who === 'friendly') !== (other.player === holder.player)) return false
       if (leaderService.sameUnit(state, other.id, holder.id)) return who === 'friendly'
       const within = entry.scope.within
-      return within === undefined || leaderService.unitDistance(state, other.id, holder.id) <= within + 1e-6
+      if (within === undefined) return true
+      // Scope.wholly (FYR-AB-1 Icon of Grimnir): every model of the other unit wholly within range of the holder
+      if (entry.scope.wholly) return unitWhollyWithin(state, other.id, holder.id, within)
+      return leaderService.unitDistance(state, other.id, holder.id) <= within + 1e-6
     }
   }
 }

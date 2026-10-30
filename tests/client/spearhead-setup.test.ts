@@ -1,15 +1,15 @@
 // WP6 smoke: the client store builds a real Spearhead game from the data bundle (Castelite Company vs Bigmob, Fire and
-// Jade) and the bot can drive both seats for a while through the real engine.
+// Jade; the four armies are Cities of Sigmar, Ironjawz, Slaves to Darkness and Fyreslayers) and the bot can drive both seats for a while through the real engine.
 import { describe, expect, it } from 'vitest'
 import { loadBundle } from '../../src/data'
 import { buildPlayerSetup, regimentChoices, spearheadArmies, useGameStore, DEFAULT_SPEARHEAD_FACTIONS } from '../../src/client/store/game'
 import { UtilityDecider } from '../../src/ai/utility'
 
 describe('spearhead client setup', () => {
-  it('offers exactly the two Spearhead armies with two regiment abilities and four enhancements each', async () => {
+  it('offers exactly the four Spearhead armies with two regiment abilities and four enhancements each', async () => {
     const bundle = await loadBundle()
     const armies = spearheadArmies(bundle)
-    expect(armies.map((a) => a.faction).sort()).toEqual(['cities', 'ironjawz'])
+    expect(armies.map((a) => a.faction).sort()).toEqual(['cities', 'fyreslayers', 'ironjawz', 'slaves'])
     for (const a of armies) {
       expect(regimentChoices(bundle, a)).toHaveLength(2)
       expect(a.enhancements).toHaveLength(4)

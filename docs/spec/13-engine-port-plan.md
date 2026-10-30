@@ -243,6 +243,26 @@ charge module's drive loop (`ChargeState.heroic = true`). Deviations kept on pur
 decision (the owner may decline); "Any ... phase" commands may be used in either turn; Raze counts a unit with any model in
 enemy territory within 3" of a long edge; Redeploy offers short slides that do not end in combat (the path is not tested).
 
+### 3.8 F6 engine-core: generic mechanisms for Slaves to Darkness and Fyreslayers (additive)
+
+Contract edits (all additive): `types.ts` `TacticPiles` `+ oath?: Id | null` and `+ fulfilled?: Id[]`; `ChooseOptionTopic`
+`+ 'extraTactic' | 'bottomTactic'`. `hooks.ts` `EFFECT_HOOKS` `+ noRetreatDamage: []` (read directly). Data:
+`Effect.noRetreatDamage?: true`, `Scope.wholly?: true` (types + `common.schema.json`). Non-frozen: `EngineCodeHook`
+`+ onOwnModelSlain`, `+ extraTacticDraw`; `adjustFeelNoPain` is now asked by the AoS ward roll.
+
+| Mechanism | Where | For |
+|---|---|---|
+| Oath / fulfilled piles: `setOath`, `oathOf`, `clearOath`, `fulfilledOf`; a scored oath goes to `fulfilled` (and stays on `scored`), its command stays offered, used = discarded; oath shown in the opponent's view; lapses at end of turn | `cards.ts` | STD-BT-1 |
+| Extra draw: `EngineCodeHook.extraTacticDraw(state, entry, player)`; after the draw step, `extraTactic` (draw / pass) then `bottomTactic` (put back) | `cards.ts` | STD-ENH-4 |
+| `Effect.noRetreatDamage` on an active effect waives Retreat damage (`unitIgnoresRetreatDamage`) | `phases/movement.ts` | STD-RA-2 |
+| `EngineCodeHook.onOwnModelSlain(ctx, { ability, unitId, model, by })` fires for the slain model's unit, last model included; `deferMortalAfterFight` holds mortal damage, `drainAfterFightMortal` lands it when the Fight activation ends | `attack.ts`, `phases/fight.ts` | STD-AB-4 |
+| Ability re-rolls of a short charge roll / a run roll below 4: declarative `reroll` at `onChargeRoll` / `onAdvanceRoll` or a `produce` there (`applyAbilityRerolls`) | `rerolls.ts`, `charge.ts`, `movement.ts` | STD-ENH-3, STD-AB-2 |
+| `Scope.wholly`: friendly / enemy auras with `within` count a unit only when every model is wholly within (`unitWhollyWithin`) | `hooks-impl.ts`, `effects.ts` | FYR-AB-1, FYR-AB-2 |
+| Code-hook Ward for a unit no scope names: `adjustFeelNoPain` asked for every source; best ward wins | `attack.ts` | FYR-AB-3 |
+| Redeploy: `requestRedeploy(state, { abilityId, player, unitIds, minEnemyDistance, markSetUp? })`; the ability loop asks one `abilityMode` (data.redeploy) per unit, spots validated by `resolveSetUp` (the reserve-arrival validator) | `redeploy.ts`, `abilities.ts`, `phases/movement.ts` | FYR-RA-1 |
+| Opponent's hero phase window: already in `phases/command.ts` (`timing { kind: 'phase', phase: 'command', whose: 'any' }`) | — | FYR-AB-2 |
+| Sim pairs every Spearhead army in the bundle (`simPairings`, `--armies a,b`); the start screen already lists armies from data | `tools/sim-core.ts` | any vs any |
+
 ## 4. Client impact
 
 ### 4.1 Counts

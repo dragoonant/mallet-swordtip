@@ -44,6 +44,9 @@ const FACTION_COLOR: Record<string, string> = {
   // Age of Sigmar: Cities' polished steel, Ironjawz' rust-hot orange.
   cities: '#dfe6f2',
   ironjawz: '#ff9a3a',
+  // Darkoath blood-red scratches, Fyreslayer molten gold.
+  slaves: '#e0443a',
+  fyreslayers: '#ffb02e',
   sm: '#5aa7ff',
   ork: '#8dff5a',
   necrons: '#39ff6a',
@@ -77,9 +80,10 @@ export function factionColor(faction: string): THREE.Color {
 }
 
 /** How a faction's melee reads: 'blade' = swept steel arcs, 'chop' = heavy crude chops with dust and grit,
+ *  'rend' = quick crossing scratch-slashes (Darkoath), 'ember' = a molten overhead axe-fall that throws embers (Fyreslayers),
  *  'spark' = the original spark-and-streak clash every other faction keeps. */
-export type MeleeStyle = 'blade' | 'chop' | 'spark'
-const MELEE_STYLE: Record<string, MeleeStyle> = { cities: 'blade', ironjawz: 'chop' }
+export type MeleeStyle = 'blade' | 'chop' | 'rend' | 'ember' | 'spark'
+const MELEE_STYLE: Record<string, MeleeStyle> = { cities: 'blade', ironjawz: 'chop', slaves: 'rend', fyreslayers: 'ember' }
 export function meleeStyle(faction: string): MeleeStyle {
   return MELEE_STYLE[faction] ?? 'spark'
 }

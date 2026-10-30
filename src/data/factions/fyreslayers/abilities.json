@@ -1,0 +1,324 @@
+[
+  {
+    "id": "fyreslayers.ability.saga-axeband",
+    "name": "Saga Axeband",
+    "text": "Army marker for the Fyreslayers Saga Axeband. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "fyreslayers.ability.awaken-the-runes",
+    "name": "Awaken the Runes",
+    "text": "At the start of your turn, once per battle round, pick an ur-gold rune you have not yet used this battle and roll a dice. On a 1-5 its standard effect applies to your units; on a 6 its enhanced effect applies too. The effect lasts until the start of your next turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfTurn",
+      "whose": "your"
+    },
+    "limit": "oncePerRound",
+    "code": "fyreslayersAwakenTheRunes",
+    "params": {
+      "army": true,
+      "activation": "D6",
+      "enhancedOn": 6,
+      "priority": "P1",
+      "runes": [
+        {
+          "id": "fury",
+          "name": "Rune of Fury",
+          "text": "Friendly units add 1 to their hit rolls for combat attacks.",
+          "enhancedText": "In addition, their melee weapons have +1 Attacks.",
+          "standard": [
+            {
+              "when": {
+                "weaponType": "melee"
+              },
+              "modifyRoll": {
+                "roll": "hit",
+                "value": 1
+              }
+            }
+          ],
+          "enhanced": [
+            {
+              "when": {
+                "weaponType": "melee"
+              },
+              "modifyStat": {
+                "stat": "A",
+                "value": 1
+              }
+            }
+          ]
+        },
+        {
+          "id": "searing-heat",
+          "name": "Rune of Searing Heat",
+          "text": "Friendly melee weapons have +1 Rend.",
+          "enhancedText": "In addition, their melee weapons have +1 Damage.",
+          "standard": [
+            {
+              "when": {
+                "weaponType": "melee"
+              },
+              "modifyStat": {
+                "stat": "AP",
+                "value": -1
+              }
+            }
+          ],
+          "enhanced": [
+            {
+              "when": {
+                "weaponType": "melee"
+              },
+              "modifyStat": {
+                "stat": "D",
+                "value": 1
+              }
+            }
+          ]
+        },
+        {
+          "id": "fiery-determination",
+          "name": "Rune of Fiery Determination",
+          "text": "Friendly units have Ward (5+).",
+          "enhancedText": "In addition, friendly units add 1 to their save rolls.",
+          "standard": [
+            {
+              "feelNoPain": 5
+            }
+          ],
+          "enhanced": [
+            {
+              "modifyRoll": {
+                "roll": "save",
+                "value": 1
+              }
+            }
+          ]
+        },
+        {
+          "id": "relentless-zeal",
+          "name": "Rune of Relentless Zeal",
+          "text": "Friendly units have +2\" Move.",
+          "enhancedText": "In addition, friendly units add 2 to their charge rolls.",
+          "standard": [
+            {
+              "modifyStat": {
+                "stat": "M",
+                "value": 2
+              }
+            }
+          ],
+          "enhanced": [
+            {
+              "modifyRoll": {
+                "roll": "charge",
+                "value": 2
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "fyreslayers.ability.magmic-tunnels",
+    "name": "Magmic Tunnels",
+    "text": "Once per battle, at the start of the first battle round, pick up to 2 friendly units. Take them off the battlefield and set them up again anywhere, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfRound",
+      "whose": "your"
+    },
+    "limit": "oncePerBattle",
+    "code": "fyreslayersMagmicTunnels",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "params": {
+      "round": 1,
+      "maxUnits": 2,
+      "minEnemyDistance": 6,
+      "anywhere": true,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "fyreslayers.ability.fyresteel-throwing-axes",
+    "name": "Fyresteel Throwing Axes",
+    "text": "Once per turn, in your shooting phase, pick any number of friendly units that are not in combat and are within 10\" of an enemy unit. Each picks a visible enemy unit within 10\" and rolls a dice; on a 4+ that enemy unit suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "shooting",
+      "whose": "your"
+    },
+    "limit": "oncePerTurnArmy",
+    "code": "fyreslayersThrowingAxes",
+    "params": {
+      "range": 10,
+      "successOn": 4,
+      "mortal": "D3",
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "fyreslayers.ability.too-stubborn-to-die",
+    "name": "Too Stubborn to Die",
+    "text": "At the start of any turn, heal the bearer for D3.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfTurn",
+      "whose": "any"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "fyreslayersTooStubborn",
+    "params": {
+      "heal": "D3",
+      "priority": "P3"
+    }
+  },
+  {
+    "id": "fyreslayers.ability.horn-of-grimnir",
+    "name": "Horn of Grimnir",
+    "text": "In your hero phase, if the bearer is not in combat, roll a dice for each friendly unit on the battlefield that has lost models. On a 3+ return 1 slain model to that unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "fyreslayersHornOfGrimnir",
+    "params": {
+      "successOn": 3,
+      "returnModels": 1,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "fyreslayers.ability.spirit-of-grimnir",
+    "name": "Spirit of Grimnir",
+    "text": "The bearer's army may re-roll the activation roll of Awaken the Runes.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "fyreslayersSpiritOfGrimnir",
+    "params": {
+      "reroll": "activation"
+    }
+  },
+  {
+    "id": "fyreslayers.ability.powerful-presence",
+    "name": "Powerful Presence",
+    "text": "The bearer's Control characteristic is 3 higher.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "effect": {
+      "modifyStat": {
+        "stat": "OC",
+        "value": 3
+      }
+    }
+  },
+  {
+    "id": "fyreslayers.ability.icon-of-grimnir",
+    "name": "Icon of Grimnir",
+    "text": "Friendly units add 1 to their save rolls while they are wholly within 12\" of this unit.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "friendly",
+      "within": 12,
+      "wholly": true
+    },
+    "effect": {
+      "modifyRoll": {
+        "roll": "save",
+        "value": 1
+      }
+    },
+    "params": {
+      "range": 12
+    }
+  },
+  {
+    "id": "fyreslayers.ability.plant-the-icon",
+    "name": "Plant the Icon",
+    "text": "Once per battle, in any hero phase: for the rest of the turn friendly units have Ward (5+) while they are wholly within 12\" of this unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "code": "fyreslayersPlantTheIcon",
+    "params": {
+      "range": 12,
+      "ward": 5,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "fyreslayers.ability.duty-unto-death",
+    "name": "Duty Unto Death",
+    "text": "While your general is wholly within this unit's combat range, both this unit and your general have Ward (5+).",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "fyreslayersDutyUntoDeath",
+    "params": {
+      "range": 3,
+      "ward": 5
+    }
+  },
+  {
+    "id": "fyreslayers.ability.whirlwind-of-destruction",
+    "name": "Whirlwind of Destruction",
+    "text": "While this unit has charged this turn, its melee weapons have +1 Attacks.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "when": {
+        "unitCharged": true,
+        "weaponType": "melee"
+      },
+      "modifyStat": {
+        "stat": "A",
+        "value": 1
+      }
+    }
+  }
+]

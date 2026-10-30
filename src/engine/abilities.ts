@@ -21,6 +21,7 @@ import type { DecisionHandler, EngineContext } from './modules'
 import type { ActivatedAbilityHook } from './hooks'
 import { applySlide, parseAt, parseSlide, readMoveQueue, readPlaceRequest, slideOptions, writeMoveQueue, writePlaceRequest } from './factions/aos-moves'
 import { CFR_ID, SYNTHETIC_ABILITIES, discardReplacement, placeReplacement, replaceableUnits, replacementOptions } from './factions/spearhead-core'
+import { applyRedeploy, readRedeploy, redeployOptions, writeRedeploy } from './redeploy'
 import type { TimingWindowId } from '../data/types'
 import type { AbilityId, DiceRoll, GameState, Phase, PlayerId, RuntimeAbility, UnitId } from './types'
 
@@ -172,7 +173,8 @@ function clearMark(state: GameState, prefix: string): void {
 }
 
 // move / place: the decision is the next step of an ability's movement (Mighty Destroyers) or a replacement's set-up (Call for Reinforcements)
-interface WindowData { window: AbilityWindow; k: string; choices?: { id: string; abilityId: AbilityId; unitId: UnitId | null }[]; move?: boolean; place?: boolean }
+// redeploy: where a lifted unit is set up again (redeploy.ts, FYR-RA-1 Magmic Tunnels)
+interface WindowData { window: AbilityWindow; k: string; choices?: { id: string; abilityId: AbilityId; unitId: UnitId | null }[]; move?: boolean; place?: boolean; redeploy?: boolean }
 
 function optionAction(player: PlayerId, optionId: string) {
   return { type: 'chooseOption' as const, player, decisionId: '', optionId }
@@ -205,6 +207,24 @@ function nextStep(ctx: EngineContext, window: AbilityWindow, k: string): 'pendin
       options: opts.map((o) => ({ id: o.id, label: o.label, action: optionAction(place.player, o.id) })),
     })
     return 'pending'
+  }
+  const rd = readRedeploy(s)
+  if (rd) {
+    const queue = rd.unitIds.filter((id) => s.units[id]?.location === 'board')
+    while (queue.length > 0) {
+      const opts = redeployOptions(s, queue[0], rd.minEnemyDistance)
+      if (opts.length === 0) { queue.shift(); continue } // nowhere legal: the unit stays where it is
+      writeRedeploy(s, { ...rd, unitIds: queue })
+      const data: WindowData = { window, k, redeploy: true }
+      ctx.decide({
+        kind: 'chooseOption', player: rd.player, window: DISPLAY_WINDOW[window], canPass: true,
+        context: { topic: 'abilityMode', unitId: queue[0], abilityId: rd.abilityId, data: data as unknown as Record<string, unknown> },
+        options: opts.map((o) => ({ id: o.id, label: `${unitName(s, queue[0])}: ${o.label}`, action: optionAction(rd.player, o.id), hint: { value: o.value } })),
+      })
+      return 'pending'
+    }
+    writeRedeploy(s, null)
+    return 'again'
   }
   const mq = readMoveQueue(s)
   if (mq) {
@@ -338,6 +358,7 @@ export const abilityService: AbilityService = {
       const topic = pending.context.topic
       if (data.move) return answerMove(ctx, action)
       if (data.place) return answerPlace(ctx, action)
+      if (data.redeploy) return answerRedeploy(ctx, action)
       if (action.type === 'pass') {
         if (topic === 'abilityUse') { s.phaseState.marks.push(passMark(k)); return }
         clearMark(s, selPrefix(k)) // cancelling a target pick drops the whole selection
@@ -375,6 +396,19 @@ function answerMove(ctx: EngineContext, action: Answer): Rejected {
     if (!applySlide(ctx, unitId, slide.dx, slide.dz, mq.maxDistance)) return { code: 'E_OUT_OF_RANGE', reason: `${unitName(s, unitId)} cannot move there` }
   }
   writeMoveQueue(s, { ...mq, queue: mq.queue.slice(1) })
+}
+
+function answerRedeploy(ctx: EngineContext, action: Answer): Rejected {
+  const s = ctx.state
+  const rd = readRedeploy(s)
+  if (!rd || rd.unitIds.length === 0) return { code: 'E_NOT_AN_OPTION', reason: 'abilities: no unit is waiting to be set up again' }
+  const unitId = rd.unitIds[0]
+  if (action.type !== 'pass') {
+    if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'abilities: expected chooseOption or pass' }
+    const at = parseAt(action.optionId)
+    if (!at || !applyRedeploy(ctx, unitId, at, rd.minEnemyDistance, rd.markSetUp === true)) return { code: 'E_TERRITORY', reason: `${unitName(s, unitId)} cannot be set up there` }
+  }
+  writeRedeploy(s, { ...rd, unitIds: rd.unitIds.slice(1) })
 }
 
 function answerPlace(ctx: EngineContext, action: Answer): Rejected {

@@ -30,6 +30,10 @@ const SOURCE_HUES: Record<string, { major: string | null; minor: string | null }
   'space-wolves': { major: '#5d7896', minor: '#e0a824' },
   'chaos-daemons': { major: '#7b342d', minor: '#77603f' },
   'dark-angels': { major: '#1f3b2a', minor: '#d9cfb4' },
+  // Age of Sigmar armies. Darkoath: crimson cloaks and sashes, bronze and leather trim, fur and iron (grey) left alone.
+  // Fyreslayers: burnished bronze-gold armour as the major, flame-orange hair, beards and ruddy skin as the minor (they share a hue band, so a repaint moves them together).
+  slaves: { major: '#642620', minor: '#9b8061' },
+  fyreslayers: { major: '#c58d3b', minor: '#ac5222' },
   // Black plate has no hue to remap; the bone-coloured tabards/trim are the only repaintable colour.
   'black-templars': { major: null, minor: '#e6dfc8' },
 }

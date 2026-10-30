@@ -13,6 +13,14 @@ const MODELS: Array<[string, string, string]> = [
   ['ironjawz.unit.brute-ragerz', 'brute-rager', 'brute-rager'],
   ['ironjawz.unit.ardboyz', 'ardboy', 'ironjawz-ardboy'],
   ['ironjawz.unit.brutes', 'brute', 'ironjawz-brute'],
+  ['slaves.unit.darkoath-warqueen', 'warqueen', 'darkoath-warqueen'],
+  ['slaves.unit.darkoath-savagers', 'savager', 'darkoath-savager'],
+  ['slaves.unit.darkoath-savagers', 'godspeaker', 'darkoath-godspeaker'],
+  ['slaves.unit.darkoath-fellriders', 'fellrider', 'darkoath-fellrider'],
+  ['slaves.unit.darkoath-marauders', 'marauder', 'darkoath-marauder'],
+  ['fyreslayers.unit.battlesmith', 'battlesmith', 'fyr-battlesmith'],
+  ['fyreslayers.unit.hearthguard-berzerkers', 'hearthguard', 'fyr-hearthguard'],
+  ['fyreslayers.unit.vulkite-berzerkers', 'vulkite', 'fyr-vulkite'],
 ]
 
 describe('Spearhead figures and board', () => {
@@ -22,6 +30,12 @@ describe('Spearhead figures and board', () => {
       expect(ENABLED_GLB_SLUGS).toContain(slug)
       expect(existsSync(`public/assets/models/${slug}.glb`)).toBe(true)
     }
+  })
+
+  it('FIG-AOS-004 every enabled GLB slug has a file on disk (a missing one would 404 on every load), none is a dead 40k slug', () => {
+    for (const slug of ENABLED_GLB_SLUGS) expect(existsSync(`public/assets/models/${slug}.glb`), slug).toBe(true)
+    const mapped = new Set(MODELS.map((m) => m[2]))
+    for (const slug of ENABLED_GLB_SLUGS) expect(mapped.has(slug), `${slug} is enabled but no Spearhead model uses it`).toBe(true)
   })
 
   it('FIG-AOS-002 the Spearhead terrain pieces use the aos GLBs, 40k ids keep their look', () => {

@@ -1,0 +1,62 @@
+{
+  "id": "slaves.army.darkoath-raiders",
+  "faction": "slaves",
+  "name": "Darkoath Raiders",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "warqueen",
+      "datasheet": "slaves.unit.darkoath-warqueen",
+      "size": 1
+    },
+    {
+      "ref": "savagers",
+      "datasheet": "slaves.unit.darkoath-savagers",
+      "size": 10
+    },
+    {
+      "ref": "fellriders",
+      "datasheet": "slaves.unit.darkoath-fellriders",
+      "size": 5
+    },
+    {
+      "ref": "marauders",
+      "datasheet": "slaves.unit.darkoath-marauders",
+      "size": 10
+    }
+  ],
+  "warlord": "warqueen",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "slaves.ability.oaths-of-darkness"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "slaves.ability.rage-of-arkhar",
+      "default": true
+    },
+    {
+      "id": "slaves.ability.fearless-invaders",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "slaves.enh.bloodthirsty-blade",
+      "default": true
+    },
+    {
+      "id": "slaves.enh.godshadow-talisman",
+      "default": false
+    },
+    {
+      "id": "slaves.enh.champion-of-raids",
+      "default": false
+    },
+    {
+      "id": "slaves.enh.fell-ritualist",
+      "default": false
+    }
+  ]
+}

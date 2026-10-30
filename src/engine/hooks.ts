@@ -241,6 +241,8 @@ export const EFFECT_HOOKS: Record<keyof Effect, HookName[]> = {
   // INF-5.6: read directly by movement.ts / charge.ts, never through a hook
   moveThroughModels: [],
   autoPassDesperateEscape: [],
+  // STD-RA-2: read directly by phases/movement.ts (unitIgnoresRetreatDamage)
+  noRetreatDamage: [],
 }
 
 // hooks a descriptor must be registered at: its trigger's hook plus every hook its effect keys need

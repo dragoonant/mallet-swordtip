@@ -51,17 +51,19 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
   force: { id: 'psychic-zap', volume: 0.9 },
 }
 
-/** Spearhead weapons (Cities of Sigmar, Ironjawz) by what their id or name says. Blades and polearms swing, the
+/** Spearhead weapons (Cities of Sigmar, Ironjawz, Slaves to Darkness, Fyreslayers) by what their id or name says. Blades and polearms swing, the
  *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
  *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
-const AOS_FACTION_ID = /^(cities|ironjawz)\./
+const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers)\./
 const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
   [/grapeshot/, 'aos-cannon-fire', 0.85],
   [/cannon/, 'aos-cannon-fire'],
   [/pistol|handgun|flintlock|musket|blunderbuss/, 'wpn-slugga', 0.7],
   [/lance|cavalier/, 'aos-lance-charge-impact'],
   [/longsword|sword|rapier|sabre/, 'aos-sword-clash'],
-  [/halberd|spear|pike|freeguild|steelhelm/, 'aos-halberd-strike'],
+  [/halberd|spear|pike|freeguild|steelhelm|poleaxe|javelin/, 'aos-halberd-strike'],
+  // Darkoath fellrider blades are curved cavalry sabres; the Warqueen's rune-etched axe and Fyreslayer axes fall to the chop below.
+  [/fellrider|blades?/, 'aos-sword-clash'],
   [/hoove?s|crew|sidearm|shield/, 'aos-shield-bash'],
   [/choppa|stikka|rager|cleaver|axe/, 'aos-choppa-hit'],
   [/brute|fist|klaw|club|gore/, 'aos-fist-smash'],
@@ -75,7 +77,8 @@ export function aosWeaponSound(weaponId: string, weaponName = '', melee = true):
   const hit = AOS_WEAPON_RULES.find(([re]) => re.test(text))
   if (hit) return hit[2] === undefined ? { id: hit[1] } : { id: hit[1], volume: hit[2] }
   if (!melee) return undefined
-  return { id: weaponId.startsWith('ironjawz.') ? 'aos-choppa-hit' : 'aos-halberd-strike' }
+  // Orruk, Darkoath and duardin gear is all axes and crude iron: the chop; only the Cities' drilled steel is the halberd.
+  return { id: weaponId.startsWith('cities.') ? 'aos-halberd-strike' : 'aos-choppa-hit' }
 }
 
 /** What a caller with the data bundle and game state can offer for weapon-accurate firing sounds
@@ -462,6 +465,9 @@ const DEATH_TRIM: Partial<Record<SfxId, number>> = {
 const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
   cities: ['aos-human-death-1', 'aos-human-death-2'],
   ironjawz: ['aos-orruk-death-1', 'aos-orruk-death-2'],
+  // Darkoath raiders and Fyreslayers are men and duardin: the human cries are the nearest voices we have.
+  slaves: ['aos-human-death-1', 'aos-human-death-2'],
+  fyreslayers: ['aos-human-death-1', 'aos-human-death-2'],
 }
 
 function takeFor(modelId: string): number {
@@ -543,7 +549,12 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
 
     // Cities charge on horse with a roar of men, Ironjawz stomp in bellowing.
     case 'ChargeDeclared': {
-      if (lookup?.factionOfUnit(event.unitId) === 'ironjawz') return [{ id: 'aos-orruk-stomp' }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }]
+      const chargeFaction = lookup?.factionOfUnit(event.unitId)
+      if (chargeFaction === 'ironjawz') return [{ id: 'aos-orruk-stomp' }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }]
+      // Darkoath and Fyreslayer footsloggers pound in on foot with a battle cry; only the Fellriders thunder.
+      if ((chargeFaction === 'slaves' || chargeFaction === 'fyreslayers') && !(lookup?.keywordsOfUnit?.(event.unitId) ?? []).includes('CAVALRY')) {
+        return [{ id: 'aos-armoured-march', opts: { volume: 0.7 } }, { id: 'aos-human-battle-cry', opts: { volume: 0.8 } }]
+      }
       return [{ id: 'aos-horse-charge' }, { id: 'aos-human-battle-cry', opts: { volume: 0.7 } }]
     }
 

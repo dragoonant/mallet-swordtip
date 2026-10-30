@@ -260,7 +260,7 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'soulreaper', faction: 'thousand-sons', label: 'Scarab Terminator (soulreaper cannon)' },
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'hellfyre', faction: 'thousand-sons', label: 'Scarab Terminator (hellfyre rack)' },
   { datasheetId: 'ths.tzaangors', modelId: 'tzaangor', faction: 'thousand-sons', label: 'Tzaangor' },
-  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz)
+  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers)
   { datasheetId: 'cities.unit.freeguild-cavalier-marshal', modelId: 'cavalier-marshal', faction: 'cities', label: 'Cavalier-Marshal' },
   { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm', faction: 'cities', label: 'Steelhelm' },
   { datasheetId: 'cities.unit.freeguild-cavaliers', modelId: 'cavalier', faction: 'cities', label: 'Freeguild Cavalier' },
@@ -269,6 +269,14 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ironjawz.unit.brute-ragerz', modelId: 'brute-rager', faction: 'ironjawz', label: 'Brute Rager' },
   { datasheetId: 'ironjawz.unit.ardboyz', modelId: 'ardboy', faction: 'ironjawz', label: 'Ardboy' },
   { datasheetId: 'ironjawz.unit.brutes', modelId: 'brute', faction: 'ironjawz', label: 'Brute' },
+  { datasheetId: 'slaves.unit.darkoath-warqueen', modelId: 'warqueen', faction: 'slaves', label: 'Darkoath Warqueen' },
+  { datasheetId: 'slaves.unit.darkoath-savagers', modelId: 'savager', faction: 'slaves', label: 'Darkoath Savager' },
+  { datasheetId: 'slaves.unit.darkoath-savagers', modelId: 'godspeaker', faction: 'slaves', label: 'Godspeaker' },
+  { datasheetId: 'slaves.unit.darkoath-fellriders', modelId: 'fellrider', faction: 'slaves', label: 'Darkoath Fellrider' },
+  { datasheetId: 'slaves.unit.darkoath-marauders', modelId: 'marauder', faction: 'slaves', label: 'Darkoath Marauder' },
+  { datasheetId: 'fyreslayers.unit.battlesmith', modelId: 'battlesmith', faction: 'fyreslayers', label: 'Battlesmith' },
+  { datasheetId: 'fyreslayers.unit.hearthguard-berzerkers', modelId: 'hearthguard', faction: 'fyreslayers', label: 'Hearthguard Berzerker' },
+  { datasheetId: 'fyreslayers.unit.vulkite-berzerkers', modelId: 'vulkite', faction: 'fyreslayers', label: 'Vulkite Berzerker' },
 ]
 
 // Figures are true tabletop-miniature scale (~1-2 world-inches tall — see resolveBase), so packing

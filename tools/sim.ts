@@ -12,6 +12,8 @@ async function main(): Promise<void> {
   const seed = arg('seed', '1')
   const verbose = process.argv.includes('--verbose')
   const ai = process.argv.includes('--ai') // both seats played by the utility AI instead of random legal moves
+  // --armies a,b: only these army (patrol) or faction ids; default every Spearhead army in the data bundle, all pairings
+  const only = arg('armies', '').split(',').map((x) => x.trim()).filter(Boolean)
   const bundle = await loadBundle()
   const started = Date.now()
   const wins: Record<string, number> = {}
@@ -21,7 +23,7 @@ async function main(): Promise<void> {
     const t0 = Date.now()
     let run
     try {
-      run = await runGame(bundle, seed, g, DATA_VERSION, ai)
+      run = await runGame(bundle, seed, g, DATA_VERSION, ai, only)
     } catch (err) {
       const v = (err as { violations?: Violation[] }).violations ?? [{ seed: `sim-${seed}-${g}`, actionIndex: -1, message: (err as Error).message }]
       violations.push(...v)

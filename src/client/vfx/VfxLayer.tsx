@@ -268,6 +268,38 @@ function makeController(pools: Pools, fx: FxEngine): VfxApi {
         }
         return
       }
+      if (style === 'rend') {
+        // Darkoath: three quick scratch-slashes that cross over each other, thin and blood-red, with a few dark flecks.
+        const base = Math.random() * Math.PI
+        for (let i = 0; i < 3; i++) {
+          const heading = base + (i - 1) * 0.55
+          const dx = Math.cos(heading) * 0.62, dz = Math.sin(heading) * 0.62
+          const from = { x: at.x - dx, y: at.y + 0.95 - i * 0.1, z: at.z - dz }
+          const to = { x: at.x + dx, y: at.y + 0.2 + i * 0.12, z: at.z + dz }
+          const draw = () => {
+            spawnTracer(pools.tracerPool, 0.17, from, to, 0.08, color)
+            spawnTracer(pools.tracerPool, 0.11, from, to, 0.03, SLASH_CORE_COLOR)
+            spawnBurst(pools.sparkPool, 3, to.x, to.y + 0.1, to.z, 0.24, 2.0, 0.06, 0.012, color, 1)
+          }
+          if (i === 0) draw()
+          else setTimeout(draw, i * 70)
+        }
+        spawnBurst(pools.sparkPool, 3, at.x, at.y + 0.3, at.z, 0.45, 1.6, 0.07, 0.015, DEBRIS_COLOR, 1.6)
+        return
+      }
+      if (style === 'ember') {
+        // Fyreslayers: one molten overhead axe-fall, a gold core, a ring of heat and embers that drift up instead of falling.
+        const heading = Math.random() * Math.PI * 2
+        const dx = Math.cos(heading) * 0.3, dz = Math.sin(heading) * 0.3
+        const from = { x: at.x - dx, y: at.y + 1.15, z: at.z - dz }
+        const to = { x: at.x + dx, y: at.y + 0.1, z: at.z + dz }
+        spawnTracer(pools.tracerPool, 0.2, from, to, 0.13, color)
+        spawnTracer(pools.tracerPool, 0.13, from, to, 0.05, SLASH_CORE_COLOR)
+        spawnBurst(pools.sparkPool, 8, to.x, to.y + 0.1, to.z, 0.3, 3.0, 0.09, 0.02, color, 1)
+        spawnBurst(pools.sparkPool, 6, to.x, to.y + 0.2, to.z, 0.7, 1.1, 0.07, 0.01, color, 1.8)
+        spawnDisc(pools.ringPool, 0.2, to.x, to.y + 0.1, to.z, 0.15, 0.9, color)
+        return
+      }
       spawnBurst(pools.sparkPool, 7, at.x, at.y, at.z, 0.28, 2.6, 0.09, 0.02, color, 1)
       for (let i = 0; i < 2; i++) {
         const angle = Math.random() * Math.PI * 2

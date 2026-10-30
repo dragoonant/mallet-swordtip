@@ -3,11 +3,11 @@
 // collecting. An effect is stored on the unit record it was granted to; `scope` is evaluated relative to that holder
 // (self = the whole attached unit, attacker = attacks made against the holder, friendly/enemy + within = aura).
 import type { Duration, EffectList, Scope } from '../data/types'
-import { distance } from './geometry'
+import { distance, whollyWithinOf } from './geometry'
 import { leaderService } from './leaders'
 import type { EngineContext } from './modules'
 import { unitModels } from './state'
-import type { ActiveEffect, GameState, PlayerId, UnitId } from './types'
+import type { ActiveEffect, GameState, Model, PlayerId, UnitId } from './types'
 
 export interface EffectGrant {
   sourceAbilityId: string
@@ -90,11 +90,25 @@ export const effectService: EffectService = {
         const within = e.scope.within
         if (within !== undefined) {
           const theirs = unitModels(state, other.id)
-          if (!mine.some((m) => theirs.some((t) => distance(m, t) <= within + 1e-6))) continue
+          if (e.scope.wholly) { if (!modelsWhollyWithin(mine, theirs, within)) continue }
+          else if (!mine.some((m) => theirs.some((t) => distance(m, t) <= within + 1e-6))) continue
         }
         add(e)
       }
     }
     return out
   },
+}
+
+// Scope.wholly (AoS "wholly within", FYR-AB-1): every subject model is wholly within `range` of some reference model.
+// No subject or no reference model on the board = not within.
+export function modelsWhollyWithin(subjects: readonly Model[], refs: readonly Model[], range: number): boolean {
+  if (subjects.length === 0 || refs.length === 0) return false
+  return subjects.every((m) => refs.some((r) => whollyWithinOf(m, r, range)))
+}
+
+// the unit-level form: every board model of `subjectUnitId` (attached halves included) wholly within `range` of `referenceUnitId`
+export function unitWhollyWithin(state: GameState, subjectUnitId: UnitId, referenceUnitId: UnitId, range: number): boolean {
+  const boardOf = (id: UnitId) => leaderService.halves(state, id).flatMap((h) => state.units[h]?.location === 'board' ? unitModels(state, h) : [])
+  return modelsWhollyWithin(boardOf(subjectUnitId), boardOf(referenceUnitId), range)
 }

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "slaves.unit.darkoath-savagers",
+    "faction": "slaves",
+    "name": "Darkoath Savagers",
+    "keywords": [
+      "INFANTRY"
+    ],
+    "factionKeywords": [
+      "CHAOS",
+      "SLAVES TO DARKNESS"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 1,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "savager",
+        "name": "Darkoath Savager",
+        "min": 9,
+        "max": 9,
+        "default": 9,
+        "base": {
+          "shape": "round",
+          "mm": 28.5
+        },
+        "weapons": {
+          "default": [
+            "slaves.weapon.darkoath-weapons"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      },
+      {
+        "modelId": "godspeaker",
+        "name": "Godspeaker",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "champion": true,
+        "base": {
+          "shape": "round",
+          "mm": 28.5
+        },
+        "weapons": {
+          "default": [
+            "slaves.weapon.darkoath-weapons"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "slaves.ability.visions-of-glory"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

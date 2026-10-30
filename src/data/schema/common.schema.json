@@ -656,6 +656,9 @@
         "chargeAfterFallBack": {
           "const": true
         },
+        "noRetreatDamage": {
+          "const": true
+        },
         "stealth": {
           "const": true
         },
@@ -711,6 +714,10 @@
         "within": {
           "type": "number",
           "minimum": 0
+        },
+        "wholly": {
+          "const": true,
+          "description": "with within: every model of the other unit must be wholly within `within` inches of the holder (aura 'wholly within')"
         },
         "keyword": {
           "$ref": "#/$defs/Keyword"

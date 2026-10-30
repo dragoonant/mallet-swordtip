@@ -26,6 +26,7 @@ import { applySlide, checkSlide, parseAt, parseSlide, slideOptions } from './fac
 import { healUnit, inCombat, returnSlainModels, returnableModels } from './factions/aos-common'
 import { losService } from './los'
 import { awardVp } from './missions'
+import { codeHookFor, sourcesFor } from './hooks-impl'
 import { otherPlayer, type DecisionHandler, type EngineContext, type WindowTrigger } from './modules'
 import { canDeclareCharge, neededChargeDistance } from './phases/charge'
 import { boardModelsOf, datasheetOf, enemyModelsOnBoard, keywordsOf, modelStats, setModelPos, spawnUnitCopy, territoryOf, unitModels } from './state'
@@ -167,6 +168,8 @@ export function cardsTurnStart(s: GameState): void {
 export function expireCardFlags(s: GameState, until: CardFlag['until']): void {
   // CITIES-BT-1: a card set aside by The Officer's Order that was neither used nor scored goes back at the end of its owner's turn
   if (until === 'turn') clearOfficersOrder(s, s.activePlayer)
+  // STD-BT-1: an oath not fulfilled this turn stops being the oath (the card stays in the hand)
+  if (until === 'turn') clearOath(s, s.activePlayer)
   const c = s.cards
   if (!c || c.flags.length === 0) return
   c.flags = c.flags.filter((f) => f.until !== until)
@@ -192,6 +195,35 @@ export function clearOfficersOrder(s: GameState, p: PlayerId): void {
   delete next[p]
   s.mission.custom = { ...s.mission.custom, officersOrder: next }
 }
+// ---------- STD-BT-1 Oaths of Darkness: an oath card per turn, fulfilled cards set to one side ----------
+// Generic piles any faction hook may use: setOath marks a hand card as the turn's oath (shown to the opponent). Scoring the oath
+// moves it to `fulfilled` (it also stays on the public scored record) instead of leaving it on the table; a fulfilled card's
+// command can be used later (then it is discarded). Using the oath's command before scoring it discards it as normal. The oath
+// lapses at the end of the turn (expireCardFlags 'turn'). Fulfilled cards are not in the hand, so the 3-card limit ignores them.
+export function oathOf(s: GameState, p: PlayerId): Id | null {
+  const piles = s.cards?.tactics[p]
+  const id = piles?.oath ?? null
+  return id && piles?.hand.includes(id) ? id : null
+}
+export function fulfilledOf(s: GameState, p: PlayerId): Id[] {
+  return s.cards?.tactics[p]?.fulfilled ?? []
+}
+export function setOath(s: GameState, p: PlayerId, cardId: Id): boolean {
+  const piles = cardsOf(s).tactics[p]
+  if (!piles || !piles.hand.includes(cardId)) return false
+  piles.oath = cardId
+  return true
+}
+export function clearOath(s: GameState, p: PlayerId): void {
+  const piles = s.cards?.tactics[p]
+  if (piles && piles.oath) piles.oath = null
+}
+// the cards whose commands a player may use: the hand plus the fulfilled oaths
+const commandCards = (s: GameState, p: PlayerId): Id[] => {
+  const piles = s.cards?.tactics[p]
+  return piles ? [...piles.hand, ...(piles.fulfilled ?? [])] : []
+}
+
 function officersLocked(s: GameState, p: PlayerId, cardId: Id): boolean {
   const l = (s.mission.custom.officersLock as Partial<Record<PlayerId, OfficersLock>> | undefined)?.[p]
   return !!l && l.cardId === cardId && l.round === s.round && l.turn === s.activePlayer && l.phase === s.phase
@@ -623,16 +655,69 @@ function tacticsStep(ctx: EngineContext, p: PlayerId): boolean {
     return true
   }
   c.discardDone[p] = s.round
-  if (maySeizerDraw(s, p)) {
+  if (maySeizerDraw(s, p) && cardMark(s, drawKey(s, p)) === undefined) {
     const n = Math.max(0, Math.min(HAND_SIZE - piles.hand.length, piles.deck.length))
     if (n > 0) {
       piles.hand = [...piles.hand, ...piles.deck.slice(0, n)]
       piles.deck = piles.deck.slice(n)
       ctx.emit({ type: 'TacticsDrawn', count: n, player: p })
     }
+    setCardMark(s, drawKey(s, p), n)
   }
+  // STD-ENH-4 Fell Ritualist: after drawing, optionally draw 1 more, then put 1 hand card on the bottom of the deck
+  if (extraDrawStep(ctx, p)) return true
   c.drawRound[p] = s.round
   return false
+}
+
+// the largest extra draw any of the player's sources on the board grants (EngineCodeHook.extraTacticDraw)
+export function extraTacticDraws(s: GameState, p: PlayerId): number {
+  let best = 0
+  for (const entry of sourcesFor(s)) {
+    const spec = codeHookFor(entry.code)
+    if (!spec?.extraTacticDraw) continue
+    const holder = s.units[entry.holderUnitId]
+    if (!holder || holder.player !== p || holder.location !== 'board') continue
+    best = Math.max(best, spec.extraTacticDraw(s, entry, p))
+  }
+  return best
+}
+
+// round-scoped progress of the draw step; kept in mission.custom because the draw happens before any phase starts
+const drawKey = (s: GameState, p: PlayerId): string => `drawn:${s.round}:${p}`
+const extraKey = (s: GameState, p: PlayerId): string => `extra:${s.round}:${p}`
+const bottomKey = (s: GameState, p: PlayerId): string => `bottom:${s.round}:${p}`
+function cardMark(s: GameState, key: string): unknown { return (s.mission.custom.cardMarks as Record<string, unknown> | undefined)?.[key] }
+function setCardMark(s: GameState, key: string, v: unknown): void {
+  s.mission.custom = { ...s.mission.custom, cardMarks: { ...((s.mission.custom.cardMarks as Record<string, unknown> | undefined) ?? {}), [key]: v } }
+}
+
+function extraDrawStep(ctx: EngineContext, p: PlayerId): boolean {
+  const s = ctx.state
+  const piles = cardsOf(s).tactics[p]
+  // only after an actual draw (a seizing player who draws nothing gets no extra draw)
+  const drawn = cardMark(s, drawKey(s, p))
+  if (typeof drawn !== 'number' || drawn <= 0) return false
+  const owed = cardMark(s, bottomKey(s, p))
+  if (typeof owed === 'number' && owed > 0) {
+    if (piles.hand.length === 0) { setCardMark(s, bottomKey(s, p), 0); return false }
+    ctx.decide({
+      kind: 'chooseOption', player: p, window: 'round.start', canPass: false,
+      context: { topic: 'bottomTactic', unitId: null, abilityId: null, data: { hand: [...piles.hand] } },
+      options: piles.hand.map((id) => ({ id: `bottom:${id}`, label: `Put ${cardName(id)} on the bottom of the deck`, action: optionAction(p, `bottom:${id}`), hint: { value: 1 - tacticOdds(s, p, id) } })),
+    })
+    return true
+  }
+  if (cardMark(s, extraKey(s, p)) !== undefined) return false
+  const extra = Math.min(extraTacticDraws(s, p), piles.deck.length)
+  if (extra <= 0) { setCardMark(s, extraKey(s, p), 0); return false }
+  const plural = extra === 1 ? 'card' : 'cards'
+  ctx.decide({
+    kind: 'chooseOption', player: p, window: 'round.start', canPass: true,
+    context: { topic: 'extraTactic', unitId: null, abilityId: null, data: { count: extra } },
+    options: [{ id: 'draw', label: `Draw ${extra} more battle tactic ${plural}, then put ${extra} back on the bottom`, action: optionAction(p, 'draw'), hint: { value: 0.5 } }],
+  })
+  return true
 }
 
 // SPH-8.2 ③ and ④; true while a decision is pending
@@ -861,13 +946,15 @@ function offersFor(s: GameState, p: PlayerId, slots: CommandSlot[], cc: CommandC
   if (!c) return []
   const out: Offer[] = []
   const setAside = officersOrderCard(s, p)
-  for (const cardId of c.tactics[p].hand) {
+  const fulfilled = fulfilledOf(s, p)
+  for (const cardId of commandCards(s, p)) {
     const def = COMMANDS[cardId]
     if (!def || !slots.includes(def.slot) || !whoseOk(s, p, def.whose)) continue
     if (officersLocked(s, p, cardId)) continue
     for (const t of def.targets(s, p, cc)) {
       // a set-aside card (CITIES-BT-1) comes back after its command, so using it costs nothing
-      const keep = cardId === setAside ? -0.2 : tacticOdds(s, p, cardId)
+      // a fulfilled oath (STD-BT-1) can no longer be scored, so keeping it is worth little
+      const keep = cardId === setAside ? -0.2 : fulfilled.includes(cardId) ? 0.05 : tacticOdds(s, p, cardId)
       out.push({
         id: `${cardId}|${t}`, cardId, target: t,
         label: `${TACTIC_NAMES[cardId].command} (${TACTIC_NAMES[cardId].name}): ${def.label ? def.label(s, t) : unitName(s, t)}`,
@@ -898,9 +985,15 @@ function useCommand(ctx: EngineContext, p: PlayerId, cardId: Id, target: string,
       ...s.mission.custom,
       officersLock: { ...((s.mission.custom.officersLock as Record<string, OfficersLock> | undefined) ?? {}), [p]: { cardId, round: s.round, turn: s.activePlayer, phase: s.phase } },
     }
+  } else if (!piles.hand.includes(cardId) && (piles.fulfilled ?? []).includes(cardId)) {
+    // STD-BT-1: a fulfilled oath's command is used, the card is discarded
+    piles.fulfilled = (piles.fulfilled ?? []).filter((id) => id !== cardId)
+    piles.discard = [...piles.discard, cardId]
   } else {
     piles.hand = piles.hand.filter((id) => id !== cardId)
     piles.discard = [...piles.discard, cardId]
+    // STD-BT-1: the oath's command used before it was scored: the card is discarded and the oath ends
+    if (piles.oath === cardId) piles.oath = null
   }
   const def = COMMANDS[cardId]
   const unitId = target.includes('>') ? target.split('>')[0] : s.units[target] ? target : null
@@ -1055,7 +1148,7 @@ export function commandWindow(ctx: EngineContext, slot: 'hero' | 'movement' | 'c
   const data = { mode: 'command', slot, key, player: p }
   if (followUpStep(ctx, data)) return true
   if (s.phaseState.marks.includes(passMark(key, p))) return false
-  if (c.tactics[p].hand.length === 0) return false
+  if (commandCards(s, p).length === 0) return false
   const offers = offersFor(s, p, [slot], { trigger: undefined, window: slot })
   if (offers.length === 0) return false
   raiseOffer(ctx, p, offers, data)
@@ -1072,7 +1165,7 @@ const REACTION_SLOTS: Partial<Record<string, CommandSlot[]>> = {
 export function reactionWindow(ctx: EngineContext, window: string, p: PlayerId, key: string, trigger?: WindowTrigger): boolean {
   const s = ctx.state
   const c = s.cards
-  if (!c || c.tactics[p].hand.length === 0) return false
+  if (!c || commandCards(s, p).length === 0) return false
   const slots = REACTION_SLOTS[window]
   if (!slots) return false
   const k = `${window}|${key}`
@@ -1102,7 +1195,7 @@ export function rallyAfterRetreat(ctx: EngineContext, unitId: UnitId): void {
 // ============================================================================================================
 // Decision handler: twistPick, discardTactics, scoreTactics, tacticCommand
 // ============================================================================================================
-export const CARD_TOPICS = new Set(['twistPick', 'discardTactics', 'scoreTactics', 'tacticCommand'])
+export const CARD_TOPICS = new Set(['twistPick', 'discardTactics', 'scoreTactics', 'tacticCommand', 'extraTactic', 'bottomTactic'])
 
 function handle(ctx: EngineContext, action: Action, pending: PendingDecision): Rejection | void {
   if (pending.kind !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'cards: expected a chooseOption decision' }
@@ -1136,11 +1229,36 @@ function handle(ctx: EngineContext, action: Action, pending: PendingDecision): R
       const id = choice.replace(/^score:/, '')
       const piles = c.tactics[p]
       if (!piles.hand.includes(id) || !tacticMet(s, p, id)) return { code: 'E_NOT_AN_OPTION', reason: `${id} cannot be scored now` }
+      const oath = oathOf(s, p) === id
       piles.hand = piles.hand.filter((x) => x !== id)
       piles.scored = [...piles.scored, id]
+      // STD-BT-1: a scored oath is fulfilled and set to one side; its command stays usable
+      if (oath) { piles.fulfilled = [...(piles.fulfilled ?? []), id]; piles.oath = null }
       if (officersMap(s)[p] === id) clearOfficersOrder(s, p)
       ctx.emit({ type: 'TacticScored', cardId: id, vp: 1, player: p })
       awardVp(ctx, p, 1, id)
+      return
+    }
+    case 'extraTactic': {
+      const piles = c.tactics[p]
+      const n = Math.min(Number(data.count ?? 1), piles.deck.length)
+      setCardMark(s, extraKey(s, p), choice === null ? 0 : n)
+      if (choice === null || n <= 0) return
+      piles.hand = [...piles.hand, ...piles.deck.slice(0, n)]
+      piles.deck = piles.deck.slice(n)
+      ctx.emit({ type: 'TacticsDrawn', count: n, player: p })
+      setCardMark(s, bottomKey(s, p), n)
+      return
+    }
+    case 'bottomTactic': {
+      const piles = c.tactics[p]
+      const id = (choice ?? '').replace(/^bottom:/, '')
+      if (!piles.hand.includes(id)) return { code: 'E_NOT_AN_OPTION', reason: `${id} is not in hand` }
+      piles.hand = piles.hand.filter((x) => x !== id)
+      piles.deck = [...piles.deck, id]
+      if (piles.oath === id) piles.oath = null
+      const owed = cardMark(s, bottomKey(s, p))
+      setCardMark(s, bottomKey(s, p), Math.max(0, (typeof owed === 'number' ? owed : 1) - 1))
       return
     }
     case 'tacticCommand': {
@@ -1163,7 +1281,7 @@ function handle(ctx: EngineContext, action: Action, pending: PendingDecision): R
       const key = String(data.key ?? '')
       if (choice === null) { s.phaseState.marks.push(passMark(key, p)); return }
       const [cardId, target] = [choice.slice(0, choice.indexOf('|')), choice.slice(choice.indexOf('|') + 1)]
-      if (!c.tactics[p].hand.includes(cardId) || !COMMANDS[cardId]) return { code: 'E_NOT_AN_OPTION', reason: `${cardId} is not in hand` }
+      if (!commandCards(s, p).includes(cardId) || !COMMANDS[cardId]) return { code: 'E_NOT_AN_OPTION', reason: `${cardId} is not in hand` }
       useCommand(ctx, p, cardId, target, { trigger: (data.trigger as WindowTrigger | null) ?? undefined, window: String(data.window ?? data.slot ?? '') })
       return
     }
@@ -1185,7 +1303,8 @@ export function redactCards(state: GameState, viewer: PlayerId): GameState {
       tactics: {
         ...c.tactics,
         [viewer]: { ...c.tactics[viewer], deck: hide(c.tactics[viewer].deck, 'deck') },
-        [opp]: { ...c.tactics[opp], deck: hide(c.tactics[opp].deck, 'deck'), hand: hide(c.tactics[opp].hand, 'hand') },
+        // STD-BT-1: the opponent's oath card is shown face up in its hand slot
+        [opp]: { ...c.tactics[opp], deck: hide(c.tactics[opp].deck, 'deck'), hand: hide(c.tactics[opp].hand, 'hand').map((h, i) => (c.tactics[opp].hand[i] === oathOf(state, opp) ? c.tactics[opp].hand[i] : h)) },
       } as CardsState['tactics'],
     }
     : undefined

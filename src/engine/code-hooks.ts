@@ -14,11 +14,14 @@ import type { EngineContext, Services, WindowTrigger } from './modules'
 import { keywordsOf, unitModels } from './state'
 import { citiesHooks } from './factions/cities'
 import { ironjawzHooks } from './factions/ironjawz'
+import { slavesHooks } from './factions/slaves'
+import { fyreslayersHooks } from './factions/fyreslayers'
 import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
-  ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
-  RuntimeStratagem, RuntimeWeapon, Unit, UnitId, WeaponId,
+  ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, Model, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
+  RuntimeAbility, RuntimeStratagem, RuntimeWeapon, Unit, UnitId, WeaponId,
 } from './types'
+import type { DestroyedBy } from './attack'
 
 export type ReactionKind = ReactionWindowDecision['context']['reaction']
 
@@ -75,7 +78,8 @@ export interface EngineCodeHook extends CodeHook {
   weaponAvailable?(state: GameState, entry: HookSourceEntry, modelId: ModelId, weaponId: WeaponId): boolean | null
   // C1 (World Eaters Wrathful Devotion): runs after every other FNP source of `modelId` has been merged. `current` = the best FNP
   // threshold the model has without this source (null = none). Returns the threshold to use and a modifier added to the FNP die;
-  // null = no opinion
+  // null = no opinion. AoS (attack.ts wardThreshold): asked of every source on the board whatever its scope, so a code hook can give
+  // a Ward to a unit no data scope names (FYR-AB-3 Duty Unto Death: the general); the best ward wins (min with `current`)
   adjustFeelNoPain?(state: GameState, entry: HookSourceEntry, modelId: ModelId, current: number | null): { threshold: number | null; modifier: number } | null
   // answers a chooseOption whose context.data.code names this hook, when the hook has no `pick` of its own
   answer?(ctx: EngineContext, action: Action, pending: PendingDecision): Rejection | void
@@ -113,6 +117,14 @@ export interface EngineCodeHook extends CodeHook {
   // called by abilities.ts at the top of every ability window, for each code present in state.abilities: put the battle-long
   // effects or bookkeeping this source needs in place (Glimmering's re-roll holder, Consecrate the Land's Ward). Must be idempotent.
   ensureEffects?(ctx: EngineContext): void
+  // STD-AB-4 (Glorious Death): called by attack.ts each time a model of a unit whose datasheet (or army battle trait / regiment
+  // ability) names this code is slain, even when it was the unit's last model. `model` is the snapshot at removal; `by` says who
+  // slew it and how (by.kind 'melee' = a combat attack). Hold mortal damage for after the Fight with attack.ts deferMortalAfterFight.
+  onOwnModelSlain?(ctx: EngineContext, info: { ability: RuntimeAbility; unitId: UnitId; model: Model; by: DestroyedBy }): void
+  // STD-ENH-4 (Fell Ritualist): extra battle tactic cards the source's player may draw after each draw step (0 = none). Asked of
+  // every source whose holder belongs to `player` and is on the board; the largest answer counts. cards.ts then offers the draw
+  // (topic 'extraTactic') and the put-back to the bottom of the deck (topic 'bottomTactic').
+  extraTacticDraw?(state: GameState, entry: HookSourceEntry, player: PlayerId): number
 }
 
 
@@ -214,6 +226,8 @@ export function unitWithinObjectiveRange(state: GameState, unitId: UnitId, obj: 
 export const codeHooks: Record<string, EngineCodeHook> = {
   ...citiesHooks,
   ...ironjawzHooks,
+  ...slavesHooks,
+  ...fyreslayersHooks,
   // core Spearhead abilities no data file names (Call for Reinforcements, SPH-12); abilities.ts adds their descriptor itself
   [spearheadCallForReinforcements.name]: spearheadCallForReinforcements,
 }

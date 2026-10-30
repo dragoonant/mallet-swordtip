@@ -1,0 +1,48 @@
+[
+  {
+    "id": "fyreslayers.weapon.ancestral-battle-axe",
+    "name": "Ancestral Battle-axe",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "fyreslayers.weapon.flamestrike-poleaxe",
+    "name": "Flamestrike Poleaxe",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      {
+        "ability": "CRIT_MORTAL"
+      }
+    ]
+  },
+  {
+    "id": "fyreslayers.weapon.fyresteel-handaxes",
+    "name": "Fyresteel Handaxes",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      {
+        "ability": "ANTI",
+        "keyword": "@charged",
+        "value": 1
+      }
+    ]
+  }
+]

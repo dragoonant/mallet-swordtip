@@ -47,7 +47,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
     if (psychic || /force|stave|staff|goad/.test(text)) return 'force'
     // Tyranid claws, talons and teeth rend and slash, so they voice as the cutting sound; only a klaw/fist
     // (or a plain crushing profile) is the heavy crunch.
-    if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks/.test(text)) return 'crush'
+    if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks|hoove?s/.test(text)) return 'crush'
     if (/choppa|chain|sword|blade|axe|eviscerator|knife|knives|reaper|claw|talon|teeth|jaws|snappa|stikka|maw|hyperphase|mandible|flail|whip|glaive|spear|lance|khopesh|fang/.test(text)) return 'chain'
     return strength >= 8 ? 'crush' : 'chain'
   }
@@ -94,7 +94,7 @@ export interface VfxClassification {
 
 /** Engine faction ids by the prefix of a weapon id ('ork.w.shoota'), for weapons classified with no faction given. */
 const ID_PREFIX_FACTION: [string, string][] = [
-  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
+  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
   ['am.', 'astra-militarum'], ['lov.', 'leagues-of-votann'], ['gk.', 'grey-knights'], ['csm', 'chaos-space-marines'], ['we.', 'world-eaters'], ['ade', 'adepta-sororitas'], ['cus.', 'adeptus-custodes'], ['drk.', 'drukhari'], ['ael.', 'aeldari'], ['adm.', 'adeptus-mechanicus'], ['dg.', 'death-guard'], ['ths.', 'thousand-sons'], ['sw.', 'space-wolves'], ['da.', 'dark-angels'], ['ba.', 'blood-angels'], ['dw.', 'deathwatch'], ['bt.', 'black-templars'],
 ]
 
@@ -129,6 +129,8 @@ export function classifyVfxFamily(weaponId: string, weapon: WeaponData | undefin
   if (/shoota|slugga|dakka|stikk|big.?shoota|kopta|saddlegit/.test(text)) return kw('dakka')
   if (/autocannon|assault cannon|assault-cannon|hylas|auto.?rifle|heavy.?bolter|heavy.?stubber|stubber|seismic|icarus|cannon/.test(text)) return kw('autocannon')
   if (/lasgun|laspistol|lascarbine|las.?pistol|radium|galvanic/.test(text)) return kw('las')
+  // Hurled iron (a javelin, a throwing axe) flies as a hard kinetic streak, like the other black-powder-free slugs.
+  if (/javelin|throwing.?axe/.test(text)) return kw('bolt')
   if (/arquebus/.test(text)) return kw('bolt') // a heavy slug-thrower: a hard kinetic crack, not a las beam
   if (/bolt|combi|storm|hurricane|spear|castellan|sentinel blade|sentinel-blade|autogun|autopistol|hybrid firearm|neophyte firearm|neophyte-firearm|pistol|sniper|small.?arms/.test(text)) return kw('bolt')
   switch (fac) {
