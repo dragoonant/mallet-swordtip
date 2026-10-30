@@ -9,10 +9,13 @@
 //  slavesRageOfArkhar (RA-1)      activated, any combat phase, oncePerTurnArmy; target = a friendly unit in combat; grants
 //        +params.extraAttacks Attacks and +params.extraRend Rend on melee weapons until the end of the turn. Companion weapons are
 //        left alone by the engine (weapons.ts effectiveWeapon returns them as printed) and by the `not` condition.
-//  slavesFearlessInvaders (RA-2)  activated, your movement phase, oncePerTurnArmy; target = a friendly unit in combat; grants
-//        { chargeAfterFallBack } and { noRetreatDamage } until the end of the turn.
-//  slavesChampionOfRaids (ENH-3)  enhancement, activated, your charge phase; target = another friendly unit wholly within params.range
-//        of the bearer; grants { reroll: 'all' } that only applies at onChargeRoll (hooks), until the end of the turn.
+//  slavesFearlessInvaders (RA-2)  activated, your movement phase, oncePerTurnArmy, params.window 'moveDeclared': offered when a
+//        friendly unit in combat declares a Retreat (before the retreat damage); grants { chargeAfterFallBack } and
+//        { noRetreatDamage } until the end of the turn.
+//  slavesChampionOfRaids (ENH-3)  enhancement, activated; target = another friendly unit wholly within params.range of the bearer;
+//        grants { reroll: 'all' } that only applies at onChargeRoll (hooks), until the end of the turn. The card says "your charge
+//        phase", but the engine's charge-phase ability window opens only after every charge is over, so the data offers it in the
+//        movement-phase window that closes just before the charge phase (approximation; same turn, before any charge roll).
 //  slavesFellRitualist (ENH-4)    passive marker: extraTacticDraw gives params.extraCards (cards.ts offers the draw and the put-back).
 //  slavesOathOfSupremacy (AB-1)   activated, your hero phase; target = a friendly unit wholly within params.range of the Warqueen (she may
 //        pick herself); grants { modifyRoll hit +1 } until the start of your next turn.
@@ -27,6 +30,7 @@ import type { EngineCodeHook } from '../code-hooks'
 import type { Effect } from '../../data/types'
 import type { DiceRoll, GameState, PlayerId, UnitId } from '../types'
 import { distance, ENGAGEMENT_H, EPS } from '../geometry'
+import { readDeclaredMove } from '../declared'
 import { deferMortalAfterFight } from '../attack'
 import { cardName, setOath, tacticOdds } from '../cards'
 import { announce, inCombat, liveModels, onBoard, paramOf, paramsByCode, whollyWithinUnit } from './aos-common'
@@ -83,9 +87,35 @@ const rageActivate: ActivatedAbilityHook = {
 const slavesRageOfArkhar: EngineCodeHook = { name: 'slavesRageOfArkhar', kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: rageActivate }
 
 // ---------- STD-RA-2 Fearless Invaders ----------
+// Offered in the 'moveDeclared' window (data params.window): the friendly unit in combat that has just declared a Retreat, before
+// the retreat's mortal damage is rolled. At the end of the movement phase (the plain phase window) the retreat is already over and
+// the unit is out of combat, so the ability could never do anything there.
+const retreatingUnit = (state: GameState, player: PlayerId): UnitId | null => {
+  const d = readDeclaredMove(state)
+  const u = d && d.moveType === 'fallBack' ? onBoard(state, d.unitId) : null
+  return u && u.player === player && inCombat(state, u.id) ? u.id : null
+}
+const invadersTargets = (state: GameState, _unitId: UnitId | null, player?: PlayerId): UnitId[] => {
+  const id = retreatingUnit(state, player ?? state.activePlayer)
+  return id ? [id] : []
+}
+
+// AI hint (src/ai/utility.ts scoreDeclareMove): the player can still swear Fearless Invaders this turn, so a Retreat it declares now
+// would cost no mortal damage and leave the unit free to charge again
+export function slavesFreeRetreatAvailable(state: GameState, player: PlayerId): boolean {
+  const reg = state.abilities[state.players[player]?.regimentAbilityId ?? '']
+  if (!reg || reg.code !== 'slavesFearlessInvaders') return false
+  if (state.activePlayer !== player || state.phase !== 'movement') return false
+  return !state.players[player].abilityUses.some((u) => u.abilityId === reg.id && u.round === state.round && u.turn === state.activePlayer)
+}
+
 const invadersActivate: ActivatedAbilityHook = {
-  canUse: rageActivate.canUse,
-  targets: rageTargets as ActivatedAbilityHook['targets'],
+  canUse(state, _unitId, use) {
+    const targets = invadersTargets(state, null, use.player)
+    const picked = use.targetUnitIds?.[0]
+    return targets.length > 0 && (!picked || targets.includes(picked))
+  },
+  targets: invadersTargets as ActivatedAbilityHook['targets'],
   resolve(ctx, use) {
     const target = use.targetUnitIds[0]
     if (!target || !onBoard(ctx.state, target)) return

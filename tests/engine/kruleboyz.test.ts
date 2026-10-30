@@ -12,6 +12,7 @@ import { codeHooks } from '../../src/engine/code-hooks'
 import { effectService } from '../../src/engine/effects'
 import { hookService } from '../../src/engine/hooks-impl'
 import { losService } from '../../src/engine/los'
+import { objectiveService } from '../../src/engine/objectives'
 import { weaponService } from '../../src/engine/weapons'
 import { unitIgnoresRetreatDamage } from '../../src/engine/phases/movement'
 import { replaceableUnits } from '../../src/engine/factions/spearhead-core'
@@ -617,28 +618,33 @@ describe('KRU-ENH enhancements', () => {
 })
 
 describe('KRU-AB warscroll abilities', () => {
-  it('KRU-AB-1 All Part of Da Plan: +3 Control on another unit wholly within 9" until your next turn; the Killaboss cannot target itself', () => {
+  it('KRU-AB-1 All Part of Da Plan: +3 to the control score of another unit wholly within 9" until your next turn (once per unit, not per model); the Killaboss cannot target itself', () => {
     const s = game()
     only(s, [BOSS, GUT1, GUT2, BOW])
     place(s, BOSS, 0, -8)
-    place(s, GUT1, -4, -5, 0.3) // wholly within 9"
+    place(s, GUT1, -7, -6, 0.3) // wholly within 9", three models on the South objective (-6, -6)
     place(s, GUT2, 6, -5, 0.3) // partly within
     place(s, BOW, 12, -8) // beyond
     expect(offeredFor(s, 'A', 'hero', PLAN)).toEqual([BOSS])
     expect(targetsOf(s, 'kruleboyzAllPartOfDaPlan', BOSS, 'A')).toEqual([GUT1])
     expect(targetsOf(s, 'kruleboyzAllPartOfDaPlan', BOSS, 'A')).not.toContain(BOSS)
-    expect(stat(s, GUT1, 'OC')).toBe(1)
     const ctx = ctxFor(s, [])
+    const onObj = objectiveService.modelsInRange(s, 'obj-a', 'A').filter((m) => s.models[m].unitId === GUT1).length
+    expect(onObj).toBeGreaterThan(1) // several Gutrippaz contest it, so a per-model bonus would show
+    const control = (): number => objectiveService.levelOfControl(s, 'obj-a', ctx).A
+    expect(control()).toBe(onObj)
     useOnce(ctx, 'hero', 'A', PLAN, { target: GUT1 })
-    expect(stat(s, GUT1, 'OC')).toBe(4)
+    expect(control()).toBe(onObj + 3) // +3 for the unit, not +3 for each contesting model
+    // each model's Control characteristic is unchanged
+    expect(stat(s, GUT1, 'OC')).toBe(1)
     expect(stat(s, GUT2, 'OC')).toBe(1)
     expect(stat(s, BOSS, 'OC')).toBe(2)
     // survives the end of the turn and the opponent's turn; gone at the start of our next turn
     effectService.expire(ctx, 'turnEnd', null)
     effectService.expire(ctx, 'nextOwnTurn', 'B')
-    expect(stat(s, GUT1, 'OC')).toBe(4)
+    expect(control()).toBe(onObj + 3)
     effectService.expire(ctx, 'nextOwnTurn', 'A')
-    expect(stat(s, GUT1, 'OC')).toBe(1)
+    expect(control()).toBe(onObj)
     // with nobody in range it is not offered
     place(s, GUT1, -12, -8)
     place(s, GUT2, 12, -5)

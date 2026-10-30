@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 import { usePresentationSettings } from '../presentation/settings'
 import { useBoardSize } from './Board'
+import { useRealmSide, type Realm } from './realm'
 
 /** Sun direction (unit vector from the board towards the sun, y up) and colour — exported so other
  *  code (ambience flashes, decals, UI) can stay consistent with the key light. Elevation is ~32 degrees:
@@ -10,6 +11,14 @@ export const SUN_DIRECTION: readonly [number, number, number] = [0.736, 0.534, 0
 export const SUN_COLOR = '#ffcf98'
 const SUN_DISTANCE = 60
 const SUN_POSITION: [number, number, number] = [SUN_DIRECTION[0] * SUN_DISTANCE, SUN_DIRECTION[1] * SUN_DISTANCE, SUN_DIRECTION[2] * SUN_DISTANCE]
+
+/** Sky, bounce and fill colours per realm side. Aqshy is the ember-lit scene described below; Ghyran is a green-gold
+ *  afternoon: a leaf-green dusk sky, a pale-lime sky bounce over mossy ground, and a cool jade fill. The sun key keeps
+ *  its direction (and SUN_COLOR, which the ambience flashes read) so shadows fall the same way on both sides. */
+const REALM_LIGHT: Record<Realm, { sky: string; hemiSky: string; hemiGround: string; ambient: string; fill: string; sun: string }> = {
+  aqshy: { sky: '#1c0d08', hemiSky: '#ffc9a0', hemiGround: '#8a3a1c', ambient: '#ffb48a', fill: '#ff9a6a', sun: SUN_COLOR },
+  ghyran: { sky: '#0b1d12', hemiSky: '#d8f2b8', hemiGround: '#2f6a34', ambient: '#a6e0a0', fill: '#6cc8a0', sun: '#fff0c4' },
+}
 
 /** Ember-lit scene (Aqshy): a warm shadowed directional key, a peach sky / glowing-ground bounce hemisphere carrying
  *  most of the ambient, and a weak copper shadowless fill from the opposite side so faces turned away from the sun
@@ -21,20 +30,22 @@ const SUN_POSITION: [number, number, number] = [SUN_DIRECTION[0] * SUN_DISTANCE,
 export function Lighting() {
   const lowGraphics = usePresentationSettings((s) => s.lowGraphics)
   const { w, h } = useBoardSize()
+  const c = REALM_LIGHT[useRealmSide()]
   // shadow frustum follows the board's half-diagonal plus a margin for tall terrain: about +-22 x +-18 for 30x22
   const sx = Math.hypot(w, h) / 2 + 3.4
   const sy = sx * 0.8
   return (
     <>
-      {/* Realm of Fire: a smouldering dusk sky behind the board, warm sky/ember-bounce ambient, a coppery fill */}
-      <color attach="background" args={['#1c0d08']} />
-      <hemisphereLight intensity={1.05} color="#ffc9a0" groundColor="#8a3a1c" />
-      <ambientLight intensity={0.18} color="#ffb48a" />
-      <directionalLight position={[-24, 14, -16]} intensity={0.55} color="#ff9a6a" />
+      {/* Realm of Fire: a smouldering dusk sky behind the board, warm sky/ember-bounce ambient, a coppery fill.
+          Realm of Life: the same rig in greens (REALM_LIGHT). */}
+      <color attach="background" args={[c.sky]} />
+      <hemisphereLight intensity={1.05} color={c.hemiSky} groundColor={c.hemiGround} />
+      <ambientLight intensity={0.18} color={c.ambient} />
+      <directionalLight position={[-24, 14, -16]} intensity={0.55} color={c.fill} />
       <directionalLight
         position={SUN_POSITION}
         intensity={2.6}
-        color={SUN_COLOR}
+        color={c.sun}
         castShadow={!lowGraphics}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}

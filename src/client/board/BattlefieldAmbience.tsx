@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { usePresentationSettings } from '../presentation/settings'
+import { useRealmSide, type Realm } from './realm'
 
 const ARTILLERY_SLOTS = 2
 const FLARE_SLOTS = 2
@@ -22,11 +23,21 @@ const ARTILLERY_DECAY = 1
 const FLARE_DECAY = 2
 
 const FLARE_RISE_S = 1.6
-const FLARE_TYPES = [
-  { color: '#ff4a2a', gain: 2.2 }, // red reads dim per unit of intensity, so it gets more
-  { color: '#ff9a30', gain: 1.5 }, // Aqshy: rising embers and fire-bursts, no green or blue flares
-  { color: '#ffd27a', gain: 1.1 },
-] as const
+const FLARE_TYPES: Record<Realm, readonly { color: string; gain: number }[]> = {
+  aqshy: [
+    { color: '#ff4a2a', gain: 2.2 }, // red reads dim per unit of intensity, so it gets more
+    { color: '#ff9a30', gain: 1.5 }, // Aqshy: rising embers and fire-bursts, no green or blue flares
+    { color: '#ffd27a', gain: 1.1 },
+  ],
+  // Ghyran: drifting spore-lights and glowing seed-bursts, no reds
+  ghyran: [
+    { color: '#3fe39a', gain: 1.3 },
+    { color: '#a8ff7a', gain: 1.1 },
+    { color: '#fff0a0', gain: 1.0 },
+  ],
+}
+/** Colours of the distant flashes beyond the board edge: gun-flashes in the Realm of Fire, wild-magic pulses in the Realm of Life. */
+const FLASH_COLORS: Record<Realm, readonly [string, string]> = { aqshy: ['#ff9a3c', '#ffd9a0'], ghyran: ['#5dffb0', '#d6ffb8'] }
 
 type Mode = 'off' | 'normal' | 'demo'
 
@@ -93,6 +104,8 @@ export function BattlefieldAmbience() {
   const artLights = useRef<(THREE.PointLight | null)[]>([])
   const artGlows = useRef<(THREE.Sprite | null)[]>([])
   const flareLights = useRef<(THREE.PointLight | null)[]>([])
+  const realmRef = useRef<Realm>('aqshy')
+  realmRef.current = useRealmSide()
   const flareGroups = useRef<(THREE.Group | null)[]>([])
   const flareSprites = useRef<(THREE.Sprite | null)[]>([])
   const flareCores = useRef<(THREE.Mesh | null)[]>([])
@@ -144,7 +157,7 @@ export function BattlefieldAmbience() {
     const light = artLights.current[idx]
     if (light) {
       light.position.set(s.x, s.y, s.z)
-      light.color.set(Math.random() < 0.5 ? '#ff9a3c' : '#ffd9a0')
+      light.color.set(FLASH_COLORS[realmRef.current][Math.random() < 0.5 ? 0 : 1])
     }
     const glow = artGlows.current[idx]
     if (glow) {
@@ -174,7 +187,8 @@ export function BattlefieldAmbience() {
     s.drift.set(nx !== 0 ? 0 : wind, 0, nx !== 0 ? wind : 0)
     s.riseS = FLARE_RISE_S
     s.total = FLARE_RISE_S + rand(7, 9)
-    const type = FLARE_TYPES[Math.floor(Math.random() * FLARE_TYPES.length)]
+    const palette = FLARE_TYPES[realmRef.current]
+    const type = palette[Math.floor(Math.random() * palette.length)]
     s.gain = type.gain
     s.start = now()
     s.active = true

@@ -1,12 +1,12 @@
 // Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (Cities of
 // Sigmar, Ironjawz, Slaves to Darkness, Fyreslayers, Kruleboyz, Gloomspite Gitz, Lumineth Realm-lords or Kharadron Overlords; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
-// device, and Start. The battleplan is fixed (Fire and Jade, Aqshy side, standard terrain), so it is shown, not chosen.
+// device, and Start. The battleplan is fixed (Fire and Jade, standard terrain); only its realm side (Aqshy, Ghyran or random) is picked.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
 import { FactionCrest } from './FactionCrest'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { loadBundle } from '../../data'
 import type { DataBundle } from '../../data/types'
-import { AI_DIFFICULTY_OPTIONS, DEFAULT_AI_DIFFICULTY, DEFAULT_SPEARHEAD_FACTIONS, regimentChoices, resolveFactionId, resolvePatrol, spearheadArmies, useGameStore, type AiDifficulty, type FactionKey, type OpponentKind } from '../store/game'
+import { AI_DIFFICULTY_OPTIONS, DEFAULT_AI_DIFFICULTY, DEFAULT_SPEARHEAD_FACTIONS, regimentChoices, resolveFactionId, resolvePatrol, spearheadArmies, spearheadMission, resolveRealm, useGameStore, type AiDifficulty, type FactionKey, type RealmChoice, type OpponentKind } from '../store/game'
 import { phaseLabel, relativeTime, shouldConfirmReplace, type SaveEnvelope } from '../store/saveGame'
 import { randomArmyPaint, usePaintStore } from '../figures/paint'
 import { PainterPanel } from './PainterPanel'
@@ -241,6 +241,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
   const [opponent, setOpponent] = useState<OpponentKind>('hotseat')
   const [difficulty, setDifficulty] = useState<AiDifficulty>(DEFAULT_AI_DIFFICULTY)
   const [seed, setSeed] = useState<string>(() => randomSeed())
+  const [realmChoice, setRealmChoice] = useState<RealmChoice>('aqshy')
   const [regimentA, setRegimentA] = useState('')
   const [enhancementA, setEnhancementA] = useState('')
   const [regimentB, setRegimentB] = useState('')
@@ -299,7 +300,9 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
   const activeFaction = factions.find((f) => f.id === factionId)
   const opponentActive = factions.find((f) => f.id === opponentFaction)
   const army = bundle ? resolvePatrol(bundle, faction) : undefined
-  const mission = bundle ? Object.values(bundle.missions).find((m) => m.format === 'spearhead') : undefined
+  // Random is settled by the seed text (shown below it), so the same seed always plays the same realm.
+  const realm = resolveRealm(realmChoice, seed)
+  const mission = bundle ? spearheadMission(bundle, realm) : undefined
 
   // a faction missing from the bundle (data still loading) falls back to the first one that exists
   useEffect(() => {
@@ -327,6 +330,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         patrolId: army?.id,
         opponent,
         seed,
+        realm: realmChoice,
         regimentAbilityId: regimentA || undefined,
         enhancementId: enhancementA || undefined,
         opponentRegimentAbilityId: regimentB || undefined,
@@ -385,8 +389,22 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         <div style={label}>Battleplan</div>
         <div style={{ ...optionCard, fontSize: 13 }} data-testid="setup-mission">
           <strong>{mission?.name ?? 'Fire and Jade'}</strong>
-          <div style={mutedText}>Aqshy side · horizontal split · 30" × 22" · {mission?.rounds ?? 4} battle rounds</div>
+          <div style={mutedText}>{realm === 'ghyran' ? 'Ghyran' : 'Aqshy'} side · horizontal split · 30" × 22" · {mission?.rounds ?? 4} battle rounds</div>
         </div>
+        <div style={label}>Realm side</div>
+        <div style={row} data-testid="setup-realm">
+          {([['aqshy', 'Aqshy (fire)'], ['ghyran', 'Ghyran (jade)'], ['random', 'Random']] as const).map(([id, text]) => (
+            <button key={id} style={realmChoice === id ? buttonActive : buttonBase} data-testid={`setup-realm-${id}`} aria-pressed={realmChoice === id} onClick={() => setRealmChoice(id)}>
+              {text}
+            </button>
+          ))}
+        </div>
+        {realmChoice === 'random' && <p style={missionBlurb} data-testid="setup-realm-random-note">Random is decided by the seed below: this seed plays {realm === 'ghyran' ? 'Ghyran' : 'Aqshy'}.</p>}
+        <p style={missionBlurb}>
+          {realm === 'ghyran'
+            ? 'The Realm of Life: a jade-green board, objectives spread along the middle line and into two opposite corners, and the Ghyran twist deck of vines, blessings and healing springs.'
+            : 'The Realm of Fire: a scorched board with an objective in each corner of the field, and the Aqshy twist deck of rings of fire, bloodshed and smoke.'}
+        </p>
         {mission?.text && <p style={missionBlurb}>{mission.text}</p>}
         <ul style={missionList} data-testid="setup-mission-scoring">
           <li>At the end of your own turn you score 1 VP for holding at least one objective.</li>

@@ -130,11 +130,27 @@ const CHOOSE_OPTION_INFO: Partial<Record<ChooseOptionTopic, { title: string; hin
   tacticCommand: { title: 'Play a command?', hint: "Spend a battle tactic card for its command. The card is discarded and can no longer be scored. Pass to keep your cards." },
 }
 
+/** An ability prompt whose every real option ends in a distance, e.g. `Toward Dracothion (12.0")`: the options are headings for a slide. */
+function isHeadingList(options?: readonly { id: string; label?: string }[]): boolean {
+  const real = (options ?? []).filter((o) => typeof o.label === 'string')
+  return real.length >= 2 && real.every((o) => /\(\d+(\.\d+)?"\)$/.test(o.label!))
+}
+
+/** "enemy" / "friendly" when every option of an ability-target prompt is a unit of that side, else null. */
+function targetSide(options: readonly { id: string }[] | undefined, state: GameState | undefined, player: string | undefined): 'enemy' | 'friendly' | null {
+  if (!options || !state || !player || options.length === 0) return null
+  const units = options.map((o) => state.units[o.id])
+  if (units.some((u) => !u)) return null
+  if (units.every((u) => u.player !== player)) return 'enemy'
+  if (units.every((u) => u.player === player)) return 'friendly'
+  return null
+}
+
 export function chooseOptionInfoFor(
   context: { topic: ChooseOptionTopic; abilityId: string | null; unitId?: string | null; data?: Record<string, unknown> },
-  _options?: readonly { id: string }[],
+  options?: readonly { id: string; label?: string }[],
   state?: GameState,
-  _player?: string,
+  player?: string,
 ): { title: string; hint: string } | undefined {
   if (context.topic === 'other' && context.data?.kind === 'embark') {
     const uname = context.unitId && state ? groupLabel(state, context.unitId) : undefined
@@ -168,7 +184,7 @@ export function chooseOptionInfoFor(
     const uname = context.unitId && state ? groupLabel(state, context.unitId) : undefined
     return {
       title: `Move ${uname ?? 'the unit'}`,
-      hint: `Pick a heading and the unit slides that way in a straight line (the distance is in the label). It cannot end in a spot it could not stand in. Pick Stay where it is, or pass, to leave it.`,
+      hint: `Pick a heading and the unit slides that way in a straight line (the distance is in the label). It cannot end in a spot it could not stand in. Leave it here keeps the unit where it is.`,
     }
   }
   // A replacement unit is set up on the board (Call for Reinforcements and kin)
@@ -181,9 +197,17 @@ export function chooseOptionInfoFor(
   const ab = context.abilityId && state ? state.abilities[context.abilityId] : undefined
   if (ab && (context.topic === 'abilityMode' || context.topic === 'abilityTarget')) {
     const base = CHOOSE_OPTION_INFO[context.topic]
+    // An ability that slides a unit along a chosen line (Careening Destruction) lists its headings as the effects
+    if (context.topic === 'abilityMode' && isHeadingList(options)) {
+      return {
+        title: `${ab.name}: pick a heading`,
+        hint: 'Pick the line the unit travels along; the distance is in each label. It moves in a straight line and cannot end in a spot it could not stand in. Pass to leave it where it is.',
+      }
+    }
+    const side = context.topic === 'abilityTarget' ? targetSide(options, state, player) : null
     return {
       title: `${ab.name}: ${context.topic === 'abilityTarget' ? 'choose a target' : 'choose an effect'}`,
-      hint: base?.hint ?? '',
+      hint: side === 'enemy' ? 'Pick the enemy unit this ability hits.' : side === 'friendly' ? 'Pick the friendly unit this ability affects.' : base?.hint ?? '',
     }
   }
   return CHOOSE_OPTION_INFO[context.topic]
@@ -324,6 +348,10 @@ function labelForOption(pending: PendingDecision, state: GameState, events: read
         const tr = state.units[o.id.replace(/^embark:/, '')]
         if (tr) return `Embark ${pending.context.unitId ? groupLabel(state, pending.context.unitId) : 'the unit'} into ${tr.name}`
       }
+      // A slide prompt already names its unit in the title; drop the engine's repeated "Unit name: " from every heading.
+      const uid = pending.context.unitId
+      const uname = uid ? state.units[uid]?.name : undefined
+      if (uname && pending.context.topic === 'abilityMode' && o.label.startsWith(`${uname}: `)) return o.label.slice(uname.length + 2)
       return o.label
     }
     default:

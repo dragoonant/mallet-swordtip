@@ -6,14 +6,18 @@ export interface LayoutBlock { id: string; x: number; y: number; w: number; h: n
 
 export const STAGGER_GAP = 4
 
-/** Returns id -> upward shift in px (>= 0). Blocks are sorted bottom-first; each is lifted above anything it overlaps. */
-export function resolveStagger(blocks: LayoutBlock[], gap = STAGGER_GAP): Map<string, number> {
+/**
+ * Returns id -> upward shift in px (>= 0). Blocks are sorted bottom-first; each is lifted above anything it overlaps.
+ * `fixed` rects (the objective labels, which never move) count as already placed, so a unit tag that sits on one is lifted
+ * clear of it whichever of the two is lower on screen.
+ */
+export function resolveStagger(blocks: LayoutBlock[], gap = STAGGER_GAP, fixed: LayoutBlock[] = []): Map<string, number> {
   const out = new Map<string, number>()
-  const placed: LayoutBlock[] = [] // rects at their final (shifted) position
+  const placed: LayoutBlock[] = [...fixed] // rects at their final (shifted) position
   const sorted = [...blocks].sort((a, b) => (b.y + b.h) - (a.y + a.h) || a.id.localeCompare(b.id))
   for (const b of sorted) {
     let shift = 0
-    for (let guard = 0; guard <= sorted.length; guard++) {
+    for (let guard = 0; guard <= sorted.length + fixed.length; guard++) {
       const top = b.y - shift
       const hit = placed.find((p) => b.x < p.x + p.w && p.x < b.x + b.w && top < p.y + p.h + 0 && p.y < top + b.h + gap)
       if (!hit) break
@@ -37,19 +41,17 @@ const QUANT = 8 // px grid used for the bottom-first ordering so sub-pixel jitte
 export class StaggerSolver {
   private last = new Map<string, LayoutBlock>()
   private result = new Map<string, number>()
-  update(blocks: LayoutBlock[]): Map<string, number> {
-    let changed = blocks.length !== this.last.size
-    if (!changed) {
-      for (const b of blocks) {
-        const o = this.last.get(b.id)
-        if (!o || Math.abs(o.x - b.x) > RESOLVE_THRESHOLD || Math.abs(o.y - b.y) > RESOLVE_THRESHOLD || Math.abs(o.w - b.w) > RESOLVE_THRESHOLD || Math.abs(o.h - b.h) > RESOLVE_THRESHOLD) { changed = true; break }
-      }
-    }
+  private lastFixed = new Map<string, LayoutBlock>()
+  update(blocks: LayoutBlock[], fixed: LayoutBlock[] = []): Map<string, number> {
+    const moved = (o: LayoutBlock | undefined, b: LayoutBlock) => !o || Math.abs(o.x - b.x) > RESOLVE_THRESHOLD || Math.abs(o.y - b.y) > RESOLVE_THRESHOLD || Math.abs(o.w - b.w) > RESOLVE_THRESHOLD || Math.abs(o.h - b.h) > RESOLVE_THRESHOLD
+    let changed = blocks.length !== this.last.size || fixed.length !== this.lastFixed.size
+    if (!changed) changed = blocks.some((b) => moved(this.last.get(b.id), b)) || fixed.some((b) => moved(this.lastFixed.get(b.id), b))
     if (!changed) return this.result
     this.last = new Map(blocks.map((b) => [b.id, b]))
+    this.lastFixed = new Map(fixed.map((b) => [b.id, b]))
     // Quantise y so near-ties order by id, not by jitter.
-    const q = blocks.map((b) => ({ ...b, y: Math.round(b.y / QUANT) * QUANT, x: Math.round(b.x / QUANT) * QUANT }))
-    this.result = resolveStagger(q)
+    const quant = (b: LayoutBlock) => ({ ...b, y: Math.round(b.y / QUANT) * QUANT, x: Math.round(b.x / QUANT) * QUANT })
+    this.result = resolveStagger(blocks.map(quant), STAGGER_GAP, fixed.map(quant))
     return this.result
   }
 }

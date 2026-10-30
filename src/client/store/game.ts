@@ -26,7 +26,7 @@ import {
   type Vec3,
 } from '../../engine'
 import type { Decider } from '../../engine/decider'
-import type { CombatPatrolData, DataBundle, EnhancementData } from '../../data/types'
+import type { CombatPatrolData, DataBundle, EnhancementData, MissionData } from '../../data/types'
 import { loadBundle } from '../../data'
 import { RandomDecider } from '../../ai/random'
 import { UtilityDecider } from '../../ai/utility'
@@ -144,13 +144,37 @@ function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => void):
   })
 }
 
-function resolveMissionId(bundle: DataBundle, mission?: string): Id {
+/** Which side of the Fire and Jade battlefield a game is fought on (core rules, Spearhead pre-battle step 3). */
+export type Realm = 'aqshy' | 'ghyran'
+/** What the start screen offers: a fixed side, or a coin flip taken from the game seed. */
+export type RealmChoice = Realm | 'random'
+export const REALMS: readonly Realm[] = ['aqshy', 'ghyran']
+
+/** `random` resolves from the seed text alone, so the same seed always plays the same realm (and a saved game never re-rolls it). */
+export function realmForSeed(seed: string): Realm {
+  let h = 2166136261
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619)
+  // murmur3 finaliser: one-character seeds differ only in the low bits, which the plain FNV loop would leave in step
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16
+  return (h & 1) === 0 ? 'aqshy' : 'ghyran'
+}
+export function resolveRealm(choice: RealmChoice | undefined, seed: string): Realm {
+  return choice === 'ghyran' || choice === 'aqshy' ? choice : choice === 'random' ? realmForSeed(seed) : 'aqshy'
+}
+
+/** The Spearhead battleplan file for one realm side: found by data (format 'spearhead', id names the side), never by a hard-coded id. */
+export function spearheadMission(bundle: DataBundle, realm: Realm): MissionData | undefined {
+  const all = Object.values(bundle.missions).filter((m) => m.format === 'spearhead')
+  return all.find((m) => m.id.includes(realm)) ?? all[0]
+}
+
+function resolveMissionId(bundle: DataBundle, mission?: string, realm: Realm = 'aqshy'): Id {
   if (mission) {
     if (bundle.missions[mission]) return mission
     const prefixed = `mission.${mission}`
     if (bundle.missions[prefixed]) return prefixed
   }
-  const spearhead = Object.values(bundle.missions).find((m) => m.format === 'spearhead')
+  const spearhead = spearheadMission(bundle, realm)
   if (spearhead) return spearhead.id
   const first = Object.keys(bundle.missions)[0]
   if (!first) throw new Error('newGame: data bundle has no missions')
@@ -158,9 +182,9 @@ function resolveMissionId(bundle: DataBundle, mission?: string): Id {
 }
 
 // ---- Spearhead setup (13-port-plan §4.3) -------------------------------------------------------------
-// The one battleplan we ship: Fire and Jade, Aqshy side, horizontal split, standard terrain layout. The mission is found
-// by data (format 'spearhead'), never by a hard-coded id, so a renamed file still loads.
-export const SPEARHEAD_SIDE = 'aqshy' as const
+// The battleplan we ship: Fire and Jade, horizontal split, standard terrain layout, on the Aqshy or the Ghyran side (one
+// mission file per side; resolveMissionId / spearheadMission find it by data).
+export const SPEARHEAD_SIDE: Realm = 'aqshy'
 export const DEFAULT_SPEARHEAD_FACTIONS: { player: string; opponent: string } = { player: 'cities', opponent: 'ironjawz' }
 
 /** Every Spearhead army the data bundle ships (CombatPatrolData with mode 'spearhead'), sorted by id. */
@@ -190,8 +214,10 @@ export function buildPlayerSetup(bundle: DataBundle, factionKey: FactionKey, pat
 }
 
 function buildSetup(bundle: DataBundle, opts: NewGameOptions): GameSetup {
-  const missionId = resolveMissionId(bundle, opts.mission)
+  const missionId = resolveMissionId(bundle, opts.mission, resolveRealm(opts.realm, opts.seed))
   const mission = bundle.missions[missionId]
+  // a mission file that names its side (...-ghyran-...) decides it; the chosen realm only picks between files
+  const side: Realm = REALMS.find((r) => missionId.includes(r)) ?? resolveRealm(opts.realm, opts.seed)
   const terrainLayoutId = mission.terrainLayouts.find((l) => l.includes('standard')) ?? mission.terrainLayouts[0]
   if (!terrainLayoutId) throw new Error(`newGame: mission "${missionId}" lists no terrain layouts`)
   const opponentFaction = opts.opponentFaction ?? defaultOpponentFaction(bundle, opts.playerFaction)
@@ -207,7 +233,7 @@ function buildSetup(bundle: DataBundle, opts: NewGameOptions): GameSetup {
     firstTurn: 'rollOff',
     dataVersion: bundle.version,
     mode: 'spearhead',
-    side: SPEARHEAD_SIDE,
+    side,
     defenderTerritory: 'B',
   }
 }
@@ -215,6 +241,8 @@ function buildSetup(bundle: DataBundle, opts: NewGameOptions): GameSetup {
 // ---------- store ----------
 export interface NewGameOptions {
   mission?: string
+  /** Fire and Jade side: Aqshy (default), Ghyran, or random (from the seed). Ignored when `mission` names a file. */
+  realm?: RealmChoice
   playerFaction: FactionKey
   /** The other seat's faction; defaults per defaultOpponentFaction. May equal playerFaction (mirror match). */
   opponentFaction?: FactionKey

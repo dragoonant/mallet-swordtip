@@ -4,7 +4,8 @@ import * as THREE from 'three'
 import { isCameraDragModifier } from './cameraModifiers'
 import { extrudedPolygonGeometry } from './geometry'
 import { useThree } from '@react-three/fiber'
-import { BATTLEFIELDS, useBattlefieldPBR } from './terrainAssets'
+import { battlefieldFor, useBattlefieldPBR } from './terrainAssets'
+import { useRealmSide } from './realm'
 import { useUiStore } from '../ui/uiStore'
 import { useGameStore } from '../store/game'
 import { isMultiTouchActive, onMultiTouchStart } from './touchCamera'
@@ -48,7 +49,8 @@ function GroundMesh({
   const maxAniso = useThree((s) => s.gl.capabilities.getMaxAnisotropy())
   const invalidate = useThree((s) => s.invalidate)
   // Baked 2048x1502 Realm of Fire mats (art/board-textures/gen_aqshy.py): ~68 texels per inch, mapped once over exactly the board.
-  const { map, normalMap, roughnessMap, emissiveMap } = useBattlefieldPBR(BATTLEFIELDS[battlefieldIndex].urls, Math.min(8, maxAniso))
+  const realm = useRealmSide()
+  const { map, normalMap, roughnessMap, emissiveMap } = useBattlefieldPBR(battlefieldFor(realm, battlefieldIndex).urls, Math.min(8, maxAniso))
   // frameloop="demand": a texture swap (HUD cycle button) must schedule its own repaint.
   useEffect(() => {
     invalidate()

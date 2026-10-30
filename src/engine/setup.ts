@@ -491,12 +491,15 @@ function preBattle(ctx: EngineContext): 'pending' | 'done' {
 
   // SPH-4.3 battlefield side
   if (ctx.once('pre:side')) {
+    const offered = sideOptions(s)
     if (s.setup.side !== undefined) s.mission.custom.side = s.setup.side
+    // a battleplan file that fixes one realm side (its id names it) leaves nothing to choose
+    else if (offered.length === 1) s.mission.custom.side = offered[0]
     else {
       ctx.decide({
         kind: 'chooseOption', player: defender, window, canPass: false,
         context: { topic: 'battlefieldSide', unitId: null, abilityId: null, data: {} },
-        options: sideOptions(s).map((side) => ({ id: side, label: side === 'aqshy' ? 'Aqshy (Realm of Fire)' : 'Ghyran (Realm of Life)', action: optionAction(defender, side) })),
+        options: offered.map((side) => ({ id: side, label: side === 'aqshy' ? 'Aqshy (Realm of Fire)' : 'Ghyran (Realm of Life)', action: optionAction(defender, side) })),
       })
       return 'pending'
     }

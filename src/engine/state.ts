@@ -460,6 +460,11 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
   if (mission.terrainLayouts.length > 0 && !mission.terrainLayouts.includes(setup.terrainLayoutId)) {
     throw new EngineInvariantError(`terrain layout '${setup.terrainLayoutId}' is not allowed by mission '${mission.id}'`)
   }
+  // SPH-4.3: a battleplan file named for one realm side (its id says aqshy or ghyran) can only be played on that side
+  const namedSides = (['aqshy', 'ghyran'] as const).filter((side) => mission.id.includes(side))
+  if (setup.side !== undefined && namedSides.length === 1 && namedSides[0] !== setup.side) {
+    throw new EngineInvariantError(`mission '${mission.id}' is the ${namedSides[0]} side; setup asks for '${setup.side}'`)
+  }
   const board = buildBoard(bundle, setup.terrainLayoutId, mission)
 
   const datasheets: Record<string, RuntimeDatasheet> = {}

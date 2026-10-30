@@ -365,3 +365,15 @@ export const citiesHooks: Record<string, EngineCodeHook> = {
   citiesConsecrateTheLand, citiesIronweldDiscipline, citiesBrazier, citiesGlimmering,
   citiesOfficersOrder,
 }
+
+// ---------- AI hints (read by src/ai/utility.ts objectivePull) ----------
+// How much of a held marker's pull a Cities unit should feel. The Castelite Company holds ground with its Steelhelms and the
+// Cannon; the Cavaliers and the Marshal are the counter-charge (Strike-first once they charge, Devastating Charge), so while a
+// line holder is still on the table they guard nothing themselves and go where the next charge is. null = no opinion.
+export function citiesHoldWeight(state: GameState, unitId: UnitId): number | null {
+  const unit = state.units[unitId]
+  if (!unit || unit.location !== 'board' || !unit.datasheetId.startsWith('cities.unit.freeguild-cavalier')) return null
+  const holders = Object.values(state.units).some((u) => u.player === unit.player && u.location === 'board'
+    && (isDatasheet(state, u.id, undefined, 'steelhelms') || isDatasheet(state, u.id, undefined, 'great-cannon')))
+  return holders ? 0.4 : null
+}

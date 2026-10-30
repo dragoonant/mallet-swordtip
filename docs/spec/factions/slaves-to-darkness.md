@@ -240,3 +240,12 @@ rules above were re-checked against the PDF: no numbers needed fixing. Choices t
   mark `glory:<victim>><attacker>` for the phase), so models slain after the near ones are gone still count.
 - **Regiment / enhancement defaults:** Rage of Arkhar and Bloodthirsty Blade. The sim's variant games use the last of each
   list (Fearless Invaders, Fell Ritualist).
+- **F9 audit (weak armies):** Fearless Invaders was offered only in the end-of-movement window, after every retreat had already
+  paid its mortal damage and left combat, so it never did anything. It now carries `params.window: 'moveDeclared'` and is offered
+  as a friendly unit in combat declares a Retreat (before the damage roll), for that unit (STD-RA-2 tests). Champion of Raids
+  was offered in the charge-phase window, which the engine opens only after every charge is over; it is now offered at the end
+  of your movement phase, just before the charge phase (approximation: the engine has no window at the start of the charge
+  phase; same turn, before any charge roll; STD-ENH-3 tests).
+- **AI hints (F9):** `slavesFreeRetreatAvailable` lets `src/ai/utility.ts` retreat a unit with Charge (+1 Damage) weapons, or one
+  losing its fight, when Fearless Invaders is still unused this turn; Oath of Supremacy goes to the unit most likely to fight
+  before your next turn (in combat, or a likely Move + charge), weighted by expected damage.

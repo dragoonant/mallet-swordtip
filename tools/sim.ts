@@ -1,6 +1,6 @@
 // Headless simulator CLI: `npm run sim -- --games N --seed S`
 import { DATA_VERSION, loadBundle } from '../src/data/index'
-import { runGame, type Violation } from './sim-core'
+import { realmFromArgv, runGame, type Violation } from './sim-core'
 
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`)
@@ -13,6 +13,8 @@ async function main(): Promise<void> {
   const verbose = process.argv.includes('--verbose')
   const ai = process.argv.includes('--ai') // both seats played by the utility AI instead of random legal moves
   // --armies a,b: only these army (patrol) or faction ids; default every Spearhead army in the data bundle, all pairings
+  // --realm aqshy|ghyran|random: which side of the Fire and Jade battlefield (default aqshy)
+  const realm = realmFromArgv()
   const only = arg('armies', '').split(',').map((x) => x.trim()).filter(Boolean)
   const bundle = await loadBundle()
   const started = Date.now()
@@ -23,7 +25,7 @@ async function main(): Promise<void> {
     const t0 = Date.now()
     let run
     try {
-      run = await runGame(bundle, seed, g, DATA_VERSION, ai, only)
+      run = await runGame(bundle, seed, g, DATA_VERSION, ai, only, realm)
     } catch (err) {
       const v = (err as { violations?: Violation[] }).violations ?? [{ seed: `sim-${seed}-${g}`, actionIndex: -1, message: (err as Error).message }]
       violations.push(...v)
@@ -38,7 +40,7 @@ async function main(): Promise<void> {
       console.log(`game ${g} A=${run.factions.A} B=${run.factions.B}: ${run.winner ?? 'unfinished'} (${run.reason}) VP ${run.vp.A}-${run.vp.B}, rounds ${run.rounds}, actions ${run.actions.length}, ${Date.now() - t0}ms${run.violations.length ? `, ${run.violations.length} violation(s)` : ''}`)
     }
   }
-  console.log(`sim: ${games} games, seed ${seed}, ${((Date.now() - started) / 1000).toFixed(1)}s`)
+  console.log(`sim: ${games} games, seed ${seed}, realm ${realm}, ${((Date.now() - started) / 1000).toFixed(1)}s`)
   console.log(`wins: ${Object.entries(wins).map(([f, n]) => `${f} ${n}`).join(', ') || 'none'}; draws: ${draws}`)
   console.log(`mean rounds: ${(rounds / Math.max(games, 1)).toFixed(2)}; mean actions/game: ${(actions / Math.max(games, 1)).toFixed(1)}`)
   console.log(`violations: ${violations.length}`)

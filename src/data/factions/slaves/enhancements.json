@@ -21,7 +21,7 @@
     "id": "slaves.enh.champion-of-raids",
     "faction": "slaves",
     "name": "Champion of Raids",
-    "text": "In your charge phase, another friendly unit wholly within 12\" of the general can re-roll its charge rolls for the rest of the turn.",
+    "text": "Just before your charge phase, another friendly unit wholly within 12\" of the general can re-roll its charge rolls for the rest of the turn.",
     "cost": 0,
     "restriction": {},
     "effect": "slaves.ability.champion-of-raids"

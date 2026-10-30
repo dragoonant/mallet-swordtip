@@ -14,6 +14,7 @@ import { effectService } from '../../src/engine/effects'
 import { hookService } from '../../src/engine/hooks-impl'
 import { unitIgnoresRetreatDamage } from '../../src/engine/phases/movement'
 import { applyAbilityRerolls } from '../../src/engine/rerolls'
+import { writeDeclaredMove } from '../../src/engine/declared'
 import { weaponService } from '../../src/engine/weapons'
 import { whollyWithinUnit } from '../../src/engine/factions/aos-common'
 import type { AbilityDescriptor, CardDeckData, DataBundle, DatasheetData, EnhancementData, FactionData, WeaponData } from '../../src/data/types'
@@ -349,11 +350,23 @@ describe('STD-RA-2 Fearless Invaders', () => {
     return s
   }
 
-  it('STD-RA-2 only units in combat can be targeted (movement phase of your own turn)', () => {
+  it('STD-RA-2 offered as a unit in combat declares a Retreat (before the retreat damage), for that unit only', () => {
     const s = invadersGame()
-    expect(usableIds(s, 'A', 'movement')).toContain(INVADERS)
+    // nothing declared yet, or a unit staying put: nothing to pick
+    expect(usableIds(s, 'A', 'moveDeclared')).not.toContain(INVADERS)
+    writeDeclaredMove(s, { unitId: 'A:marauders', moveType: 'stationary' })
+    expect(usableIds(s, 'A', 'moveDeclared')).not.toContain(INVADERS)
+    writeDeclaredMove(s, { unitId: 'A:marauders', moveType: 'fallBack' })
+    expect(usableIds(s, 'A', 'moveDeclared')).toContain(INVADERS)
     expect(targetsFor('slavesFearlessInvaders', s, null, 'A')).toEqual(['A:marauders'])
-    place(s, 'A:marauders', -5, -6)
+    // a unit out of combat cannot be picked
+    writeDeclaredMove(s, { unitId: 'A:savagers', moveType: 'fallBack' })
+    expect(usableIds(s, 'A', 'moveDeclared')).not.toContain(INVADERS)
+  })
+
+  it('STD-RA-2 is not offered at the end of the movement phase, when every retreat is already over', () => {
+    const s = invadersGame()
+    writeDeclaredMove(s, { unitId: 'A:marauders', moveType: 'fallBack' })
     expect(usableIds(s, 'A', 'movement')).not.toContain(INVADERS)
   })
 
@@ -361,7 +374,8 @@ describe('STD-RA-2 Fearless Invaders', () => {
     const s = invadersGame()
     const { ctx } = ctxFor(s)
     expect(unitIgnoresRetreatDamage(s, 'A:marauders')).toBe(false)
-    useOnce(ctx, 'movement', 'A', INVADERS, { target: 'A:marauders' })
+    writeDeclaredMove(s, { unitId: 'A:marauders', moveType: 'fallBack' })
+    useOnce(ctx, 'moveDeclared', 'A', INVADERS, { target: 'A:marauders' })
     expect(unitIgnoresRetreatDamage(s, 'A:marauders')).toBe(true)
     expect(unitIgnoresRetreatDamage(s, 'A:savagers')).toBe(false)
     expect(unitIgnoresRetreatDamage(s, 'A:fellriders')).toBe(false)
@@ -404,7 +418,7 @@ describe('STD-ENH-2 Godshadow Talisman', () => {
 describe('STD-ENH-3 Champion of Raids', () => {
   const championGame = () => {
     const s = game(CHAMPION)
-    s.phase = 'charge'
+    s.phase = 'movement'
     place(s, 'A:warqueen', -4, -6)
     place(s, 'A:marauders', -9, -6) // wholly within 12"
     place(s, 'A:savagers', 2, -6) // spills beyond 12" of the general
@@ -422,13 +436,20 @@ describe('STD-ENH-3 Champion of Raids', () => {
     expect(targets.every((id) => whollyWithinUnit(s, id, 'A:warqueen', 12))).toBe(true)
   })
 
+  it('STD-ENH-3 offered just before the charge phase (end of your movement phase), not after the charges are over', () => {
+    const s = championGame()
+    expect(usableIds(s, 'A', 'movement')).toContain(CHAMPION_AB)
+    s.phase = 'charge'
+    expect(usableIds(s, 'A', 'charge')).not.toContain(CHAMPION_AB)
+  })
+
   it('STD-ENH-3 the target re-rolls a short charge roll for the rest of the turn (and a good roll is never re-rolled)', () => {
     const s = championGame()
     const { ctx } = ctxFor(s, [1, 2, 6, 5, 4, 4])
     const data = { chargingUnitId: 'A:marauders', targetUnitIds: [] }
     const short = ctx.roll({ purpose: 'charge', player: 'A', sides: 6, count: 2, mode: 'sum', unitId: 'A:marauders' })
     expect(applyAbilityRerolls(ctx, 'onChargeRoll', data, short, 8)).toBe(short) // not granted yet
-    useOnce(ctx, 'charge', 'A', CHAMPION_AB, { target: 'A:marauders' })
+    useOnce(ctx, 'movement', 'A', CHAMPION_AB, { target: 'A:marauders' })
     const redone = applyAbilityRerolls(ctx, 'onChargeRoll', data, short, 8)
     expect(redone).not.toBe(short)
     expect(redone.dice).toEqual([6, 5])

@@ -1,5 +1,5 @@
 // Headless simulator core: two random-legal-move bots play full Spearhead games (Cities of Sigmar vs Ironjawz on
-// Fire and Jade, Aqshy side) through the public engine API (createGame / legalActions / step) on the real data
+// Fire and Jade, either realm side) through the public engine API (createGame / legalActions / step) on the real data
 // bundle, checking invariants after every step. Shared by the CLI (tools/sim.ts) and tests/engine/fullgame.test.ts.
 import type { DataBundle } from '../src/data/types'
 import { UtilityDecider } from '../src/ai/utility'
@@ -23,7 +23,20 @@ export interface GameRun {
   final: GameState
 }
 
-const MISSION = 'sph-fire-and-jade-aqshy-horizontal'
+// Fire and Jade battleplan per realm side (data: src/data/missions/). `--realm aqshy|ghyran|random` on the sim tools picks the
+// side; random is a pure function of seed and game index (balance-stats / ai-trace pass no seed) so a rerun plays the same board. The default stays Aqshy.
+export type SimRealm = 'aqshy' | 'ghyran' | 'random'
+const MISSIONS: Record<'aqshy' | 'ghyran', string> = {
+  aqshy: 'sph-fire-and-jade-aqshy-horizontal',
+  ghyran: 'sph-fire-and-jade-ghyran-horizontal',
+}
+export function realmFromArgv(argv: string[] = process.argv): SimRealm {
+  const i = argv.indexOf('--realm')
+  const v = i >= 0 ? argv[i + 1] : undefined
+  if (v === undefined) return 'aqshy'
+  if (v === 'aqshy' || v === 'ghyran' || v === 'random') return v
+  throw new Error(`sim: --realm must be aqshy, ghyran or random (got "${v}")`)
+}
 const BATTLE_PHASES = ['command', 'movement', 'shooting', 'charge', 'fight']
 const MAX_ACTIONS = 6_000 // a normal game is a few hundred decisions; hitting this reports the game as stalled
 
@@ -62,12 +75,14 @@ export function simPairings(bundle: DataBundle, only?: string[]): [string, strin
 }
 
 // game g: pairing floor(g / 4) (cycling), seats swapped on odd games, the last regiment / enhancement on games 2-3 of each block
-export function makeSimSetup(bundle: DataBundle, gameIndex: number, dataVersion: string, only?: string[]): GameSetup {
+// `realm` defaults to the --realm command-line flag (Aqshy when absent), so every tool that builds a sim game honours it.
+export function makeSimSetup(bundle: DataBundle, gameIndex: number, dataVersion: string, only?: string[], realm: SimRealm = realmFromArgv(), baseSeed: string | number = ''): GameSetup {
   const pairs = simPairings(bundle, only)
   const [a, b] = pairs[Math.floor(gameIndex / 4) % pairs.length]
   const [p0, p1] = gameIndex % 2 === 0 ? [a, b] : [b, a]
   const variant = gameIndex % 4 >= 2
-  const missionId = bundle.missions[MISSION] ? MISSION : Object.keys(bundle.missions)[0]
+  const side: 'aqshy' | 'ghyran' = realm === 'random' ? (botRng(`realm-${baseSeed}-${gameIndex}`)() < 0.5 ? 'aqshy' : 'ghyran') : realm
+  const missionId = bundle.missions[MISSIONS[side]] ? MISSIONS[side] : Object.keys(bundle.missions)[0]
   const layoutId = bundle.missions[missionId].terrainLayouts[0]
   return {
     missionId,
@@ -77,7 +92,7 @@ export function makeSimSetup(bundle: DataBundle, gameIndex: number, dataVersion:
     firstTurn: 'rollOff',
     dataVersion,
     mode: 'spearhead',
-    side: 'aqshy',
+    side,
   }
 }
 
@@ -122,9 +137,9 @@ function choose(rand: () => number, pending: PendingDecision, legal: Action[]): 
   return legal[Math.floor(rand() * legal.length)]
 }
 
-export async function runGame(bundle: DataBundle, baseSeed: string | number, gameIndex: number, dataVersion: string, ai = false, only?: string[]): Promise<GameRun> {
+export async function runGame(bundle: DataBundle, baseSeed: string | number, gameIndex: number, dataVersion: string, ai = false, only?: string[], realm: SimRealm = realmFromArgv()): Promise<GameRun> {
   const seed = `sim-${baseSeed}-${gameIndex}`
-  const setup = makeSimSetup(bundle, gameIndex, dataVersion, only)
+  const setup = makeSimSetup(bundle, gameIndex, dataVersion, only, realm, baseSeed)
   const factions = { A: setup.players.A.faction, B: setup.players.B.faction } as Record<PlayerId, string>
   const rand = botRng(seed)
   const violations: Violation[] = []

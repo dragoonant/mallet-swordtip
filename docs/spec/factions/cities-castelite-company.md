@@ -191,3 +191,9 @@ flavour only; Consecrate the Land is a normal ability, not a prayer.)
 11. **Reinforcements keyword:** core Spearhead rule (destroyed unit may be replaced once); handled by
     core, not this faction.
 12. **Heal (D6)** and **mortal damage** are core primitives.
+13. **AI hints (F9 audit):** `citiesHoldWeight` (cities.ts) scales the pull of markers the army already holds to 0.4 for the
+    Cavaliers and the Marshal while a Steelhelms unit or the Cannon is on the table, so the counter-charge goes hunting instead
+    of guarding home markers. The AI's charge-setup value (`chargeTrade`) now discounts the return blow for a unit that strikes
+    first after charging (For Sigmar, Charge!), as the charge decision already did. Deployment checks that a fast unit can slide
+    out (whole-unit slides, terrain included) and re-tries every shape when it cannot; moves the engine cannot find for a boxed
+    unit (and charge moves for a roll that reaches but finds no placement) come from `src/ai/moves.ts`, filtered by `validate()`.

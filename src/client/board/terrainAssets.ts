@@ -41,6 +41,14 @@ export const BATTLEFIELDS: readonly Battlefield[] = [
   battlefield('ashlands', 'Ember Ashlands'),
 ]
 
+/** The Realm of Life side of Fire and Jade: the Aqshy mat re-coloured to moss, grass and jade-veined ground by
+ *  art/board-textures/tint_ghyran.py (no new art). It is the one ground used whenever a game is on the Ghyran side; the
+ *  HUD's ground cycle only moves between the Realm of Fire mats above. */
+export const GHYRAN_BATTLEFIELD: Battlefield = battlefield('ghyran', 'Ghyran Jade Grove')
+
+/** The ground mat for a realm side: Ghyran's own, or the chosen Realm of Fire mat. */
+export const battlefieldFor = (realm: 'aqshy' | 'ghyran', index: number): Battlefield => (realm === 'ghyran' ? GHYRAN_BATTLEFIELD : BATTLEFIELDS[index])
+
 export const BRICK_URLS: PbrUrls = {
   map: BASE + 'brick/diff_1k.jpg',
   normalMap: BASE + 'brick/nor_gl_1k.jpg',

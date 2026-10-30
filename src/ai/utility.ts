@@ -16,6 +16,9 @@ import { tacticOdds } from '../engine/cards'
 import { kruleboyzAbilityTiming, kruleboyzTargetBonus } from '../engine/factions/kruleboyz'
 import { gloomspiteAbilityTiming, retreatsAndCharges } from '../engine/factions/gloomspite'
 import { kharadronAbilityTiming, kharadronModeBonus, kharadronTargetBonus } from '../engine/factions/kharadron'
+import { slavesFreeRetreatAvailable } from '../engine/factions/slaves'
+import { citiesHoldWeight } from '../engine/factions/cities'
+import { extraMoveCandidates } from './moves'
 import {
   bestRangedRangeOfUnit, expectedAttack, hasAnyMeleeWeapon, hasAnyRangedWeapon, isGunline,
   sumExpectedAttacks, threatAt, threatFrom, threatSources, type ThreatSource, unitMeleeDamage, unitRangedDamage, unitValue,
@@ -57,6 +60,8 @@ function objectivePull(state: GameState, player: PlayerId, pos: { x: number; z: 
   let score = 0
   const cover = unitId ? objectiveCover(state, player, unitId) : null
   const reach = enemyReachOC(state, player)
+  // faction hint: a unit whose job is the counter-charge feels less of the pull of markers its army already holds
+  const hold = unitId ? citiesHoldWeight(state, unitId) ?? 1 : 1
   for (const obj of Object.values(state.objectives)) {
     if (obj.removed) continue
     const controller = DEFAULT_SERVICES.objectives.controller(state, obj.id)
@@ -65,7 +70,7 @@ function objectivePull(state: GameState, player: PlayerId, pos: { x: number; z: 
     // only needs a guard once the enemy is in range of it; the free units go for the centre and the enemy's markers
     const threatened = (reach.get(obj.id) ?? 0) > 0
     const mineBase = threatened ? 3.5 : 1.2
-    const base = (controller === player ? mineBase : controller === other(player) ? 8 : 5) * weight
+    const base = (controller === player ? mineBase * hold : controller === other(player) ? 8 : 5) * weight
     const d = Math.hypot(obj.pos.x - pos.x, obj.pos.z - pos.z)
     // role spread: a marker other friendly units already hold with more Control than the enemy can bring is somebody
     // else's job, so this unit's pull toward it shrinks and it goes for the next marker instead of stacking up
@@ -73,7 +78,7 @@ function objectivePull(state: GameState, player: PlayerId, pos: { x: number; z: 
     // gentler falloff than 1/(1+d): a scored objective should still pull meaningfully from a turn or two's move
     // away (6-12"), not only once a unit is already almost on top of it
     score += (base / (1 + d / 6)) * share
-    if (d <= 3) score += (controller === player ? (threatened ? 1.5 : 0.2) : 6) * weight * share
+    if (d <= 3) score += (controller === player ? (threatened ? 1.5 : 0.2) * hold : 6) * weight * share
   }
   return score
 }
@@ -324,7 +329,10 @@ function chargeTrade(state: GameState, player: PlayerId, unitId: UnitId, targetI
   if (hit !== undefined) return hit
   const dmg = unitMeleeDamage(state, unitId, targetId, { charged: true })
   const wounds = unitModels(state, targetId).reduce((a, x) => a + x.woundsRemaining, 0)
-  const ret = unitMeleeDamage(state, targetId, unitId, {})
+  let ret = unitMeleeDamage(state, targetId, unitId, {})
+  // a unit that strikes first after charging (For Sigmar, Charge! and the like) takes back only what survives its blows, the
+  // same discount scoreDeclareCharge gives the charge itself; without it the move that sets the charge up looks worse than it is
+  if (wounds > 0 && strikesFirstOnCharge(state, unitId)) ret *= Math.max(0, 1 - dmg / wounds)
   const v = Math.max(0, dmg * unitValue(state, targetId) * 0.02 - ret * unitValue(state, unitId) * 0.02 * 0.5 + chargeObjectiveSwing(state, player, unitId, targetId, dmg, wounds))
   m.set(key, v)
   return v
@@ -509,6 +517,10 @@ function scoreDeclareMove(state: GameState, player: PlayerId, action: DeclareMov
         if (!melee || losingTrade) s += 3.5
         // GLO-BT-1: a free Retreat followed by a charge is a fresh Charge and Strike-first for nothing
         else if (retreatsAndCharges(state, unitId)) s += 4
+        // STD-RA-2 Fearless Invaders is sworn as the Retreat is declared: free and the unit charges again, which pays for a
+        // unit whose weapons hit harder on the charge, or one losing its fight
+        else if (enemy && slavesFreeRetreatAvailable(state, player) && (hasChargeBonus(state, unitId)
+          || unitMeleeDamage(state, enemy.unitId, unitId, {}) * unitValue(state, enemy.unitId) > unitMeleeDamage(state, unitId, enemy.unitId, {}) * unitValue(state, unitId) * 1.2)) s += 4
       }
       return s
     }
@@ -665,8 +677,10 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
     // a long oval base (Rockgrinder, 150x90 mm) is deeper than a 5" zone when it faces the enemy: also try it side-on
     const oval = g.models.some((m) => m.base.radius2 !== undefined && Math.abs(m.base.radius - m.base.radius2) > 0.2)
     let unitBest = -Infinity
-    // pass 0: the preferred shapes on a coarse grid; pass 1 (only when nothing fit, e.g. a crowded 5" zone): every shape, a fine grid, side-on facings
-    for (let pass = 0; pass < 2 && unitBest === -Infinity; pass++) {
+    let bestBoxed = false // the best spot so far leaves a fast unit no slide out (deployLaneBlock: 5+ of 6 slides blocked)
+    // pass 0: the preferred shapes on a coarse grid; pass 1 (only when nothing fit, e.g. a crowded 5" zone, or a fast unit would be
+    // boxed in): every shape, a fine grid, side-on facings
+    for (let pass = 0; pass < 2 && (unitBest === -Infinity || (pass === 1 && bestBoxed)); pass++) {
     const passShapes: FormationShape[] = pass === 0 ? shapes : ['line', 'block', 'phalanx', 'wedge', 'checker']
     for (let z = minZ + 0.5; z <= maxZ - 0.5 + 1e-9; z += zStep) {
       for (let x = minX + 0.5; x <= maxX - 0.5 + 1e-9; x += pass === 0 ? xStep : 0.25) {
@@ -703,7 +717,7 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
             }
             score += rng.next() * 0.6
             cands.push({ action, score })
-            if (score > unitBest) unitBest = score
+            if (score > unitBest) { unitBest = score; bestBoxed = stats.M >= 8 && lanes.own >= 5 }
           }
         }
       }
@@ -719,30 +733,38 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
   return null
 }
 
-// how boxed in a deployment spot is: probes 2.5" and 5" ahead of the unit (straight at the enemy and 45 degrees either side)
-// that land off the board or on a friendly model already set up. A fast unit parked behind a slow block in a corner
-// can never get out (no move ends clear of the block), so the cavalry must keep its lanes open.
+// how boxed in a deployment spot is: the whole unit slid 3" and 6" ahead (straight at the enemy and 45 degrees either side), each
+// slide counted as blocked when a model would end off the board, on a friendly model already set up, or inside terrain it cannot
+// stand in. A fast unit parked between a slow block, a war machine and a wall can never get out (every move the engine offers is
+// a slide like these), so the cavalry must keep its lanes open.
 function deployLaneBlock(state: GameState, player: PlayerId, placements: ModelPlacement[], toEnemy: number): { own: number; others: number } {
-  const c = placementsCenter(placements)
   const friends = boardModelsOf(state, player)
-  const probes = (at: { x: number; z: number }): { x: number; z: number }[] => {
-    const out: { x: number; z: number }[] = []
-    for (const da of [0, Math.PI / 4, -Math.PI / 4]) for (const d of [2.5, 5]) out.push({ x: at.x + Math.cos(toEnemy + da) * d, z: at.z + Math.sin(toEnemy + da) * d })
-    return out
-  }
+  const hw = state.board.w / 2, hh = state.board.h / 2
+  const slides: { x: number; z: number }[] = []
+  for (const da of [0, Math.PI / 4, -Math.PI / 4]) for (const d of [3, 6]) slides.push({ x: Math.cos(toEnemy + da) * d, z: Math.sin(toEnemy + da) * d })
   let blocked = 0
-  for (const p of probes(c)) {
-    if (Math.abs(p.x) > state.board.w / 2 - 1 || Math.abs(p.z) > state.board.h / 2 - 1) { blocked++; continue }
-    if (friends.some((m) => Math.hypot(m.pos.x - p.x, m.pos.z - p.z) < m.base.radius + 1.2)) blocked++
+  for (const v of slides) {
+    const stuck = placements.some((p) => {
+      const m = state.models[p.modelId]
+      if (!m) return false
+      const pos = { x: p.pos.x + v.x, y: p.pos.y, z: p.pos.z + v.z }
+      const r = Math.max(m.base.radius, m.base.radius2 ?? 0)
+      if (Math.abs(pos.x) > hw - r || Math.abs(pos.z) > hh - r) return true
+      const foot = { pos, facing: p.facing ?? m.facing, base: m.base }
+      if (friends.some((f) => basesOverlap(foot, f))) return true
+      return deployTerrainBlock(state, m, pos, foot.facing) !== null
+    })
+    if (stuck) blocked++
   }
-  // and the other way round: standing in the lanes of a fast unit that is already set up
+  // and the other way round: standing straight in front of a fast unit that is already set up (a unit beside it is fine: it
+  // still has its straight slides, and a passenger next to a transport is where it wants to be)
   let others = 0
   for (const u of boardUnitsOf(state, player)) {
     const ms = unitModels(state, u.id)
     if (ms.length === 0 || modelStats(state, ms[0]).M < 8) continue
-    const uc = centerOfUnit(state, u.id)
-    if (!uc) continue
-    for (const p of probes(uc)) if (placements.some((q) => Math.hypot(q.pos.x - p.x, q.pos.z - p.z) < 1.8)) others++
+    for (const v of slides.slice(0, 2)) {
+      if (ms.some((m) => placements.some((q) => { const mm = state.models[q.modelId]; return !!mm && basesOverlap({ pos: { x: m.pos.x + v.x, y: m.pos.y, z: m.pos.z + v.z }, facing: m.facing, base: m.base }, { pos: q.pos, facing: q.facing ?? mm.facing, base: mm.base }) }))) others++
+    }
   }
   return { own: blocked, others }
 }
@@ -825,6 +847,19 @@ function chargeObjectiveSwing(state: GameState, player: PlayerId, unitId: UnitId
   // even off-objective, finishing a unit off is worth something beyond its value (one fewer body to contest later)
   if (swing === 0 && wounds > 0 && dmg >= wounds * 0.9) swing = 0.5
   return unitValue(state, unitId) > 0 ? swing : 0
+}
+
+// would this unit have Strike-first once it has charged this turn (state-only probe, as scoreDeclareCharge does)
+function strikesFirstOnCharge(state: GameState, unitId: UnitId): boolean {
+  const unit = state.units[unitId]
+  if (!unit) return false
+  const charged = { ...state, units: { ...state.units, [unitId]: { ...unit, turn: { ...unit.turn, chargedThisTurn: true } } } } as GameState
+  return !!DEFAULT_SERVICES.hooks.eligibilityFor?.(charged, unitId, 'fightFirst')
+}
+
+// some melee weapon of the unit is better on the charge (Charge (+1 Damage))
+function hasChargeBonus(state: GameState, unitId: UnitId): boolean {
+  return unitModels(state, unitId).some((m) => m.weapons.some((w) => state.weapons[w]?.kind === 'melee' && state.weapons[w].abilities.some((a) => a.ability === 'CHARGE_DAMAGE')))
 }
 
 // a granted charge re-roll (Champion of Raids and the like) on this unit this turn
@@ -968,6 +1003,19 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
     for (const e of engagedEnemyUnits(state, player, unitId)) best = Math.max(best, unitMeleeDamage(state, unitId, e, {}) * unitValue(state, e) * 0.02)
     return best * 4 + (state.units[unitId].turn.foughtThisPhase ? -3 : 0)
   }
+  if (code === 'slavesOathOfSupremacy' && unit.player === player) {
+    // +1 to hit until our next turn: worth the most on the unit that will swing before then (in combat now, or a likely charge)
+    // (the hero phase comes before the move, so a unit not yet in combat gets its Move before the charge)
+    let best = 0
+    const move = stats0(state, unitId)?.M ?? 0
+    for (const e of boardUnitsOf(state, other(player))) {
+      const gap = minGapBetweenUnits(state, unitId, e.id)
+      if (gap > 12.5 + move) continue
+      const p = gap <= ENGAGEMENT_H ? 1 : chargeProb(Math.ceil(Math.max(0, gap - 0.5 - move)))
+      best = Math.max(best, p * unitMeleeDamage(state, unitId, e.id, { charged: gap > ENGAGEMENT_H }) * unitValue(state, e.id) * 0.02)
+    }
+    return best * 1.5
+  }
   if (code === 'citiesDecisiveCommander' && unit.player === player) {
     // a unit missing models (On Your Feet!) or holding an objective (Yield No Quarter!) gains the most
     return (unit.startingStrength - unit.models.length) * 0.4 + (contestsObjective(state, unitId) ? 0.8 : 0)
@@ -1037,7 +1085,9 @@ export class UtilityDecider implements Decider {
   }
 
   async decide(view: PlayerView, pending: PendingDecision, legal: Action[] | null): Promise<Action> {
-    const options = legal ?? legalActions(view.state, pending) ?? []
+    let options = legal ?? legalActions(view.state, pending) ?? []
+    // re-formed moves and charge moves when the engine's own candidates leave the unit stuck (src/ai/moves.ts)
+    if (pending.kind === 'moveUnit' || pending.kind === 'chargeMove') options = [...options, ...extraMoveCandidates(view.state, pending, options)]
     if (pending.kind === 'deployUnit') {
       const formed = chooseFormationDeployment(view.state, view.player, pending, this.rng)
       if (formed) return formed

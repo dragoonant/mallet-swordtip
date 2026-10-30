@@ -191,11 +191,20 @@ const planActivate: ActivatedAbilityHook = {
     const target = use.targetUnitIds[0]
     if (!target || !onBoard(ctx.state, target)) return
     const control = num(paramOf(ctx.state, use.abilityId, 'control', 3), 3)
-    ctx.services.effects.grant(ctx, target, { modifyStat: { stat: 'OC', value: control } }, { sourceAbilityId: use.abilityId, sourceUnitId: use.unitId, scope: { who: 'self' }, duration: 'untilNextTurn' })
-    announce(ctx, use, target, `All Part of Da Plan: +${control} Control until the start of your next turn`)
+    // F9 fix: +3 to the unit's control SCORE, not +3 Control on every model (a 5-model Gutrippaz unit used to gain +15). An empty
+    // marker effect carries the bonus until the start of your next turn; `produce` adds it once at onObjectiveControl.
+    ctx.services.effects.grant(ctx, target, {}, { sourceAbilityId: use.abilityId, sourceUnitId: use.unitId, scope: { who: 'self' }, duration: 'untilNextTurn' })
+    announce(ctx, use, target, `All Part of Da Plan: +${control} to its control score until the start of your next turn`)
   },
 }
-const kruleboyzAllPartOfDaPlan: EngineCodeHook = { name: CODE_PLAN, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: planActivate }
+const kruleboyzAllPartOfDaPlan: EngineCodeHook = {
+  name: CODE_PLAN, kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: planActivate,
+  producesAt: ['onObjectiveControl'],
+  produce(_ctx, entry, data) {
+    if (!entry.active || data.contestingUnitId !== entry.holderUnitId) return null
+    return { kind: 'stat', delta: num(entry.params.control, 3) }
+  },
+}
 
 // ---------- KRU-AB-3 Breath of the Mire-drakes ----------
 const breathActivate: ActivatedAbilityHook = {

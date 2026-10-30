@@ -187,7 +187,7 @@
   {
     "id": "kruleboyz.ability.all-part-of-da-plan",
     "name": "All Part of Da Plan",
-    "text": "In your hero phase, pick another friendly unit wholly within 9\" of this unit. Until the start of your next turn, that unit has 3 more Control.",
+    "text": "In your hero phase, pick another friendly unit wholly within 9\" of this unit. Until the start of your next turn, add 3 to that unit's control score (once for the unit, not for each model).",
     "trigger": "activated",
     "timing": {
       "kind": "phase",

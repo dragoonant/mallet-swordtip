@@ -54,7 +54,7 @@
   {
     "id": "slaves.ability.fearless-invaders",
     "name": "Fearless Invaders",
-    "text": "Once per turn, in your movement phase, pick a friendly unit that is in combat. If it retreats this turn, it suffers no mortal damage from the retreat, and it can still charge later in the turn.",
+    "text": "Once per turn, in your movement phase, pick a friendly unit that is in combat as it declares a Retreat. That retreat costs it no mortal damage, and it can still charge later in the turn.",
     "trigger": "activated",
     "timing": {
       "kind": "phase",
@@ -72,6 +72,7 @@
     "duration": "untilEndOfTurn",
     "code": "slavesFearlessInvaders",
     "params": {
+      "window": "moveDeclared",
       "priority": "P2"
     }
   },
@@ -114,11 +115,11 @@
   {
     "id": "slaves.ability.champion-of-raids",
     "name": "Champion of Raids",
-    "text": "In your charge phase, pick another friendly unit wholly within 12\" of the bearer. It can re-roll its charge rolls for the rest of the turn.",
+    "text": "Just before your charge phase (at the end of your movement phase), pick another friendly unit wholly within 12\" of the bearer. It can re-roll its charge rolls for the rest of the turn.",
     "trigger": "activated",
     "timing": {
       "kind": "phase",
-      "phase": "charge",
+      "phase": "movement",
       "whose": "your"
     },
     "scope": {

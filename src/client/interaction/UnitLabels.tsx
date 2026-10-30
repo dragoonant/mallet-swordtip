@@ -91,7 +91,7 @@ function unionRect(els: (Element | null | undefined)[]): { l: number; t: number;
 // measuring (one forced layout per frame, no paint in between), so the solver's input is the true anchor position and
 // the output cannot feed back into the next frame's input. Offsets are in screen px and converted per wrapper,
 // because the tag lives in a distance-scaled Html and the icon row does not.
-function LabelLayoutDriver() {
+function LabelLayoutDriver({ compact }: { compact: boolean }) {
   const invalidate = useThree((s) => s.invalidate)
   const solver = useMemo(() => new StaggerSolver(), [])
   useFrame((_, delta) => {
@@ -109,7 +109,15 @@ function LabelLayoutDriver() {
       if (!r) { e.offset = 0; continue }
       blocks.push({ id, x: r.l, y: r.t, w: r.r - r.l, h: r.b - r.t })
     }
-    const targets = solver.update(blocks)
+    // Phone: the board is small, so a tag standing on an objective's label is lifted clear of it (the label stays put).
+    const fixed: LayoutBlock[] = []
+    if (compact && typeof document !== 'undefined') {
+      document.querySelectorAll('[data-testid^="objective-label-"]').forEach((el, i) => {
+        const q = el.getBoundingClientRect()
+        if (q.width > 0 && q.height > 0) fixed.push({ id: `objective:${i}`, x: q.left, y: q.top, w: q.width, h: q.height })
+      })
+    }
+    const targets = solver.update(blocks, fixed)
     let moving = false
     for (const [id, target] of targets) {
       const e = labelRegistry.get(id)!
@@ -185,7 +193,7 @@ export function UnitLabels() {
 
   return (
     <>
-      <LabelLayoutDriver />
+      <LabelLayoutDriver compact={compact} />
       {compact && <CompactLabelCuller />}
       {units.map((unit) => {
         const models = unit.models.map((id) => state.models[id]).filter((m): m is NonNullable<typeof m> => !!m)
