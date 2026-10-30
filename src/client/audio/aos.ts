@@ -130,6 +130,9 @@ export const NARR_ALIAS: Readonly<Record<string, string>> = {
   'narr-command-phase': 'aos-narr-hero-phase',
   'narr-victory': 'aos-narr-victory',
   'narr-defeat': 'aos-narr-defeat',
+  'narr-objective-taken': 'aos-narr-objective-taken',
+  'narr-unit-destroyed': 'aos-narr-unit-destroyed',
+  'narr-your-turn': 'aos-narr-your-turn',
 }
 
 export function isAosId(id: string): id is AosSoundId {
