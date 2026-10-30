@@ -26,7 +26,7 @@ workflows) → `STATUS.md` (what exists) → `PLAN.md` (scope, decisions, milest
 
 ## Conventions
 - 1 world unit = 1 inch, y up, board centred at the origin. Spearhead
-  is ≈30"×22.4" (confirm in F1); the inherited 40k code still uses 44"×30".
+  is 30"×22" (docs/spec/11-spearhead.md); the inherited 40k client still hard-codes 44"×30" until WP6.
 - Engine contracts are frozen: `src/engine/{types,actions,events,hooks,rng,decider,index}.ts`. Any
   change needs a matching edit to `docs/spec/00-architecture.md` and a note in the agent's `issues`.
 - Every engine test is named with its checklist ID from `docs/spec/12-rules-test-checklist.md`

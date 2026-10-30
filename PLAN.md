@@ -19,8 +19,8 @@ The name parodies "Spearhead"; the project is a fork of Mallet 42k (40k Combat P
   save/continue, phone layout, Pages deploy, Playwright helpers, figure pipeline, workflow scripts.
 - **Adapted:** dice, measurement/coherency, LoS, the attack sequence (hit → wound → rend/save →
   ward → damage, crits), 2D6 charges, pile-in, AI deciders, the action log and seeded RNG.
-- **New:** hero phase (spells with unbind, prayers), priority roll each round (double turns),
-  commands and command points, battle tactic cards, the realm twist deck, reinforcements,
+- **New:** hero phase (spells and prayers; Spearhead drops unbinding and command points), priority roll each round (double turns),
+  battle tactic cards (the only source of commands), the realm twist deck, reinforcements,
   regiment ability + enhancement choice, 4 battle rounds on the small Spearhead board.
 
 ## Milestones
