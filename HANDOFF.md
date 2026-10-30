@@ -110,12 +110,27 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
   nor moves the Frigate much. The rule works (the other KO-BT tests pass; a human gets the offer). Fix is AI deployment / movement, not
   the engine.
 
+## F10 (2026-10-30): engine fixes, objective-aware AI, figure tuning, sounds, QA
+- Engine: unit set-up fallback, re-formed move and charge routes (`src/engine/phases/reform.ts`), the Champion of Raids charge-phase
+  hook, and separate normal and mortal damage pools. Spec note in `docs/spec/13-engine-port-plan.md`.
+- AI: objective-aware move scoring (`src/ai/objectives.ts`), Kharadron hints, utility tuning. Matrix rerun in `docs/balance.md` (672
+  games, 0 invariant violations): Kharadron 73% wins, Kruleboyz 59%, Ironjawz 54%, Fyreslayers 51%, Lumineth 44%, Cities 41%,
+  Gloomspite 32% (up from 24%), Slaves 23%.
+- Figures and sounds: GLB repaint and gallery tuning (`glbPaint.ts`, `FigureGallery.tsx`); nine regenerated AoS sounds with the
+  redo scripts in `tools/local-audio/`.
+- QA on the built site (`vite preview --port 4473`): `tests/e2e/f10-playthrough.spec.ts` plays Gloomspite (human, seat A) vs the
+  Lumineth bot on Ghyran and Kharadron (human) vs the Kruleboyz bot on Aqshy to the end screen in 4 rounds. No console errors, no
+  failed requests, no stalled decisions, ability prompts for Flankin' Force, Careening Destruction, Ply the Skies, Assault Boat and
+  Timed Charges all appeared and worked. Close-ups of the new GLB figures (Snarlpack Cavalry, Hurakan Windchargers, Arkanaut
+  Company, Man-skewer Boltboyz) read clearly. Shots in `e2e-out/f10/` (gitignored). No player-blocking bugs found, so no code fixes.
+- Small things seen, not fixed: floating unit labels can sit on top of the HUD when the camera is close and tilted; the Kharadron
+  human deployment can stack a Hero on a small unit when the strip is crowded.
+
 ## Next
-- Balance: read `docs/balance.md`, then `tools/balance-stats.ts --armies a,b` and `tools/ai-trace.ts` on the worst pairings.
-- Figures: concepts and MGSD GLBs for the four F8 armies (the Frigate, Wheelas, Killaboss and Windmage first); then play Gloomspite and
-  Lumineth as the human side once to check their ability prompts.
+- Balance: Gloomspite (32%) and Slaves (23%) still trail; read `docs/balance.md`, then `tools/balance-stats.ts --armies a,b` and
+  `tools/ai-trace.ts` on their worst pairings. Pull Kharadron (73%) back by AI play, not stats.
+- Check that the Kharadron bot now uses Ply the Skies (`tests/engine/kharadron.test.ts` KO-BT-3 end to end) after the F10 AI hints.
 - Add a regiment-ability / enhancement picker test pass for Fearless Invaders and Fyresteel Throwing Axes (the QA bot only takes the default).
-- Kharadron bot: deploy the Companies beside the Frigate and move the Frigate so Ply the Skies is used (turns KO-BT-3 end to end green),
-  then pull Kharadron (78%) back toward the pack by AI play, not stats; lift Slaves and Gloomspite (about 25%).
 - Phone: the board is small while a prompt is open and unit tags crowd the objective labels; hide tags during placement.
+- Camera: fade or clamp floating unit labels near the HUD in close-up views.
 - Ship: push to `main`; Pages deploys `dist/` at https://dragoonant.github.io/mallet-swordtip/.
