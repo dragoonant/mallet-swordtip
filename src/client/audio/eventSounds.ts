@@ -63,6 +63,25 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
  *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
  *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
 const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron)\./
+/** The F8 armies' own weapon sounds, matched on the full weapon id before the shared rules below: Kruleboyz crossbows,
+ *  Killbow and jagged blades, the Gitz' bows and wolf jaws, Lumineth wind magic, bows and pikes, Kharadron aether guns
+ *  and skyhooks (the Frigate's heavy skyhook is the broadside). */
+const AOS_ARMY_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
+  [/^kruleboyz\..*beast-skewer/, 'aos-kruleboyz-killbow'],
+  [/^kruleboyz\..*crossbow/, 'aos-kruleboyz-crossbow'],
+  [/^kruleboyz\..*fangs/, 'aos-kruleboyz-gnashtoof'],
+  [/^kruleboyz\..*(hacka|jaggedy|stikka|cleaver)/, 'aos-kruleboyz-hacka'],
+  [/^gloomspite\..*jaws/, 'aos-gloomspite-wolf-snarl'],
+  [/^gloomspite\..*bow/, 'aos-gloomspite-grot-bow'],
+  [/^lumineth\..*windblast/, 'aos-lumineth-wind-blast'],
+  [/^lumineth\..*shards/, 'aos-lumineth-wind-spirit', 0.8],
+  [/^lumineth\..*bow/, 'aos-lumineth-arrow'],
+  [/^lumineth\..*pike/, 'aos-lumineth-pike'],
+  [/^kharadron\..*volley-gun/, 'aos-kharadron-volley-gun'],
+  [/^kharadron\..*heavy-skyhook/, 'aos-kharadron-broadside'],
+  [/^kharadron\..*skyhook/, 'aos-kharadron-harpoon'],
+  [/^kharadron\..*(pistol|carbine)/, 'aos-kharadron-aether-pistol'],
+]
 const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
   [/grapeshot/, 'aos-cannon-fire', 0.85],
   [/cannon/, 'aos-cannon-fire'],
@@ -94,7 +113,7 @@ const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
 export function aosWeaponSound(weaponId: string, weaponName = '', melee = true): { id: SoundId; volume?: number } | undefined {
   if (!AOS_FACTION_ID.test(weaponId)) return undefined
   const text = `${weaponId.slice(weaponId.indexOf('.') + 1)} ${weaponName}`.toLowerCase()
-  const hit = AOS_WEAPON_RULES.find(([re]) => re.test(text))
+  const hit = AOS_ARMY_WEAPON_RULES.find(([re]) => re.test(weaponId)) ?? AOS_WEAPON_RULES.find(([re]) => re.test(text))
   if (hit) return hit[2] === undefined ? { id: hit[1] } : { id: hit[1], volume: hit[2] }
   if (!melee) return undefined
   // Orruk, Darkoath and duardin gear is all axes and crude iron: the chop; only the Cities' drilled steel is the halberd.
@@ -489,10 +508,11 @@ const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
   slaves: ['aos-human-death-1', 'aos-human-death-2'],
   fyreslayers: ['aos-human-death-1', 'aos-human-death-2'],
   // Kruleboyz and Gloomspite Gitz fall with an orruk's bellow (the nearest green-skin voice we have); Lumineth and Kharadron are aelves and duardin.
-  kruleboyz: ['aos-orruk-death-1', 'aos-orruk-death-2'],
-  gloomspite: ['aos-orruk-death-1', 'aos-orruk-death-2'],
-  lumineth: ['aos-human-death-1', 'aos-human-death-2'],
-  kharadron: ['aos-human-death-1', 'aos-human-death-2'],
+  // F8 armies: their own death first, paired with the nearest shared voice so a squad going down does not repeat one take.
+  kruleboyz: ['aos-kruleboyz-death', 'aos-orruk-death-1'],
+  gloomspite: ['aos-gloomspite-death'],
+  lumineth: ['aos-lumineth-death', 'aos-human-death-2'],
+  kharadron: ['aos-kharadron-death', 'aos-human-death-1'],
 }
 
 function takeFor(modelId: string): number {
@@ -507,6 +527,34 @@ function deathSound(faction: string, modelId = ''): EventSound {
   const id = DEATH_SOUND[faction] ?? 'model-death'
   const volume = DEATH_TRIM[id]
   return volume === undefined ? { id } : { id, opts: { volume } }
+}
+
+const at = (id: AosSfxId, volume?: number): EventSound => (volume === undefined ? { id } : { id, opts: { volume } })
+
+/** F8 armies on the move, by datasheet keywords: Kruleboyz squelch through the swamp, the Gitz' wolves run (the
+ *  Wheelas rattle), Lumineth riders and flyers rush on the wind and the Spirit howls, a Frigate drones and Skywardens
+ *  buzz. Undefined falls through to the shared hooves / march. */
+const ARMY_MOVE: Record<string, (kw: readonly string[]) => EventSound | undefined> = {
+  kruleboyz: () => at('aos-kruleboyz-swamp-march', 0.5),
+  gloomspite: (kw) => (kw.includes('WAR MACHINE') ? at('aos-gloomspite-chariot', 0.55) : at('aos-gloomspite-wolf-run', 0.55)),
+  lumineth: (kw) =>
+    kw.includes('MONSTER') ? at('aos-lumineth-wind-spirit', 0.5)
+      : kw.includes('CAVALRY') || kw.includes('FLY') ? at('aos-lumineth-wind-rush', 0.55) : undefined,
+  kharadron: (kw) =>
+    kw.includes('WAR MACHINE') ? at('aos-kharadron-airship-engine', 0.5) : kw.includes('FLY') ? at('aos-kharadron-propeller', 0.55) : undefined,
+}
+
+/** F8 army charges: the movement sound of the unit plus the army's own war cry (a Gnashtoof snarls, a Wheela rattles in). */
+const ARMY_CHARGE: Record<string, (kw: readonly string[]) => EventSound[]> = {
+  kruleboyz: (kw) => [kw.includes('CAVALRY') ? at('aos-kruleboyz-gnashtoof', 0.9) : at('aos-kruleboyz-swamp-march', 0.8), at('aos-kruleboyz-war-cry', 0.8)],
+  gloomspite: (kw) => [kw.includes('WAR MACHINE') ? at('aos-gloomspite-chariot') : at('aos-gloomspite-wolf-howl', 0.8), at('aos-gloomspite-cackle', 0.7)],
+  lumineth: (kw) =>
+    kw.includes('MONSTER') ? [at('aos-lumineth-wind-spirit')]
+      : [kw.includes('CAVALRY') || kw.includes('FLY') ? at('aos-lumineth-wind-rush', 0.8) : at('aos-armoured-march', 0.7), at('aos-lumineth-war-cry', 0.8)],
+  kharadron: (kw) => [
+    kw.includes('WAR MACHINE') ? at('aos-kharadron-airship-engine', 0.8) : kw.includes('FLY') ? at('aos-kharadron-propeller', 0.8) : at('aos-armoured-march', 0.7),
+    at('aos-kharadron-war-cry', 0.8),
+  ],
 }
 
 /** Sounds to play for one engine event. `perspective` (the human seat) is optional — omit it to get
@@ -576,6 +624,8 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
     case 'UnitMoved': {
       if (Object.keys(event.paths ?? {}).length === 0) return []
       const kw = lookup?.keywordsOfUnit?.(event.unitId) ?? []
+      const armyMove = ARMY_MOVE[lookup?.factionOfUnit(event.unitId) ?? '']?.(kw)
+      if (armyMove) return [armyMove]
       if (kw.includes('CAVALRY')) return [{ id: 'aos-horse-gallop', opts: { volume: 0.55 } }]
       if (kw.includes('INFANTRY')) return [{ id: 'aos-armoured-march', opts: { volume: 0.5 } }]
       return []
@@ -586,9 +636,8 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
       const chargeFaction = lookup?.factionOfUnit(event.unitId)
       if (chargeFaction === 'ironjawz') return [{ id: 'aos-orruk-stomp' }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }]
       const mounted = (lookup?.keywordsOfUnit?.(event.unitId) ?? []).includes('CAVALRY')
-      // Kruleboyz stomp in with an orruk roar (a Gnashtoof rider hits the ground at a gallop); the Gitz howl in on wolves (or the war-cart's wheels).
-      if (chargeFaction === 'kruleboyz') return mounted ? [{ id: 'aos-horse-charge', opts: { volume: 0.8 } }, { id: 'aos-orruk-roar', opts: { volume: 0.7 } }] : [{ id: 'aos-orruk-stomp', opts: { volume: 0.8 } }, { id: 'aos-orruk-roar', opts: { volume: 0.6 } }]
-      if (chargeFaction === 'gloomspite') return [{ id: 'aos-horse-charge', opts: { volume: 0.8 } }, { id: 'aos-orruk-roar', opts: { volume: 0.6 } }]
+      const armyCharge = ARMY_CHARGE[chargeFaction ?? '']?.(lookup?.keywordsOfUnit?.(event.unitId) ?? [])
+      if (armyCharge) return armyCharge
       // Darkoath, Fyreslayer, Lumineth and Kharadron footsloggers pound in on foot with a battle cry; only mounted units thunder.
       if ((chargeFaction === 'slaves' || chargeFaction === 'fyreslayers' || chargeFaction === 'lumineth' || chargeFaction === 'kharadron') && !mounted) {
         return [{ id: 'aos-armoured-march', opts: { volume: 0.7 } }, { id: 'aos-human-battle-cry', opts: { volume: 0.8 } }]

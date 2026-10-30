@@ -138,3 +138,46 @@ ALT = {
     "aos-objective-captured": dict(ag="a short bright trumpet fanfare, three rising notes",
                                    mg="Two trumpets play a short bright rising fanfare, regal and clean"),
 }
+
+# ---- F8 armies: Kruleboyz, Gloomspite Gitz, Lumineth Realm-lords, Kharadron Overlords (aos-<army>-<thing>).
+# Vocal cues are AudioGen growls / cackles / shouts (wordless); Qwen voices came out too high for orruks.
+SFX.update({
+    "aos-kruleboyz-war-cry": dict(dur=3.0, p="a pack of huge monsters growling and snarling a deep guttural roar"),
+    "aos-kruleboyz-crossbow": dict(dur=2.0, p="a heavy crossbow firing, a sharp wooden twang and a bolt whooshing away"),
+    "aos-kruleboyz-killbow": dict(dur=2.5, p="a giant wooden ballista firing, a loud rope snap, a heavy wooden thunk and a big bolt whooshing"),
+    "aos-kruleboyz-hacka": dict(dur=2.0, p="a crude jagged iron blade hacking into armour, a heavy chop and a rough metal scrape"),
+    "aos-kruleboyz-swamp-march": dict(dur=4.0, p="heavy footsteps squelching and splashing through deep swamp mud"),
+    "aos-kruleboyz-gnashtoof": dict(dur=3.0, p="a huge vicious beast snarling and growling with snapping jaws"),
+    "aos-kruleboyz-death": dict(dur=2.5, p="a big brute groaning in pain and falling with a heavy splash into mud"),
+    "aos-gloomspite-cackle": dict(dur=3.0, p="a group of small goblins cackling with high pitched wicked laughter"),
+    "aos-gloomspite-wolf-howl": dict(dur=4.0, p="a pack of wolves howling"),
+    "aos-gloomspite-wolf-snarl": dict(dur=2.0, p="a wolf snarling viciously and snapping its jaws"),
+    "aos-gloomspite-grot-bow": dict(dur=1.5, p="a small wooden bow firing, a light string twang and an arrow whizzing past"),
+    "aos-gloomspite-wolf-run": dict(dur=4.0, p="a pack of wolves running fast, paws pounding on dirt and panting"),
+    "aos-gloomspite-chariot": dict(dur=4.0, p="a rickety wooden cart racing over rough ground, rattling wheels, creaking and clattering wood"),
+    "aos-gloomspite-death": dict(dur=2.0, p="a small goblin shrieking a high pitched squeal of pain"),
+    "aos-lumineth-war-cry": dict(dur=2.5, p="a group of men shouting a short sharp battle cry together"),
+    "aos-lumineth-arrow": dict(dur=1.5, p="an arrow shot from a bow, a taut string twang and a fast whistling whoosh"),
+    "aos-lumineth-wind-blast": dict(dur=2.5, p="a sudden powerful gust of wind blasting past with a deep whoosh"),
+    "aos-lumineth-pike": dict(dur=1.5, p="a steel spear thrust, a fast swish and a sharp metallic ring"),
+    "aos-lumineth-wind-spirit": dict(dur=4.0, p="a howling roaring whirlwind, strong swirling gusts of wind"),
+    "aos-lumineth-wind-rush": dict(dur=3.0, p="a fast rushing wind sweeping past"),
+    "aos-lumineth-death": dict(dur=2.0, p="a young man gasping in pain with a short cry, then collapsing"),
+    "aos-kharadron-war-cry": dict(dur=2.5, p="a group of gruff deep voiced men shouting a loud hearty cheer"),
+    "aos-kharadron-aether-pistol": dict(dur=1.5, p="a steam powered pistol shot, a sharp bang with a hiss of steam"),
+    "aos-kharadron-volley-gun": dict(dur=2.5, p="a rapid firing multi barrel gun, a fast rattling burst of shots with a mechanical whir"),
+    "aos-kharadron-harpoon": dict(dur=2.0, p="a pneumatic harpoon gun firing, a heavy thunk, a hiss of air and a rattling chain"),
+    "aos-kharadron-broadside": dict(dur=3.0, p="a ship firing a broadside of cannons, several heavy booms in a row"),
+    "aos-kharadron-propeller": dict(dur=3.0, p="a small propeller engine buzzing and whirring as it flies past"),
+    "aos-kharadron-airship-engine": dict(dur=5.0, p="a large airship engine droning with spinning propellers and hissing steam"),
+    "aos-kharadron-death": dict(dur=2.0, p="a gruff man grunting in pain and falling down with a clank of metal armour"),
+})
+ALT.update({
+    "aos-lumineth-wind-spirit": dict(ag="strong wind howling and whooshing in a storm"),
+    "aos-kharadron-propeller": dict(ag="a small propeller spinning fast with a buzzing motor"),
+    "aos-kharadron-aether-pistol": dict(ag="a loud gunshot followed by a short hiss of steam"),
+    "aos-kharadron-war-cry": dict(ag="a crowd of men cheering and shouting loudly"),
+    "aos-gloomspite-wolf-snarl": dict(ag="a dog growling and barking aggressively"),
+    "aos-gloomspite-grot-bow": dict(ag="a bow string twang and an arrow flying"),
+    "aos-kharadron-airship-engine": dict(ag="a propeller airplane engine droning steadily"),
+})

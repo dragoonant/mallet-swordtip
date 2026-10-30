@@ -1241,6 +1241,209 @@
       "id": "aos-narr-your-turn",
       "kind": "voice",
       "text": "Your turn."
+    },
+    {
+      "id": "aos-kruleboyz-war-cry",
+      "kind": "sfx",
+      "prompt": "A mob of hulking swamp brutes growls and snarls a deep guttural wordless war roar, low pitched and menacing, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kruleboyz-crossbow",
+      "kind": "sfx",
+      "prompt": "A heavy crude crossbow loosing a bolt: a hard wooden twang of the string and a fast whoosh of the bolt flying off, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kruleboyz-killbow",
+      "kind": "sfx",
+      "prompt": "A huge wooden bolt thrower fires: creaking timber, a loud rope snap, a heavy thunk and a big spear-like bolt whooshing away, no voices, no music",
+      "durationSeconds": 1.4,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kruleboyz-hacka",
+      "kind": "sfx",
+      "prompt": "A crude jagged iron blade hacks into armour: a heavy chop and a rough grinding scrape of rusty metal, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kruleboyz-swamp-march",
+      "kind": "sfx",
+      "prompt": "Heavy booted footsteps squelching and splashing through deep sucking swamp mud, a steady trudge, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kruleboyz-gnashtoof",
+      "kind": "sfx",
+      "prompt": "A huge vicious swamp hound snarls and growls deep in its throat and snaps its jaws, no voices, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kruleboyz-death",
+      "kind": "sfx",
+      "prompt": "A big brute groans in pain and topples with a heavy splash into swamp mud, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-gloomspite-cackle",
+      "kind": "sfx",
+      "prompt": "A gang of small mischievous goblins cackling with high pitched nasty laughter, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-gloomspite-wolf-howl",
+      "kind": "sfx",
+      "prompt": "A pack of big wolves howling together, long rising howls, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-gloomspite-wolf-snarl",
+      "kind": "sfx",
+      "prompt": "A savage wolf snarls and snaps its jaws in a fast bite, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-gloomspite-grot-bow",
+      "kind": "sfx",
+      "prompt": "A small crude short bow loosing an arrow: a light twang and a thin whizz, no voices, no music",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-gloomspite-wolf-run",
+      "kind": "sfx",
+      "prompt": "A pack of wolves running fast: pounding paws on dirt and heavy panting, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-gloomspite-chariot",
+      "kind": "sfx",
+      "prompt": "A rickety wooden war cart pulled at speed over rough ground: rattling wheels, creaking and clattering planks, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-gloomspite-death",
+      "kind": "sfx",
+      "prompt": "A small goblin shrieks a high pitched squeal of pain and falls, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lumineth-war-cry",
+      "kind": "sfx",
+      "prompt": "A disciplined band of warriors gives a short sharp wordless battle shout in unison, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lumineth-arrow",
+      "kind": "sfx",
+      "prompt": "A fine longbow loosing an arrow: a taut string twang and a fast whistling whoosh, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lumineth-wind-blast",
+      "kind": "sfx",
+      "prompt": "A sudden blast of magical wind: a deep rushing whoosh of air that swells and fades, no voices, no music",
+      "durationSeconds": 1.4,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lumineth-pike",
+      "kind": "sfx",
+      "prompt": "A long steel pike thrust: a fast swish and a bright metallic ring, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lumineth-wind-spirit",
+      "kind": "sfx",
+      "prompt": "A towering spirit of the wind: a howling roaring whirlwind with swirling gusts, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lumineth-wind-rush",
+      "kind": "sfx",
+      "prompt": "A fast rush of wind sweeping past as riders speed by, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lumineth-death",
+      "kind": "sfx",
+      "prompt": "A warrior gasps a short cry of pain and collapses with a light clink of armour, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-war-cry",
+      "kind": "sfx",
+      "prompt": "A crew of gruff deep-voiced sky-sailors shouts a loud hearty wordless cheer, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-aether-pistol",
+      "kind": "sfx",
+      "prompt": "A steam powered pistol fires: a sharp crack and a quick hiss of venting steam, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-volley-gun",
+      "kind": "sfx",
+      "prompt": "A multi-barrelled volley gun fires a fast rattling burst with a mechanical whir, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-harpoon",
+      "kind": "sfx",
+      "prompt": "A pneumatic harpoon launcher fires: a heavy thunk, a hiss of air and a rattling chain paying out, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-broadside",
+      "kind": "sfx",
+      "prompt": "An airship fires a broadside: several heavy booming guns in quick succession, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-propeller",
+      "kind": "sfx",
+      "prompt": "A small backpack propeller engine buzzing and whirring as a flyer zips past, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-airship-engine",
+      "kind": "sfx",
+      "prompt": "A large airship engine droning with spinning propellers and hissing steam vents, no voices, no music",
+      "durationSeconds": 3.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-kharadron-death",
+      "kind": "sfx",
+      "prompt": "A stocky sky-sailor grunts in pain and falls with a clank of metal gear, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
     }
   ]
 }

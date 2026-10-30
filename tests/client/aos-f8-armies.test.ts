@@ -67,7 +67,7 @@ describe('F8 armies on the client', () => {
     expect(resolveFigureKit('kharadron.unit.arkanaut-company-gunners', undefined, 'arkanaut-volley').kit).not.toBe(resolveFigureKit('kharadron.unit.arkanaut-company-gunners', undefined, 'arkanaut').kit)
   })
 
-  it('CLIENT-F8-005 every weapon of the four new armies has a swing or shot sound from the existing palette', () => {
+  it('CLIENT-F8-005 every weapon of the four new armies has a swing or shot sound', () => {
     const weapons = Object.entries(bundle.weapons).filter(([id]) => NEW_ID.test(id))
     expect(weapons.length).toBeGreaterThanOrEqual(30)
     for (const [id, w] of weapons) {
@@ -76,19 +76,19 @@ describe('F8 armies on the client', () => {
       expect(s!.id, id).toBeTruthy()
     }
     const s = (id: string): string | undefined => aosWeaponSound(id, bundle.weapons[id]?.name, bundle.weapons[id]?.type === 'melee')?.id
-    expect(s('kruleboyz.weapon.man-skewer-crossbow')).toBe('guardian-spear-shot')
-    expect(s('gloomspite.weapon.grot-bow')).toBe('guardian-spear-shot')
-    expect(s('lumineth.weapon.windcharger-bow')).toBe('guardian-spear-shot')
-    expect(s('kharadron.weapon.aethermatic-volley-gun')).toBe('burst-cannon-whir')
-    expect(s('kharadron.weapon.light-skyhook')).toBe('wpn-hunter-killer-missile')
-    expect(s('kharadron.weapon.heavy-skyhook')).toBe('aos-cannon-fire')
-    expect(s('kharadron.weapon.privateer-pistol')).toBe('wpn-slugga')
-    expect(s('lumineth.weapon.windblast-vortex')).toBe('psychic-zap')
-    expect(s('lumineth.weapon.warden-pike-and-blade')).toBe('aos-halberd-strike')
-    expect(s('kruleboyz.weapon.wicked-hacka')).toBe('aos-choppa-hit')
-    expect(s('kruleboyz.weapon.jaggedy-blade')).toBe('aos-sword-clash')
+    expect(s('kruleboyz.weapon.man-skewer-crossbow')).toBe('aos-kruleboyz-crossbow')
+    expect(s('gloomspite.weapon.grot-bow')).toBe('aos-gloomspite-grot-bow')
+    expect(s('lumineth.weapon.windcharger-bow')).toBe('aos-lumineth-arrow')
+    expect(s('kharadron.weapon.aethermatic-volley-gun')).toBe('aos-kharadron-volley-gun')
+    expect(s('kharadron.weapon.light-skyhook')).toBe('aos-kharadron-harpoon')
+    expect(s('kharadron.weapon.heavy-skyhook')).toBe('aos-kharadron-broadside')
+    expect(s('kharadron.weapon.privateer-pistol')).toBe('aos-kharadron-aether-pistol')
+    expect(s('lumineth.weapon.windblast-vortex')).toBe('aos-lumineth-wind-blast')
+    expect(s('lumineth.weapon.warden-pike-and-blade')).toBe('aos-lumineth-pike')
+    expect(s('kruleboyz.weapon.wicked-hacka')).toBe('aos-kruleboyz-hacka')
+    expect(s('kruleboyz.weapon.jaggedy-blade')).toBe('aos-kruleboyz-hacka')
     expect(s('kharadron.weapon.skalfhammer')).toBe('aos-fist-smash')
-    expect(s('gloomspite.weapon.snarlfang-jaws')).toBe('aos-fist-smash')
+    expect(s('gloomspite.weapon.snarlfang-jaws')).toBe('aos-gloomspite-wolf-snarl')
     expect(s('kharadron.weapon.skypike')).toBe('aos-halberd-strike')
   })
 
@@ -127,9 +127,9 @@ describe('F8 armies on the client', () => {
       expect(c.length, f).toBeGreaterThan(0)
       expect(c.every((x) => x.id.startsWith('aos-')), f).toBe(true)
     }
-    expect(soundsForEvent(ev({ type: 'ChargeDeclared', unitId: 'u' }), 'A', lookupFor('gloomspite', ['CAVALRY'])).map((x) => x.id)).toContain('aos-horse-charge')
-    expect(soundsForEvent(ev({ type: 'ChargeDeclared', unitId: 'u' }), 'A', lookupFor('kharadron', ['INFANTRY'])).map((x) => x.id)).toContain('aos-human-battle-cry')
-    expect(soundsForEvent(ev({ type: 'ChargeDeclared', unitId: 'u' }), 'A', lookupFor('kruleboyz', ['INFANTRY'])).map((x) => x.id)).toContain('aos-orruk-stomp')
+    expect(soundsForEvent(ev({ type: 'ChargeDeclared', unitId: 'u' }), 'A', lookupFor('gloomspite', ['CAVALRY'])).map((x) => x.id)).toContain('aos-gloomspite-wolf-howl')
+    expect(soundsForEvent(ev({ type: 'ChargeDeclared', unitId: 'u' }), 'A', lookupFor('kharadron', ['INFANTRY'])).map((x) => x.id)).toContain('aos-kharadron-war-cry')
+    expect(soundsForEvent(ev({ type: 'ChargeDeclared', unitId: 'u' }), 'A', lookupFor('kruleboyz', ['INFANTRY'])).map((x) => x.id)).toContain('aos-kruleboyz-war-cry')
   })
 
   it('CLIENT-F8-009 ability prompts name their ability; slides and set-ups say what is being picked', () => {

@@ -18,6 +18,15 @@ export const AOS_SFX_IDS = [
   'aos-human-battle-cry', 'aos-human-death-1', 'aos-human-death-2', 'aos-orruk-roar', 'aos-orruk-death-1', 'aos-orruk-death-2',
   'aos-marshal-command', 'aos-priority-drumroll', 'aos-round-start-war-horn', 'aos-objective-captured',
   'aos-battle-tactic-scored', 'aos-victory', 'aos-defeat',
+  // F8 armies: each has its own war cry, weapons, movement, beast or engine and death
+  'aos-kruleboyz-war-cry', 'aos-kruleboyz-crossbow', 'aos-kruleboyz-killbow', 'aos-kruleboyz-hacka',
+  'aos-kruleboyz-swamp-march', 'aos-kruleboyz-gnashtoof', 'aos-kruleboyz-death',
+  'aos-gloomspite-cackle', 'aos-gloomspite-wolf-howl', 'aos-gloomspite-wolf-snarl', 'aos-gloomspite-grot-bow',
+  'aos-gloomspite-wolf-run', 'aos-gloomspite-chariot', 'aos-gloomspite-death',
+  'aos-lumineth-war-cry', 'aos-lumineth-arrow', 'aos-lumineth-wind-blast', 'aos-lumineth-pike',
+  'aos-lumineth-wind-spirit', 'aos-lumineth-wind-rush', 'aos-lumineth-death',
+  'aos-kharadron-war-cry', 'aos-kharadron-aether-pistol', 'aos-kharadron-volley-gun', 'aos-kharadron-harpoon',
+  'aos-kharadron-broadside', 'aos-kharadron-propeller', 'aos-kharadron-airship-engine', 'aos-kharadron-death',
 ] as const
 
 export const AOS_STINGER_IDS = [
@@ -72,6 +81,36 @@ export const AOS_FALLBACK: Record<AosSoundId, AosFallback> = {
   'aos-battle-tactic-scored': { id: 'vp-scored-sting' },
   'aos-victory': { id: 'victory-fanfare' },
   'aos-defeat': { id: 'defeat-sting' },
+  // F8 armies (their own files are generated; these only cover a missing file)
+  'aos-kruleboyz-war-cry': { id: 'ork-war-cry', volume: 0.85 },
+  'aos-kruleboyz-crossbow': { id: 'stratagem-whoosh', volume: 0.3 },
+  'aos-kruleboyz-killbow': { id: 'wpn-hunter-killer-missile', volume: 0.75 },
+  'aos-kruleboyz-hacka': { id: 'wpn-choppa', volume: 0.85 },
+  'aos-kruleboyz-swamp-march': { id: 'charge-rumble', volume: 0.5 },
+  'aos-kruleboyz-gnashtoof': { id: 'power-klaw-crunch' },
+  'aos-kruleboyz-death': { id: 'death-orks', volume: 0.5 },
+  'aos-gloomspite-cackle': { id: 'ork-war-cry', volume: 0.7 },
+  'aos-gloomspite-wolf-howl': { id: 'ork-war-cry', volume: 0.7 },
+  'aos-gloomspite-wolf-snarl': { id: 'power-klaw-crunch', volume: 0.85 },
+  'aos-gloomspite-grot-bow': { id: 'stratagem-whoosh', volume: 0.3 },
+  'aos-gloomspite-wolf-run': { id: 'charge-rumble', volume: 0.6 },
+  'aos-gloomspite-chariot': { id: 'charge-rumble', volume: 0.7 },
+  'aos-gloomspite-death': { id: 'death-orks', volume: 0.45 },
+  'aos-lumineth-war-cry': { id: 'marine-shout', volume: 0.8 },
+  'aos-lumineth-arrow': { id: 'stratagem-whoosh', volume: 0.3 },
+  'aos-lumineth-wind-blast': { id: 'stratagem-whoosh', volume: 0.5 },
+  'aos-lumineth-pike': { id: 'wpn-big-choppa', volume: 0.7 },
+  'aos-lumineth-wind-spirit': { id: 'stratagem-whoosh', volume: 0.6 },
+  'aos-lumineth-wind-rush': { id: 'stratagem-whoosh', volume: 0.4 },
+  'aos-lumineth-death': { id: 'model-death', volume: 0.85 },
+  'aos-kharadron-war-cry': { id: 'marine-shout', volume: 0.85 },
+  'aos-kharadron-aether-pistol': { id: 'wpn-slugga', volume: 0.7 },
+  'aos-kharadron-volley-gun': { id: 'burst-cannon-whir', volume: 0.85 },
+  'aos-kharadron-harpoon': { id: 'wpn-hunter-killer-missile', volume: 0.75 },
+  'aos-kharadron-broadside': { id: 'wpn-bombast-field-gun', volume: 0.8 },
+  'aos-kharadron-propeller': { id: 'charge-rumble', volume: 0.4 },
+  'aos-kharadron-airship-engine': { id: 'charge-rumble', volume: 0.5 },
+  'aos-kharadron-death': { id: 'death-astra-militarum', volume: 0.5 },
   // music: the existing bed, and the war-like stingers (the machine, warp and xenos ones stay out of this set)
   'aos-ambient-bed': { id: 'ambient-battlefield-loop' },
   'aos-stinger-iron-vanguard': { id: 'stinger-crusade-drums' },
@@ -118,6 +157,15 @@ export const AOS_AVAILABLE: ReadonlySet<AosSoundId> = new Set<AosSoundId>([
   'aos-stinger-the-long-march',
   'aos-sword-clash',
   'aos-victory',
+  // F8 armies
+  'aos-kruleboyz-war-cry', 'aos-kruleboyz-crossbow', 'aos-kruleboyz-killbow', 'aos-kruleboyz-hacka',
+  'aos-kruleboyz-swamp-march', 'aos-kruleboyz-gnashtoof', 'aos-kruleboyz-death',
+  'aos-gloomspite-cackle', 'aos-gloomspite-wolf-howl', 'aos-gloomspite-wolf-snarl', 'aos-gloomspite-grot-bow',
+  'aos-gloomspite-wolf-run', 'aos-gloomspite-chariot', 'aos-gloomspite-death',
+  'aos-lumineth-war-cry', 'aos-lumineth-arrow', 'aos-lumineth-wind-blast', 'aos-lumineth-pike',
+  'aos-lumineth-wind-spirit', 'aos-lumineth-wind-rush', 'aos-lumineth-death',
+  'aos-kharadron-war-cry', 'aos-kharadron-aether-pistol', 'aos-kharadron-volley-gun', 'aos-kharadron-harpoon',
+  'aos-kharadron-broadside', 'aos-kharadron-propeller', 'aos-kharadron-airship-engine', 'aos-kharadron-death',
 ])
 
 /** Inherited 42k narrator ids that now play the Spearhead narrator (public/audio/aos-narr-*.mp3, one voice). */
