@@ -17,3 +17,7 @@ docs/sources/*.pdf
 
 # Playwright mobile spec scratch screenshots
 tests/e2e/__shots__/
+
+# secrets
+*.token*
+*.rtf
