@@ -66,10 +66,38 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
 - Fix: a unit fielded more than once now gets a letter (Vulkite Berzerkers A to D, Freeguild Steelhelms A/B, Ardboyz A/B) in
   `state.ts`; before, four identical "Activate Vulkite Berzerkers" buttons could not be told apart.
 
+## F7 (2026-10-30): smarter AI, narrator cues, prompt polish, four specs
+- AI: `src/ai/utility.ts` retuned from 48 to 96 game samples per change; `tools/balance-stats.ts` takes `--armies a,b`.
+  New `tools/ai-trace.ts` (`npx tsx tools/ai-trace.ts <game> [seed] --armies a,b`) plays one AI-vs-AI game and prints, each turn, where
+  every unit stands, who holds each objective, the VP, and every charge, kill and ability use. Use it to see why an army loses.
+- Client: narrator and audio cues for the new event kinds, redeploy spot markers on the board, a calmer decision prompt and card hand.
+- Specs added in `docs/spec/factions/` (each with a mechanics mapping and Test IDs): Kruleboyz, Gloomspite Gitz, Lumineth Realm-lords,
+  Kharadron Overlords.
+
+## F8 (2026-10-30): Kruleboyz, Gloomspite, Lumineth and Kharadron
+- All four are playable, so the start screen has eight crests and any army can face any other: Swampskulka Gang (KRU-), Snarlpack Huntaz
+  (GLO-), Hurakan Vanguard (LRL-), Skyhammer Task Force (KO-). Data in `src/data/factions/{kruleboyz,gloomspite,lumineth,kharadron}/`,
+  hooks in `src/engine/factions/<army>.ts`, generic engine pieces (moveDeclared window, anchored redeploy, retreat moves, leeward-edge
+  state) noted in `docs/spec/13-engine-port-plan.md` section 3.9. Each spec ends with an "as built" section listing its [RULING]s.
+- None of the four has MGSD GLBs yet: every figure is the procedural stand-in (base disc plus coloured block). It loads cleanly, no
+  404 or console error. The Arkanaut Frigate is a red box with a cream deck.
+- QA on the built site (`vite preview --port 4453`): `tests/e2e/f8-playthrough.spec.ts` plays Kruleboyz (human) vs the Lumineth bot and
+  Kharadron (human) vs the Gloomspite bot to the end screen in 4 rounds, no console errors, no failed requests; shots in `e2e-out/f8/`
+  (`abilities/` has the prompts). Seen in prompts: Covered in Mud, Kruleboyz Waaagh!, All Part of Da Plan, Breath of the Mire-drakes,
+  Scare Taktikz, Ply the Skies, Assault Boat, Timed Charges, Bomb Racks, Always Take What You Are Owed. Not seen in a
+  human prompt: the Gloomspite and Lumineth abilities (they were the bot side), Disengage, the Flask.
+  `tests/e2e/f8-armies.spec.ts` (start screen, cards, deployment, a fight) also passes. `npm test` 920/920, typecheck clean.
+- Harness fix, not a game bug: the playthrough used to click the End phase button while the bot was still deciding. That button stays
+  disabled, so Playwright waited until the whole test timed out ("target crashed"). The loop now only clicks on the human's decisions.
+  `QA_TRACE=1` logs each decision to `e2e-out/f8/<prefix>-trace.log`; `QA_HANG=1` dumps the page's state if it stops answering.
+
 ## Next
 - Balance: Ironjawz still win about 4 of 5 AI-vs-AI games (32/40). Use `tools/balance-stats.ts` to see where Cities lose damage
   (Steelhelm and Cavalier charges, Cannon uptime) and tune unit stats or the Cities AI.
-- Balance the two new armies with `tools/balance-stats.ts` (Slaves vs Fyreslayers AI games), then the Cities/Ironjawz gap.
+- Balance all eight armies with `tools/balance-stats.ts --armies a,b` and `tools/ai-trace.ts` (start with the four F8 armies, which have
+  only been played a few times), then the Cities/Ironjawz gap.
+- Figures: concepts and MGSD GLBs for the four F8 armies (the Frigate, Wheelas, Killaboss and Windmage first); then play Gloomspite and
+  Lumineth as the human side once to check their ability prompts.
 - Add a regiment-ability / enhancement picker test pass for Fearless Invaders and Fyresteel Throwing Axes (the QA bot only takes the default).
 - Ghyran side is data only (no Ghyran battleplan file), so only the Aqshy side is playable.
 - Phone: the board is small while a prompt is open and unit tags crowd the objective labels; hide tags during placement.
