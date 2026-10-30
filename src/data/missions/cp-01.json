@@ -1,0 +1,44 @@
+{
+  "id": "mission.cp-01",
+  "name": "Clash of Patrols",
+  "text": "Four markers lie between the deployment zones; each one you control scores 5 VP (max 15 per turn). Retrieve Intelligence: from round 2, at the start of your Command phase you may search one marker you control that nobody has searched yet, gaining 1 CP if your Warlord is on the battlefield. Each marker can be searched once per battle by either side. Searching doesn't remove it; it still scores.",
+  "format": "combatPatrol",
+  "board": { "w": 44, "h": 30 },
+  "deploymentZones": {
+    "A": [
+      { "x": -22, "z": -15 },
+      { "x": 22, "z": -15 },
+      { "x": 22, "z": -10 },
+      { "x": -22, "z": -10 }
+    ],
+    "B": [
+      { "x": -22, "z": 10 },
+      { "x": 22, "z": 10 },
+      { "x": 22, "z": 15 },
+      { "x": -22, "z": 15 }
+    ]
+  },
+  "objectives": [
+    { "id": "west", "x": -10, "z": 0 },
+    { "id": "east", "x": 10, "z": 0 },
+    { "id": "north", "x": 0, "z": 6 },
+    { "id": "south", "x": 0, "z": -6 }
+  ],
+  "rounds": 5,
+  "firstTurn": "roll",
+  "scoring": [
+    { "id": "take-and-hold-r2-4", "when": "command.end", "rounds": { "from": 2, "to": 4 }, "who": "active", "rule": "holdObjectives", "pointsPer": 5, "cap": 15 },
+    { "id": "take-and-hold-r5-first", "when": "command.end", "rounds": { "from": 5, "to": 5 }, "who": "first", "rule": "holdObjectives", "pointsPer": 5, "cap": 15 },
+    { "id": "take-and-hold-r5-second", "when": "turn.end", "rounds": { "from": 5, "to": 5 }, "who": "second", "rule": "holdObjectives", "pointsPer": 5, "cap": 15 }
+  ],
+  "rules": [
+    {
+      "id": "retrieve-intelligence",
+      "code": "retrieveIntelligence",
+      "window": "command.start",
+      "params": { "roundFrom": 2, "chooseOptionTopic": "recoverObjective", "cpBonusIfWarlordOnBoard": 1 }
+    }
+  ],
+  "victory": { "tie": "draw" },
+  "terrainLayouts": ["terrain.cp-long-edges", "terrain.cp-01"]
+}

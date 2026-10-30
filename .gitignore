@@ -1,0 +1,19 @@
+node_modules
+dist
+e2e-out
+test-results
+playwright-report
+.env
+.env.*
+.DS_Store
+
+# secrets (never commit)
+elevenlabs.token
+*.token
+.env*
+
+# GW rules PDFs: local reference only, never published (public repo)
+docs/sources/*.pdf
+
+# Playwright mobile spec scratch screenshots
+tests/e2e/__shots__/

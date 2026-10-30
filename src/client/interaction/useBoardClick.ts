@@ -1,0 +1,99 @@
+// Turns Board's down/move/up pointer stream into a plain "click" callback, so a left-drag that
+// orbits the camera (OrbitControls reads the same canvas pointer events) doesn't also drop a unit —
+// only a down→up pair that barely moved counts as a click.
+//
+// Also drains an in-progress model/formation nudge (M4 #3: dragging a placed ghost before Confirm).
+// The drag itself starts on a pointer-down on the ghost mesh in PlacementOverlay.tsx (which calls
+// uiStore.startNudge and stops propagation so the mat below never sees that 'down' at all); this
+// hook only needs to keep updating the draft on every 'move' while a nudge is active, and clear it
+// on 'up'. Reading uiStore via getState() (not the reactive hook) for the same reason Scene.tsx's
+// onBoardPointer does: a captured pointer stream keeps calling whichever closure was live when the
+// drag started, never a fresher one, so anything read here has to be fetched live.
+import { useCallback, useRef } from 'react'
+import { useUiStore } from '../ui/uiStore'
+import { useGameStore } from '../store/game'
+import { updateMoveHover } from './moveHover'
+import { liftToPlane, nudgeY } from './floors'
+import { snapOversizeDeployPlacements } from './formationValidation'
+import { combinedUnitModels } from './geometry'
+import { beginDeployDrag, canPreviewDeploy, isDeployDragging, liftDeployDrag } from './deployDrag'
+
+const CLICK_MAX_DRAG_IN = 0.4
+
+function applyNudge(point: { x: number; z: number }) {
+  const ui = useUiStore.getState()
+  const nudge = ui.nudge
+  const draft = ui.draft
+  if (!nudge || !draft || draft.decisionId !== nudge.decisionId) return true
+  const gs = useGameStore.getState().state
+  // a deployment model too big for the zone stays glued to the battlefield edge while it is dragged
+  const snap = <T extends { modelId: string; pos: { x: number; y: number; z: number }; facing?: number }>(ps: T[]): T[] => (gs ? snapOversizeDeployPlacements(gs, combinedUnitModels(gs, draft.unitId), ps) : ps)
+  const yAt = (x: number, z: number, y: number) => (gs ? nudgeY(gs, x, z, y) : y)
+  if (nudge.mode === 'model') {
+    const cur = draft.placements.find((p) => p.modelId === nudge.modelId)
+    const q = liftToPlane(point.x, point.z, cur?.pos.y ?? 0)
+    const target = { x: q.x - nudge.grab.x, z: q.z - nudge.grab.z }
+    ui.setDraft({
+      ...draft,
+      placements: snap(draft.placements.map((p) => (p.modelId === nudge.modelId ? { ...p, pos: { x: target.x, y: yAt(target.x, target.z, p.pos.y), z: target.z } } : p))),
+    })
+  } else {
+    const q = liftToPlane(point.x, point.z, nudge.basePlacements[0]?.pos.y ?? 0)
+    const dx = q.x - nudge.grab.x
+    const dz = q.z - nudge.grab.z
+    ui.setDraft({
+      ...draft,
+      anchor: { x: draft.anchor.x + dx, z: draft.anchor.z + dz },
+      placements: snap(nudge.basePlacements.map((p) => ({ ...p, pos: { x: p.pos.x + dx, y: yAt(p.pos.x + dx, p.pos.z + dz, p.pos.y), z: p.pos.z + dz } }))),
+    })
+  }
+  return true
+}
+
+export function useBoardClick(onClick: (point: { x: number; z: number }) => void) {
+  const down = useRef<{ x: number; z: number } | null>(null)
+
+  return useCallback(
+    (point: { x: number; z: number }, kind: 'move' | 'down' | 'up' | 'hover' | 'leave') => {
+      if (kind === 'hover' || kind === 'leave') {
+        updateMoveHover(kind === 'hover' ? point : null)
+        return
+      }
+      if (kind === 'move') {
+        applyNudge(point)
+        // mouse press-and-drag while placing a deployUnit unit: the formation follows the pointer (touch drags arrive
+        // as 'hover' events instead, see Board.tsx); the lift below stages it
+        const start = down.current
+        if (start && !useUiStore.getState().nudge && canPreviewDeploy() && (isDeployDragging() || Math.hypot(point.x - start.x, point.z - start.z) > CLICK_MAX_DRAG_IN)) {
+          beginDeployDrag()
+          updateMoveHover(point)
+        }
+        return
+      }
+      if (kind === 'down') {
+        down.current = point
+        return
+      }
+      // 'up'
+      const nudging = !!useUiStore.getState().nudge
+      if (nudging) {
+        applyNudge(point)
+        useUiStore.getState().clearNudge()
+        down.current = null
+        return
+      }
+      const start = down.current
+      down.current = null
+      if (isDeployDragging()) {
+        // a drag leaves the formation staged as the draft where it was dropped; Confirm in the prompt commits it
+        updateMoveHover(null)
+        useUiStore.getState().selectUnit(null)
+        liftDeployDrag(point)
+        return
+      }
+      if (!start) return
+      if (Math.hypot(point.x - start.x, point.z - start.z) <= CLICK_MAX_DRAG_IN) onClick(point)
+    },
+    [onClick],
+  )
+}

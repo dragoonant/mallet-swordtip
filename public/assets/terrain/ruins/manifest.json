@@ -1,0 +1,219 @@
+{
+  "ruin-corner": {
+    "size": [
+      1,
+      1.3611,
+      0.7598
+    ]
+  },
+  "ruin-facade": {
+    "size": [
+      1,
+      1.2455,
+      0.6983
+    ]
+  },
+  "ruin-small": {
+    "size": [
+      1,
+      1.3473,
+      0.5808
+    ]
+  },
+  "ruin-tall": {
+    "size": [
+      1,
+      2.2276,
+      0.7822
+    ]
+  },
+  "barricade": {
+    "size": [
+      1,
+      0.1704,
+      0.5398
+    ]
+  },
+  "crater": {
+    "size": [
+      0.9072,
+      0.1347,
+      1
+    ]
+  },
+  "bunker-a": {
+    "size": [
+      0.999,
+      0.6887,
+      0.579
+    ]
+  },
+  "bunker-b": {
+    "size": [
+      1.0003,
+      0.5758,
+      0.5364
+    ]
+  },
+  "ruin-citadel-corner-1": {
+    "size": [
+      0.9916,
+      0.9118,
+      1.0018
+    ],
+    "shape": "corner"
+  },
+  "ruin-citadel-corner-3": {
+    "size": [
+      0.9987,
+      0.9744,
+      0.8952
+    ],
+    "shape": "corner",
+    "cornerTurns": 1
+  },
+  "ruin-citadel-corner-4": {
+    "size": [
+      1.0004,
+      0.8095,
+      0.6489
+    ],
+    "shape": "corner"
+  },
+  "ruin-citadel-wall-1": {
+    "size": [
+      0.9997,
+      0.6519,
+      0.3892
+    ],
+    "shape": "rect"
+  },
+  "ruin-citadel-wall-2": {
+    "size": [
+      0.9998,
+      0.9131,
+      0.3338
+    ],
+    "shape": "rect"
+  },
+  "ruin-citadel-wall-3": {
+    "size": [
+      1.0016,
+      0.8084,
+      0.3323
+    ],
+    "shape": "rect"
+  },
+  "t5-barricade-rockcrete": {
+    "size": [
+      1.0,
+      0.1888,
+      0.178
+    ]
+  },
+  "t5-barricade-sandbag": {
+    "size": [
+      1.0,
+      0.2299,
+      0.2737
+    ]
+  },
+  "t5-barricade-tanktrap": {
+    "size": [
+      1.0,
+      0.3056,
+      0.2737
+    ]
+  },
+  "t5-crate-container": {
+    "size": [
+      1.0,
+      0.4844,
+      0.5466
+    ]
+  },
+  "t5-crate-fuel": {
+    "size": [
+      1.0,
+      0.6175,
+      0.8779
+    ]
+  },
+  "t5-crate-pillbox": {
+    "size": [
+      1.0,
+      0.4019,
+      0.8312
+    ]
+  },
+  "t5-crate-supply": {
+    "size": [
+      1.0,
+      0.4668,
+      0.6458
+    ]
+  },
+  "t5-crater-pipe": {
+    "size": [
+      1.0,
+      0.1502,
+      0.9964
+    ]
+  },
+  "t5-crater-scorch": {
+    "size": [
+      1.0,
+      0.1501,
+      0.9991
+    ]
+  },
+  "t5-crater-wreck": {
+    "size": [
+      0.9767,
+      0.1324,
+      1.0
+    ]
+  },
+  "t5-wall-bulkhead": {
+    "size": [
+      1.0,
+      0.6178,
+      0.1768
+    ]
+  },
+  "t5-wall-cathedral": {
+    "size": [
+      1.0,
+      0.6036,
+      0.4079
+    ]
+  },
+  "t5-wall-colonnade": {
+    "size": [
+      1.0,
+      0.8768,
+      0.3399
+    ]
+  },
+  "t5-wall-forge": {
+    "size": [
+      1.0,
+      0.8031,
+      0.3768
+    ]
+  },
+  "t5-wall-hab": {
+    "size": [
+      1.0,
+      0.7199,
+      0.3733
+    ]
+  },
+  "t5-wall-shrine": {
+    "size": [
+      1.0,
+      0.743,
+      0.3836
+    ]
+  }
+}

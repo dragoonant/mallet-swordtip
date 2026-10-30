@@ -1,0 +1,226 @@
+// Public entry point: one datasheet's SD figure, procedurally built and posed. Rendering-only —
+// the engine never imports this and never sees anything drawn here, only the Model.base/height
+// numbers this reads from src/data (docs/spec/30-figures.md, top of file). See index.ts for the
+// full per-model API contract this exposes to the wiring layer.
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { requestFrame } from './anim'
+import type { Group } from 'three'
+import type { ThreeEvent } from '@react-three/fiber'
+import { applyPaintToColors, resolveBaseStyle, useArmyPaint } from './paint'
+import { resolveBase, resolveFigureKit, resolvePaintColors, useDataBundle } from './data'
+import { SwarmBody } from './SwarmBody'
+import { BODY_KIND, BIPED_CONFIG, VEHICLE_CONFIG, ARTILLERY_CONFIG, HOUND_CONFIG } from './kitConfigs'
+import { BaseDisc, BASE_THICKNESS } from './BaseDisc'
+import { GlbBody } from './GlbBody'
+import { GlowAura } from './GlowAura'
+import { glbSlugFor } from './glbModels'
+import { useGlbInstance } from './glbLoader'
+import { BipedBody } from './BipedBody'
+import { VehicleBody } from './VehicleBody'
+import { ArtilleryBody } from './ArtilleryBody'
+import { HoundBody } from './HoundBody'
+import type { Pose, FigureAction, FigureActionKind } from './types'
+
+const POSITION_EASE_PER_SEC = 10
+const YAW_EASE_PER_SEC = 8
+// Below this remaining distance (world-inches), an eased move counts as "arrived" for walk-cycle
+// purposes even though the ease-toward-target math never technically reaches zero.
+const MOVE_EPS = 0.01
+
+// One-shot action durations (ms), how long each pose displays before Figure reverts to idle/walk
+// on its own. 'death' is terminal — it has no entry and is simply never timed out.
+const ACTION_MS: Record<Exclude<FigureActionKind, 'death'>, number> = { shoot: 700, melee: 700, hit: 300 }
+
+export interface FigureProps {
+  /** Datasheet id from the data bundle, e.g. "sm.terminator-squad". Unknown ids still render —
+   *  see resolveFigureKit's fallback. */
+  datasheetId: string
+  /** Datasheet model type (Model.datasheetModelId, e.g. "sergeant"). Optional; only used to pick a GLB body
+   *  (see glbModels.ts) — omit and the procedural figure is always used. */
+  modelId?: string
+  /** Stable per-model-instance key (the engine model id); only picks between a model type's alternate GLB sculpts (e.g. Poxwalkers). */
+  variantKey?: string
+  /** Faction id, e.g. "sm" | "ork" | "necrons" — resolves the paintScheme. Unknown ids paint neutral grey. */
+  faction: string
+  /** Owning seat in a game; picks up that seat's game-only colours (paint.ts bySeat). Omit outside a game. */
+  seat?: 'A' | 'B'
+  /** Target world position. Figure eases its own group toward it every frame (snapping only on
+   *  first mount, so placing a figure never makes it slide in from the origin) instead of
+   *  requiring a wrapper — a caller that already eases position itself (e.g. wrapping Figure in
+   *  its own per-frame lerp) can keep doing that too; easing a already-settled target is a no-op. */
+  position?: readonly [number, number, number]
+  /** Desired facing, radians. Eased with a turn-speed limit rather than snapped — drive it with
+   *  the direction of travel while `moving`, then with the bearing to a target once an `action`
+   *  starts, and the figure turns to face it instead of popping. */
+  rotationY?: number
+  /** Explicit walk-cycle override. Omit to let Figure infer it from `position` motion (distance
+   *  to target above ~0.01in counts as moving) — pass it explicitly only when a caller wants the
+   *  walk cycle to track something other than raw position (e.g. "still mid-move" from engine
+   *  state even while eased position has already visually caught up). */
+  moving?: boolean
+  /** One-shot combat/death cue layered over the idle/walk base pose — shoot recoil, melee lunge
+   *  + swing, hit flinch, death topple/fade/sink. See FigureAction (types.ts) for the `t0`
+   *  contract. Clearing `action` (passing undefined) reverts to idle/walk on the next render;
+   *  'death' never reverts on its own. */
+  action?: FigureAction
+  /** Escape hatch: forces this exact pose and ignores action/moving inference entirely. Used by
+   *  the figure gallery and death-ghost callers, which already know precisely which static pose
+   *  they want and have no ongoing action/movement to report. */
+  pose?: Pose
+  selected?: boolean
+  highlighted?: boolean
+  /** Pointer is on this unit's prompt button: a bright pulsing ring, distinct from `highlighted`. */
+  hovered?: boolean
+  /** Pointer is on this model's unit/row in the unit card: a soft pulsing glow around the figure. */
+  glowing?: boolean
+  onClick?: (event: ThreeEvent<MouseEvent>) => void
+}
+
+const ORIGIN = [0, 0, 0] as const
+
+export const Figure = memo(function Figure({
+  datasheetId,
+  modelId,
+  variantKey,
+  faction,
+  seat,
+  position = ORIGIN,
+  rotationY,
+  moving,
+  action,
+  pose: poseOverride,
+  selected,
+  highlighted,
+  hovered,
+  glowing,
+  onClick,
+}: FigureProps) {
+  // `rotationY` is an engine facing — forward along world (cos f, sin f) — but the figure mesh
+  // faces local +Z, which three's rotation.y turns to (sin θ, cos θ); θ = π/2 − f lines them up.
+  const yaw = rotationY === undefined ? 0 : Math.PI / 2 - rotationY
+  const bundle = useDataBundle()
+  const glbSlug = glbSlugFor(datasheetId, modelId, variantKey)
+  const glb = useGlbInstance(glbSlug)
+  const seedRef = useRef(Math.random() * 100)
+  const groupRef = useRef<Group>(null!)
+  const easedPos = useRef({ x: position[0], y: position[1], z: position[2] })
+  const easedYaw = useRef(yaw)
+  const initialized = useRef(false)
+  // Target (x,y,z,yaw) the figure last fully arrived at; while the props still match, the frame loop does nothing.
+  const settled = useRef<[number, number, number, number] | null>(null)
+  const [autoMoving, setAutoMoving] = useState(false)
+
+  // Tracks one-shot actions: a change in `action.t0` (any type, compared by !==) restarts the
+  // window; the window itself is timed off Figure's own clock via setTimeout, never off t0.
+  const [actionExpired, setActionExpired] = useState(false)
+  const actionToken = useRef<FigureAction['t0'] | undefined>(undefined)
+  useEffect(() => {
+    if (!action || action.t0 === actionToken.current) return
+    actionToken.current = action.t0
+    setActionExpired(false)
+    if (action.kind === 'death') return // terminal — no reversion timer
+    const timer = setTimeout(() => setActionExpired(true), ACTION_MS[action.kind])
+    return () => clearTimeout(timer)
+  }, [action])
+
+  useFrame((state, delta) => {
+    const g = groupRef.current
+    if (!g) return
+    const st = settled.current
+    if (initialized.current && st && st[0] === position[0] && st[1] === position[1] && st[2] === position[2] && st[3] === yaw) return
+    if (!initialized.current) {
+      g.position.set(position[0], position[1], position[2])
+      g.rotation.y = yaw
+      easedPos.current.x = position[0]
+      easedPos.current.y = position[1]
+      easedPos.current.z = position[2]
+      easedYaw.current = yaw
+      initialized.current = true
+      settled.current = [position[0], position[1], position[2], yaw]
+      requestFrame(state)
+      return
+    }
+
+    const p = easedPos.current
+    const posT = Math.min(1, delta * POSITION_EASE_PER_SEC)
+    p.x += (position[0] - p.x) * posT
+    p.y += (position[1] - p.y) * posT
+    p.z += (position[2] - p.z) * posT
+    g.position.set(p.x, p.y, p.z)
+
+    // Shortest-path yaw ease so a figure never spins the long way round to face a new target.
+    let diff = yaw - easedYaw.current
+    diff = ((diff + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI
+    easedYaw.current += diff * Math.min(1, delta * YAW_EASE_PER_SEC)
+    g.rotation.y = easedYaw.current
+
+    const dx = position[0] - p.x
+    const dy = position[1] - p.y
+    const dz = position[2] - p.z
+    const stillMoving = dx * dx + dy * dy + dz * dz > MOVE_EPS * MOVE_EPS
+    if (moving === undefined && stillMoving !== autoMoving) setAutoMoving(stillMoving)
+    if (!stillMoving && Math.abs(diff) < 0.002) {
+      // Arrived: snap exactly and stop easing until the position/yaw props change.
+      p.x = position[0]
+      p.y = position[1]
+      p.z = position[2]
+      g.position.set(p.x, p.y, p.z)
+      easedYaw.current = yaw
+      g.rotation.y = yaw
+      settled.current = [position[0], position[1], position[2], yaw]
+    }
+    requestFrame(state)
+  })
+
+  const datasheet = bundle?.datasheets[datasheetId]
+  const factionData = bundle?.factions[faction]
+
+  const { archetype, kit } = useMemo(() => resolveFigureKit(datasheetId, datasheet, modelId), [datasheetId, datasheet, modelId])
+  const base = useMemo(() => resolveBase(datasheet, archetype, modelId), [datasheet, archetype, modelId])
+  const paint = useArmyPaint(faction, seat)
+  const colors = useMemo(() => applyPaintToColors(resolvePaintColors(factionData), paint), [factionData, paint])
+  const baseStyle = useMemo(() => resolveBaseStyle(paint), [paint])
+
+  const bodyKind = BODY_KIND[kit]
+  const isMoving = moving ?? autoMoving
+  const actionPose = action && !actionExpired ? action.kind : null
+  const pose: Pose = poseOverride ?? actionPose ?? (isMoving ? 'walk' : 'idle')
+
+  return (
+    <group ref={groupRef} onClick={onClick}>
+      <BaseDisc radiusX={base.radiusX} radiusZ={base.radiusZ} colors={colors} selected={selected} highlighted={highlighted} hovered={hovered} glbBody={!!glb} baseStyle={baseStyle} />
+      {glowing && <GlowAura height={base.height} radius={Math.max(base.radiusX, base.radiusZ)} />}
+      {glb && <GlbBody object={glb} slug={glbSlug} radiusX={base.radiusX} radiusZ={base.radiusZ} pose={pose} seed={seedRef.current} faction={faction} paint={paint} />}
+      {!glb && <group position={[0, BASE_THICKNESS, 0]} scale={[base.height, base.height, base.height]}>
+        {bodyKind === 'swarm' ? (
+          <SwarmBody colors={colors} pose={pose} seed={seedRef.current} />
+        ) : bodyKind === 'artillery' ? (
+          <ArtilleryBody config={ARTILLERY_CONFIG[kit] ?? { barrel: 'field-gun' }} colors={colors} pose={pose} seed={seedRef.current} />
+        ) : bodyKind === 'hound' ? (
+          <HoundBody config={HOUND_CONFIG[kit] ?? { rightWeapon: 'none', leftWeapon: 'none' }} colors={colors} pose={pose} seed={seedRef.current} />
+        ) : bodyKind === 'vehicle' ? (
+          <VehicleBody config={VEHICLE_CONFIG[kit] ?? { weapon: 'none', hasRotor: false }} colors={colors} pose={pose} seed={seedRef.current} />
+        ) : (
+          <BipedBody
+            config={
+              BIPED_CONFIG[kit] ?? {
+                headShape: 'generic-head',
+                rightWeapon: 'none',
+                leftWeapon: 'none',
+                bulk: 1,
+                hasBackpack: false,
+                shoulderPads: 'none',
+                hasCape: false,
+                skin: 'none',
+              }
+            }
+            colors={colors}
+            pose={pose}
+            seed={seedRef.current}
+          />
+        )}
+      </group>}
+    </group>
+  )
+})

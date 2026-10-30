@@ -1,0 +1,1052 @@
+// Client game store (docs/spec/50-client.md §2). Owns the one GameState the UI renders from, drives it through
+// engine.step(), and auto-plays the bot seat with src/ai/random.ts. The client never mutates GameState directly —
+// every change here comes from a step() result.
+import { create } from 'zustand'
+import {
+  createGame,
+  diceExprMean,
+  legalActions as engineLegalActions,
+  load as engineLoad,
+  ENGINE_VERSION,
+  step,
+  registerDataBundle,
+  view as engineView,
+  type Action,
+  type CommandRerollDecision,
+  type GameEvent,
+  type GameSetup,
+  type GameState,
+  type Id,
+  type PendingDecision,
+  type PlayerId,
+  type PlayerSetup,
+  type RejectionCode,
+  type DiceRoll,
+  type Unit,
+  type Vec3,
+} from '../../engine'
+import type { Decider } from '../../engine/decider'
+import type { CombatPatrolData, DataBundle, EnhancementData } from '../../data/types'
+import { loadBundle } from '../../data'
+import { RandomDecider } from '../../ai/random'
+import { UtilityDecider } from '../../ai/utility'
+import { sourceName } from '../ui/labels'
+// Imported from their own submodules (not the '../presentation' barrel) to avoid a store<->director
+// import cycle: the barrel re-exports director.ts, which itself imports this store.
+import { waitForPresentationIdle } from '../presentation/idleStore'
+import { pushSnapshot, resetPresentation, usePresentedStore } from '../presentation/presentedStore'
+import { usePaintStore } from '../figures/paint'
+import { SAVE_DISCARDED_MESSAGE, clearSave, persistAfterAction, readSave, type SaveEnvelope } from './saveGame'
+import { rerollMuteActive, usePresentationSettings, type CommandRerollSetting, type RerollMute } from '../presentation/settings'
+import { critWouldPay, dieOutcomes, offerIndexes, rollForOffer } from '../ui/rerollInfo'
+import { isAnnouncementHolding } from '../presentation/announceStore'
+import { figureModelsLoading, waitForFigureModels } from '../figures/loadTracker'
+
+// ---------- setup defaults ----------
+/** A faction picked on the start screen: a legacy setup key ('space-marines', 'orks', 'necrons', 'tyranids') or any
+ *  faction id the data bundle declares. resolveFactionId() maps either to the engine faction id. */
+export type FactionKey = string
+export type OpponentKind = 'bot' | 'hotseat'
+/** Bot opponent strength, own-words-labelled on the start screen (AI_DIFFICULTY_OPTIONS below).
+ *  'random' keeps the pre-M5 uniform-random bot as an explicit easy option; 'easy'/'normal' drive
+ *  src/ai/utility.ts's UtilityDecider (docs/spec/40-ai.md §7, simplified per its own header). */
+export type AiDifficulty = 'random' | 'easy' | 'normal'
+export const DEFAULT_AI_DIFFICULTY: AiDifficulty = 'normal'
+export const AI_DIFFICULTY_OPTIONS: { key: AiDifficulty; label: string; blurb: string }[] = [
+  { key: 'random', label: 'Random (easy)', blurb: 'Picks any legal move at random — great for learning the rules.' },
+  { key: 'easy', label: 'Casual', blurb: 'Weighs its options but plays a bit loose — good for a relaxed game.' },
+  { key: 'normal', label: 'Standard', blurb: 'Always takes what it judges the best move — a real fight.' },
+]
+
+function makeBotDecider(difficulty: AiDifficulty, seed: string): Decider {
+  if (difficulty === 'random') return new RandomDecider(seed)
+  return new UtilityDecider(difficulty, seed)
+}
+
+/** Legacy setup keys -> engine faction ids. A key not listed is taken to already BE a faction id, so a
+ *  faction added to the data bundle is selectable with no client edit. */
+export const FACTION_ID: Record<string, Id> = { 'space-marines': 'sm', orks: 'ork', necrons: 'necrons', tyranids: 'tyranids' }
+export function resolveFactionId(key: FactionKey): Id {
+  return FACTION_ID[key] ?? key
+}
+/** Every Combat Patrol a faction can field, sorted by id (the first is the default). */
+export function patrolsForFaction(bundle: DataBundle, factionKey: FactionKey): CombatPatrolData[] {
+  const factionId = resolveFactionId(factionKey)
+  return Object.values(bundle.patrols).filter((p) => p.faction === factionId).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+}
+/** The chosen patrol if it belongs to the faction, else the faction's default (first) patrol. */
+export function resolvePatrol(bundle: DataBundle, factionKey: FactionKey, patrolId?: string): CombatPatrolData | undefined {
+  const all = patrolsForFaction(bundle, factionKey)
+  return (patrolId && all.find((p) => p.id === patrolId)) || all[0]
+}
+function factionLabel(bundle: DataBundle, key: FactionKey): string {
+  return bundle.factions[resolveFactionId(key)]?.name ?? key
+}
+// Opponent when none is chosen: keeps the original Marines-vs-Orks pairing, otherwise the first other
+// faction (Marines, then Orks, then bundle order) that has a Combat Patrol.
+const DEFAULT_OPPONENT_ORDER = ['sm', 'ork']
+function defaultOpponentFaction(bundle: DataBundle, own: FactionKey): FactionKey {
+  const ownId = resolveFactionId(own)
+  const hasPatrol = (id: string) => Object.values(bundle.patrols).some((p) => p.faction === id)
+  const candidates = [...DEFAULT_OPPONENT_ORDER, ...Object.keys(bundle.factions)].filter((id) => id !== ownId && bundle.factions[id] && hasPatrol(id))
+  return candidates[0] ?? ownId
+}
+
+const DEFAULT_MISSION_ID = 'mission.cp-01'
+// The bot's own small "thinking" pace, once presentation has caught up — scaled by the player's chosen
+// animation speed (src/client/presentation/settings.ts) so a 'fast'/'instant' game doesn't sit through a
+// fixed 400ms per decision regardless of setting.
+const BOT_DELAY_MS: Record<'normal' | 'fast' | 'instant', number> = { normal: 400, fast: 100, instant: 0 }
+function botPaceDelayMs(): number {
+  return BOT_DELAY_MS[usePresentationSettings.getState().animSpeed]
+}
+// Watchdogs for the bot loop (client-owned defense-in-depth — the engine's own legalActions() contract already
+// guarantees a non-empty list per decision, but a bad heuristic, a slow scorer, or a genuinely stuck decision
+// must never be able to leave the HUD showing "Opponent is thinking…" forever; see docs on runBotDecision below).
+// Both are a *rare safety net*: normal play resolves the presentation queue in well under a second and
+// decide() in low milliseconds, so neither cap should fire on a healthy turn.
+const FIGURE_LOAD_TIMEOUT_MS = 20000 // cap on waiting for freshly placed figures' models to load
+const PRESENTATION_IDLE_TIMEOUT_MS = 3000 // cap on waiting for the director's queue to drain before deciding anyway
+const PRESENTATION_IDLE_PER_EVENT_MS = 150 // extra wait allowed per event still waiting to be presented (capped at 200 events)
+const BOT_DECISION_TIMEOUT_MS = 3000 // absolute cap on how long we wait for decide() itself
+const UTILITY_SLOW_MS = 500 // UtilityDecider budget; over this we don't trust the pick and redo it with RandomDecider
+// Outer safety net, independent of scheduleBotIfNeeded/runBotDecision's own logic: whatever the cause (a
+// scheduling race, an exception outside the try/catch above, a browser-only timing quirk that didn't show
+// up in headless testing), no PendingDecision may sit unanswered forever. Polled on a real recurring timer
+// rather than tied to any one decision's own await chain, so it fires even if that chain never runs at all.
+const NO_PROGRESS_WARN_MS = 5000
+const PROGRESS_WATCHDOG_POLL_MS = 1000
+
+function botDebugEnabled(): boolean {
+  try {
+    return typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug')
+  } catch {
+    return false
+  }
+}
+
+function botDebug(...args: unknown[]): void {
+  if (botDebugEnabled()) console.debug('[bot]', ...args)
+}
+
+function sleep(ms: number): Promise<void> {
+  return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve()
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      onTimeout()
+      reject(new Error(`bot decision timed out after ${ms}ms`))
+    }, ms)
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v) },
+      (e) => { clearTimeout(timer); reject(e) },
+    )
+  })
+}
+
+function resolveMissionId(bundle: DataBundle, mission?: string): Id {
+  if (mission) {
+    if (bundle.missions[mission]) return mission
+    const prefixed = `mission.${mission}`
+    if (bundle.missions[prefixed]) return prefixed
+  }
+  if (bundle.missions[DEFAULT_MISSION_ID]) return DEFAULT_MISSION_ID
+  const first = Object.keys(bundle.missions)[0]
+  if (!first) throw new Error('newGame: data bundle has no missions')
+  return first
+}
+
+// Tellyporta-style enhancement choice: name the first friendly unit carrying the required keyword.
+function enhancementChoiceFor(
+  bundle: DataBundle,
+  patrol: CombatPatrolData,
+  enhancement: EnhancementData | undefined,
+): { unitRef: string } | undefined {
+  if (!enhancement?.choice) return undefined
+  const kw = enhancement.choice.unitKeyword
+  const match = patrol.units.find((u) => {
+    const ds = bundle.datasheets[u.datasheet]
+    return !!ds && ((ds.keywords as string[]).includes(kw) || (ds.factionKeywords as string[]).includes(kw))
+  })
+  return match ? { unitRef: match.ref } : undefined
+}
+
+// Attach every LEADER-capable datasheet in the patrol to a bodyguard it may join (R-10.1), one leader per bodyguard.
+// Prefers the patrol data's own `attachTo` hint when present, otherwise infers from the datasheet's `leader.attachTo`.
+function defaultAttachments(bundle: DataBundle, patrol: CombatPatrolData): PlayerSetup['attachments'] {
+  const used = new Set<string>()
+  const attachments: PlayerSetup['attachments'] = []
+  for (const u of patrol.units) {
+    const ds = bundle.datasheets[u.datasheet]
+    if (!ds?.leader) continue
+    let bodyguardRef = u.attachTo && patrol.units.some((b) => b.ref === u.attachTo && !used.has(b.ref)) ? u.attachTo : undefined
+    if (!bodyguardRef) {
+      const candidate = patrol.units.find((b) => b.ref !== u.ref && !used.has(b.ref) && ds.leader!.attachTo.includes(b.datasheet))
+      bodyguardRef = candidate?.ref
+    }
+    if (bodyguardRef) {
+      attachments.push({ leaderRef: u.ref, bodyguardRef })
+      used.add(bodyguardRef)
+    }
+  }
+  return attachments
+}
+
+/** After a setup-time split the parent ref no longer exists, so its leaders move onto the halves (one leader per half, R-10.1):
+ *  leaders already attached to the parent first, then any unattached leader whose datasheet may join the squad's datasheet. */
+function remapSplitAttachments(bundle: DataBundle, patrol: CombatPatrolData, attachments: PlayerSetup['attachments'], splitRefs: string[]): PlayerSetup['attachments'] {
+  let out = [...attachments]
+  for (const parentRef of splitRefs) {
+    const parent = patrol.units.find((u) => u.ref === parentRef)
+    const parts = parent?.patrolSquads
+    if (!parent || !parts?.length) continue
+    const queue = out.filter((a) => a.bodyguardRef === parentRef).map((a) => a.leaderRef)
+    out = out.filter((a) => a.bodyguardRef !== parentRef)
+    const attached = new Set(out.map((a) => a.leaderRef))
+    for (const u of patrol.units) {
+      if (u.ref === parentRef || attached.has(u.ref) || queue.includes(u.ref)) continue
+      const ls = bundle.datasheets[u.datasheet]?.leader
+      if (ls && ls.attachTo.includes(parent.datasheet)) queue.push(u.ref)
+    }
+    parts.forEach((part, i) => { if (queue[i]) out.push({ leaderRef: queue[i], bodyguardRef: part.ref }) })
+  }
+  return out
+}
+
+/** Patrol unit refs that carry setup-time Patrol Squads parts (e.g. Sororitas Battle Sisters); AM/Tyranids use the in-engine deployment prompt instead. */
+export function splittablePatrolRefs(bundle: DataBundle, factionKey: FactionKey, patrolId?: string): string[] {
+  const patrol = resolvePatrol(bundle, factionKey, patrolId)
+  return patrol ? patrol.units.filter((u) => u.patrolSquads?.length).map((u) => u.ref) : []
+}
+
+/** The patrol's either/or unit slots (Grey Knights: Terminators or Dreadknight), each with its refs and default. */
+export function patrolUnitChoices(bundle: DataBundle, factionKey: FactionKey, patrolId?: string): { id: string; refs: string[]; default: string }[] {
+  const patrol = resolvePatrol(bundle, factionKey, patrolId)
+  return patrol?.unitChoices ?? []
+}
+
+export interface EmbarkOption { unitRef: string; transportRef: string; unitName: string; transportName: string; models: number }
+
+/** Units of the patrol that may start the battle embarked in one of its Transports (SDC E1). Mirrors the engine's canCarry
+ *  (keyword gates + spare capacity) from datasheet data; a Patrol Squads unit is offered only while it stays whole. */
+export function embarkOptions(bundle: DataBundle, factionKey: FactionKey, patrolId?: string, split = false): EmbarkOption[] {
+  const patrol = resolvePatrol(bundle, factionKey, patrolId)
+  if (!patrol) return []
+  const kwOf = (dsId: string): string[] => { const d = bundle.datasheets[dsId]; return d ? [...(d.keywords as string[]), ...(d.factionKeywords as string[])] : [] }
+  const out: EmbarkOption[] = []
+  for (const t of patrol.units) {
+    const spec = bundle.datasheets[t.datasheet]?.transport
+    if (!spec) continue
+    for (const parent of patrol.units) {
+      if (parent.ref === t.ref) continue
+      if (parent.attachTo && patrol.units.some((u) => u.ref === parent.attachTo)) continue // an attached Leader only travels with its bodyguard
+      // Split Patrol Squads: offer each half (own ref + own size) in place of the parent unit.
+      const parts = split && parent.patrolSquads?.length ? parent.patrolSquads.map((h, i) => ({ ref: h.ref, size: h.size, name: `${bundle.datasheets[parent.datasheet]?.name ?? parent.ref} (half ${i + 1})` })) : [{ ref: parent.ref, size: parent.size, name: bundle.datasheets[parent.datasheet]?.name ?? parent.ref }]
+      // E3: an attached Leader rides with its bodyguard as one unit, so it must pass the keyword gates and fit the capacity too.
+      const leaders = split && parent.patrolSquads?.length ? [] : patrol.units.filter((l) => l.attachTo === parent.ref)
+      const gateOk = [parent.datasheet, ...leaders.map((l) => l.datasheet)].every((ds) => {
+        const kw = kwOf(ds)
+        return (spec.keywords ?? []).every((k) => kw.includes(k)) && !(spec.excludeKeywords ?? []).some((k) => kw.includes(k))
+      })
+      if (!gateOk) continue
+      const extra = leaders.reduce((n, l) => n + l.size, 0)
+      const withLeaders = leaders.length > 0 ? ` with ${leaders.map((l) => bundle.datasheets[l.datasheet]?.name ?? l.ref).join(' and ')}` : ''
+      for (const u of parts) {
+        if (u.size + extra > spec.capacity) continue
+        out.push({ unitRef: u.ref, transportRef: t.ref, unitName: `${u.name}${withLeaders}`, transportName: bundle.datasheets[t.datasheet]?.name ?? t.ref, models: u.size + extra })
+      }
+    }
+  }
+  return out
+}
+
+export function buildPlayerSetup(bundle: DataBundle, factionKey: FactionKey, secondaryId?: string, split = false, unitChoices?: Record<string, string>, patrolId?: string, embarked?: { unitRef: string; transportRef: string }[]): PlayerSetup {
+  const factionId = resolveFactionId(factionKey)
+  const patrol = resolvePatrol(bundle, factionKey, patrolId)
+  if (!patrol) throw new Error(`newGame: no Combat Patrol data for faction "${factionId}"`)
+  const enhancement = patrol.enhancements.find((e) => e.default) ?? patrol.enhancements[0]
+  const chosen = secondaryId ? patrol.secondaries.find((s) => s.id === secondaryId) : undefined
+  const secondary = chosen ?? patrol.secondaries.find((s) => s.default) ?? patrol.secondaries[0]
+  const enhancementData = enhancement ? bundle.enhancements[enhancement.id] : undefined
+  const splitRefs = split ? splittablePatrolRefs(bundle, factionKey, patrol.id) : []
+  return {
+    name: factionLabel(bundle, factionKey),
+    faction: factionId,
+    patrolId: patrol.id,
+    enhancementId: enhancement?.id ?? '',
+    enhancementChoice: enhancementChoiceFor(bundle, patrol, enhancementData),
+    secondaryId: secondary?.id ?? '',
+    attachments: splitRefs.length ? remapSplitAttachments(bundle, patrol, defaultAttachments(bundle, patrol), splitRefs) : defaultAttachments(bundle, patrol),
+    reserves: [], // no reserves unless a unit requires them (handled by the deployment decision itself)
+    battleReadyVp: 0,
+    ...(unitChoices && Object.keys(unitChoices).length ? { unitChoices } : {}),
+    ...(embarked && embarked.length ? { embarked } : {}),
+    ...(splitRefs.length ? { splitUnits: splitRefs } : {}),
+  }
+}
+
+/** Sentinel unit-choice value: pick one of the group's refs at random (seeded, so a seed replays the same roster). */
+export const RANDOM_UNIT_CHOICE = 'random'
+
+/** Resolves a seat's either/or picks. Random picks (and every unset group on a bot seat) roll from the game seed. */
+function resolveUnitChoices(bundle: DataBundle, factionKey: FactionKey, picks: Record<string, string> | undefined, randomUnset: boolean, seed: string, patrolId?: string): Record<string, string> | undefined {
+  const out: Record<string, string> = {}
+  for (const g of patrolUnitChoices(bundle, factionKey, patrolId)) {
+    const pick = picks?.[g.id]
+    if (pick && pick !== RANDOM_UNIT_CHOICE) out[g.id] = pick
+    else if (pick === RANDOM_UNIT_CHOICE || randomUnset) {
+      let h = 2166136261
+      for (const c of `${seed}:unitChoice:${g.id}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
+      out[g.id] = g.refs[(h >>> 0) % g.refs.length]
+    }
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
+function buildSetup(bundle: DataBundle, opts: NewGameOptions): GameSetup {
+  const missionId = resolveMissionId(bundle, opts.mission)
+  const mission = bundle.missions[missionId]
+  const terrainLayoutId = mission.terrainLayouts[0]
+  if (!terrainLayoutId) throw new Error(`newGame: mission "${missionId}" lists no terrain layouts`)
+  const opponentFaction = opts.opponentFaction ?? defaultOpponentFaction(bundle, opts.playerFaction)
+  return {
+    missionId,
+    terrainLayoutId,
+    players: {
+      A: buildPlayerSetup(bundle, opts.playerFaction, opts.secondaryId, opts.splitSquads, resolveUnitChoices(bundle, opts.playerFaction, opts.unitChoices, false, opts.seed, opts.patrolId), opts.patrolId, opts.embark),
+      B: buildPlayerSetup(bundle, opponentFaction, undefined, opts.opponentSplitSquads,
+        resolveUnitChoices(bundle, opponentFaction, opts.opponentUnitChoices, opts.opponent === 'bot', opts.seed, opts.opponentPatrolId), opts.opponentPatrolId, opts.opponentEmbark),
+    },
+    sides: 'rollOff',
+    firstTurn: 'rollOff',
+    dataVersion: bundle.version,
+  }
+}
+
+// ---------- store ----------
+export interface NewGameOptions {
+  mission?: string
+  playerFaction: FactionKey
+  /** The other seat's faction; defaults per defaultOpponentFaction. May equal playerFaction (mirror match). */
+  opponentFaction?: FactionKey
+  /** Player A's Combat Patrol (patrol id); defaults to the faction's first patrol by id. */
+  patrolId?: string
+  /** The other seat's Combat Patrol; defaults likewise. */
+  opponentPatrolId?: string
+  opponent: OpponentKind
+  seed: string
+  /** Player A's chosen secondary (patrol.secondaries[].id); falls back to the patrol's default. */
+  secondaryId?: string
+  /** Split the seat's setup-time Patrol Squads units (Sororitas Battle Sisters) into their listed halves. Default: keep whole.
+   *  Per seat, so a hotseat Player B can split too; a bot seat keeps its units whole unless asked. AM/Tyranids split through the
+   *  engine's own deployment prompt, which is offered to whichever seat owns the unit. */
+  splitSquads?: boolean
+  opponentSplitSquads?: boolean
+  /** Either/or unit picks (patrol.unitChoices group id -> chosen ref, or RANDOM_UNIT_CHOICE) per seat. An omitted group takes
+   *  the patrol default, except on a bot seat, where it is picked at random from the seed. */
+  unitChoices?: Record<string, string>
+  opponentUnitChoices?: Record<string, string>
+  /** Units that start embarked in a friendly Transport (PlayerSetup.embarked), per seat. Offered by embarkOptions. */
+  embark?: { unitRef: string; transportRef: string }[]
+  opponentEmbark?: { unitRef: string; transportRef: string }[]
+  /** Bot opponent strength; ignored for 'hotseat'. Defaults to DEFAULT_AI_DIFFICULTY ('normal'). */
+  difficulty?: AiDifficulty
+  /** Spike-only: rewrite the bundle + setup after buildSetup (see src/spike/incursion.ts). Unused by normal games. */
+  transform?: (bundle: DataBundle, setup: GameSetup) => { bundle: DataBundle; setup: GameSetup }
+}
+
+export interface ToastMessage {
+  id: number
+  text: string
+  code?: RejectionCode
+}
+
+export interface VpToastMessage {
+  id: number
+  text: string
+}
+
+/** A client-only annotation line for the event feed (src/client/ui/EventFeed.tsx) — not a real engine
+ *  GameEvent (that union is frozen, see src/engine/types.ts's header), so it's tracked separately and
+ *  interleaved at render time by `afterSeq` against each real event's own EventBase.seq. Used today only
+ *  for "Re-roll skipped (setting)" (see maybeAutoAnswerReroll below), but kept generic in case a
+ *  later client-only note needs the same feed slot. */
+export interface LogNote {
+  id: number
+  afterSeq: number
+  text: string
+}
+
+export interface GameStore {
+  bundle: DataBundle | null
+  setup: GameSetup | null
+  state: GameState | null
+  pending: PendingDecision | null
+  /** Seq of the last engine event when `pending` was raised; the prompt shows once presentedSeq reaches it. */
+  pendingSeq: number
+  legal: Action[] | null
+  events: GameEvent[]
+  diceLog: DiceRoll[]
+  actionLog: Action[]
+  /** Client-only feed annotations — see LogNote. */
+  notes: LogNote[]
+  toast: ToastMessage | null
+  /** Latest "+N VP — Reason" pop-up (M6 gap: scoring was invisible outside the Events list). */
+  vpToast: VpToastMessage | null
+  opponent: OpponentKind | null
+  humanSeat: PlayerId
+  botSeat: PlayerId | null
+  /** Bot strength for the current game (null when there is no bot seat), for HUD/EndScreen display. */
+  difficulty: AiDifficulty | null
+  loading: boolean
+  error: string | null
+
+  newGame(opts: NewGameOptions): Promise<void>
+  /** Dev/QA seam (src/client/dev/scenarios.ts): adopt an already-built engine state instead of calling createGame. */
+  startFromState(init: { bundle: DataBundle; setup: GameSetup; state: GameState; pending: PendingDecision | null }, opts: { opponent: OpponentKind; seed: string; difficulty?: AiDifficulty }): void
+  dispatch(action: Action): void
+  clearToast(): void
+  clearVpToast(): void
+  /** Start-screen message after a stored game was discarded (null when there is nothing to say). */
+  saveNotice: string | null
+  dismissSaveNotice(): void
+  /** The continuable stored game, or null. A stored game that cannot even be parsed is discarded here (with saveNotice set). */
+  inspectSave(): SaveEnvelope | null
+  /** Rebuilds the stored game by replaying it (exact hash check) and opens it on the current board. False = nothing restored;
+   *  when the save was bad it has been discarded and saveNotice is set. */
+  continueSavedGame(): Promise<boolean>
+}
+
+const EVENT_LOG_LIMIT = 2000
+const DICE_LOG_LIMIT = 200
+const NOTES_LOG_LIMIT = 200
+
+// ---------- Command Re-roll setting (docs: see CommandRerollSetting in presentation/settings.ts) ----------
+// A human-owned commandReroll decision (src/engine/stratagems.ts's openCommandReroll) can be raised after
+// almost every re-rollable die — 16+ times in a busy round — so most players want the game to only stop
+// for one when it's actually worth considering. 'onlyWhenItMatters' (the default) auto-answers Pass for
+// everything else. The rules below are a client-side *heuristic* reading of the same roll a player would
+// eyeball themselves; they intentionally err toward showing the prompt (returning "matters") whenever the
+// engine's own event log doesn't give us enough to be sure, rather than silently passing on an offer we
+// couldn't actually evaluate.
+
+function unitHasAnyKeyword(state: GameState, unitId: string | null, keywords: string[]): boolean {
+  const unit = unitId ? state.units[unitId] : undefined
+  const ds = unit ? state.datasheets[unit.datasheetId] : undefined
+  if (!ds) return false
+  return keywords.some((kw) => (ds.keywords as string[]).includes(kw) || (ds.factionKeywords as string[]).includes(kw))
+}
+
+/** A weapon whose Damage characteristic can plausibly matter (mean ≥ 2) — D2, D3 (mean 2), D6 (mean 3.5),
+ *  flat 2+, etc. A flat 1 (mean 1) never qualifies. */
+function weaponDamageMatters(state: GameState, weaponId: string | null): boolean {
+  const weapon = weaponId ? state.weapons[weaponId] : undefined
+  return !!weapon && diceExprMean(weapon.D) >= 2
+}
+
+/** Most recent ChargeRolled for this unit in the log — the same roll that just raised the commandReroll
+ *  decision, since stratagems.ts opens that decision immediately after the roll it answers, in the same
+ *  step(). Unmatched (shouldn't happen) or an impossible charge (needed === null) both count as failed. */
+function chargeRollFailed(events: GameEvent[], unitId: string | null): boolean {
+  if (!unitId) return true
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i]
+    if (e.type === 'ChargeRolled' && e.unitId === unitId) return e.needed === null || e.total < e.needed
+  }
+  return true // no matching roll found — ask rather than guess
+}
+
+/** The dice of a batch that could still be re-rolled and currently fail (hit/wound/save rolls, judged by
+ *  the roll's own needed number — see dieOutcomes). Null when the roll can't be judged: ask rather than guess. */
+function failedDice(state: GameState, events: GameEvent[], pending: CommandRerollDecision): number[] | null {
+  const roll = pending.context.roll
+  const outcomes = dieOutcomes(state, events, roll)
+  if (outcomes.length === 0 || outcomes.every((o) => o === 'neutral')) return null
+  const locked = roll.rerolled ?? []
+  return outcomes.map((o, i) => (o === 'fail' && !locked.includes(i) ? i : -1)).filter((i) => i >= 0)
+}
+
+/** The "onlyWhenItMatters" rule set (see the setting's own doc comment in presentation/settings.ts), applied
+ *  once per fast-rolled batch: failed charge rolls; a save batch with a failed die when the target is a
+ *  CHARACTER/VEHICLE/MONSTER or a unit's last model; a hit/wound batch with 2+ failed dice or a Damage-2+
+ *  weapon (never when no die in the batch failed); Advance rolls; battle-shock/
+ *  desperate-escape rolls (battle-shock itself is never commandRerollable — see stratagems.ts's
+ *  COMMAND_REROLL_PURPOSES — so only desperateEscape can reach here in practice). Anything else (attacks,
+ *  damage, hazardous, …) doesn't matter and gets auto-passed. */
+function commandRerollMatters(state: GameState, events: GameEvent[], pending: CommandRerollDecision): boolean {
+  const roll = pending.context.roll
+  switch (roll.purpose) {
+    case 'advance':
+    case 'desperateEscape':
+    case 'battleShock':
+      return true
+    case 'charge':
+      return chargeRollFailed(events, roll.unitId)
+    case 'save': {
+      const failed = failedDice(state, events, pending)
+      if (failed === null) return true
+      if (failed.length === 0) return false
+      const bigModel = unitHasAnyKeyword(state, roll.unitId, ['CHARACTER', 'VEHICLE', 'MONSTER'])
+      const unit = roll.unitId ? state.units[roll.unitId] : undefined
+      const lastModel = !!unit && unit.models.length <= 1
+      return bigModel || lastModel
+    }
+    case 'hit':
+    case 'wound': {
+      const failed = failedDice(state, events, pending)
+      if (failed === null) return true
+      if (failed.length === 0) return false
+      return failed.length >= 2 || weaponDamageMatters(state, roll.weaponId)
+    }
+    default:
+      return false
+  }
+}
+
+function shouldSkipCommandReroll(setting: CommandRerollSetting, mute: RerollMute, state: GameState, events: GameEvent[], pending: CommandRerollDecision): boolean {
+  // "Stop asking", clicked in the prompt itself, outranks the setting for as long as it holds.
+  if (rerollMuteActive(mute, state)) return true
+  if (setting === 'always') return false
+  // 'never': the engine only ever raises this decision when the player can afford Command Re-roll (see
+  // stratagems.ts's commandRerollBlocked, checked before ctx.decide()), so there's no affordability check
+  // left for us to make — always safe to auto-pass.
+  if (setting === 'never') return true
+  return !commandRerollMatters(state, events, pending)
+}
+
+// Bot scheduling lives outside reactive state (timer handles/decider instances aren't state); reset on every newGame.
+let botTimer: ReturnType<typeof setTimeout> | null = null
+let botDecider: Decider | null = null
+// Autosave only games that can be rebuilt from setup + actions (newGame / a restored save), not dev scenario positions.
+let autosaveOn = false
+// Generic progress watchdog (see NO_PROGRESS_WARN_MS above) — its own timer handle and "have we already
+// warned about the current decision" bookkeeping, reset on every newGame like the bot scheduling above.
+let progressWatchdogTimer: ReturnType<typeof setInterval> | null = null
+let watchdogPendingId: string | null = null
+let watchdogPendingSince = 0
+let watchdogWarned = false
+
+function clearBotTimer(): void {
+  if (botTimer !== null) {
+    clearTimeout(botTimer)
+    botTimer = null
+  }
+}
+
+function clearProgressWatchdog(): void {
+  if (progressWatchdogTimer !== null) {
+    clearInterval(progressWatchdogTimer)
+    progressWatchdogTimer = null
+  }
+  watchdogPendingId = null
+  watchdogWarned = false
+}
+
+function diceRollsFrom(events: GameEvent[]): DiceRoll[] {
+  return events.filter((e): e is Extract<GameEvent, { type: 'DiceRolled' }> => e.type === 'DiceRolled').map((e) => e.roll)
+}
+
+// Mirrors src/client/presentation/director.ts's hasOpenAttackRolls: true from the most recent
+// AttackSequenceStarted up to (not including) its matching AttackSequenceEnded. Scanned backward since we
+// only care about "is one open right now", not the whole buffer. Used to decide whether the bot should
+// skip the idle-wait/pacing delay for its next decision — see runBotDecision's own comment on why.
+function isMidAttackSequence(events: GameEvent[]): boolean {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const t = events[i].type
+    if (t === 'AttackSequenceEnded') return false
+    if (t === 'AttackSequenceStarted') return true
+  }
+  return false
+}
+
+/** The most recent VpScored in this batch of events, as a ready-to-show "+10 VP — Raze and Ruin"
+ *  pop-up — null when nothing scored this step. */
+export function vpToastFrom(state: GameState, bundle: DataBundle | null, events: GameEvent[]): VpToastMessage | null {
+  const scored = events.filter((e): e is Extract<GameEvent, { type: 'VpScored' }> => e.type === 'VpScored')
+  const last = scored[scored.length - 1]
+  if (!last) return null
+  return { id: Date.now(), text: `${last.amount >= 0 ? "+" : ""}${last.amount} VP — ${sourceName(state, bundle, last.source)}` }
+}
+
+export const useGameStore = create<GameStore>()((set, get) => {
+  function scheduleBotIfNeeded(): void {
+    clearBotTimer()
+    const { state, pending, opponent, botSeat } = get()
+    if (!state || !pending || opponent !== 'bot' || !botSeat) return
+    if (pending.player !== botSeat || state.phase === 'ended') return
+    const decisionId = pending.id
+    // Defer to the next tick unconditionally — runBotDecision() itself does the real pacing (presentation
+    // idle wait + speed-scaled delay, skipped entirely for mid-attack decisions), since that pacing needs
+    // a fresh read of the event log/settings at the moment it actually runs, not at schedule time.
+    botTimer = setTimeout(() => {
+      botTimer = null
+      void runBotDecision(decisionId)
+    }, 0)
+  }
+
+  // Outer safety net (see NO_PROGRESS_WARN_MS above): polls independently of scheduleBotIfNeeded/
+  // runBotDecision, so it still fires even if whatever normally drives a bot decision never ran at all
+  // for this one (a scheduling race, an exception that somehow escaped runBotDecision's own try/catch, a
+  // browser-only timing quirk). Any PendingDecision — bot's or human's — gets one console.warn once it's
+  // sat unanswered for NO_PROGRESS_WARN_MS; a bot-owned one is then forced through via a fresh
+  // RandomDecider so the game can never truly freeze, regardless of root cause.
+  function startProgressWatchdog(): void {
+    clearProgressWatchdog()
+    progressWatchdogTimer = setInterval(() => {
+      const { state, pending, botSeat, legal } = get()
+      if (!state || !pending || state.phase === 'ended') {
+        watchdogPendingId = null
+        watchdogWarned = false
+        return
+      }
+      if (pending.id !== watchdogPendingId) {
+        watchdogPendingId = pending.id
+        watchdogPendingSince = Date.now()
+        watchdogWarned = false
+        return
+      }
+      // A narration pause (the phase/turn banner — src/client/presentation/announceStore.ts) is
+      // deliberate dead time the player can end with a click, not a stalled decision: hold the stall
+      // clock while one is on screen so a run of announced phases can't trip the watchdog into
+      // force-answering the bot over the top of the banner.
+      if (isAnnouncementHolding() || figureModelsLoading()) {
+        watchdogPendingSince = Date.now()
+        return
+      }
+      const stalledMs = Date.now() - watchdogPendingSince
+      if (stalledMs < NO_PROGRESS_WARN_MS || watchdogWarned) return
+      watchdogWarned = true
+      console.warn(`[bot] no progress on decision ${pending.id} (${pending.kind}, player ${pending.player}) for ${stalledMs}ms`)
+      if (pending.player !== botSeat) return // the human's own decision — nothing to force, just the warning
+      const view = engineView(state, pending.player)
+      new RandomDecider(`${pending.id}:watchdog`).decide(view, pending, legal).then(
+        (action) => {
+          if (get().pending?.id !== pending.id) return
+          try {
+            get().dispatch(action)
+          } catch (err) {
+            console.error(`[bot] watchdog dispatch() threw on decision ${pending.id} (${pending.kind}):`, err)
+          }
+        },
+        (err) => console.error(`[bot] watchdog RandomDecider also threw on decision ${pending.id} (${pending.kind}):`, err),
+      )
+    }, PROGRESS_WATCHDOG_POLL_MS)
+  }
+
+  // Last-resort action picker: doesn't go through a Decider at all (a Decider throwing is exactly the failure
+  // this exists to survive), just re-reads legalActions() fresh and takes the first non-pass option so the
+  // decision always advances instead of leaving the bot's turn stuck forever.
+  function anyLegalAction(state: GameState, pending: PendingDecision): Action | null {
+    const options = engineLegalActions(state, pending)
+    if (!options || options.length === 0) return null
+    return options.find((a) => a.type !== 'pass') ?? options[0]
+  }
+
+  async function runBotDecision(expectedDecisionId: string): Promise<void> {
+    const initial = get()
+    if (!initial.state || !initial.pending || !initial.botSeat || initial.pending.id !== expectedDecisionId || !botDecider) return
+    // Any decision offered while an attack sequence is still open (commandReroll after almost every die,
+    // but also e.g. a save-type choice mid-sequence) is answered at once, with no idle-wait and no pacing
+    // delay: src/client/presentation/director.ts's waitForAttackToClose deliberately withholds the whole
+    // buffered attack-roll batch from playing until AttackSequenceEnded, precisely so the dice group into
+    // one tray window per squad/weapon/target instead of one window per die — so presentation genuinely
+    // never goes idle mid-sequence, and gating on it here would just burn the watchdog cap on every one of
+    // these (this is what made the bot's turn slow: see the coordinator's 52e4285 follow-up).
+    const midAttack = isMidAttackSequence(initial.events)
+    let waitedOnPresentation = false
+    if (!midAttack) {
+      const idleBefore = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      // Cap scales with how many events are still waiting to be shown, so a long backlog (a big charge or
+      // volley) is never raced past by the bot while its dice are still on screen.
+      const { latestSeq, presentedSeq } = usePresentedStore.getState()
+      const backlog = Math.max(0, Math.min(200, latestSeq - presentedSeq))
+      await waitForPresentationIdle(PRESENTATION_IDLE_TIMEOUT_MS + backlog * PRESENTATION_IDLE_PER_EVENT_MS)
+      waitedOnPresentation = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - idleBefore > 1
+      if (get().pending?.id !== expectedDecisionId) return
+      await sleep(botPaceDelayMs())
+      if (get().pending?.id !== expectedDecisionId) return
+      // Figures that just hit the table (the last deployment above all) are still streaming in their
+      // models: hold play until they're on screen rather than running whole phases over stand-ins.
+      await waitForFigureModels(FIGURE_LOAD_TIMEOUT_MS)
+      if (get().pending?.id !== expectedDecisionId) return
+    }
+    const { state, pending, legal, botSeat } = get()
+    if (!state || !pending || !botSeat || pending.id !== expectedDecisionId || !botDecider) return
+    const decider = botDecider
+    const view = engineView(state, botSeat)
+    const kind = pending.kind
+    let timedOut = false
+    let action: Action | null = null
+    const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    try {
+      action = await withTimeout(decider.decide(view, pending, legal), BOT_DECISION_TIMEOUT_MS, () => {
+        timedOut = true
+        console.error(`[bot] decision ${pending.id} (${kind}) exceeded ${BOT_DECISION_TIMEOUT_MS}ms — falling back to RandomDecider`)
+      })
+      const elapsed = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0
+      botDebug(`decide kind=${kind} id=${pending.id} ms=${elapsed.toFixed(1)} waitedOnPresentation=${waitedOnPresentation}`)
+      if (decider instanceof UtilityDecider && elapsed > UTILITY_SLOW_MS) {
+        console.error(`[bot] UtilityDecider took ${elapsed.toFixed(1)}ms (> ${UTILITY_SLOW_MS}ms) on decision ${pending.id} (${kind}) — redoing with RandomDecider`)
+        action = null // discard the slow pick; fall through to the RandomDecider fallback below
+      }
+    } catch (err) {
+      if (!timedOut) console.error(`[bot] decide() threw on decision ${pending.id} (${kind}):`, err)
+      action = null
+    }
+    if (get().pending?.id !== expectedDecisionId) return // human acted (or game ended) while the bot "thought"
+    if (!action) {
+      try {
+        action = await new RandomDecider(`${pending.id}:fallback`).decide(view, pending, legal)
+      } catch (err) {
+        console.error(`[bot] RandomDecider fallback also threw on decision ${pending.id} (${kind}):`, err)
+        action = null
+      }
+    }
+    if (!action) {
+      // Both the real decider and the random fallback failed on the same decision — legalActions() itself
+      // is empty (a violation of the engine's own contract; see src/engine/phases/legal.ts). Grab anything
+      // legal one more time rather than leave the HUD stuck on "Opponent is thinking…" forever.
+      const fresh = get().state
+      action = fresh ? anyLegalAction(fresh, pending) : null
+    }
+    if (!action) {
+      console.error(`[bot] no legal action available at all for decision ${pending.id} (${kind}) — giving up on this decision`)
+      return
+    }
+    if (get().pending?.id !== expectedDecisionId) return
+    try {
+      get().dispatch(action)
+    } catch (err) {
+      console.error(`[bot] dispatch() threw on decision ${pending.id} (${kind}):`, err)
+    }
+  }
+
+  // Re-roll offers the player shouldn't have to sit through: a human-owned commandReroll the current
+  // setting (or an in-prompt mute) says to skip is answered Pass, and a rerollOffer whose re-roll could
+  // only lose an already-successful roll is answered Keep — each leaving a muted note in the event feed
+  // instead of a prompt, so an auto-answer is always visible after the fact.
+  // Never touches a decision owned by botSeat — the bot answers its own commandReroll offers through
+  // runBotDecision/UtilityDecider as usual, not through this path. Recurses (via dispatch → applyResult
+  // → this function again) for the next decision, which is exactly right for a run of several
+  // auto-skippable offers in the same attack.
+  function addNote(text: string): void {
+    set((s) => ({
+      notes: [...s.notes, { id: Date.now() + Math.random(), afterSeq: s.events[s.events.length - 1]?.seq ?? 0, text }].slice(-NOTES_LOG_LIMIT),
+    }))
+  }
+
+  function maybeAutoAnswerReroll(): void {
+    const { state, pending, legal, botSeat, events } = get()
+    if (!state || !pending || pending.player === botSeat) return
+    const { commandRerollSetting: setting, rerollMute: mute } = usePresentationSettings.getState()
+    const muted = rerollMuteActive(mute, state)
+
+    if (pending.kind === 'commandReroll') {
+      if (!shouldSkipCommandReroll(setting, mute, state, events, pending)) return
+      const options = legal ?? engineLegalActions(state, pending)
+      const passAction = options?.find((a) => a.type === 'pass')
+      if (!passAction) return
+      addNote(muted ? 'Re-roll offer skipped (muted)' : 'Re-roll skipped (setting)')
+      get().dispatch(passAction)
+      return
+    }
+
+    // rerollOffer (attack.ts / charge.ts) is raised once per batch, on dice that already *succeeded* — an
+    // ability offering to re-roll anything, including the hits and wounds the player just made. Taking it
+    // can only lose those successes unless a critical would trigger something (critWouldPay), so an offer
+    // whose every die already succeeded is answered "keep" here instead of asked, which is where most of
+    // the repetition came from. A failed die among the offered ones, and charges, are left to the player:
+    // a longer charge that is already in reach can still buy position.
+    if (pending.kind === 'chooseOption' && pending.context.topic === 'rerollOffer') {
+      if (setting === 'always' && !muted) return
+      const roll = rollForOffer(state, pending.context.data)
+      if (!roll) return // can't identify the roll — ask rather than answer blind
+      const data = pending.context.data
+      const eligible = offerIndexes(roll, data)
+      const outcomes = dieOutcomes(state, events, roll, typeof data.needed === 'number' ? data.needed : null)
+      const allSucceeded = eligible.length > 0 && eligible.every((i) => outcomes[i] === 'success')
+      if (!muted && (roll.purpose === 'charge' || !allSucceeded || critWouldPay(state, roll, eligible))) return
+      const keep = (pending.options ?? []).find((o) => o.id === 'keep')
+      if (!keep) return
+      addNote(muted ? 'Kept the roll (muted)' : 'Kept the roll — a re-roll could only lose it')
+      get().dispatch(keep.action)
+    }
+  }
+
+  // Auto-answers run immediately, so a decision the player will never be asked is never pending (or
+  // rendered, even as the "Resolving dice…" placeholder) while its dice play. Nothing is revealed early:
+  // the feed note is gated on presentedSeq by its afterSeq (EventFeed.tsx), and the director plays the
+  // follow-on step's events strictly after the ones that raised this decision.
+  function scheduleAutoAnswer(): void {
+    if (get().pending) maybeAutoAnswerReroll()
+  }
+
+  function applyResult(result: { state: GameState; events: GameEvent[]; pending: PendingDecision | null; rejection?: { code: RejectionCode; reason: string } }, dispatched?: Action): void {
+    // step() returns a fresh state object (engine cloneForStep), so the snapshot ring can hold references.
+    // Engine event seq is the *action's* log index (shared by every event of one step), and a rejection's
+    // ActionRejected carries state.log.length — the seq the next accepted step will reuse. Advancing the
+    // cursor to it would mark that next step as already presented, so a rejection never moves it.
+    const lastSeq = result.events.length > 0 && !result.rejection ? result.events[result.events.length - 1].seq : usePresentedStore.getState().latestSeq
+    pushSnapshot(lastSeq, result.state)
+    set((s) => ({
+      state: result.state,
+      pending: result.pending,
+      pendingSeq: lastSeq,
+      legal: result.pending ? engineLegalActions(result.state, result.pending) : null,
+      events: [...s.events, ...result.events].slice(-EVENT_LOG_LIMIT),
+      diceLog: [...s.diceLog, ...diceRollsFrom(result.events)].slice(-DICE_LOG_LIMIT),
+      actionLog: dispatched && !result.rejection ? [...s.actionLog, dispatched].slice(-EVENT_LOG_LIMIT) : s.actionLog,
+      toast: result.rejection ? { id: Date.now(), text: result.rejection.reason, code: result.rejection.code } : s.toast,
+      // vpToast is raised by the presentation director when the VpScored event actually plays.
+    }))
+    if (dispatched && !result.rejection) autosave(result.state)
+    scheduleBotIfNeeded()
+    scheduleAutoAnswer()
+  }
+
+  // One game in progress per browser, written after every accepted action (src/client/store/saveGame.ts). A finished game
+  // clears the save. Serialises once per action; storage failures are swallowed inside writeEnvelope.
+  function autosave(state: GameState): void {
+    if (!autosaveOn) return
+    const { opponent, difficulty, humanSeat } = get()
+    if (!opponent) return
+    const bySeat = usePaintStore.getState().bySeat
+    persistAfterAction(state, { opponent, difficulty, humanSeat, paint: bySeat.A || bySeat.B ? { ...(bySeat.A ? { A: bySeat.A } : {}), ...(bySeat.B ? { B: bySeat.B } : {}) } : undefined })
+  }
+
+  return {
+    bundle: null,
+    setup: null,
+    state: null,
+    pending: null,
+    pendingSeq: -1,
+    legal: null,
+    events: [],
+    diceLog: [],
+    actionLog: [],
+    notes: [],
+    toast: null,
+    vpToast: null,
+    opponent: null,
+    humanSeat: 'A',
+    botSeat: null,
+    difficulty: null,
+    loading: false,
+    error: null,
+    saveNotice: null,
+
+    async newGame(opts) {
+      clearBotTimer()
+      clearProgressWatchdog()
+      botDecider = null
+      // A "stop asking about re-rolls" from the last battle never carries into a new one (see RerollMute).
+      usePresentationSettings.getState().muteRerolls(null)
+      set({ loading: true, error: null, toast: null })
+      try {
+        let bundle = await loadBundle()
+        let setup = buildSetup(bundle, opts)
+        // measurement spike only (src/spike): lets the caller swap in a derived bundle/setup (e.g. Incursion scale)
+        if (opts.transform) ({ bundle, setup } = opts.transform(bundle, setup))
+        registerDataBundle(bundle)
+        const result = createGame(setup, opts.seed, bundle)
+        const botSeat: PlayerId | null = opts.opponent === 'bot' ? 'B' : null
+        const difficulty = opts.difficulty ?? DEFAULT_AI_DIFFICULTY
+        botDecider = botSeat ? makeBotDecider(difficulty, `${opts.seed}:ai:${botSeat}`) : null
+        // createGame events carry seq -1; the first step's events carry log.length (0).
+        const headSeq = result.state.log.length - 1
+        resetPresentation(headSeq, result.state)
+        set({
+          bundle,
+          setup,
+          state: result.state,
+          pending: result.pending,
+          pendingSeq: headSeq,
+          legal: result.pending ? engineLegalActions(result.state, result.pending) : null,
+          events: result.events.slice(-EVENT_LOG_LIMIT),
+          diceLog: diceRollsFrom(result.events).slice(-DICE_LOG_LIMIT),
+          actionLog: [],
+          notes: [],
+          toast: null,
+          vpToast: null,
+          opponent: opts.opponent,
+          humanSeat: 'A',
+          botSeat,
+          difficulty: botSeat ? difficulty : null,
+          loading: false,
+          error: null,
+          saveNotice: null,
+        })
+        // The new game replaces whatever was saved (the start screen asked first); its own save begins at its first accepted action.
+        autosaveOn = true
+        clearSave()
+        scheduleBotIfNeeded()
+        scheduleAutoAnswer()
+        startProgressWatchdog()
+      } catch (err) {
+        set({ loading: false, error: err instanceof Error ? err.message : String(err) })
+        throw err
+      }
+    },
+
+    startFromState(init, opts) {
+      autosaveOn = false // dev/QA positions are not rebuilt from setup + actions, so they cannot be saved
+      clearBotTimer()
+      clearProgressWatchdog()
+      usePresentationSettings.getState().muteRerolls(null)
+      registerDataBundle(init.bundle)
+      const botSeat: PlayerId | null = opts.opponent === 'bot' ? 'B' : null
+      const difficulty = opts.difficulty ?? DEFAULT_AI_DIFFICULTY
+      botDecider = botSeat ? makeBotDecider(difficulty, `${opts.seed}:ai:${botSeat}`) : null
+      const headSeq = init.state.log.length - 1
+      resetPresentation(headSeq, init.state)
+      set({
+        bundle: init.bundle, setup: init.setup, state: init.state, pending: init.pending, pendingSeq: headSeq,
+        legal: init.pending ? engineLegalActions(init.state, init.pending) : null,
+        events: [], diceLog: [], actionLog: [], notes: [], toast: null, vpToast: null,
+        opponent: opts.opponent, humanSeat: 'A', botSeat, difficulty: botSeat ? difficulty : null, loading: false, error: null,
+      })
+      scheduleBotIfNeeded()
+      scheduleAutoAnswer()
+      startProgressWatchdog()
+    },
+
+    dispatch(action) {
+      const { state } = get()
+      if (!state) return
+      clearBotTimer()
+      const result = step(state, action)
+      applyResult(result, action)
+    },
+
+    clearToast() {
+      set({ toast: null })
+    },
+
+    clearVpToast() {
+      set({ vpToast: null })
+    },
+
+    dismissSaveNotice() {
+      set({ saveNotice: null })
+    },
+
+    inspectSave() {
+      const r = readSave()
+      if (r.status === 'ok') return r.envelope
+      if (r.status === 'invalid') {
+        clearSave()
+        set({ saveNotice: SAVE_DISCARDED_MESSAGE })
+      }
+      return null
+    },
+
+    async continueSavedGame() {
+      const r = readSave()
+      if (r.status === 'none') return false
+      const discard = () => {
+        clearSave()
+        set({ loading: false, saveNotice: SAVE_DISCARDED_MESSAGE })
+        return false
+      }
+      if (r.status === 'invalid') return discard()
+      const { envelope } = r
+      set({ loading: true, error: null, saveNotice: null })
+      let bundle: DataBundle
+      try {
+        bundle = await loadBundle()
+      } catch (err) {
+        // The game data itself would not load (offline, deploy in progress): not the save's fault, so keep it.
+        set({ loading: false, error: err instanceof Error ? err.message : String(err) })
+        return false
+      }
+      try {
+        registerDataBundle(bundle)
+        let result
+        try {
+          result = engineLoad(envelope.file, bundle)
+        } catch (err) {
+          // A different engine major is refused up front; the hash check is what decides whether the save still replays exactly.
+          const code = (err as { details?: { code?: string } }).details?.code
+          if (code !== 'E_VERSION') throw err
+          result = engineLoad({ ...envelope.file, engineVersion: ENGINE_VERSION }, bundle)
+        }
+        const { meta } = envelope
+        clearBotTimer()
+        clearProgressWatchdog()
+        usePresentationSettings.getState().muteRerolls(null)
+        const botSeat: PlayerId | null = meta.opponent === 'bot' ? (meta.humanSeat === 'A' ? 'B' : 'A') : null
+        const difficulty = meta.difficulty ?? DEFAULT_AI_DIFFICULTY
+        botDecider = botSeat ? makeBotDecider(difficulty, `${envelope.file.seed}:ai:${botSeat}`) : null
+        for (const seat of ['A', 'B'] as const) usePaintStore.getState().setSeatPaint(seat, meta.paint?.[seat])
+        // The board opens on the current position: everything up to the head counts as already shown (no replay of dice,
+        // volleys, banners or camera flights). The next step's events carry log.length.
+        const headSeq = result.state.log.length - 1
+        resetPresentation(headSeq, result.state)
+        autosaveOn = true
+        set({
+          bundle,
+          setup: envelope.file.setup,
+          state: result.state,
+          pending: result.pending,
+          pendingSeq: headSeq,
+          legal: result.pending ? engineLegalActions(result.state, result.pending) : null,
+          events: [],
+          diceLog: [],
+          actionLog: [],
+          notes: [],
+          toast: null,
+          vpToast: null,
+          opponent: meta.opponent,
+          humanSeat: meta.humanSeat,
+          botSeat,
+          difficulty: botSeat ? difficulty : null,
+          loading: false,
+          error: null,
+          saveNotice: null,
+        })
+        scheduleBotIfNeeded()
+        scheduleAutoAnswer()
+        startProgressWatchdog()
+        return true
+      } catch {
+        // Replay rejected, hash differs, or the data the save names is gone: it cannot be continued exactly.
+        return discard()
+      }
+    },
+  }
+})
+
+// ---------- selectors (docs/spec/50-client.md §2) ----------
+export function unitsOnBoard(state: GameState | null): Unit[] {
+  if (!state) return []
+  return Object.values(state.units).filter((u) => u.location === 'board')
+}
+
+export function modelPositions(state: GameState | null): Record<string, Vec3> {
+  const out: Record<string, Vec3> = {}
+  if (!state) return out
+  for (const m of Object.values(state.models)) out[m.id] = m.pos
+  return out
+}
+
+export function activePlayer(state: GameState | null): PlayerId | null {
+  return state?.activePlayer ?? null
+}
+
+export function phase(state: GameState | null): GameState['phase'] | null {
+  return state?.phase ?? null
+}
+
+export function round(state: GameState | null): number | null {
+  return state?.round ?? null
+}
+
+export function cp(state: GameState | null, player: PlayerId): number {
+  return state?.players[player]?.cp ?? 0
+}
+
+export function vp(state: GameState | null, player: PlayerId): number {
+  return state?.players[player]?.vp ?? 0
+}

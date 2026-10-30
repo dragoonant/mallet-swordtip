@@ -1,0 +1,88 @@
+[
+  {
+    "id": "csm.e.foul-zealotry",
+    "faction": "chaos-space-marines",
+    "name": "Foul Zealotry",
+    "text": "When the bearer's unit makes a Dark Pact, it gains both [LETHAL HITS] and [SUSTAINED HITS 1] for the phase instead of choosing one. The Leadership test and mortal wounds are unchanged.",
+    "cost": 0,
+    "restriction": { "keyword": ["ARANIS ZARKAN"] },
+    "effect": {
+      "id": "csm.e.foul-zealotry.effect",
+      "name": "Foul Zealotry",
+      "text": "The bearer's unit takes both Dark Pact abilities together instead of picking one.",
+      "trigger": "always",
+      "code": "foulZealotry",
+      "scope": { "who": "self" }
+    }
+  },
+  {
+    "id": "csm.e.prey-on-the-weak",
+    "faction": "chaos-space-marines",
+    "name": "Prey on the Weak",
+    "text": "In your Shooting phase, once the bearer's unit has finished shooting, choose one enemy unit hit by at least one attack from the bearer's Rite of Possession that activation. That unit takes a Battle-shock test with -1 to the result.",
+    "cost": 0,
+    "restriction": { "keyword": ["ARANIS ZARKAN"] },
+    "effect": {
+      "id": "csm.e.prey-on-the-weak.effect",
+      "name": "Prey on the Weak",
+      "text": "After the bearer's unit shoots, one enemy unit hit by the Rite of Possession takes a Battle-shock test at -1.",
+      "trigger": "always",
+      "code": "preyOnTheWeak",
+      "scope": { "who": "self" },
+      "params": {
+        "pickWindow": "shooting.attacksResolved",
+        "weaponId": "csm.w.rite-of-possession",
+        "battleShockModifier": -1
+      }
+    }
+  },
+  {
+    "id": "csm.e.hateful-exhortation",
+    "faction": "chaos-space-marines",
+    "name": "Hateful Exhortation",
+    "text": "At the start of the first battle round, pick one enemy unit. For the rest of the battle, each attack made by a model in the bearer's unit against that enemy unit improves its AP by 1 if it scores a Critical Wound. This works only while the bearer is alive.",
+    "cost": 0,
+    "restriction": {
+      "keyword": [
+        "DARK APOSTLE"
+      ]
+    },
+    "effect": {
+      "id": "csm.e.hateful-exhortation.effect",
+      "name": "Hateful Exhortation",
+      "text": "Critical Wounds against the marked enemy unit improve the attack's AP by 1.",
+      "trigger": "woundRoll",
+      "scope": {
+        "who": "self"
+      },
+      "effect": {
+        "critWoundAp": 1
+      },
+      "code": "hatefulExhortation"
+    }
+  },
+{
+    "id": "csm.e.infernal-blessing",
+    "faction": "chaos-space-marines",
+    "name": "Infernal Blessing",
+    "text": "The bearer has a 5+ Feel No Pain save against every wound it loses, mortal wounds included.",
+    "cost": 0,
+    "restriction": {
+      "keyword": [
+        "DARK APOSTLE"
+      ]
+    },
+    "effect": {
+      "id": "csm.e.infernal-blessing.effect",
+      "name": "Infernal Blessing",
+      "text": "The bearer ignores lost wounds on a 5+.",
+      "trigger": "always",
+      "effect": {
+        "feelNoPain": 5
+      },
+      "scope": {
+        "who": "bearer"
+      }
+    }
+  }
+]

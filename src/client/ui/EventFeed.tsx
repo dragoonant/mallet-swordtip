@@ -1,0 +1,199 @@
+// Rolling feed of engine events in plain language (docs/spec/50-client.md §5 "Action log", trimmed
+// to a read-only feed — undo/replay are out of scope for a first playable pass). The summarising lives
+// in eventSummary.ts (pure); this file only renders: one grouped line per weapon attack (click to expand
+// per-step numbers), lines coloured by acting player, auto-sticking to the newest line.
+// CP/VP lines also get their own small pinned "Scoring" list above the general feed.
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import type { GameEvent, GameState } from '@/engine'
+import type { DataBundle } from '@/data/types'
+import { useGameStore } from '../store/game'
+import { useDisplayState, usePresentedStore } from '../presentation/presentedStore'
+import { sourceName } from './labels'
+import { colors, mutedText, panel } from './theme'
+import { summariseEvents, turnTotals } from './eventSummary'
+import { useFormFactor } from './formFactor'
+import { CompactDrawer } from './compactSheets'
+
+// Desktop/tablet: a drawer docked to the right edge, closed by default so the log never sits over the
+// board — a tab on the edge slides it out and back.
+const drawerWrap: CSSProperties = {
+  position: 'absolute',
+  right: 0,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  display: 'flex',
+  alignItems: 'center',
+  pointerEvents: 'none',
+  zIndex: 15,
+}
+const drawerTab: CSSProperties = {
+  ...panel,
+  pointerEvents: 'auto',
+  cursor: 'pointer',
+  writingMode: 'vertical-rl',
+  padding: '14px 8px',
+  borderRadius: '8px 0 0 8px',
+  borderRight: 'none',
+  color: colors.text,
+  fontWeight: 700,
+  fontSize: 12,
+  letterSpacing: 0.6,
+  textTransform: 'uppercase',
+}
+const wrap: CSSProperties = {
+  ...panel,
+  width: 340,
+  maxHeight: 'calc(100vh - 160px)',
+  padding: 10,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  overflowY: 'auto',
+  borderRadius: '8px 0 0 8px',
+  pointerEvents: 'auto',
+}
+const heading: CSSProperties = { fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6, flex: '0 0 auto' }
+const scroll: CSSProperties = { overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, paddingTop: 4 }
+const scoringScroll: CSSProperties = { ...scroll, height: 60, flexDirection: 'column-reverse' }
+const eventsScroll: CSSProperties = { ...scroll, height: 260 }
+
+const MAX_LINES = 100
+const LINE_COLOR = { A: colors.playerA, B: colors.playerB } as const
+
+function playerName(state: GameState, id: string | null | undefined): string {
+  if (!id) return 'No one'
+  return state.players[id as 'A' | 'B']?.name ?? id
+}
+
+/** Own-words CP/VP line for the pinned Scoring list. */
+function describeScoring(e: GameEvent, state: GameState, bundle: DataBundle | null): string | null {
+  if (e.type === 'CpChanged') {
+    const name = sourceName(state, bundle, e.source)
+    return `${playerName(state, e.player)} ${e.delta >= 0 ? 'gains' : 'spends'} ${Math.abs(e.delta)} CP — ${name}`
+  }
+  if (e.type === 'VpScored') {
+    return `${playerName(state, e.player)} ${e.amount >= 0 ? "+" : ""}${e.amount} VP — ${sourceName(state, bundle, e.source)}`
+  }
+  return null
+}
+
+export function EventFeed() {
+  const state = useDisplayState()
+  const allEvents = useGameStore((s) => s.events)
+  const allNotes = useGameStore((s) => s.notes)
+  const presentedSeq = usePresentedStore((s) => s.presentedSeq)
+  const bundle = useGameStore((s) => s.bundle)
+  const [open, setOpen] = useState<Set<string>>(new Set())
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const stick = useRef(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const { compact } = useFormFactor()
+  const events = allEvents.filter((e) => e.seq <= presentedSeq)
+  const notes = allNotes.filter((n) => n.afterSeq <= presentedSeq)
+
+  const lineCount = events.length + notes.length
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el && stick.current) el.scrollTop = el.scrollHeight
+  }, [lineCount, presentedSeq, open, drawerOpen])
+  if (!state) return null
+
+  const scoring = events.map((e) => describeScoring(e, state, bundle)).filter((s): s is string => s !== null).slice(-30)
+
+  const merged = [
+    ...summariseEvents(events, state, bundle).map((l) => ({ ...l, muted: false })),
+    ...notes.map((n) => ({ key: `n:${n.id}`, text: n.text, detail: undefined as string[] | undefined, luck: undefined as 'lucky' | 'unlucky' | 'average' | undefined, player: null, kind: 'event' as const, sortKey: n.afterSeq + 0.5, muted: true })),
+  ].sort((a, b) => a.sortKey - b.sortKey)
+  const totals = turnTotals(events, state)
+  const described = merged.slice(-MAX_LINES)
+
+  const toggle = (key: string): void =>
+    setOpen((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+
+  const body = (
+    <>
+      <div>
+        <div style={heading}>Scoring</div>
+        <div style={scoringScroll} data-testid="scoring-feed">
+          {scoring.length === 0 && <div style={mutedText}>Nothing yet.</div>}
+          {scoring.map((text, i) => (
+            <div key={i}>{text}</div>
+          ))}
+        </div>
+      </div>
+      {totals.length > 0 && (
+        <div data-testid="turn-totals">
+          <div style={heading}>This turn</div>
+          <div style={{ ...scroll, maxHeight: 70, gap: 2, fontSize: 11 }}>
+            {totals.map((r) => (
+              <div key={r.unitId} style={{ color: LINE_COLOR[r.player] }}>
+                {r.name}: {r.dealt > 0 || r.slain > 0 ? `dealt ${r.dealt}, slain ${r.slain}` : ''}{(r.dealt > 0 || r.slain > 0) && r.taken > 0 ? ' · ' : ''}{r.taken > 0 ? `took ${r.taken}` : ''}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={compact ? { flex: '1 1 auto', minHeight: 180, display: 'flex', flexDirection: 'column' } : undefined}>
+        <div style={heading}>Events</div>
+        <div
+          style={compact ? { ...scroll, flex: '1 1 0', minHeight: 0 } : eventsScroll}
+          ref={scrollRef}
+          data-testid="events-feed"
+          onScroll={(ev) => {
+            const el = ev.currentTarget
+            stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24
+          }}
+        >
+          {described.length === 0 && <div style={mutedText}>Nothing yet.</div>}
+          {described.map((line) => {
+            const expandable = !!line.detail?.length
+            const style: CSSProperties = line.muted
+              ? mutedText
+              : {
+                  color: line.player ? LINE_COLOR[line.player] : undefined,
+                  fontWeight: line.kind === 'header' ? 700 : undefined,
+                  borderTop: line.kind === 'header' ? `1px solid ${colors.border}` : undefined,
+                  cursor: expandable ? 'pointer' : undefined,
+                }
+            return (
+              <div
+                key={line.key}
+                style={style}
+                data-testid={line.muted ? 'event-note' : line.kind === 'attack' ? 'event-attack' : undefined}
+                onClick={expandable ? () => toggle(line.key) : undefined}
+              >
+                {line.text}
+                {line.luck && line.luck !== 'average' && <span style={{ ...mutedText, fontSize: 11 }}> {line.luck === 'lucky' ? '▲ lucky' : '▼ unlucky'}</span>}
+                {expandable && open.has(line.key) && line.detail?.map((d, i) => (
+                  <div key={i} style={{ ...mutedText, fontSize: 11, paddingLeft: 8 }}>{d}</div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </>
+  )
+
+  if (compact) {
+    return (
+      <CompactDrawer id="feed" title="Event feed">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 auto', minHeight: 0 }}>{body}</div>
+      </CompactDrawer>
+    )
+  }
+  return (
+    <div style={drawerWrap}>
+      <button style={drawerTab} data-testid="btn-feed-drawer" aria-expanded={drawerOpen} onClick={() => setDrawerOpen((o) => !o)}>
+        {drawerOpen ? 'Log ▸' : '◂ Log'}
+      </button>
+      {drawerOpen && <div style={wrap} data-testid="feed-drawer">{body}</div>}
+    </div>
+  )
+}
+
