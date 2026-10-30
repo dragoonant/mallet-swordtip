@@ -9,7 +9,7 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 
 - `<slug>.png`: the chosen concept.
 - `rejected/`: earlier candidates (cropped base, crew standing off the base, lance across the horse's head, head
-  too small).
+  too small, lanky mounts).
 - `sheets/<slug>.png`: front, side and back renders of the finished GLB. `sheets/contact-*.png` holds one army per
   image.
 
@@ -41,6 +41,19 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 | `glo-wolfgit-stikka` | Wolfgit Retinue (spear) | 60×35 oval | 1.5 | GLB done, checked (yaw -90) |
 | `glo-snarlpack-cavalry` | Snarlpack Cavalry | 75×42 oval | 1.75 | GLB done, checked (yaw 90; lances overhang the base) |
 | `glo-sunsteala-wheela` | Sunsteala Wheelas | 120×92 oval | 2.2 | GLB done, checked (yaw 90, `fit` 116) |
+| `kru-killbow` | Beast-skewer Killbow | 90×52 oval | 1.1 | GLB done, checked (`fit` 90, bolt overhangs the base front) |
+| `lrl-warden` | Vanari Auralan Wardens | 32 | 1.6 | GLB done, checked |
+| `lrl-windmage` | Hurakan Windmage | 60×35 oval | 2.0 | GLB done, checked (cape overhangs the base sides) |
+| `lrl-windcharger` | Hurakan Windchargers | 60×35 oval | 1.9 | GLB done, checked (yaw 90) |
+| `lrl-spirit-of-the-wind` | Hurakan Spirit of the Wind | 60 | 2.4 | GLB done, checked |
+| `ko-admiral` | Arkanaut Admiral | 32 | 1.35 | GLB done, checked |
+| `ko-arkanaut` | Arkanaut Company (pistol and cutter) | 25 | 1.15 | GLB done, checked |
+| `ko-arkanaut-skypike` | Arkanaut Company (Skypike) | 25 | 1.15 | GLB done, checked |
+| `ko-arkanaut-volley` | Arkanaut Company (Volley Gun) | 25 | 1.15 | GLB done, checked |
+| `ko-arkanaut-skyhook` | Arkanaut Company (Light Skyhook) | 25 | 1.15 | GLB done, checked |
+| `ko-skywarden` | Skywardens (pistol and skypike) | 32, flying stem | 1.6 | GLB done, checked |
+| `ko-skywarden-volley` | Skywardens (Volley Gun) | 32, flying stem | 1.6 | GLB done, checked |
+| `ko-frigate` | Arkanaut Frigate | 120×92 oval, flying stand | 3.4 | GLB done, checked (yaw 90) |
 
 The GLBs are not wired into the game yet. The client's figure slug list needs these slugs before they show up.
 
@@ -80,7 +93,9 @@ colours or quartering only.
   pointed iron cap and aims a barbed crossbow with green-dripping bolts. `kru-murknob` wears a horned half-helm and
   carries a cleaver and a crooked banner pole topped by a fuming swamp-beast skull over a brown rag.
   `kru-killaboss-gnashtoof` is a warlord in a tall spiked crown-helm with a jagged spear and bone cape, riding a
-  chunky purple-grey swamp hound with a huge fanged head. `kru-gutrippa-boss` and `kru-killbow` were not made.
+  chunky purple-grey swamp hound with a huge fanged head. `kru-killbow` (made later, in the same Gemini chat) is a squat giant crossbow on fat wooden wheels with thick
+  rust-iron bow arms, a barbed harpoon bolt, bone trophies and a teal rag, crewed by two MGSD orruks, one at the
+  winch and one pointing. `kru-gutrippa-boss` was not made.
 - Gloomspite Gitz: bright green goblins with huge black-hooded heads, rust-red saddle cloths and rags, chunky
   big-headed grey-white wolves, dull iron and pale-yellow glowing shards. `glo-wolfgit-bow` (the base figure) draws a
   crooked bow; `glo-wolfgit-stikka` wears a red bandana mask and jabs a barbed spear. `glo-snarlboss` has a feathered
@@ -90,6 +105,27 @@ colours or quartering only.
   wolves and crewed by an archer and a spearman. No moon or GW faction icons.
 - Rejects for these two armies: `glo-wolfgit-bow-c1` (the goblin was true MGSD but the wolf had near-realistic
   proportions; an edit gave it a bigger round head and stubbier legs).
+- Lumineth Realm-lords: ivory-white and pale-gold armour, sky-blue and teal cloth, lilac-pink ribbons and plumes,
+  silver blades and small pale-cyan crystals, with elf faces under the helms. The shields carry our three-curl wind
+  swirl. `lrl-warden` (the base figure) wears a tall teal-crested ivory helm and holds a long silver pike and a kite
+  shield. `lrl-windmage` wears a pale-gold crescent headdress and a streaming sky-blue cape, and carries a censer-orb
+  staff while riding a puffy smiling cloud. `lrl-windcharger` wears a slim ivory helm with a lilac plume and draws a
+  silver bow on a chubby plum-red beaked lizard-bird. `lrl-spirit-of-the-wind` is a translucent cyan big-headed spirit
+  with wind-curl horns, a whirlwind funnel for a lower body, a pale-gold longbow and orbiting lilac ribbons and
+  crystal shards. No Lumineth runes or GW icons.
+- Kharadron Overlords: ivory plates with deep crimson trim, brass and copper fittings, plum leather, glowing green
+  lenses and grey-white braided beards, with our cog-inside-a-cloud badge on the belt. `ko-arkanaut` (the base
+  figure) wears a round brass diving helmet with green goggles and carries a cutlass and a flared pistol. The
+  `-skypike`, `-volley` and `-skyhook` looks swap in a hooked pole-arm with a green bulb, a six-barrel crank gun with
+  an ammo drum, and a shoulder harpoon launcher with a chain. `ko-admiral` has a wide green visor slit, crimson
+  coat-tails, a piston hammer and a triple-barrel pistol. `ko-skywarden` and `ko-skywarden-volley` wear glass bubble
+  helmets and copper balloon-engine packs with a propeller, and hover on a clear stem. `ko-frigate` is a fat
+  ivory-and-crimson hull with two big copper balloon domes, green portholes, a bow harpoon cannon and three tiny
+  crew, on a thick clear stand. No GW logos, runes or guild heraldry.
+- Rejects: `lrl-warden-c1` (a short sword-like spear and a robot visor), `lrl-windcharger-c1` (a lanky dinosaur
+  mount with long legs; an edit that only shortened the tail was also dropped), `ko-arkanaut-c1` (the base was cut
+  off at the bottom edge), `kru-killbow-c1` (a realistic ballista cart with no bow arms) and `kru-killbow-c2` (still
+  realistic, and the side-on bow arms read as a ring).
 
 ## Pipeline notes
 
@@ -105,6 +141,13 @@ colours or quartering only.
   Wheela faced sideways in its concept, so each needed `yaw` 90 (or -90 for `glo-wolfgit-stikka`, which faced the
   other way). The Wheela got `height` 2.2 and `fit` 116 so the cart and wolves fill the 120×92 base. Sheets:
   `sheets/contact-kruleboyz.png` and `sheets/contact-gloomspite.png`.
+
+- Lumineth used `swordtip_b6_picks.json`; Kharadron and `kru-killbow` used `swordtip_b7_picks.json`. The
+  Windcharger and the Frigate faced sideways in their concepts and needed `yaw` 90. The Killbow concept was a
+  three-quarter view and Hunyuan already put the bolt along +Z, so it needed no yaw, but it got `fit` 90 so the
+  machine stays near its oval. The Skywarden stems came through as thin clear posts. Sheets:
+  `sheets/contact-lumineth.png` and `sheets/contact-kharadron.png`; the Killbow row was added to the bottom of
+  `sheets/contact-kruleboyz.png`.
 
 ## Terrain
 
