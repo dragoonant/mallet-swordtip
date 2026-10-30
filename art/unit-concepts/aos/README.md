@@ -23,6 +23,15 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 | `brute-rager` | `ironjawz.unit.brute-ragerz` | 40 | 1.65 | GLB done, checked |
 | `ironjawz-ardboy` | `ironjawz.unit.ardboyz` | 32 | 1.45 | GLB done, checked |
 | `ironjawz-brute` | `ironjawz.unit.brutes` | 40 | 1.65 | GLB done, checked |
+| `darkoath-warqueen` | Darkoath Warqueen | 32 | 1.45 | GLB done, checked |
+| `darkoath-savager` | Darkoath Savagers | 28.5 | 1.3 | GLB done, checked |
+| `darkoath-godspeaker` | Darkoath Savagers (Godspeaker) | 28.5 | 1.3 | GLB done, checked |
+| `darkoath-fellrider` | Darkoath Fellriders | 60×35 oval | 1.7 | GLB done, checked |
+| `darkoath-marauder` | Darkoath Marauders | 28.5 | 1.3 | GLB done, checked |
+| `fyr-battlesmith` | Battlesmith | 32 | 1.45 | GLB done, checked |
+| `fyr-hearthguard` | Hearthguard Berzerkers | 32 | 1.2 | GLB done, checked |
+| `fyr-vulkite` | Vulkite Berzerkers | 32 | 1.15 | GLB done, checked |
+| `fyr-vulkite-karl` | Vulkite Berzerkers (unit leader look) | 32 | 1.2 | GLB done, checked |
 
 The GLBs are not wired into the game yet. The client's figure slug list needs these slugs before they show up.
 
@@ -39,6 +48,23 @@ colours or quartering only.
 - Ironjawz: crude riveted iron plate in ochre and black. `ironjawz-ardboy` carries a choppa and a round shield.
   `ironjawz-brute` swings a two-handed hacka. `brute-rager` roars with two cleavers and chained arms.
   `ironjawz-megaboss` wears a crested helm and a black cloak, with a huge choppa and a spiked iron fist.
+- Slaves to Darkness (Darkoath): crimson and rust cloth, tarnished bronze, blackened iron, grey fur and ash-blue
+  warpaint, with carved oathstone pebbles on cords. `darkoath-warqueen` has a horned bronze half-helm, red braids,
+  a crimson cloak and a big bronze axe. `darkoath-savager` is a shaggy-maned, bare-chested berserker with a
+  rust-red sash, an iron axe and a hide buckler. `darkoath-godspeaker` is a hooded seer in a bone mask and a
+  tattered crimson robe with a charm-hung staff. `darkoath-marauder` wears a horned iron cap and a fur mantle, with
+  a bronze sword and a round wooden shield marked with one red scratch. `darkoath-fellrider` is a helmeted raider
+  with a curved blade and a javelin quiver on a chunky shaggy black pony. No eight-pointed stars or other Chaos
+  sigils.
+- Fyreslayers: ruddy bare chests with plain glowing gold line tattoos, flame-orange beards and crests, burnished
+  bronze helms, plain gold bracers and belts, charcoal loincloths. `fyr-vulkite` has a mohawk crest and a glowing
+  hand-axe in each fist. `fyr-vulkite-karl` is the same berserker with a fan crest, a plain gold face-mask and two
+  bigger axes. `fyr-hearthguard` wears a dragon-snouted bronze helm and holds a glowing poleaxe. `fyr-battlesmith`
+  has a braided beard, a battle-axe and a banner pole topped by a plain anvil with gold flames over a blank
+  charcoal-and-red banner. No rune copies or GW icons.
+- Rejects for these two armies: `darkoath-warqueen-c1` (a realistic dwarf-like miniature, about 3.5 heads tall, and
+  an edit did not fix the proportions) and `fyr-vulkite-c1` (mid-leap on a clear acrylic flight stand, feet off
+  the base).
 
 ## Pipeline notes
 
@@ -46,6 +72,9 @@ colours or quartering only.
   and 45) so they face down the base's long axis. The cannon concept has no base and was shaped with `--nocut`.
 - `finalize_model.py` used to ignore `yaw`, because glTF import leaves objects in quaternion rotation mode. It now
   sets the rotation mode to `XYZ` first.
+- `darkoath-fellrider` (60×35 oval) needed `yaw` 0, not 90: with 90 the pony stood across the oval. Darkoath and
+  Fyreslayers used `swordtip_b3_picks.json`; their sheets are `sheets/contact-darkoath.png` and
+  `sheets/contact-fyreslayers.png`.
 
 ## Terrain
 
