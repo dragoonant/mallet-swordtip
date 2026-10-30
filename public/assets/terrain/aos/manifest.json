@@ -1,0 +1,24 @@
+{
+  "ruined-domicile": {
+    "size": [
+      1.0,
+      0.6809,
+      0.7229
+    ],
+    "footprintInches": [
+      5,
+      3
+    ]
+  },
+  "ravaged-shrine": {
+    "size": [
+      1.0,
+      0.852,
+      0.912
+    ],
+    "footprintInches": [
+      3,
+      2
+    ]
+  }
+}

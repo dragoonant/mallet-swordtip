@@ -919,6 +919,238 @@
       "kind": "music",
       "prompt": "Short eerie alien stinger. Slow pulsing deep sub-bass, cold glassy synth drones, distant metallic scraping and an inhuman low throat-singing drone, strange shimmering high tones, a sense of something vast and hostile approaching from the dark between stars. Tense, ominous, sparse, sci-fi horror, fades into silence",
       "lengthMs": 14000
+    },
+    {
+      "id": "aos-halberd-strike",
+      "kind": "sfx",
+      "prompt": "A heavy steel halberd blade chopping down into a plate-armoured soldier: a whistling swing, a sharp crunching metallic bite and a dull meaty thud, dry, close, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sword-clash",
+      "kind": "sfx",
+      "prompt": "Two steel swords clashing hard in a duel: a bright ringing clang of metal on metal with a short shimmering ring-out, a second lighter scrape of blades, no voices, no music",
+      "durationSeconds": 1,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-lance-charge-impact",
+      "kind": "sfx",
+      "prompt": "A heavy cavalry lance striking a shield and armour at full gallop: a splintering wooden crack, a huge crunching metallic crash and a dull thud of a body hit, short heavy impact, no horses, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-cannon-fire",
+      "kind": "sfx",
+      "prompt": "A single old black powder great cannon firing: a huge deep booming blast with a rolling thunder tail and a wooden carriage rumble, smoky and massive, no voices, no music",
+      "durationSeconds": 2.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-cannonball-impact",
+      "kind": "sfx",
+      "prompt": "A heavy iron cannonball smashing into stone, wood and soldiers: a loud crunching crash, splintering timber, falling debris and a deep thump, no explosion fire, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-choppa-hit",
+      "kind": "sfx",
+      "prompt": "A huge crude iron cleaver chopping through armour with brute force: a heavy swing whoosh then a dull, ugly, clunking crunch of thick rusty iron on steel plate, heavy and clumsy not sharp, no voices, no music",
+      "durationSeconds": 1,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fist-smash",
+      "kind": "sfx",
+      "prompt": "A giant spiked iron gauntlet fist smashing down onto steel armour and bone: a deep crushing boom, bending metal, a heavy bone-crunching thud, short and brutal, no voices, no music",
+      "durationSeconds": 1,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-shield-bash",
+      "kind": "sfx",
+      "prompt": "A metal-rimmed wooden shield slammed hard into an armoured opponent: a thick wooden thump with a rattling metallic clank, short and solid, no voices, no music",
+      "durationSeconds": 0.7,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-armour-hit",
+      "kind": "sfx",
+      "prompt": "A weapon blow glancing off heavy steel plate armour: a sharp metallic clank with a quick ringing tail, dry and bright, no voices, no music",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-miss-whoosh",
+      "kind": "sfx",
+      "prompt": "A big weapon swung through the air and missing: a quick airy whoosh with a faint blade whistle, nothing hit, no voices, no music",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-horse-gallop",
+      "kind": "sfx",
+      "prompt": "A single armoured warhorse galloping steadily on firm dirt: a rhythmic four-beat hoof pattern with faint jingling harness and armour rattle, steady constant pace, seamless loop, no neighing, no voices, no music",
+      "durationSeconds": 4,
+      "promptInfluence": 0.5,
+      "loop": true
+    },
+    {
+      "id": "aos-horse-charge",
+      "kind": "sfx",
+      "prompt": "A squadron of armoured knights on warhorses charging: one loud fierce horse whinny then a thundering rumble of many galloping hooves growing louder, clanking armour and harness, no music, no voices",
+      "durationSeconds": 3.5,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-armoured-march",
+      "kind": "sfx",
+      "prompt": "A squad of soldiers in steel plate armour marching in step on hard ground: heavy synchronised boot thumps with a rattling clinking of metal plates and halberd shafts, steady rhythm, no voices, no music",
+      "durationSeconds": 3,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-orruk-stomp",
+      "kind": "sfx",
+      "prompt": "A single colossal armoured brute stomping one heavy foot on hard ground: a deep thudding impact with a metallic clank of thick iron armour plates and a low rumble, one footstep, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-human-battle-cry",
+      "kind": "sfx",
+      "prompt": "A group of medieval soldiers roaring a ferocious unified battle shout as they charge: many human male voices yelling a raw wordless war cry, intense and angry, with faint armour clatter, no words, no music",
+      "durationSeconds": 2.2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "aos-human-death-1",
+      "kind": "sfx",
+      "prompt": "A single human male soldier cries out in pain and dies: a short strained gasping shout, a grunt, a collapse of a body in clanking armour onto the ground, realistic, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "aos-human-death-2",
+      "kind": "sfx",
+      "prompt": "A human male warrior screams as he is struck down: a sharp cry cut short, a wet choking groan, then a heavy armoured body falling and rattling on stone, realistic, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "aos-orruk-roar",
+      "kind": "sfx",
+      "prompt": "A huge hulking brute with a very deep gravelly voice bellows a furious aggressive war roar, like an enraged giant thug yelling a long deep ROAAAR, chesty and loud, low pitched. Deep, loud, angry, no croaking, no gargling, no frog sounds, no music",
+      "durationSeconds": 2,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "aos-orruk-death-1",
+      "kind": "sfx",
+      "prompt": "A huge hulking brute with a very deep gravelly voice bellows a furious dying roar, like an enraged giant thug yelling ARGH, then a heavy body in iron armour slams into the dirt. Deep, loud, angry, no croaking, no gargling, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "aos-orruk-death-2",
+      "kind": "sfx",
+      "prompt": "A giant brutish monster groans and snarls with a deep guttural voice, a long weakening bellow like a wounded bull-sized thug, then collapses with a crash of heavy iron plates and a thud on the ground. Deep, gravelly, no croaking, no frog sounds, no music",
+      "durationSeconds": 2.2,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "aos-marshal-command",
+      "kind": "sfx",
+      "prompt": "A commanding human male knight-commander bellows a loud authoritative battle order across a field, a single sharp rallying shout with a ringing parade-ground voice, a wordless HAAA command yell, no actual words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "aos-priority-drumroll",
+      "kind": "sfx",
+      "prompt": "A tense snare drumroll building suspense then ending in one hard hit on a big war drum, medieval military drums, no melody, no voices",
+      "durationSeconds": 3,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-round-start-war-horn",
+      "kind": "sfx",
+      "prompt": "A deep powerful medieval war horn blown twice, a long rising low brass call across a battlefield with a slight echo, heraldic and martial, no voices",
+      "durationSeconds": 3,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-objective-captured",
+      "kind": "sfx",
+      "prompt": "A short heraldic brass fanfare: two bright trumpets playing a rising three-note triumphant flourish, regal and clean, medieval pageantry, no voices, no drums",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-battle-tactic-scored",
+      "kind": "sfx",
+      "prompt": "A short sharp heroic fanfare sting: trumpets and a snare roll with a quick bright cymbal crash, uplifting and punchy, about two seconds, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-victory",
+      "kind": "sfx",
+      "prompt": "A grand triumphant orchestral brass fanfare with rolling timpani and a final bright held chord with cymbal crash, heroic fantasy victory, no voices",
+      "durationSeconds": 6,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-defeat",
+      "kind": "sfx",
+      "prompt": "A slow mournful descending orchestral sting with low brass and a single deep muffled war drum, a solemn defeated fall into silence, dark fantasy, no voices",
+      "durationSeconds": 5,
+      "promptInfluence": 0.5
+    },
+    {
+      "id": "aos-ambient-bed",
+      "kind": "music",
+      "prompt": "Loopable dark fantasy battlefield ambient bed. Gritty and sparse: slow low war drums pulsing far away, a cold howling wind, faint distant metallic clanks and rumbling, a low brooding drone of cellos and basses in a minor key. No melody, no choir, steady and unobtrusive, seamless loop",
+      "lengthMs": 40000
+    },
+    {
+      "id": "aos-stinger-iron-vanguard",
+      "kind": "music",
+      "prompt": "Short dark heroic fantasy stinger. Pounding war drums and low brass play a defiant marching motif, strings rising, ending with a single powerful orchestral hit that rings away. Grim, medieval, martial, ends cleanly",
+      "lengthMs": 12000
+    },
+    {
+      "id": "aos-stinger-the-long-march",
+      "kind": "music",
+      "prompt": "Short dark fantasy orchestral stinger. A slow tolling bass drum march, low cellos and a distant horn calling a weary determined theme in a minor key, a sense of an army walking toward war. Heavy, atmospheric, fades out naturally",
+      "lengthMs": 14000
+    },
+    {
+      "id": "aos-stinger-gate-of-ash",
+      "kind": "music",
+      "prompt": "Short ominous dark fantasy stinger. Deep rumbling taiko drums, growling low trombones and tubas in a menacing three-note motif, strings tremolo building tension, a crushing final hit with a rolling echo. Savage, threatening, brutish",
+      "lengthMs": 12000
+    },
+    {
+      "id": "aos-stinger-banner-and-blade",
+      "kind": "music",
+      "prompt": "Short heroic orchestral stinger. Bright trumpets and French horns sound a noble rising fanfare over timpani and snare drum, strings surging, a held triumphant chord. Chivalric, heraldic, dark heroic fantasy but hopeful, ends cleanly",
+      "lengthMs": 12000
+    },
+    {
+      "id": "aos-stinger-last-stand",
+      "kind": "music",
+      "prompt": "Short desperate dark fantasy orchestral stinger. Urgent fast war drums and driving low strings, brass crying out a defiant falling-then-rising theme, tense and heroic, climbing to an intense final chord and cut-off. Epic, defiant, outnumbered",
+      "lengthMs": 13000
+    },
+    {
+      "id": "aos-stinger-cold-hearth",
+      "kind": "music",
+      "prompt": "Short sombre dark fantasy stinger. A single solo cello and distant muffled war drum, a lone French horn playing a slow sorrowful melody in a minor key over low strings, a sense of loss after battle, long soft fade-out. Melancholy, dignified",
+      "lengthMs": 14000
     }
   ]
 }
