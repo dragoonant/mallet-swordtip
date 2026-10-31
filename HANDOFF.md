@@ -152,14 +152,42 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
   as stand-in kits and the new sounds fall back silently (the audio loader swallows the 404). Commit them, then the CI warnings go away.
 - Balance for the four new armies has not been run: `npm run sim` matrix and `tools/balance-stats.ts` still need a 12x12 pass.
 
+## F13 (2026-10-31): four more army specs, 12-army balance matrix, camera fit, phone prompts, picker tests
+- Specs written from the official PDFs: `docs/spec/factions/{blades-of-khorne,maggotkin-of-nurgle,nighthaunt,sylvaneth}.md`, each with a
+  mechanics mapping table (a data / b hook / c engine), RULINGs and test ids (BOK-, MON-, NH-, SYL-). F14 built them.
+- 12-army balance matrix in `docs/balance.md` (1,584 games, 24 per pairing, seed 21): Stormcast 64.8%, Kharadron 63.6%, Ironjawz 59.5%,
+  Soulblight 59.1%, Kruleboyz 53.0%, Seraphon 50.4%, Fyreslayers 42.8%, Lumineth 41.7%, Skaven 37.5%, Cities 36.7%, Gloomspite 28.0%,
+  Slaves 23.9%. AI `arrivalStrike` (`src/ai/utility.ts`): reserve arrivals are set up where they can hit something (AI-ARRIVE-001/002).
+- Camera: the deployment view and round 1 overview fit the 30x22 Spearhead board on desktop and on a phone in landscape
+  (`src/client/board/cameraPresets.ts`, `CameraRig.tsx`; `tests/e2e/f13-camera.spec.ts`).
+- Phone: the decision prompt sits in a bottom sheet that no longer covers the board during deployment
+  (`BottomSheet.tsx`, `DecisionPrompt.tsx`; `tests/e2e/f13-phone.spec.ts`).
+- Picker tests: `tests/e2e/f13-pickers.spec.ts` (PICK-001/002) picks a non-default regiment ability and enhancement and checks they reach
+  the Mission panel on desktop and phone.
+
+## F14 (2026-10-31): Khorne, Nurgle, Nighthaunt and Sylvaneth
+- Sixteen armies now play: Blades of Khorne (Fangs of the Blood God), Maggotkin of Nurgle (Bleak Host), Nighthaunt (Slasher Host),
+  Sylvaneth (Spitewing Flight). Data in `src/data/factions/{khorne,nurgle,nighthaunt,sylvaneth}/`, hooks in `src/engine/factions/`,
+  generic engine additions in `docs/spec/13-engine-port-plan.md` section 3.12 (additive). Faction ids on the start screen:
+  `khorne`, `nurgle`, `nighthaunt`, `sylvaneth`. Figures (18 GLBs), concepts and sounds landed in `c05b8ed`.
+- QA (`vite preview --port 4477`): `tests/e2e/f14-playthrough.spec.ts` plays Khorne (human) vs the Nighthaunt bot on Aqshy and Sylvaneth
+  (human) vs the Nurgle bot on Ghyran to the end screen in 4 rounds; no console errors, no failed requests, no stalled decisions. A third
+  test serves 404 for every GLB and mp3 and plays Khorne vs Nighthaunt through round 2: stand-in figures draw, nothing fatal.
+  Ability prompts seen and working: The Quarry, Stalk the Prey, Blood-Drenched, Pack Hunters, Target of Vengeance, Heartwood Hunting
+  Horn, Zephyrspites, Lifebringers, Spiterider Charge, Deafening Drone. Full suite: typecheck clean, 93 files / 1321 tests pass.
+  Shots in `e2e-out/f14/` (gitignored). No player-blocking bugs found, so no game-code fixes in the QA commit.
+- Seen, not fixed: the stand-in kits reuse other armies' figures (Nighthaunt units draw as green cultist stand-ins when a GLB is
+  missing); the ability buttons show only the name, with the rule text in the unit card.
+- Balance for the four F14 armies has not been run (the matrix above is 12 armies).
+
 ## Next
-- Commit the F12 art and audio (GLBs, mp3s, concepts) so the live site shows the new figures and hears the new sounds; then drop the
-  CI-warn branch in `tests/client/spearhead-audio.test.ts` / `spearhead-figures.test.ts` if you want strict checks in CI again.
-- Balance: rerun the matrix with all twelve armies (`docs/balance.md`); Gloomspite (32%) and Slaves (23%) trailed before, and the four new
-  armies have no numbers. Use `tools/balance-stats.ts --armies a,b` and `tools/ai-trace.ts` on the worst pairings.
-- The QA bot as a human only takes the default regiment ability and enhancement and the first option in each prompt; add a
-  scripted playthrough for regiment-ability and enhancement choices (Fearless Invaders, Fyresteel Throwing Axes, Cloud of Bats, Skitterleap).
+- Balance: rerun `npm run sim` / `tools/balance-stats.ts` with all sixteen armies and put the matrix in `docs/balance.md`; Slaves (23.9%) and
+  Gloomspite (28.0%) trailed in the 12-army run, the four F14 armies have no numbers. Use `tools/ai-trace.ts` on the worst pairings.
+- The QA bot as a human only takes the default regiment ability and enhancement and the first option in each prompt; `f13-pickers.spec.ts`
+  covers the pickers, but no scripted game plays the chosen abilities (Fearless Invaders, Fyresteel Throwing Axes, Cloud of Bats, Skitterleap,
+  Beacon of Nagashizzar, Gift of Febrile Frenzy).
 - Check that the Kharadron bot uses Ply the Skies (`tests/engine/kharadron.test.ts` KO-BT-3 end to end).
 - Phone: the board is small while a prompt is open and unit tags crowd the objective labels; hide tags during placement.
 - Camera: fade or clamp floating unit labels near the HUD in close-up views.
+- Stand-in kits for Nighthaunt (and the other new armies) could take a faction tint so a missing GLB still reads as the right army.
 - Ship: push to `main`; Pages deploys `dist/` at https://dragoonant.github.io/mallet-swordtip/.
