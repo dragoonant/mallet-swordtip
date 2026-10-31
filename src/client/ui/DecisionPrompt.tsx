@@ -490,7 +490,7 @@ const deployRowCompact: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap
 const optionListCompact: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
 // phone landscape strip (BottomSheet `strip`): one horizontally scrolling row per list, options first, the rest of the prompt below it
 const optionListStrip: CSSProperties = { display: 'flex', gap: 8, order: -1 }
-const deployRowStrip: CSSProperties = { display: 'flex', gap: 8, flex: '1 1 0', minWidth: 0, order: -1 }
+const deployRowStrip: CSSProperties = { display: 'flex', gap: 8, flex: '1 1 0%', minWidth: 0, order: -1 }
 const autoRowStrip: CSSProperties = { display: 'flex', flexWrap: 'nowrap', gap: 6, alignItems: 'center', flex: '0 0 auto', order: -1 }
 const optionBtnCompact: CSSProperties = { whiteSpace: 'normal', textAlign: 'left', flex: '1 1 200px', lineHeight: 1.25, padding: '8px 12px', minHeight: TOUCH_MIN, fontSize: 14 }
 /** Pick-to-confirm bar on touch: the tapped choice's name on a wide button, plus a way to back out. */

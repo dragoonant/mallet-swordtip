@@ -3,6 +3,7 @@
 // Screenshots go to e2e-out/f13-phone/<label>-<device>-<shot>.png; the prompt's height share is logged beside them.
 import { expect, test, type Page } from '@playwright/test'
 import { mkdirSync, writeFileSync } from 'node:fs'
+import { centroid, project, refreshCam, snap, makeCam } from './helpers'
 
 const OUT = 'e2e-out/f13-phone'
 const LABEL = process.env.PH_LABEL ?? 'after'
@@ -67,6 +68,19 @@ async function run(page: Page, device: string): Promise<void> {
   await chip.click()
   await page.waitForTimeout(1800)
   await grab('2-deployment-unit-picked')
+
+  // tap inside the own zone: the formation ghost lands there, and the prompt stays a slim strip
+  const sn = await snap(page)
+  const zone = (sn.pending?.context as any)?.zone as { x: number; z: number }[] | undefined
+  if (zone && zone.length) {
+    await refreshCam(page)
+    const c = centroid(zone)
+    const vp = page.viewportSize()!
+    const pt = project({ x: c.x, y: 0, z: c.z }, makeCam(), vp.width, vp.height)
+    await page.mouse.click(pt.x, pt.y)
+    await page.waitForTimeout(1200)
+    await grab('2b-deployment-ghost-in-zone')
+  }
 
   await step(page, (i) => i.round >= 1 && i.phase === 'movement' && i.kind === 'chooseUnitToActivate', 180_000)
   await page.waitForTimeout(2000)

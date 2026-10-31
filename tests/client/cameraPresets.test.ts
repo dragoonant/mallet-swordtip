@@ -65,4 +65,25 @@ describe('camera presets', () => {
     expect(b.position[2]).toBeCloseTo(-a.position[2])
     expect(b.target[2]).toBeCloseTo(-a.target[2])
   })
+
+  it('follow views from the viewer own edge', () => {
+    const near = cameraPose('follow', BOARD, { x: 0, z: -5 }, 1)
+    const far = cameraPose('follow', BOARD, { x: 0, z: -5 }, -1)
+    expect(near.position[2]).toBeGreaterThan(-5)
+    expect(far.position[2]).toBeLessThan(-5)
+  })
+
+  // The phone's bottom prompt strip (up to 30dvh) is a HUD zone: the board's near edge must clear the bottom ~128px of the screen.
+  it('phone: the board stays above the bottom prompt strip', () => {
+    const view = { aspect: 852 / 393, phone: true, height: 393 }
+    const p = cameraPose('edgeA', BOARD, undefined, 1, view)
+    const sin = Math.sin((44 * Math.PI) / 180), cos = Math.cos((44 * Math.PI) / 180)
+    const py = p.position[1], pz = p.position[2]
+    // project the near-left board corner (z = +11, plus the 1" margin) to NDC y
+    const fy = -cos, fz = -sin, uy = sin, uz = -cos
+    const vy = -py, vz = 11 - pz
+    const depth = vy * fy + vz * fz
+    const ny = (vy * uy + vz * uz) / (depth * Math.tan((42 * Math.PI) / 360))
+    expect(ny).toBeGreaterThanOrEqual(-1 + (2 * 124) / 393)
+  })
 })

@@ -39,7 +39,6 @@ const SHEET_CSS = `
 .m42-sheet button { min-height: ${TOUCH_MIN}px; min-width: ${TOUCH_MIN}px; touch-action: manipulation; }
 .m42-sheet-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .m42-sheet[data-strip="true"] { max-height: 30vh; max-height: 30dvh; }
-.m42-sheet[data-strip="true"] .m42-sheet-body { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 0 12px 8px; }
 .m42-sheet[data-strip="true"] .m42-sheet-body > * { flex: 1 1 100%; min-width: 0; }
 .m42-hscroll { overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap !important; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .m42-hscroll::-webkit-scrollbar { display: none; }
@@ -93,6 +92,7 @@ const chevron: CSSProperties = {
 const headAction: CSSProperties = { flex: '0 1 auto', minWidth: 0, maxWidth: '62%', display: 'flex', alignItems: 'center', overflow: 'hidden' }
 
 const bodyStyle: CSSProperties = { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '2px 12px 8px', display: 'flex', flexDirection: 'column', gap: 6 }
+const stripBodyStyle: CSSProperties = { ...bodyStyle, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: '6px 8px', padding: '0 12px 8px' }
 const footerStyle: CSSProperties = {
   flex: '0 0 auto',
   padding: '6px 12px',
@@ -182,7 +182,7 @@ export function BottomSheet({
         </button>
       </div>
       {/* the body stays mounted while collapsed so panels with their own state (weapon picks, dice picks) survive */}
-      <div className="m42-sheet-body" style={collapsed ? { ...bodyStyle, display: 'none' } : bodyStyle} data-testid="prompt-sheet-body">{children}</div>
+      <div className="m42-sheet-body" style={collapsed ? { ...bodyStyle, display: 'none' } : strip ? stripBodyStyle : bodyStyle} data-testid="prompt-sheet-body">{children}</div>
       {!collapsed && !strip && footer && <div style={footerStyle} data-testid="prompt-sheet-footer">{footer}</div>}
     </div>
   )
