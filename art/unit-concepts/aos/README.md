@@ -96,7 +96,23 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 | `syl-gossamid-archer` | Gossamid Archers | 32, flying stem | 1.75 | GLB done, checked |
 | `syl-spiterider-lancer` | Spiterider Lancers | 60 | 2.0 | GLB done, checked (lance overhangs the base) |
 | `syl-revenant-seeker` | Revenant Seekers | 60 | 2.0 | GLB done, checked (yaw 90) |
+| `dot-tzaangor-shaman` | Tzaangor Shaman | 40, flying stem | 2.2 | GLB done, checked (disc on a clear stem) |
+| `dot-tzaangor` | Tzaangors | 32 | 1.45 | GLB done, checked (sword overhangs the base) |
+| `dot-tzaangor-enlightened` | Tzaangor Enlightened | 40, flying stem | 2.1 | GLB done, checked (spear overhangs the base) |
+| `dot-tzaangor-skyfire` | Tzaangor Skyfires | 40, flying stem | 2.1 | GLB done, checked |
+| `obr-mortisan-ossifector` | Mortisan Ossifector | 32 | 1.6 | GLB done, checked (`--nocut`) |
+| `obr-immortis-guard` | Immortis Guard | 50 | 1.9 | GLB done, checked (halberd overhangs the base) |
+| `obr-necropolis-stalker` | Necropolis Stalkers | 50 | 1.85 | GLB done, checked (swords overhang the base) |
+| `obr-morghast-archai` | Morghast Archai | 60 | 2.6 | GLB done, checked (wingspan 5.3", well past the base) |
 
+| `dok-melusai-ironscale` | Melusai Ironscale | 40 | 1.65 | GLB done, checked (glaive overhangs the base) |
+| `dok-witch-aelf` | Witch Aelves | 25 | 1.2 | GLB done, checked |
+| `dok-doomfire-warlock` | Doomfire Warlocks | 60×35 oval | 1.75 | GLB done, checked (yaw -40) |
+| `dok-blood-stalker` | Blood Stalkers | 40 | 1.55 | GLB done, checked |
+| `idk-isharann-soulscryer` | Isharann Soulscryer | 32 | 1.5 | GLB done, checked |
+| `idk-morrsarr-guard` | Akhelian Morrsarr Guard | 60×35 oval, flying stem | 2.0 | GLB done, checked (yaw 90; eel and lance overhang the base) |
+| `idk-akhelian-allopex` | Akhelian Allopex | 90×52 oval, flying stem | 2.4 | GLB done, checked |
+| `idk-namarti-thrall` | Namarti Thralls | 32 | 1.5 | GLB done, checked (glaive overhangs the base) |
 The GLBs are not wired into the game yet. The client's figure slug list needs these slugs before they show up.
 
 ## Designs
@@ -261,6 +277,45 @@ colours or quartering only.
   `nh-knight-of-shrouds-c1` and `-c2` (the fist gripped the blade instead of the handle) and `nh-spirit-host-c1`
   (five hands instead of four). All four Sylvaneth concepts were first tries.
 
+- Disciples of Tzeentch (Tzaangor Warflock): cobalt- and sky-blue feathered goat-beasts with big beaks and grey horns,
+  turquoise and teal robes, polished gold trim and our gold crescent-moon-with-one-feather emblem on shields, chests
+  and disc tops. `dot-tzaangor` (the base figure) has a sky-blue feather crest, a teal loincloth, a curved gold sword
+  and a round teal crescent shield. The three disc riders stand on a chunky toy flying disc with stubby fangs round
+  its rim, held over the base by a clear stem: `dot-tzaangor-enlightened` wears a tall teal-and-gold crested helm and a
+  smug half-lidded stare and holds a long curved-bladed spear; `dot-tzaangor-skyfire` has a feather mohawk, a quiver of
+  rainbow-feathered arrows and a curved gold bow with a solid pink arrow, on a bronze disc with curled side horns;
+  `dot-tzaangor-shaman` has glowing pink eyes, a turquoise robe with the crescent on the chest, a crooked staff topped
+  by a big gold crescent and a little curved knife, on the turquoise disc with side horns. No Tzeentch rune, eye or
+  flame sigils.
+- Ossiarch Bonereapers (Mortisan Elite): ivory bone with cute cartoon skulls, midnight-blue lacquered plates with
+  bronze rims, solid teal blades and eye-lights, oxblood cloth, and our faceted teal soul-gem in a bone ring on chests
+  and helms. `obr-immortis-guard` (the base figure) wears a horned bone helm and carries a rib-cage tower shield and a
+  teal-bladed halberd. `obr-necropolis-stalker` has three fused skull faces, four arms and four curved teal swords.
+  `obr-mortisan-ossifector` wears a tall spiked bone crown and a midnight-blue robe with an oxblood sash, with four
+  arms (a bone chisel, a femur wand and two open hands) and a solid teal soul-mist swirl round its feet.
+  `obr-morghast-archai` wears a tall midnight-blue crested helm, spreads two bone-framed wings of solid teal
+  feather-shards and holds a teal-bladed glaive. No Ossiarch or Nagash icons.
+- All eight Tzeentch and Ossiarch concepts were first tries; there are no rejects for these two armies.
+
+- Daughters of Khaine (Heartflayer Troupe): deep crimson and oxblood cloth, glossy black leather, warm bronze blades
+  and trim, pale porcelain skin with dark-teal warpaint stripes, long silver-white hair, and our three-red-teardrops
+  sigil on cloth. `dok-witch-aelf` (the base figure) has a high ponytail, a fierce grin, a crimson wrap and harness and
+  two curved bronze knives. `dok-melusai-ironscale` wears a bronze crested circlet and holds a bronze glaive-staff with
+  a blade at each end, on a short, chunky coiled emerald snake tail. `dok-blood-stalker` has long silver braids and a
+  bronze half-mask and draws a dark-wood recurve bow with a solid red arrow, on a coiled teal snake tail.
+  `dok-doomfire-warlock` is a hooded sorcerer with a violet brow mark, a crossbow on his back and a bronze scimitar in
+  solid black-and-violet flames, on a chunky black horse with a crimson saddle cloth. No Khaine rune or temple icons,
+  no gore. (Gemini refused the Melusai prompt worded as "serpent-woman"; "naga" worked.)
+- Idoneth Deepkin (Soulraid Hunt): pale blue-grey skin, teal and midnight-blue cloth, pearl-white shell plates with
+  tarnished bronze trim, solid glowing cyan accents and our spiral-shell-over-three-waves crest. `idk-namarti-thrall`
+  (the base figure) has a huge smooth eyeless head with a white topknot and a big bronze crescent glaive.
+  `idk-isharann-soulscryer` is a hunched, squinting old seer in a ragged scale-pattern robe with a crooked pink-coral
+  staff and a pearl lantern, with three solid cyan fish on solid teal water curls. `idk-morrsarr-guard` is a knight in
+  a crested pearl-white helm with a shell shield and a lance in solid cyan sparks, on a fat blue-and-teal eel with big
+  cyan eyes. `idk-akhelian-allopex` is a fat grinning slate-grey shark with a bronze harness and harpoon launcher and a
+  tiny helmeted rider with a hook-blade. Both sea beasts hover on a clear stem. No enclave icons.
+- All eight Daughters and Idoneth concepts were first tries; there are no rejects for these two armies.
+
 ## Pipeline notes
 
 - Ovals use `base` (length) plus `base2` (width) in `units.json`. The mounts and the cannon needed `yaw` (90, 90
@@ -316,3 +371,12 @@ deep and 2.6" tall. If the footprint must be exactly 3 × 2, squash the depth or
   auto base cut (6-7%) kept them attached. The Lancer concept was a side three-quarter view that Hunyuan already put
   along +Z, so it needed no yaw; the Seeker, edited from it, came out side-on and needed `yaw` 90. The Gossamid's
   clear stem came through as a thin post. Sheets: `sheets/contact-nighthaunt.png` and `sheets/contact-sylvaneth.png`.
+- Tzeentch and Ossiarch used `swordtip_b13_picks.json`. Every figure was drawn front or three-quarter on, so none
+  needed `yaw`. The disc stems came through as thin clear posts and the auto base cut (6-8%) kept them attached. The
+  Ossifector's robe and soul-mist reach the base, so it was shaped with `--nocut`. The Morghast wings run about 5.3"
+  wide on its 60 mm base. Shapes ran one slug at a time, because a shared-GPU job caused an out-of-memory failure on
+  the first try. Sheets: `sheets/contact-tzeentch.png` and `sheets/contact-ossiarch.png`.
+- Daughters and Idoneth used `swordtip_b12_picks.json`. The Doomfire horse came out at about 45 degrees and needed
+  `yaw` -40; the Morrsarr eel faced sideways and needed `yaw` 90. The Allopex was a three-quarter view that Hunyuan
+  already put along +Z. The eel and shark stems came through as thin clear posts and the auto base cut (5-8%) kept
+  them attached. Sheets: `sheets/contact-daughters.png` and `sheets/contact-idoneth.png`.

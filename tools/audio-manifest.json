@@ -1864,6 +1864,216 @@
       "prompt": "A tree spirit creaks, cracks and splinters apart, no words, no music",
       "durationSeconds": 1.5,
       "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-daughters-war-cry",
+      "kind": "sfx",
+      "prompt": "A troupe of frenzied aelf warriors gives a high trilling ululating war cry, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-daughters-hiss",
+      "kind": "sfx",
+      "prompt": "A huge serpent-bodied warrior gives a long menacing hiss, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-daughters-knives",
+      "kind": "sfx",
+      "prompt": "A whirling flurry of knives slashes with quick metal swishes and scrapes, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-daughters-bow",
+      "kind": "sfx",
+      "prompt": "A bow looses an arrow with a sharp string twang and a whizz, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-daughters-doomfire",
+      "kind": "sfx",
+      "prompt": "A burst of cursed dark fire whooshes and crackles with an eerie hum, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-daughters-gallop",
+      "kind": "sfx",
+      "prompt": "Dark horses gallop fast with pounding hooves and a snort, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-daughters-death",
+      "kind": "sfx",
+      "prompt": "An aelf warrior gasps and falls with a soft thud, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-whale-song",
+      "kind": "sfx",
+      "prompt": "Deep underwater whale song, a long low moaning call with bubbles, no words, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-allopex",
+      "kind": "sfx",
+      "prompt": "A shark-like sea beast snaps its jaws with a loud chomp and a splash, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-eel-crackle",
+      "kind": "sfx",
+      "prompt": "A great eel crackles and buzzes with voltaic sparks, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-lance",
+      "kind": "sfx",
+      "prompt": "A lance thrusts with a whoosh and a sharp crackling electric zap, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-glaive",
+      "kind": "sfx",
+      "prompt": "A glaive whirls through the air with a spinning whoosh and a sharp slash, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-swim",
+      "kind": "sfx",
+      "prompt": "A large sea creature swims past with a rushing underwater whoosh and bubbles, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-chime",
+      "kind": "sfx",
+      "prompt": "A soft shimmering crystal chime rings with an underwater echo, no voices",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-idoneth-death",
+      "kind": "sfx",
+      "prompt": "Bubbles gurgle and rise, then fade away, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-bleat",
+      "kind": "sfx",
+      "prompt": "A warflock of goat-headed beastmen bleats in a wild chaotic chorus, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-crystal-blade",
+      "kind": "sfx",
+      "prompt": "A crystal blade swings with a whoosh and a bright glassy ring, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-sword",
+      "kind": "sfx",
+      "prompt": "A savage sword swings with a whoosh and a loud metal clang, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-disc",
+      "kind": "sfx",
+      "prompt": "A flying disc whooshes past with a humming whir, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-warpflame",
+      "kind": "sfx",
+      "prompt": "Magical warpflame crackles and whooshes with a strange warble, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-arrow",
+      "kind": "sfx",
+      "prompt": "A bow looses a flaming arrow with a string twang and a fiery whoosh, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-spell",
+      "kind": "sfx",
+      "prompt": "A shimmering magic spell rises with a sparkling whoosh and twinkling chimes, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-tzeentch-death",
+      "kind": "sfx",
+      "prompt": "A goat-headed beastman bleats in pain and vanishes in a magical puff, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ossiarch-horn",
+      "kind": "sfx",
+      "prompt": "A deep resonant bone horn blows one long low booming note, no voices",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ossiarch-march",
+      "kind": "sfx",
+      "prompt": "Heavy bone-plated footsteps stomp slowly with clacking, rattling bones, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ossiarch-clack",
+      "kind": "sfx",
+      "prompt": "Hard bone weapons clack and knock together, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ossiarch-blade",
+      "kind": "sfx",
+      "prompt": "A heavy bone blade swings with a whoosh and a hard cracking clack, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ossiarch-shard-storm",
+      "kind": "sfx",
+      "prompt": "A scything storm of bone shards whooshes and clatters in a rushing wind, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ossiarch-wings",
+      "kind": "sfx",
+      "prompt": "Giant wings beat slowly with deep heavy whooshes, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ossiarch-death",
+      "kind": "sfx",
+      "prompt": "A bone construct collapses into a rattling, clattering pile of bones, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
     }
   ]
 }

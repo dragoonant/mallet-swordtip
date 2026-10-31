@@ -264,3 +264,53 @@ SFX.update({
                                mp="A single wooden hunting horn blowing one long low mellow call with a soft forest echo. Solo horn only"),
     "aos-sylvaneth-death": dict(dur=2.5, p="a tree branch creaking and cracking, then snapping with a woody splinter"),
 })
+
+# ---- F15 armies: Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch, Ossiarch Bonereapers (aos-<army>-<thing>).
+# Cartoony rather than gory. Generation lengths are a little longer than the F14 batch so short hits keep >= 0.6 s of
+# content after trimming. Vocal cues stay wordless (Whisper-small checks them).
+SFX.update({
+    "aos-daughters-war-cry": dict(dur=3.0, p="a group of women ululating a high trilling wild war cry"),
+    "aos-daughters-hiss": dict(dur=2.5, p="a huge snake hissing loudly, a long menacing hiss"),
+    "aos-daughters-knives": dict(dur=2.0, p="knives slashing fast in a whirling flurry, quick metal swishes and blade scrapes"),
+    "aos-daughters-bow": dict(dur=2.0, p="a bow firing, a sharp string twang and an arrow whizzing past"),
+    "aos-daughters-doomfire": dict(dur=2.5, p="a burst of dark fire whooshing and crackling with an eerie low hum"),
+    "aos-daughters-gallop": dict(dur=4.0, p="horses galloping fast on hard ground, pounding hooves and a horse snorting"),
+    "aos-daughters-death": dict(dur=2.5, p="a woman gasping in surprise, then a body falling with a soft thud"),
+    "aos-idoneth-whale-song": dict(dur=4.0, p="deep underwater whale song, a long low moaning whale call with bubbles"),
+    "aos-idoneth-allopex": dict(dur=2.5, p="a shark snapping its jaws shut with a loud chomp and a splash of water"),
+    "aos-idoneth-eel-crackle": dict(dur=3.0, p="electricity crackling and buzzing with sparks and a watery splash"),
+    "aos-idoneth-lance": dict(dur=2.0, p="a spear thrust with a whoosh, then a sharp crackling electric zap"),
+    "aos-idoneth-glaive": dict(dur=2.0, p="a blade spinning through the air with a whirling whoosh, then a sharp metal slash"),
+    "aos-idoneth-swim": dict(dur=3.5, p="a large creature swimming through water, a rushing underwater whoosh with bubbles"),
+    "aos-idoneth-chime": dict(dur=3.5, engines=[AG, MG], p="a soft shimmering crystal chime ringing with an underwater echo",
+                              mp="A single soft glass chime rings one shimmering high note with a long watery echo, solo chime, no other instruments"),
+    "aos-idoneth-death": dict(dur=2.5, p="bubbles gurgling and rising in water, then fading away"),
+    "aos-tzeentch-bleat": dict(dur=3.0, p="a herd of goats bleating loudly in a wild chaotic chorus"),
+    "aos-tzeentch-crystal-blade": dict(dur=2.0, p="a glass blade swung with a whoosh and a bright ringing crystal chime"),
+    "aos-tzeentch-sword": dict(dur=2.0, p="a heavy sword swung with a whoosh and a loud metal clang"),
+    "aos-tzeentch-disc": dict(dur=3.0, p="a flying disc whooshing past with a humming whir"),
+    "aos-tzeentch-warpflame": dict(dur=2.5, p="magical fire crackling and whooshing with a strange wobbling warble"),
+    "aos-tzeentch-arrow": dict(dur=2.0, p="a bow firing a flaming arrow, a string twang and a fiery whoosh"),
+    "aos-tzeentch-spell": dict(dur=3.0, p="a shimmering magic spell, a rising sparkling whoosh with bright twinkling chimes"),
+    "aos-tzeentch-death": dict(dur=2.5, p="a goat bleating in pain, then a magical puff and a soft thud"),
+    "aos-ossiarch-horn": dict(dur=4.0, engines=[AG, MG], p="a deep resonant horn blowing one long low booming note",
+                              mp="A single deep hollow bone horn blows one long low resonant booming note with a dark echo, solo horn only"),
+    "aos-ossiarch-march": dict(dur=4.0, p="heavy footsteps stomping slowly with bones clacking and rattling"),
+    "aos-ossiarch-clack": dict(dur=2.0, p="hard bones clacking and knocking together in a fast fight"),
+    "aos-ossiarch-blade": dict(dur=2.0, p="a heavy blade swung with a whoosh, striking with a hard cracking clack"),
+    "aos-ossiarch-shard-storm": dict(dur=3.0, p="a swirling storm of sharp shards whooshing and clattering in a rushing wind"),
+    "aos-ossiarch-wings": dict(dur=3.5, p="giant wings beating slowly with deep heavy whooshes"),
+    "aos-ossiarch-death": dict(dur=2.5, p="a pile of bones collapsing and clattering to the ground"),
+})
+ALT.update({
+    "aos-daughters-war-cry": dict(ag="women shouting a high pitched wild yodel lalala"),
+    "aos-daughters-knives": dict(ag="two daggers clashing quickly, metal swishes and clinks"),
+    "aos-daughters-doomfire": dict(ag="a fireball whooshing and roaring"),
+    "aos-idoneth-allopex": dict(ag="a big animal biting with a loud snap and a splash"),
+    "aos-idoneth-eel-crackle": dict(ag="electric sparks crackling and buzzing loudly"),
+    "aos-idoneth-glaive": dict(ag="a staff spinning fast through the air, whoosh whoosh"),
+    "aos-tzeentch-disc": dict(ag="a frisbee spinning through the air with a whoosh"),
+    "aos-tzeentch-spell": dict(ag="magical sparkles and a twinkling whoosh"),
+    "aos-ossiarch-clack": dict(ag="wooden sticks clacking hard together"),
+    "aos-ossiarch-shard-storm": dict(ag="a strong gust of wind with gravel and glass rattling"),
+})

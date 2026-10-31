@@ -243,3 +243,88 @@ REDO.update({
         ),
     ),
 })
+
+# F15 armies: first-pass ids with no sane take (Allopex), a muffled bass-heavy take (warpflame), off-target bows, discs,
+# wings, horn, march and glaive, rebuilt from concrete parts and layered.
+REDO.update({
+    "aos-idoneth-allopex": dict(
+        clap="a shark snapping its jaws shut with a loud chomp and a splash of water",
+        groups=dict(
+            chomp=dict(p="a big animal's jaws snapping shut, a loud chomp", dur=1.5, takes=8),
+            splash=dict(p="a big splash of water", dur=1.5, takes=6),
+        ),
+        layers=[("chomp", "splash", 0.05)],
+    ),
+    "aos-tzeentch-warpflame": dict(
+        clap="magical fire crackling and whooshing with a strange wobbling warble",
+        groups=dict(
+            fire=dict(p="a burst of fire whooshing and crackling", dur=2.0, takes=6),
+            torch=dict(p="a blowtorch flame roaring and hissing", dur=2.0, takes=6),
+            sparkle=dict(p="magical sparkling shimmer, a high twinkling warble", dur=2.0, takes=6),
+        ),
+        layers=[("fire", "sparkle"), ("torch", "sparkle")],
+    ),
+    "aos-daughters-bow": dict(
+        clap="a bowstring twang and an arrow whizzing through the air",
+        groups=dict(
+            twang=dict(p="a bowstring twang", dur=1.2, takes=8),
+            arrow=dict(p="an arrow whistling through the air, whoosh", dur=1.2, takes=8),
+        ),
+        synth=["twang"],
+        layers=[("twang", "arrow", 0.05), ("synth-twang", "arrow", 0.05)],
+    ),
+    "aos-tzeentch-disc": dict(
+        clap="a flying disc whooshing past with a humming whir",
+        groups=dict(
+            whir=dict(p="a spinning metal disc humming and whirring", dur=2.5, takes=6),
+            whoosh=dict(p="something flying fast past, a long whoosh", dur=2.0, takes=6),
+        ),
+        layers=[("whir", "whoosh")],
+    ),
+    "aos-ossiarch-wings": dict(
+        clap="giant wings beating slowly with deep heavy whooshes",
+        groups=dict(
+            flap=dict(p="large wings flapping slowly, heavy whooshing flaps", dur=3.0, takes=6),
+            dragon=dict(p="a dragon flapping its huge wings", dur=3.0, takes=6),
+        ),
+    ),
+    "aos-ossiarch-horn": dict(
+        clap="a deep resonant horn blowing one long low booming note",
+        groups=dict(
+            horn=dict(p="A deep hollow horn blows one long low note, solo horn, slight echo, no other instruments", dur=3.5, takes=6, eng=MG),
+            ram=dict(p="a ram's horn blowing a long low note", dur=3.5, takes=6),
+        ),
+    ),
+    "aos-ossiarch-march": dict(
+        clap="heavy footsteps stomping slowly with bones clacking and rattling",
+        groups=dict(
+            steps=dict(p="heavy slow footsteps stomping on stone", dur=3.5, takes=6),
+            rattle=dict(p="dry bones rattling and clacking", dur=3.5, takes=6),
+        ),
+        layers=[("steps", "rattle")],
+    ),
+    "aos-idoneth-glaive": dict(
+        clap="a blade spinning through the air with a whirling whoosh, then a sharp metal slash",
+        groups=dict(
+            spin=dict(p="a staff spinning fast through the air, whoosh whoosh", dur=1.5, takes=6),
+            slash=dict(p="a sword slash with a sharp metallic shing", dur=1.2, takes=8),
+        ),
+        layers=[("spin", "slash", 0.3)],
+    ),
+})
+REDO.update({
+    # every AudioGen crowd take came out as English-sounding chatter (Whisper heard words), so the war cry is rebuilt
+    # from Qwen3-TTS trills, two voices layered into a small troupe.
+    "aos-daughters-war-cry": dict(
+        clap="a group of women ululating a high trilling wild war cry",
+        groups=dict(
+            ulu=dict(p="A chorus of women giving one high wild trilling ululation, wordless vocal cry, no lyrics, no instruments", dur=2.5, takes=6, eng=MG),
+        ),
+        layers=[("qwen-1", "qwen-2", 0.08), ("qwen-1", "qwen-3", 0.12), ("qwen-2", "qwen-3", 0.1)],
+        voice=True,
+        tts=dict(
+            who="A fierce, wild young female warrior in a battle frenzy, shrieking a high, fast, trilling ululation with her tongue, loud and piercing.",
+            lines=["Lalalalalalalalalalala!", "Lilililililililililili!", "Ayayayayayayayayayay!"],
+        ),
+    ),
+})
