@@ -3,7 +3,9 @@
 import { describe, expect, it } from 'vitest'
 import { cameraPose, easeInOut, maxDistanceFor, PRESET_CYCLE, TRANSITION_MS } from '../../src/client/board/cameraPresets'
 
-const BOARD = { w: 44, h: 30 }
+const BOARD = { w: 30, h: 22 }
+const DESKTOP = { aspect: 1.6, phone: false }
+const PHONE = { aspect: 852 / 393, phone: true }
 
 describe('camera presets', () => {
   it('edgeA and edgeB are mirrors in z for sideA = 1', () => {
@@ -40,6 +42,27 @@ describe('camera presets', () => {
   it('transitions are at most 600 ms and the cycle covers all four presets', () => {
     expect(TRANSITION_MS).toBeLessThanOrEqual(600)
     expect(PRESET_CYCLE).toEqual(['top', 'edgeA', 'edgeB', 'follow'])
-    expect(maxDistanceFor(BOARD)).toBeCloseTo(44 * 2.4)
+  })
+
+  // Spearhead's 30x22 board has to fill the screen: the opening view sits close in, the pull-back limit stops short of a tiny table.
+  it.each([['desktop', DESKTOP], ['phone', PHONE]] as const)('%s: the whole board frames at a distance that fills the screen', (_n, view) => {
+    for (const id of ['edgeA', 'edgeB', 'top'] as const) {
+      const p = cameraPose(id, BOARD, undefined, 1, view)
+      const dist = Math.hypot(p.position[0] - p.target[0], p.position[1] - p.target[1], p.position[2] - p.target[2])
+      expect(dist).toBeLessThan(52)
+      expect(dist).toBeGreaterThan(20)
+      expect(p.target[1]).toBe(0)
+    }
+    const home = cameraPose('edgeA', BOARD, undefined, 1, view)
+    const homeDist = Math.hypot(home.position[1], home.position[2] - home.target[2])
+    expect(maxDistanceFor(BOARD, view)).toBeGreaterThan(homeDist)
+    expect(maxDistanceFor(BOARD, view)).toBeLessThan(64)
+  })
+
+  it('edgeB is the mirror of edgeA in z when fitted to a view', () => {
+    const a = cameraPose('edgeA', BOARD, undefined, 1, PHONE)
+    const b = cameraPose('edgeB', BOARD, undefined, 1, PHONE)
+    expect(b.position[2]).toBeCloseTo(-a.position[2])
+    expect(b.target[2]).toBeCloseTo(-a.target[2])
   })
 })

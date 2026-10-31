@@ -15,7 +15,9 @@ import {
   MIN_CAMERA_DISTANCE,
   TRANSITION_MS,
   type CameraPresetId,
+  type ViewHint,
 } from './cameraPresets'
+import { getFormFactor } from '../ui/formFactor'
 
 const TOP_DOWN_POLAR = THREE.MathUtils.degToRad(4)
 const MIN_POLAR = THREE.MathUtils.degToRad(4)
@@ -24,6 +26,13 @@ const TARGET_MARGIN = 4
 /** WASD pan speed, inches per second. */
 const PAN_SPEED = 22
 const PAN_KEYS: Record<string, [number, number]> = { w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }
+
+/** What the presets frame the board into right now: the window's aspect and whether the phone HUD is up. Scene.tsx uses it
+ *  to place the opening camera before the canvas has a size. */
+export function currentViewHint(): ViewHint {
+  if (typeof window === 'undefined') return { aspect: 1.6, phone: false }
+  return { aspect: window.innerWidth / Math.max(1, window.innerHeight), phone: getFormFactor().phone }
+}
 
 /** window event that asks the rig to tween back to the default overview framing (the viewer's home-edge preset). */
 const OVERVIEW_EVENT = 'mallet:camera-overview'
@@ -90,6 +99,12 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
   const boardSize = useBoardSize()
   const boardRef = useRef(boardSize)
   boardRef.current = boardSize
+  // The canvas shape the presets fit the board into (aspect and HUD layout), kept current for the callbacks below.
+  const canvasW = useThree((s) => s.size.width)
+  const canvasH = useThree((s) => s.size.height)
+  const phone = getFormFactor().phone
+  const viewRef = useRef<ViewHint>({ aspect: canvasW / Math.max(1, canvasH), phone })
+  viewRef.current = { aspect: canvasW / Math.max(1, canvasH), phone }
   const focusRef = useRef(focusTarget)
   focusRef.current = focusTarget
   // The Canvas starts the camera on the edge the viewer sits at; track which edge we last put it on.
@@ -99,7 +114,7 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
   const startTween = (id: CameraPresetId, focus?: { x: number; z: number }) => {
     const c = controls.current
     if (!c) return
-    const pose = cameraPose(id, boardRef.current, focus, appliedFar.current ? -1 : 1)
+    const pose = cameraPose(id, boardRef.current, focus, appliedFar.current ? -1 : 1, viewRef.current)
     inputs.current++
     setTweenRef.current({
       t0: performance.now(),
@@ -160,11 +175,27 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
   useEffect(() => {
     const c = controls.current
     if (!c) return
-    const pose = cameraPose('edgeA', boardRef.current, undefined, appliedFar.current ? -1 : 1)
+    const pose = cameraPose('edgeA', boardRef.current, undefined, appliedFar.current ? -1 : 1, viewRef.current)
+    camera.position.set(...pose.position)
     c.target.set(...pose.target)
     c.update()
     invalidate()
-  }, [invalidate])
+  }, [invalidate, camera])
+
+  // The window changed shape (rotation, resize, HUD layout) before the player touched the camera: refit the opening view.
+  const fitKey = `${canvasW}x${canvasH}|${phone ? 'p' : 'd'}`
+  const lastFit = useRef(fitKey)
+  useEffect(() => {
+    if (lastFit.current === fitKey) return
+    lastFit.current = fitKey
+    const c = controls.current
+    if (!c || inputs.current > 0 || tween.current) return
+    const pose = cameraPose('edgeA', boardRef.current, undefined, appliedFar.current ? -1 : 1, viewRef.current)
+    camera.position.set(...pose.position)
+    c.target.set(...pose.target)
+    c.update()
+    invalidate()
+  }, [fitKey, camera, invalidate])
 
   // Viewer's edge changed: swing the camera 180° about the board centre.
   useEffect(() => {
@@ -182,7 +213,7 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
   useEffect(() => {
     const c = controls.current
     if (!c) return undefined
-    const home = cameraPose('edgeA', boardRef.current, undefined, 1)
+    const home = cameraPose('edgeA', boardRef.current, undefined, 1, viewRef.current)
     const overviewPolar = Math.atan2(
       Math.hypot(home.position[0] - home.target[0], home.position[2] - home.target[2]),
       home.position[1] - home.target[1],
@@ -278,7 +309,7 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
         takeOverRef.current()
         const dir = camera.position.clone().sub(c.target)
         dir.y = Math.max(dir.y, 0.1) // avoid a degenerate (near-zero) direction when already ~overhead
-        dir.normalize().multiplyScalar(THREE.MathUtils.clamp(distanceIn, MIN_CAMERA_DISTANCE, maxDistanceFor(boardRef.current)))
+        dir.normalize().multiplyScalar(THREE.MathUtils.clamp(distanceIn, MIN_CAMERA_DISTANCE, maxDistanceFor(boardRef.current, viewRef.current)))
         c.target.set(x, 0, z)
         camera.position.copy(c.target).add(dir)
         c.update()
@@ -333,7 +364,7 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
         })
       },
       inputCount: () => inputs.current,
-      homeView: () => cameraPose('edgeA', boardRef.current, undefined, appliedFar.current ? -1 : 1),
+      homeView: () => cameraPose('edgeA', boardRef.current, undefined, appliedFar.current ? -1 : 1, viewRef.current),
       aspect: () => (camera as THREE.PerspectiveCamera).aspect || 1.6,
     }
     return () => {
@@ -392,7 +423,7 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
       makeDefault
       enableDamping={false}
       minDistance={MIN_CAMERA_DISTANCE}
-      maxDistance={maxDistanceFor(boardSize)}
+      maxDistance={maxDistanceFor(boardSize, viewRef.current)}
       minPolarAngle={MIN_POLAR}
       maxPolarAngle={MAX_POLAR}
       screenSpacePanning={false}

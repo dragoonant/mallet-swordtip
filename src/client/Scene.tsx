@@ -3,7 +3,7 @@
 // prompt confirms; unit clicks are handled inside <UnitsLayer/>.
 import { Canvas } from '@react-three/fiber'
 import type { TerrainPieceData } from '@/data/types'
-import { Board, BOARD_DEPTH_IN, BOARD_WIDTH_IN, CameraRig, Lighting, Objectives, Ruler, Terrain, cameraPose } from './board'
+import { Board, BOARD_DEPTH_IN, BOARD_WIDTH_IN, CameraRig, currentViewHint, Lighting, Objectives, Ruler, Terrain, cameraPose } from './board'
 import { ShadowSync } from './board/Lighting'
 import { BattlefieldAmbience } from './board/BattlefieldAmbience'
 import { usePresentationSettings } from './presentation/settings'
@@ -134,7 +134,7 @@ export function Scene() {
       dpr={lowGraphics ? 1 : phone ? [1, 2] : [1, 1.5]}
       onCreated={({ gl, invalidate }) => guardContext(gl, invalidate)}
       shadows={!lowGraphics}
-      camera={{ position: cameraPose('edgeA', { w: BOARD_WIDTH_IN, h: BOARD_DEPTH_IN }, undefined, viewFromFar ? -1 : 1).position, fov: 42, near: 0.1, far: 500 }}
+      camera={{ position: cameraPose('edgeA', { w: BOARD_WIDTH_IN, h: BOARD_DEPTH_IN }, undefined, viewFromFar ? -1 : 1, currentViewHint()).position, fov: 42, near: 0.1, far: 500 }}
       style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
     >
       <color attach="background" args={['#0a0a10']} />
