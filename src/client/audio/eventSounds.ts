@@ -62,7 +62,7 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
 /** Spearhead weapons (all eight armies) by what their id or name says. Blades and polearms swing, the
  *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
  *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
-const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron|stormcast|skaven|seraphon|soulblight)\./
+const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron|stormcast|skaven|seraphon|soulblight|khorne|nurgle|nighthaunt|sylvaneth)\./
 /** The F8 armies' own weapon sounds, matched on the full weapon id before the shared rules below: Kruleboyz crossbows,
  *  Killbow and jagged blades, the Gitz' bows and wolf jaws, Lumineth wind magic, bows and pikes, Kharadron aether guns
  *  and skyhooks (the Frigate's heavy skyhook is the broadside). */
@@ -99,6 +99,25 @@ const AOS_ARMY_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = 
   [/^seraphon\..*beaks/, 'aos-seraphon-terrawing', 0.8],
   [/^soulblight\..*lance/, 'aos-soulblight-lance'],
   [/^soulblight\..*fangs/, 'aos-soulblight-claws'],
+  // F14 armies: Khorne's daemon bites and claws rend (Karanak growls from three throats), the cult's hooked axes chop; Nurgle's sneezes splutter, mouthparts and
+  // maws tear, scythes and blades swing; Nighthaunt's spectral steel rings softer than iron and claws scratch; Sylvaneth glaives sweep, talons
+  // and mandibles tear, thorn arrows twang, lances crash and sickles slice.
+  [/^khorne\..*savage-maws/, 'aos-khorne-karanak'],
+  [/^khorne\..*(maws|claws)/, 'aos-khorne-hound-bite'],
+  [/^khorne\..*weapons-of-the-hunt/, 'aos-khorne-axe'],
+  [/^nurgle\..*sneezes/, 'aos-nurgle-sneeze'],
+  [/^nurgle\..*mouthparts/, 'aos-nurgle-fly-buzz', 0.8],
+  [/^nurgle\..*maw/, 'aos-nurgle-gurgle'],
+  [/^nurgle\..*(scythe|plaguesword|blighted-weapon)/, 'aos-nurgle-plague-blade'],
+  [/^nighthaunt\..*scythe/, 'aos-nighthaunt-scythe'],
+  [/^nighthaunt\..*sword/, 'aos-nighthaunt-blade'],
+  [/^nighthaunt\..*(claws|daggers)/, 'aos-nighthaunt-scythe', 0.7],
+  [/^nighthaunt\..*malignant/, 'aos-nighthaunt-chains', 0.8],
+  [/^sylvaneth\..*glaive/, 'aos-sylvaneth-glaive'],
+  [/^sylvaneth\..*(talons|mandibles)/, 'wpn-claws-and-teeth', 0.9],
+  [/^sylvaneth\..*bow/, 'aos-sylvaneth-arrow'],
+  [/^sylvaneth\..*lance/, 'aos-sylvaneth-lance'],
+  [/^sylvaneth\..*sickle/, 'aos-sylvaneth-glaive', 0.9],
 ]
 const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
   [/grapeshot/, 'aos-cannon-fire', 0.85],
@@ -536,6 +555,11 @@ const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
   skaven: ['aos-skaven-death'],
   seraphon: ['aos-seraphon-death'],
   soulblight: ['aos-soulblight-death'],
+  // F14 armies: a hound yelps (or a cultist cries out), Nurgle's host bursts with a wet splat, a ghost fades on the wind, a Sylvaneth splinters apart.
+  khorne: ['aos-khorne-death', 'aos-human-death-1'],
+  nurgle: ['aos-nurgle-death', 'aos-kruleboyz-death'],
+  nighthaunt: ['aos-nighthaunt-death'],
+  sylvaneth: ['aos-sylvaneth-death'],
 }
 
 function takeFor(modelId: string): number {
@@ -573,6 +597,12 @@ const ARMY_MOVE: Record<string, (kw: readonly string[]) => EventSound | undefine
   soulblight: (kw) =>
     kw.includes('CAVALRY') ? at('aos-soulblight-gallop', 0.55)
       : kw.includes('FLY') ? at('aos-soulblight-vargheist', 0.45) : kw.includes('VAMPIRE') ? undefined : at('aos-soulblight-bone-march', 0.5),
+  // F14: hounds lope, Nurgle's host squelches (the Blightlord's rot fly drones), ghosts glide on a hush of wind, Sylvaneth beat their spite-wings.
+  khorne: (kw) => (kw.includes('BEAST') ? at('aos-khorne-hound-run', 0.5) : undefined),
+  nurgle: (kw) =>
+    kw.includes('FLY') ? at('aos-nurgle-fly-buzz', 0.45) : kw.includes('PLAGUEBEARERS') ? at('aos-nurgle-hum', 0.4) : at('aos-kruleboyz-swamp-march', 0.4),
+  nighthaunt: (kw) => (kw.includes('REINFORCEMENTS') ? at('aos-nighthaunt-chains', 0.4) : at('aos-lumineth-wind-rush', 0.35)),
+  sylvaneth: () => at('aos-sylvaneth-wings', 0.45),
 }
 
 /** F8 army charges: the movement sound of the unit plus the army's own war cry (a Gnashtoof snarls, a Wheela rattles in). */
@@ -601,6 +631,17 @@ const ARMY_CHARGE: Record<string, (kw: readonly string[]) => EventSound[]> = {
     kw.includes('CAVALRY') ? [at('aos-soulblight-gallop', 0.9), at('aos-soulblight-hiss', 0.7)]
       : kw.includes('FLY') ? [at('aos-soulblight-vargheist', 0.85)]
         : kw.includes('VAMPIRE') ? [at('aos-armoured-march', 0.6), at('aos-soulblight-hiss', 0.8)] : [at('aos-soulblight-bone-march', 0.8)],
+  // F14: Karanak growls from three throats and the hounds bay, the cult roars; Nurgle's host drones (the rot fly buzzes in); ghosts wail
+  // (the Knight of Shrouds shrieks); Sylvaneth wings whirr under a forest-spirit call.
+  khorne: (kw) =>
+    kw.includes('HERO') ? [at('aos-khorne-hound-run', 0.8), at('aos-khorne-karanak', 0.9)]
+      : kw.includes('BEAST') ? [at('aos-khorne-hound-run', 0.8), at('aos-khorne-hound-bay', 0.8)] : [at('aos-orruk-stomp', 0.6), at('aos-khorne-roar', 0.8)],
+  nurgle: (kw) => [kw.includes('FLY') ? at('aos-nurgle-fly-buzz', 0.8) : at('aos-kruleboyz-swamp-march', 0.8), at('aos-nurgle-hum', 0.7)],
+  nighthaunt: (kw) => [
+    kw.includes('REINFORCEMENTS') ? at('aos-nighthaunt-chains', 0.7) : at('aos-lumineth-wind-rush', 0.7),
+    at(kw.includes('HERO') ? 'aos-nighthaunt-shriek' : 'aos-nighthaunt-wail', 0.8),
+  ],
+  sylvaneth: () => [at('aos-sylvaneth-wings', 0.8), at('aos-sylvaneth-call', 0.7)],
 }
 
 /** F12 army spells, prayers and roars, by ability id: the Lord-Veritant's holy flame, Grey Seer warp lightning,
@@ -618,6 +659,40 @@ const AOS_ABILITY_SOUND: Record<string, EventSound> = {
   'soulblight.ability.vile-transference': at('aos-soulblight-dark-spell'),
   'soulblight.ability.spirit-gale': at('aos-soulblight-dark-spell'),
   'soulblight.ability.cloud-of-bats': at('aos-soulblight-vargheist', 0.7),
+  // F14: Karanak marks the quarry and pounces with a three-throated growl, the hounds bay and the cult roars; Nurgle's bell tolls, the
+  // Plaguebearers hum their count and plague gurgles; ghosts wail and spirit steeds ride; Sylvaneth horns sound, wings drone and leaves swirl.
+  'khorne.ability.the-quarry': at('aos-khorne-karanak', 0.8),
+  'khorne.ability.killing-pounce': at('aos-khorne-karanak'),
+  'khorne.ability.stalk-the-prey': at('aos-khorne-hound-bay', 0.7),
+  'khorne.ability.pack-hunters': at('aos-khorne-hound-bay', 0.7),
+  'khorne.ability.savagery-upon-savagery': at('aos-khorne-roar', 0.8),
+  'khorne.ability.blood-drenched': at('aos-khorne-roar', 0.6),
+  'khorne.ability.sustained-by-gore': at('aos-khorne-hound-bite', 0.6),
+  'khorne.ability.furious-bites': at('aos-khorne-hound-bite', 0.7),
+  'nurgle.ability.nurgles-embrace': at('aos-nurgle-gurgle', 0.8),
+  'nurgle.ability.pestilent-breath': at('aos-nurgle-gurgle'),
+  'nurgle.ability.locus-of-fecundity': at('aos-nurgle-bell', 0.7),
+  'nurgle.ability.daemonic-summoning': at('aos-nurgle-bell', 0.8),
+  'nurgle.ability.summoner-of-plaguebearers': at('aos-nurgle-bell', 0.7),
+  'nurgle.ability.keep-counting': at('aos-nurgle-hum', 0.8),
+  'nurgle.ability.gardener-of-nurgle': at('aos-nurgle-gurgle', 0.6),
+  'nurgle.ability.wrack-and-ruin': at('aos-nurgle-fly-buzz', 0.7),
+  'nurgle.ability.gift-of-febrile-frenzy': at('aos-nurgle-hum', 0.7),
+  'nurgle.ability.relentless-attackers': at('aos-nurgle-hum', 0.6),
+  'nighthaunt.ability.beacon-of-nagashizzar': at('aos-nighthaunt-wail', 0.8),
+  'nighthaunt.ability.soulfire-ring': at('aos-soulblight-dark-spell', 0.5),
+  'nighthaunt.ability.wave-of-terror': at('aos-nighthaunt-wail'),
+  'nighthaunt.ability.death-stalkers': at('aos-nighthaunt-hooves', 0.8),
+  'nighthaunt.ability.discorporate': at('aos-nighthaunt-death', 0.7),
+  'sylvaneth.ability.lifebringers': at('aos-sylvaneth-leaves', 0.7),
+  'sylvaneth.ability.leaves-on-the-wind': at('aos-sylvaneth-leaves', 0.8),
+  'sylvaneth.ability.heartwood-hunting-horn': at('aos-sylvaneth-horn'),
+  'sylvaneth.ability.target-of-vengeance': at('aos-sylvaneth-call', 0.8),
+  'sylvaneth.ability.bold-spirit': at('aos-sylvaneth-call', 0.7),
+  'sylvaneth.ability.deafening-drone': at('aos-sylvaneth-wings'),
+  'sylvaneth.ability.spiterider-charge': at('aos-sylvaneth-lance', 0.8),
+  'sylvaneth.ability.zephyrspites': at('aos-sylvaneth-wings', 0.6),
+  'sylvaneth.ability.zephyrkin': at('aos-sylvaneth-wings', 0.6),
 }
 
 /** Sounds to play for one engine event. `perspective` (the human seat) is optional — omit it to get

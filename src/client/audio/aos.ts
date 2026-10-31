@@ -36,6 +36,15 @@ export const AOS_SFX_IDS = [
   'aos-seraphon-terrawing', 'aos-seraphon-fire-breath', 'aos-seraphon-chimes', 'aos-seraphon-death',
   'aos-soulblight-hiss', 'aos-soulblight-lance', 'aos-soulblight-claws', 'aos-soulblight-gallop',
   'aos-soulblight-bone-march', 'aos-soulblight-vargheist', 'aos-soulblight-dark-spell', 'aos-soulblight-death',
+  // F14 armies
+  'aos-khorne-roar', 'aos-khorne-hound-bay', 'aos-khorne-hound-bite', 'aos-khorne-karanak',
+  'aos-khorne-axe', 'aos-khorne-hound-run', 'aos-khorne-death',
+  'aos-nurgle-hum', 'aos-nurgle-fly-buzz', 'aos-nurgle-plague-blade', 'aos-nurgle-sneeze',
+  'aos-nurgle-gurgle', 'aos-nurgle-bell', 'aos-nurgle-death',
+  'aos-nighthaunt-wail', 'aos-nighthaunt-shriek', 'aos-nighthaunt-chains', 'aos-nighthaunt-scythe',
+  'aos-nighthaunt-blade', 'aos-nighthaunt-hooves', 'aos-nighthaunt-death',
+  'aos-sylvaneth-call', 'aos-sylvaneth-wings', 'aos-sylvaneth-leaves', 'aos-sylvaneth-arrow',
+  'aos-sylvaneth-lance', 'aos-sylvaneth-glaive', 'aos-sylvaneth-horn', 'aos-sylvaneth-death',
 ] as const
 
 export const AOS_STINGER_IDS = [
@@ -152,6 +161,36 @@ export const AOS_FALLBACK: Record<AosSoundId, AosFallback> = {
   'aos-soulblight-vargheist': { id: 'wpn-claws-and-teeth', volume: 0.7 },
   'aos-soulblight-dark-spell': { id: 'stratagem-whoosh', volume: 0.6 },
   'aos-soulblight-death': { id: 'model-death', volume: 0.85 },
+  // F14 armies (their own files are generated; these only cover a missing file)
+  'aos-khorne-roar': { id: 'ork-war-cry', volume: 0.85 },
+  'aos-khorne-hound-bay': { id: 'ork-war-cry', volume: 0.6 },
+  'aos-khorne-hound-bite': { id: 'wpn-claws-and-teeth' },
+  'aos-khorne-karanak': { id: 'wpn-claws-and-teeth' },
+  'aos-khorne-axe': { id: 'wpn-choppa', volume: 0.85 },
+  'aos-khorne-hound-run': { id: 'charge-rumble', volume: 0.6 },
+  'aos-khorne-death': { id: 'death-tyranids', volume: 0.5 },
+  'aos-nurgle-hum': { id: 'ork-war-cry', volume: 0.5 },
+  'aos-nurgle-fly-buzz': { id: 'charge-rumble', volume: 0.4 },
+  'aos-nurgle-plague-blade': { id: 'wpn-choppa', volume: 0.85 },
+  'aos-nurgle-sneeze': { id: 'stratagem-whoosh', volume: 0.3 },
+  'aos-nurgle-gurgle': { id: 'stratagem-whoosh', volume: 0.4 },
+  'aos-nurgle-bell': { id: 'objective-captured-chime', volume: 0.6 },
+  'aos-nurgle-death': { id: 'death-orks', volume: 0.5 },
+  'aos-nighthaunt-wail': { id: 'stratagem-whoosh', volume: 0.6 },
+  'aos-nighthaunt-shriek': { id: 'stratagem-whoosh', volume: 0.6 },
+  'aos-nighthaunt-chains': { id: 'charge-rumble', volume: 0.4 },
+  'aos-nighthaunt-scythe': { id: 'wpn-big-choppa', volume: 0.7 },
+  'aos-nighthaunt-blade': { id: 'wpn-choppa', volume: 0.8 },
+  'aos-nighthaunt-hooves': { id: 'charge-rumble', volume: 0.5 },
+  'aos-nighthaunt-death': { id: 'stratagem-whoosh', volume: 0.4 },
+  'aos-sylvaneth-call': { id: 'stratagem-whoosh', volume: 0.5 },
+  'aos-sylvaneth-wings': { id: 'stratagem-whoosh', volume: 0.4 },
+  'aos-sylvaneth-leaves': { id: 'stratagem-whoosh', volume: 0.4 },
+  'aos-sylvaneth-arrow': { id: 'stratagem-whoosh', volume: 0.3 },
+  'aos-sylvaneth-lance': { id: 'wpn-hallowed-mace', volume: 0.85 },
+  'aos-sylvaneth-glaive': { id: 'wpn-big-choppa', volume: 0.7 },
+  'aos-sylvaneth-horn': { id: 'turn-start-horn', volume: 0.7 },
+  'aos-sylvaneth-death': { id: 'model-death', volume: 0.85 },
   // music: the existing bed, and the war-like stingers (the machine, warp and xenos ones stay out of this set)
   'aos-ambient-bed': { id: 'ambient-battlefield-loop' },
   'aos-stinger-iron-vanguard': { id: 'stinger-crusade-drums' },
@@ -216,6 +255,15 @@ export const AOS_AVAILABLE: ReadonlySet<AosSoundId> = new Set<AosSoundId>([
   'aos-seraphon-terrawing', 'aos-seraphon-fire-breath', 'aos-seraphon-chimes', 'aos-seraphon-death',
   'aos-soulblight-hiss', 'aos-soulblight-lance', 'aos-soulblight-claws', 'aos-soulblight-gallop',
   'aos-soulblight-bone-march', 'aos-soulblight-vargheist', 'aos-soulblight-dark-spell', 'aos-soulblight-death',
+  // F14 armies
+  'aos-khorne-roar', 'aos-khorne-hound-bay', 'aos-khorne-hound-bite', 'aos-khorne-karanak',
+  'aos-khorne-axe', 'aos-khorne-hound-run', 'aos-khorne-death',
+  'aos-nurgle-hum', 'aos-nurgle-fly-buzz', 'aos-nurgle-plague-blade', 'aos-nurgle-sneeze',
+  'aos-nurgle-gurgle', 'aos-nurgle-bell', 'aos-nurgle-death',
+  'aos-nighthaunt-wail', 'aos-nighthaunt-shriek', 'aos-nighthaunt-chains', 'aos-nighthaunt-scythe',
+  'aos-nighthaunt-blade', 'aos-nighthaunt-hooves', 'aos-nighthaunt-death',
+  'aos-sylvaneth-call', 'aos-sylvaneth-wings', 'aos-sylvaneth-leaves', 'aos-sylvaneth-arrow',
+  'aos-sylvaneth-lance', 'aos-sylvaneth-glaive', 'aos-sylvaneth-horn', 'aos-sylvaneth-death',
 ])
 
 /** Inherited 42k narrator ids that now play the Spearhead narrator (public/audio/aos-narr-*.mp3, one voice). */
