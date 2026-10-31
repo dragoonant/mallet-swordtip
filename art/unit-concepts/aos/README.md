@@ -54,6 +54,30 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 | `ko-skywarden` | Skywardens (pistol and skypike) | 32, flying stem | 1.6 | GLB done, checked |
 | `ko-skywarden-volley` | Skywardens (Volley Gun) | 32, flying stem | 1.6 | GLB done, checked |
 | `ko-frigate` | Arkanaut Frigate | 120×92 oval, flying stand | 3.4 | GLB done, checked (yaw 90) |
+| `sce-lord-vigilant` | `stormcast.unit.lord-vigilant` | 90×52 oval | 2.3 | GLB done, checked (yaw 90) |
+| `sce-lord-veritant` | `stormcast.unit.lord-veritant` | 40 | 1.7 | GLB done, checked |
+| `sce-gryph-crow` | Lord-Veritant's Gryph-crow (token) | none (15 mm perch disc) | 0.6 | GLB done, checked |
+| `sce-prosecutor` | `stormcast.unit.prosecutors` | 40, flying stem | 2.0 | GLB done, checked (wings overhang the base) |
+| `sce-liberator` | `stormcast.unit.liberators` (Warhammer) | 40 | 1.6 | GLB done, checked |
+| `sce-liberator-grandhammer` | `stormcast.unit.liberators` (Grandhammer) | 40 | 1.6 | GLB done, checked |
+| `skv-grey-seer` | `skaven.unit.grey-seer` | 32 | 1.45 | GLB done, checked |
+| `skv-stormfiend-gauntlets` | `skaven.unit.stormfiends` (Shock Gauntlets) | 60 | 2.1 | GLB done, checked (arms overhang the base) |
+| `skv-stormfiend-windlaunchers` | `skaven.unit.stormfiends` (Windlaunchers) | 60 | 2.1 | GLB done, checked (arms overhang the base) |
+| `skv-stormfiend-ratling` | `skaven.unit.stormfiends` (Ratling Cannons) | 60 | 2.1 | GLB done, checked (arms overhang the base) |
+| `skv-warp-lightning-cannon` | `skaven.unit.warp-lightning-cannon` | 120×92 oval | 2.4 | GLB done, checked (yaw 90, `fit` 116) |
+| `skv-clanrat` | `skaven.unit.clanrats` | 25 | 1.1 | GLB done, checked |
+| `ser-sunblood` | Sunblood Pack (Sunblood) | 40 | 1.75 | GLB done, checked |
+| `ser-saurus-bodyguard` | Sunblood Pack (Bodyguard) | 32 | 1.5 | GLB done, checked |
+| `ser-saurus-warrior` | Saurus Warriors | 32 | 1.5 | GLB done, checked |
+| `ser-hunter` | Hunters of Huanchi | 25 | 1.15 | GLB done, checked (blowpipe overhangs the base front) |
+| `ser-terrawing` | Terrawings | 32, flying stem | 1.6 | GLB done, checked (wings overhang the base) |
+| `ser-spawn-of-chotec` | Spawn of Chotec | 90×52 oval | 1.45 | GLB done, checked (`fit` 90) |
+| `ser-sun-acolyte` | Sun Acolyte (token) | 25 | 1.1 | GLB done, checked |
+| `ser-venomites` | Venomites (token) | 25 | 0.7 | GLB done, checked (`--nocut`) |
+| `sbg-vampire-lord` | Vampire Lord | 40 | 1.7 | GLB done, checked |
+| `sbg-skeleton` | Deathrattle Skeletons | 25 | 1.15 | GLB done, checked |
+| `sbg-blood-knight` | Blood Knights | 75×42 oval | 2.0 | GLB done, checked (yaw 90) |
+| `sbg-vargheist` | Vargheists | 50 | 1.9 | GLB done, checked (wings overhang the base) |
 
 The GLBs are not wired into the game yet. The client's figure slug list needs these slugs before they show up.
 
@@ -127,6 +151,50 @@ colours or quartering only.
   off at the bottom edge), `kru-killbow-c1` (a realistic ballista cart with no bow arms) and `kru-killbow-c2` (still
   realistic, and the side-on bow arms read as a ring).
 
+- Stormcast Eternals: burnished gold plate with deep midnight-blue panels and cloth, silver-white trim and pale cyan
+  glowing visor slits. The helm is a smooth rounded great-helm with a plain T-shaped slit and a horsehair plume, not the
+  Sigmarite face-mask helm. The tower shield carries our three-prong fork in a spiked ring. `sce-liberator` (the base
+  figure) holds the shield and a square one-handed warhammer; `sce-liberator-grandhammer` swaps both for a two-handed
+  great hammer with cyan inlays. `sce-prosecutor` has solid white feathered wings, a raised leaf-bladed javelin and
+  hovers on a clear stem. `sce-lord-veritant` wears a blue blindfold band over the helm, a white plume and a long cloak,
+  with a sword and a cyan-flame brazier staff. `sce-lord-vigilant` has a blue crest, a short cape and a double-bladed
+  greataxe, riding a chunky big-headed grey hawk-hound with folded wings and blue-and-gold barding.
+  `sce-gryph-crow` is a tiny chubby blue-black crow-griffin with a gold beak; it is a token, not a model, so its GLB
+  stands on a small 15 mm perch disc instead of a game base. No hammer-and-comet icons or Stormhost heraldry.
+- Skaven: brown and grey fur, pink ears, noses, feet and tails, rusty iron and bronze, frayed dirty-green rags, glowing
+  sickly-green crystals, and our three red claw-scratches on cloth and shields. `skv-clanrat` (the base figure) has a
+  dented iron skullcap, a patched round shield and a notched short sword. `skv-grey-seer` is a white-furred seer with
+  ram horns, green eyes, a tattered grey robe and a crooked staff with a green crystal and a little bell.
+  `skv-stormfiend-gauntlets` is a hulking big-headed rat-brute in rusty plates with a tiny wired rider on its head and
+  two coil-wrapped fists; `-windlaunchers` swaps in twin forearm mortar tubes with green globes and a tail weight, and
+  `-ratling` two six-barrel rotary guns with ammo drums. `skv-warp-lightning-cannon` is a stubby wooden cart with a fat
+  coil-wrapped barrel and a caged green crystal, crewed by two clanrats (one cranking, one covering its ears). No
+  horned-rat sigil or clan icons.
+- Rejects for these two armies: `sce-prosecutor-c1` (the javelin was a loose translucent lightning bolt and the wings
+  were see-through light, both bad for the 3D cutout; an edit made them solid).
+
+- Seraphon (Sunblooded Prowlers): turquoise and teal scales with cream bellies, burnished gold plates set with
+  solid star-blue crystals, and our three-ray sunburst on shields and pendants. `ser-saurus-warrior` (the base
+  figure) has a gold brow guard, a sunburst shield and a stone club studded with blue crystals.
+  `ser-saurus-bodyguard` swaps in a plain gold headband and a gold crystal-edged mace. `ser-sunblood` roars with its
+  jaws wide under a tall gold crest-helm and raises a bigger crystal club. `ser-hunter` is a leaf-green-to-blue
+  chameleon with swivel eyes and a spiral tail, crouched with a long blowpipe at its lips. `ser-sun-acolyte` is a
+  smooth-headed teal skink with a sunburst pendant and a long-handled bronze pot with an orange rim.
+  `ser-spawn-of-chotec` is a fat black-and-orange salamander with a huge grinning head, orange drips, a spiny sail
+  fin and a gold collar. `ser-terrawing` is a chubby plum-red baby pterosaur with a tall crest and orange-edged
+  wings on a clear stem. `ser-venomites` is three fat green-and-yellow snakes coiled around a grey pebble. No
+  Seraphon glyphs or Old One iconography.
+- Soulblight Gravelords (Bloodcrave Hunt): deep crimson lacquer, black-teal cloth, bone ivory, tarnished gold and
+  chalk-pale skin, with our fang-inside-a-blood-drop sigil. `sbg-skeleton` (the base figure) has a huge skull with
+  pale-green eyes under a dented bronze pointed helm, a tattered black-teal tabard, a chipped spear and a rusty round
+  shield. `sbg-vampire-lord` has swept crimson hair, red eyes, a bat-wing collar and cape, a flanged gold mace, a
+  kite shield and two little bats perched on the base. `sbg-blood-knight` wears a crimson horned helm with the visor
+  up and couches a gold-tipped lance on a stocky armoured skeleton horse with a fanged skull face.
+  `sbg-vargheist` is a chalk-white bat-beast with a crimson mane, a fanged grin, long talons and wide solid
+  brown-and-crimson wings. The optional skeleton and knight leader looks were not made. No dynasty heraldry.
+- Rejects for these two armies: `sbg-skeleton-c1` (true MGSD, but it stood on a tall pedestal cut off by the bottom
+  edge; an edit gave it a thin base with room below).
+
 ## Pipeline notes
 
 - Ovals use `base` (length) plus `base2` (width) in `units.json`. The mounts and the cannon needed `yaw` (90, 90
@@ -164,3 +232,14 @@ scale the pieces; nothing is wired up yet.
 
 At uniform scale, the domicile at 5" long is about 3.6" deep and 3.4" tall. The shrine at 3" long is about 2.7"
 deep and 2.6" tall. If the footprint must be exactly 3 × 2, squash the depth or accept the extra.
+
+- Stormcast and Skaven used `swordtip_b8_picks.json`. The Lord-Vigilant and the Warp Lightning Cannon faced sideways
+  in their concepts and needed `yaw` 90; the Cannon got `height` 2.4 and `fit` 116 so it fills its 120×92 oval. The
+  Prosecutor's auto base cut left a slab of the concept base around the stem, so its `textured.glb` was cut again at
+  3.5% of its height in Blender before finalizing. The Gryph-crow token uses `base` 15 as a small perch disc. Sheets:
+  `sheets/contact-stormcast.png` and `sheets/contact-skaven.png`.
+- Seraphon and Soulblight used `swordtip_b9_picks.json`. The Blood Knight faced sideways in its concept and needed
+  `yaw` 90. The Spawn of Chotec concept was a three-quarter view that Hunyuan already put along +Z, so it needed no
+  yaw, but it got `fit` 90 because at full height it ran about an inch past its oval. The auto base cut took the
+  Venomites' bottom coils (cut at 26%), so it was reshaped with `--nocut` and keeps its concept base as a thin black
+  disc on top of the game base. Sheets: `sheets/contact-seraphon.png` and `sheets/contact-soulblight.png`.

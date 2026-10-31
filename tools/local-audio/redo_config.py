@@ -105,3 +105,48 @@ REDO = {
         ),
     ),
 }
+
+# F12 armies: the weakest first-pass ids, rebuilt from two concrete layers.
+REDO.update({
+    "aos-stormcast-death": dict(
+        clap="a man groaning in pain, then a loud crack of thunder",
+        groups=dict(
+            groan=dict(p="a man groaning in pain", dur=1.5, takes=6),
+            thunder=dict(p="a loud sharp thunder clap and lightning crack", dur=2.0, takes=6),
+        ),
+        layers=[("groan", "thunder", 0.45)],
+    ),
+    "aos-seraphon-dartpipe": dict(
+        clap="a blowpipe dart shot, a short puff of air and a whizz",
+        groups=dict(
+            puff=dict(p="a short sharp puff of air", dur=1.0, takes=8),
+            whizz=dict(p="a small dart whizzing past fast", dur=1.2, takes=8),
+        ),
+        layers=[("puff", "whizz", 0.05)],
+    ),
+    "aos-seraphon-spear": dict(
+        clap="a spear thrust, a fast swish and a hard stab",
+        groups=dict(
+            swish=dict(p="a fast swish of a spear through the air", dur=1.2, takes=8),
+            stab=dict(p="a sharp stab into a wooden shield, a hard thunk", dur=1.2, takes=8),
+        ),
+        layers=[("swish", "stab", 0.15)],
+    ),
+    "aos-soulblight-bone-march": dict(
+        clap="skeletons walking, dry bones rattling and clattering",
+        groups=dict(
+            rattle=dict(p="a bag of bones rattling and clattering", dur=3.0, takes=6),
+            sticks=dict(p="wooden sticks clacking and rattling together", dur=3.0, takes=6),
+            steps=dict(p="slow footsteps walking on stone", dur=3.0, takes=6),
+        ),
+        layers=[("rattle", "steps"), ("sticks", "steps")],
+    ),
+    "aos-soulblight-vargheist": dict(
+        clap="a giant bat screeching with leathery wings flapping",
+        groups=dict(
+            screech=dict(p="a large bat screeching a loud shrill shriek", dur=2.0, takes=6),
+            wings=dict(p="large leathery wings flapping", dur=2.0, takes=6),
+        ),
+        layers=[("screech", "wings")],
+    ),
+})

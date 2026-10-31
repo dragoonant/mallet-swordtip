@@ -1444,6 +1444,223 @@
       "prompt": "A stocky sky-sailor grunts in pain and falls with a clank of metal gear, no words, no music",
       "durationSeconds": 1.2,
       "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-war-cry",
+      "kind": "sfx",
+      "prompt": "A band of armoured holy knights gives a short deep wordless battle roar together, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-hammer",
+      "kind": "sfx",
+      "prompt": "A heavy warhammer smashes into armour with a crackle of charged lightning, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-javelin",
+      "kind": "sfx",
+      "prompt": "A javelin is hurled with a fast whoosh and lands with a sharp crack of thunder, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-gryph-shriek",
+      "kind": "sfx",
+      "prompt": "A great hunting beast lets out a piercing raptor shriek, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-crow",
+      "kind": "sfx",
+      "prompt": "A single black crow caws loudly, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-wings",
+      "kind": "sfx",
+      "prompt": "Great feathered wings beat powerfully as winged warriors sweep past, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-holy-flame",
+      "kind": "sfx",
+      "prompt": "A holy flame flares up with a roar of fire and a bright shimmering chime, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-stormcast-death",
+      "kind": "sfx",
+      "prompt": "An armoured knight groans and vanishes in a crack of lightning and rolling thunder, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-skaven-chitter",
+      "kind": "sfx",
+      "prompt": "A horde of ratmen squeaks and chitters excitedly, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-skaven-warp-lightning",
+      "kind": "sfx",
+      "prompt": "A sorcerer unleashes crackling green warp lightning with a buzzing electric zap, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-skaven-cannon",
+      "kind": "sfx",
+      "prompt": "A crackling lightning cannon charges with a rising hum and fires a loud electric blast, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-skaven-ratling-gun",
+      "kind": "sfx",
+      "prompt": "A crude multi-barrelled gun fires a fast clattering rattle of shots, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-skaven-gauntlet",
+      "kind": "sfx",
+      "prompt": "A heavy shock gauntlet punches with a loud electric zap and sizzle, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-skaven-scurry",
+      "kind": "sfx",
+      "prompt": "Many ratmen scurry, claws skittering on stone, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-skaven-death",
+      "kind": "sfx",
+      "prompt": "A ratman squeals in pain and falls, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-war-cry",
+      "kind": "sfx",
+      "prompt": "A lizard warrior gives a deep rumbling roar with a hiss, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-club",
+      "kind": "sfx",
+      "prompt": "A heavy obsidian club smashes into armour with a deep crack, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-spear",
+      "kind": "sfx",
+      "prompt": "A stone-tipped spear thrusts with a fast swish and a hard stab, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-dartpipe",
+      "kind": "sfx",
+      "prompt": "A blowpipe puffs and a small dart whizzes away, no voices, no music",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-terrawing",
+      "kind": "sfx",
+      "prompt": "Leathery reptile wings flap and a flying lizard screeches, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-fire-breath",
+      "kind": "sfx",
+      "prompt": "A great reptile beast breathes a roaring gout of sun-fire, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-chimes",
+      "kind": "sfx",
+      "prompt": "Shimmering celestial chimes ring out like starlight, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-seraphon-death",
+      "kind": "sfx",
+      "prompt": "A lizard warrior shrieks and hisses in pain and falls, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-hiss",
+      "kind": "sfx",
+      "prompt": "A vampire bares its fangs with a long sinister hiss and a low growl, no words, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-lance",
+      "kind": "sfx",
+      "prompt": "An undead knight's lance crashes into a metal shield, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-claws",
+      "kind": "sfx",
+      "prompt": "A winged monster's claws slash and tear with a vicious snarl, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-gallop",
+      "kind": "sfx",
+      "prompt": "Undead warhorses gallop with heavy hooves and rattling chains, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-bone-march",
+      "kind": "sfx",
+      "prompt": "Skeleton warriors march with rattling, clattering bones, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-vargheist",
+      "kind": "sfx",
+      "prompt": "A giant bat-like monster screeches and beats leathery wings, no voices, no music",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-dark-spell",
+      "kind": "sfx",
+      "prompt": "A dark spell is cast with a deep whooshing rumble and an eerie ghostly wail, no words, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-soulblight-death",
+      "kind": "sfx",
+      "prompt": "A skeleton collapses into a clattering pile of bones, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
     }
   ]
 }
