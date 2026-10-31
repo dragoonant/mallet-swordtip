@@ -267,6 +267,18 @@ def master(iid, take):
     for _ in range(3):  # limit then re-gain so RMS lands near target even with a soft limiter in the path
         x = soft_limit(x * (TARGET_RMS / rms), ceil=0.97, knee=0.75)
         rms = float(np.sqrt((x ** 2).mean())) + 1e-9
+    lufs_t = SFX.get(iid, {}).get("lufs")
+    if lufs_t is not None and len(x) > int(0.45 * sr):
+        # opt-in (F17 on): RMS alone leaves sub-heavy takes (giant footsteps, booms) quiet on small speakers, so cut the
+        # inaudible sub rumble and land integrated loudness on the target instead (gain capped at +14 dB).
+        from scipy.signal import butter, sosfilt
+        x = sosfilt(butter(2, 45, btype="high", fs=sr, output="sos"), x, axis=0).astype(np.float32)
+        meter = pyln.Meter(sr)
+        total = 0.0
+        for _ in range(4):
+            g = min(lufs_t - meter.integrated_loudness(x), 14.0 - total)
+            total += g
+            x = soft_limit(x * 10 ** (g / 20), ceil=0.97, knee=0.8)
     return x, 1
 
 

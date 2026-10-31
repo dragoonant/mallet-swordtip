@@ -2074,6 +2074,251 @@
       "prompt": "A bone construct collapses into a rattling, clattering pile of bones, no words, no music",
       "durationSeconds": 1.5,
       "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-slaanesh-laugh",
+      "kind": "sfx",
+      "prompt": "Eerie, lilting daemonic laughter, high and teasing with an echo, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-slaanesh-claws",
+      "kind": "sfx",
+      "prompt": "Big crab-like pincer claws snap shut with sharp clicking snaps, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-slaanesh-whip",
+      "kind": "sfx",
+      "prompt": "A long lash whip whistles through the air and cracks once, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-slaanesh-chitter",
+      "kind": "sfx",
+      "prompt": "A skittering daemon beast chitters and clicks on many fast legs, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-slaanesh-gallop",
+      "kind": "sfx",
+      "prompt": "Swift slender daemon steeds gallop past on light quick hooves, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-slaanesh-musk",
+      "kind": "sfx",
+      "prompt": "A sweet, shimmering magical haze, sparkling chimes and a breathy whoosh, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-slaanesh-death",
+      "kind": "sfx",
+      "prompt": "A daemon gives a high fading shriek and vanishes in a shimmering puff, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-helsmiths-bombard",
+      "kind": "sfx",
+      "prompt": "A huge daemonic iron bombard fires with a deep explosive boom and a hiss of steam, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-helsmiths-engine",
+      "kind": "sfx",
+      "prompt": "A massive war engine grinds forward, chugging steam, hissing vents and clanking iron, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-helsmiths-hammer",
+      "kind": "sfx",
+      "prompt": "A heavy forge hammer rings off an anvil with a loud metal clang, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-helsmiths-gong",
+      "kind": "sfx",
+      "prompt": "One deep bronze war gong struck once, a long low shimmering boom, no voices",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-helsmiths-bellow",
+      "kind": "sfx",
+      "prompt": "A great bull bellows a deep, angry roar, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-helsmiths-hellfire",
+      "kind": "sfx",
+      "prompt": "A blast of roaring hellfire whooshes out in a burst of flame, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-helsmiths-death",
+      "kind": "sfx",
+      "prompt": "An armoured warrior collapses with a clank of iron and a hiss of escaping steam, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-cackle",
+      "kind": "sfx",
+      "prompt": "Deranged ghouls cackle and gibber madly, wild hysterical laughter, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-fanfare",
+      "kind": "sfx",
+      "prompt": "A short royal fanfare blown badly on one cracked, wheezy, out-of-tune horn, no voices",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-wings",
+      "kind": "sfx",
+      "prompt": "Big leathery bat wings flap quickly with heavy whooshes, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-screech",
+      "kind": "sfx",
+      "prompt": "A giant bat-like beast screeches a loud shrill shriek, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-roar",
+      "kind": "sfx",
+      "prompt": "A huge feral beast roars furiously with a snarling growl, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-gnash",
+      "kind": "sfx",
+      "prompt": "Teeth chomp and gnash in quick snapping bites, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-claws",
+      "kind": "sfx",
+      "prompt": "Filthy claws and crude blades slash with quick swishes and scrapes, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-fec-death",
+      "kind": "sfx",
+      "prompt": "A ghoul whimpers, groans and flops to the ground with a thud, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ogors-bellow",
+      "kind": "sfx",
+      "prompt": "A huge ogor gives a booming deep belly laugh, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ogors-club",
+      "kind": "sfx",
+      "prompt": "A heavy wooden club smashes down with a deep thud, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ogors-gutplate",
+      "kind": "sfx",
+      "prompt": "A big iron gut-plate is struck hard with a loud ringing clang, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ogors-snarl",
+      "kind": "sfx",
+      "prompt": "A great sabre-toothed beast snarls and growls, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ogors-paws",
+      "kind": "sfx",
+      "prompt": "A heavy beast bounds forward on pounding, thudding paws, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ogors-burp",
+      "kind": "sfx",
+      "prompt": "A thunderous, long, deep belch, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-ogors-death",
+      "kind": "sfx",
+      "prompt": "A huge ogor groans and topples over with a heavy thud, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-behemat-step",
+      "kind": "sfx",
+      "prompt": "Earth-shaking giant footsteps, slow deep booming thuds, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-behemat-grunt",
+      "kind": "sfx",
+      "prompt": "A colossal giant gives one huge deep grunt, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-behemat-boulder",
+      "kind": "sfx",
+      "prompt": "A boulder whooshes through the air and crashes into the ground, no voices, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-behemat-stomp",
+      "kind": "sfx",
+      "prompt": "A giant stamps one enormous foot with a deep boom and rumble, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-behemat-rumble",
+      "kind": "sfx",
+      "prompt": "A huge boulder rolls and rumbles across the ground, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-behemat-fall",
+      "kind": "sfx",
+      "prompt": "A giant topples over with a long groan and a ground-shaking crash, no words, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
     }
   ]
 }

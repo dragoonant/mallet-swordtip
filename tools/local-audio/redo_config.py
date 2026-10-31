@@ -328,3 +328,129 @@ REDO.update({
         ),
     ),
 })
+
+# F17 armies: wordless vocal cues get Qwen3-TTS takes (AudioGen laughter tends to come out as chatter Whisper can read),
+# and the two-part sounds (a thrown boulder, a bombard shot) are layered from concrete parts.
+REDO.update({
+    "aos-slaanesh-laugh": dict(
+        clap="eerie high lilting female laughter echoing",
+        groups=dict(giggle=dict(p="a woman giggling a high playful laugh", dur=2.5, takes=6)),
+        layers=[("qwen-1", "qwen-2", 0.1), ("qwen-1", "qwen-3", 0.15)],
+        voice=True,
+        tts=dict(
+            who="A seductive, playful female daemon with a high, sweet, lilting, eerie voice, laughing a long teasing musical laugh, sing-song and echoing.",
+            lines=["Ahahahahaha~", "Hehehehe, ahahaha~", "Mmmm, ahahahaha!"],
+        ),
+    ),
+    "aos-fec-cackle": dict(
+        clap="a crazy creature cackling and giggling madly, hysterical laughter",
+        groups=dict(goblin=dict(p="a goblin cackling madly, high crazy laughter", dur=2.5, takes=6)),
+        layers=[("qwen-1", "qwen-2", 0.1), ("qwen-2", "qwen-3", 0.12)],
+        voice=True,
+        tts=dict(
+            who="A deranged, hunched, wild-eyed ghoul with a raspy, cracked, high voice, cackling and gibbering hysterically like a madman.",
+            lines=["Hehehehehe! Kakakakaka!", "Hyahahahaha! Hehehe!", "Gyehehehe! Ahahahaha!"],
+        ),
+    ),
+    "aos-ogors-bellow": dict(
+        clap="a huge fat man laughing a loud deep booming belly laugh",
+        groups=dict(santa=dict(p="a huge man laughing ho ho ho, a deep booming laugh", dur=2.5, takes=6)),
+        voice=True,
+        tts=dict(
+            who="An enormous, fat, jolly brute with an extremely deep, booming, rumbling bass voice, roaring with a huge hearty belly laugh.",
+            lines=["Hohohohoho! Harharhar!", "Bwahahahaha!", "Hrrah hahaha! Hohoho!"],
+        ),
+    ),
+    "aos-behemat-grunt": dict(
+        clap="a giant giving one huge deep loud grunt",
+        groups=dict(grunt=dict(p="a huge man grunting loudly once, a deep heavy grunt", dur=1.6, takes=8)),
+        voice=True,
+        tts=dict(
+            who="A colossal, slow, dim-witted giant with an extremely deep, booming, rumbling bass voice, giving one huge effortful grunt.",
+            lines=["Hhuurrgh!", "Hrrnngh!", "Huuuh!"],
+        ),
+    ),
+    "aos-behemat-boulder": dict(
+        clap="a boulder whooshing through the air then crashing into the ground",
+        groups=dict(
+            whoosh=dict(p="a heavy object flying fast through the air, a deep whoosh", dur=1.5, takes=6),
+            crash=dict(p="a huge rock crashing into the ground, a loud crash of stone and rubble", dur=2.0, takes=6),
+        ),
+        layers=[("whoosh", "crash", 0.45)],
+    ),
+    "aos-helsmiths-bombard": dict(
+        clap="a huge cannon firing with a deep explosive boom",
+        groups=dict(
+            boom=dict(p="a huge cannon firing, a deep loud boom with a rolling echo", dur=2.5, takes=6),
+            hiss=dict(p="steam hissing loudly from a valve", dur=1.5, takes=4),
+        ),
+        layers=[("boom", "hiss", 0.25)],
+    ),
+})
+REDO.update({
+    # F17 second round: first-pass picks that were off-target (Helsmith death), or too short to read (claws, whip, club,
+    # gut-plate), rebuilt from two concrete parts so each has >= 0.6 s of strong sound.
+    "aos-helsmiths-death": dict(
+        clap="metal armour crashing to the ground, then steam hissing out",
+        groups=dict(
+            clank=dict(p="heavy metal armour falling and crashing onto stone", dur=1.6, takes=8),
+            hiss=dict(p="steam hissing out of a pipe", dur=1.5, takes=6),
+        ),
+        layers=[("clank", "hiss", 0.3)],
+    ),
+    "aos-fec-claws": dict(
+        clap="sharp claws slashing fast through the air and scratching",
+        groups=dict(
+            swish=dict(p="a fast swish of claws through the air, swish swish", dur=1.3, takes=8),
+            scratch=dict(p="sharp claws scratching and scraping wood", dur=1.3, takes=6),
+        ),
+        layers=[("swish", "scratch", 0.12)],
+    ),
+    "aos-slaanesh-claws": dict(
+        clap="a big crab claw snapping shut twice, sharp clicking snaps",
+        groups=dict(
+            snap=dict(p="a big crab claw snapping shut, a sharp click clack", dur=1.2, takes=8),
+            snapb=dict(p="a large pincer snapping shut with a hard clack", dur=1.2, takes=8),
+        ),
+        layers=[("snap", "snapb", 0.3)],
+    ),
+    "aos-slaanesh-whip": dict(
+        clap="a whip whooshing through the air and cracking loudly",
+        groups=dict(
+            whoosh=dict(p="a long whip swishing through the air, a fast whoosh", dur=1.2, takes=8),
+            crack=dict(p="a loud sharp whip crack", dur=1.2, takes=8),
+        ),
+        layers=[("whoosh", "crack", 0.28)],
+    ),
+    "aos-ogors-club": dict(
+        clap="a heavy wooden club swung with a whoosh and smashing down with a deep thud",
+        groups=dict(
+            swing=dict(p="a heavy wooden club swung through the air, a deep whoosh", dur=1.2, takes=8),
+            thud=dict(p="a heavy wooden club smashing down hard, a deep crunching thud", dur=1.5, takes=8),
+        ),
+        layers=[("swing", "thud", 0.3)],
+    ),
+    "aos-ogors-gutplate": dict(
+        clap="a heavy blow on a big iron plate, a deep thud and a loud ringing metal clang",
+        groups=dict(
+            clang=dict(p="a heavy iron plate struck with a hammer, a loud ringing clang", dur=2.0, takes=8),
+            thud=dict(p="a heavy punch landing hard, a deep thud", dur=1.2, takes=6),
+        ),
+        layers=[("thud", "clang")],
+    ),
+    "aos-behemat-stomp": dict(
+        clap="a single giant stomp, a huge deep boom and rumble",
+        groups=dict(boom=dict(p="a huge heavy foot stomping once, a deep boom and a rumble of shaking ground", dur=2.0, takes=8)),
+        synth=["thump"],
+        layers=[("boom", "synth-thump")],
+    ),
+})
+REDO["aos-behemat-boulder"]["groups"]["crash"]["takes"] = 6
+REDO["aos-behemat-boulder"]["groups"]["smash"] = dict(p="a big boulder smashing into the ground with a loud crash and a rumble", dur=2.0, takes=8)
+REDO["aos-behemat-boulder"]["layers"] = [("whoosh", "crash", 0.45), ("whoosh", "smash", 0.45)]
+# F17 third round: claws read better as two quick blade slashes, a gut-plate as a pan-on-pot clang over a punch.
+REDO["aos-fec-claws"]["groups"]["slash"] = dict(p="two fast sword slashes whooshing through the air, swish swish", dur=1.3, takes=8)
+REDO["aos-fec-claws"]["groups"]["rake"] = dict(p="a cat scratching with its claws, a fast sharp scratch", dur=1.3, takes=6)
+REDO["aos-fec-claws"]["layers"] = [("swish", "scratch", 0.12), ("slash", "rake", 0.1)]
+REDO["aos-ogors-gutplate"]["groups"]["pan"] = dict(p="a frying pan hitting a big metal pot, a loud ringing clang", dur=1.8, takes=8)
+REDO["aos-ogors-gutplate"]["layers"] = [("thud", "clang"), ("thud", "pan")]
