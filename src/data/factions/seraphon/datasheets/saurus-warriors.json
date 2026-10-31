@@ -1,0 +1,52 @@
+[
+  {
+    "id": "seraphon.unit.saurus-warriors",
+    "faction": "seraphon",
+    "name": "Saurus Warriors",
+    "keywords": [
+      "INFANTRY",
+      "SAURUS"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "SERAPHON"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 2,
+      "Sv": 4,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "warrior",
+        "name": "Saurus Warrior",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "seraphon.weapon.celestite-club"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "seraphon.ability.ordered-cohorts"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

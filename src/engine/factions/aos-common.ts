@@ -2,7 +2,10 @@
 // Pure geometry / state queries plus the few effects both armies need: declared rolls, Heal, returning slain models,
 // mortal damage. Nothing here knows an army; ids and numbers come from the callers.
 import { ENGAGEMENT_H, EPS, OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE, basesOverlap, coherencyNeighboursNeeded, distance, inCoherencyRange, whollyOnBoard, whollyWithinOf, withinObjectiveRange, type Footprint } from '../geometry'
-import type { AbilityUse } from '../hooks'
+import type { AbilityUse, ActivatedAbilityHook } from '../hooks'
+import type { EngineCodeHook } from '../code-hooks'
+import type { Effect } from '../../data/types'
+import { readDeclaredMove } from '../declared'
 import type { EngineContext } from '../modules'
 import { rollSum } from '../dice'
 import { keywordsOf, modelStats, unitModels } from '../state'
@@ -209,4 +212,66 @@ function findSpot(s: GameState, snap: Model, anchors: Model[], others: Model[], 
 
 function coherencyRangeOf(s: GameState, unitId: UnitId): number {
   return s.datasheets[s.units[unitId]?.datasheetId]?.coherencyRange ?? 0.5
+}
+
+// ---------- SPH-2.7 tokens (F12, SCE-AB-4 / SER-AB-6) ----------
+// takes up to `count` of `token` from the unit (all of them by default) and emits TokenRemoved; returns how many were taken
+export function removeTokens(ctx: EngineContext, unitId: UnitId, token: string, count = Number.POSITIVE_INFINITY): number {
+  const u = ctx.state.units[unitId]
+  if (!u) return 0
+  const have = u.tokens?.[token] ?? 0
+  const n = Math.min(have, Math.max(0, count))
+  if (n <= 0) return 0
+  u.tokens = { ...u.tokens, [token]: have - n }
+  ctx.emit({ type: 'TokenRemoved', unitId, token, count: n, remaining: have - n, player: u.player })
+  return n
+}
+
+// ---------- free Retreat reactions (STD-RA-2 Fearless Invaders; F12: SCE-RA-1 Strike Where Needed) ----------
+// Offered in the 'moveDeclared' window (data timing { kind 'reaction', trigger 'youDeclared', abilityId 'core.move' }, or a
+// movement-phase descriptor with params.window 'moveDeclared'): the friendly unit in combat that has just declared a Retreat,
+// before the retreat's mortal damage is rolled. It gets { noRetreatDamage } and { chargeAfterFallBack } until the end of the turn.
+// Each army registers its own code name (and announcement) with freeRetreatHook; the descriptor's own `limit` caps its uses.
+export function retreatingUnit(state: GameState, player: PlayerId): UnitId | null {
+  const d = readDeclaredMove(state)
+  const u = d && d.moveType === 'fallBack' ? onBoard(state, d.unitId) : null
+  return u && u.player === player && inCombat(state, u.id) ? u.id : null
+}
+export const freeRetreatTargets = (state: GameState, _unitId: UnitId | null, player?: PlayerId): UnitId[] => {
+  const id = retreatingUnit(state, player ?? state.activePlayer)
+  return id ? [id] : []
+}
+
+const FREE_RETREAT_CODES = new Set<string>()
+
+// AI hint (src/ai/utility.ts scoreDeclareMove): the player's regiment ability is a registered free-Retreat reaction it can still use
+// (its limit honoured: oncePerBattle = never used; otherwise not yet used this turn) in its own movement phase
+export function freeRetreatAvailable(state: GameState, player: PlayerId): boolean {
+  const reg = state.abilities[state.players[player]?.regimentAbilityId ?? '']
+  if (!reg || !reg.code || !FREE_RETREAT_CODES.has(reg.code)) return false
+  if (state.activePlayer !== player || state.phase !== 'movement') return false
+  const uses = state.players[player].abilityUses.filter((u) => u.abilityId === reg.id)
+  if (reg.limit === 'oncePerBattle') return uses.length === 0
+  return !uses.some((u) => u.round === state.round && u.turn === state.activePlayer)
+}
+
+// the activated hook of a free-Retreat reaction, registered under `name`; `summary` is what the announcement says it did
+export function freeRetreatHook(name: string, summary: string): EngineCodeHook {
+  FREE_RETREAT_CODES.add(name)
+  const activate: ActivatedAbilityHook = {
+    canUse(state, _unitId, use) {
+      const targets = freeRetreatTargets(state, null, use.player)
+      const picked = use.targetUnitIds?.[0]
+      return targets.length > 0 && (!picked || targets.includes(picked))
+    },
+    targets: freeRetreatTargets as ActivatedAbilityHook['targets'],
+    resolve(ctx, use) {
+      const target = use.targetUnitIds[0]
+      if (!target || !onBoard(ctx.state, target)) return
+      const effects: Effect[] = [{ chargeAfterFallBack: true }, { noRetreatDamage: true }]
+      ctx.services.effects.grant(ctx, target, effects, { sourceAbilityId: use.abilityId, sourceUnitId: use.unitId, scope: { who: 'self' }, duration: 'untilEndOfTurn' })
+      announce(ctx, use, target, summary)
+    },
+  }
+  return { name, kind: 'ability', hook: 'onAbilityDeclared', run: () => undefined, activate }
 }

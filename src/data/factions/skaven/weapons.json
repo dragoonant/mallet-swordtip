@@ -1,0 +1,102 @@
+[
+  {
+    "id": "skaven.weapon.warpstone-staff",
+    "name": "Warpstone Staff",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 4,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "skaven.weapon.ratling-cannons",
+    "name": "Ratling Cannons",
+    "type": "ranged",
+    "range": 15,
+    "A": "3D6",
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "skaven.weapon.windlaunchers",
+    "name": "Windlaunchers",
+    "type": "ranged",
+    "range": 15,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 2,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "skaven.weapon.shock-gauntlets",
+    "name": "Shock Gauntlets",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 2,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "CRIT_2_HITS", "value": "D6" }
+    ]
+  },
+  {
+    "id": "skaven.weapon.clubbing-blows",
+    "name": "Clubbing Blows",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 2,
+    "rend": 0,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "skaven.weapon.warp-lightning-blast",
+    "name": "Warp Lightning Blast",
+    "type": "ranged",
+    "range": 20,
+    "A": "2D6",
+    "skill": 4,
+    "wound": 6,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "HIT_MORTAL", "value": 1 }
+    ]
+  },
+  {
+    "id": "skaven.weapon.crews-teeth-and-knives",
+    "name": "Crew's Teeth and Knives",
+    "type": "melee",
+    "range": 0,
+    "A": "D6",
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "skaven.weapon.rusty-blade",
+    "name": "Rusty Blade",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  }
+]

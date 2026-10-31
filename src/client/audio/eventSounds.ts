@@ -62,7 +62,7 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
 /** Spearhead weapons (all eight armies) by what their id or name says. Blades and polearms swing, the
  *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
  *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
-const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron)\./
+const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron|stormcast|skaven|seraphon|soulblight)\./
 /** The F8 armies' own weapon sounds, matched on the full weapon id before the shared rules below: Kruleboyz crossbows,
  *  Killbow and jagged blades, the Gitz' bows and wolf jaws, Lumineth wind magic, bows and pikes, Kharadron aether guns
  *  and skyhooks (the Frigate's heavy skyhook is the broadside). */
@@ -81,6 +81,24 @@ const AOS_ARMY_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = 
   [/^kharadron\..*heavy-skyhook/, 'aos-kharadron-broadside'],
   [/^kharadron\..*skyhook/, 'aos-kharadron-harpoon'],
   [/^kharadron\..*(pistol|carbine)/, 'aos-kharadron-aether-pistol'],
+  // F12 armies: Stormcast lightning hammers and javelins and the gryph-stalker's shriek, Skaven warp guns and gauntlets,
+  // Seraphon celestite clubs and spears, dartpipes, Terrawing beaks and the Spawn's sun-fire, Soulblight lances and Vargheist claws.
+  [/^stormcast\..*(warhammer|grandhammer)/, 'aos-stormcast-hammer'],
+  [/^stormcast\..*staff/, 'aos-stormcast-hammer', 0.8],
+  [/^stormcast\..*javelin/, 'aos-stormcast-javelin'],
+  [/^stormcast\..*gryph-stalker/, 'aos-stormcast-gryph-shriek', 0.85],
+  [/^skaven\..*warp-lightning/, 'aos-skaven-cannon'],
+  [/^skaven\..*ratling/, 'aos-skaven-ratling-gun'],
+  [/^skaven\..*windlauncher/, 'aos-kharadron-harpoon', 0.7],
+  [/^skaven\..*gauntlet/, 'aos-skaven-gauntlet'],
+  [/^skaven\..*warpstone-staff/, 'aos-skaven-warp-lightning', 0.8],
+  [/^seraphon\..*club/, 'aos-seraphon-club'],
+  [/^seraphon\..*celestite/, 'aos-seraphon-spear'],
+  [/^seraphon\..*dartpipe/, 'aos-seraphon-dartpipe'],
+  [/^seraphon\..*(flame|fiery)/, 'aos-seraphon-fire-breath'],
+  [/^seraphon\..*beaks/, 'aos-seraphon-terrawing', 0.8],
+  [/^soulblight\..*lance/, 'aos-soulblight-lance'],
+  [/^soulblight\..*fangs/, 'aos-soulblight-claws'],
 ]
 const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
   [/grapeshot/, 'aos-cannon-fire', 0.85],
@@ -513,6 +531,11 @@ const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
   gloomspite: ['aos-gloomspite-death'],
   lumineth: ['aos-lumineth-death', 'aos-human-death-2'],
   kharadron: ['aos-kharadron-death', 'aos-human-death-1'],
+  // F12 armies: a Stormcast is recalled in a thunderclap, ratmen squeal, lizards hiss, the dead fall apart into bones.
+  stormcast: ['aos-stormcast-death'],
+  skaven: ['aos-skaven-death'],
+  seraphon: ['aos-seraphon-death'],
+  soulblight: ['aos-soulblight-death'],
 }
 
 function takeFor(modelId: string): number {
@@ -542,6 +565,14 @@ const ARMY_MOVE: Record<string, (kw: readonly string[]) => EventSound | undefine
       : kw.includes('CAVALRY') || kw.includes('FLY') ? at('aos-lumineth-wind-rush', 0.55) : undefined,
   kharadron: (kw) =>
     kw.includes('WAR MACHINE') ? at('aos-kharadron-airship-engine', 0.5) : kw.includes('FLY') ? at('aos-kharadron-propeller', 0.55) : undefined,
+  // F12: Prosecutors beat their wings, the Lord-Veritant's crow caws; ratmen scurry (Stormfiends tramp like everyone else);
+  // Terrawings flap; Blood Knights gallop, Vargheists shriek, skeletons rattle.
+  stormcast: (kw) => (kw.includes('FLY') ? at('aos-stormcast-wings', 0.55) : kw.includes('PRIEST') ? at('aos-stormcast-crow', 0.5) : undefined),
+  skaven: (kw) => (kw.includes('CLANRATS') || kw.includes('HERO') || kw.includes('WAR MACHINE') ? at('aos-skaven-scurry', 0.5) : undefined),
+  seraphon: (kw) => (kw.includes('FLY') ? at('aos-seraphon-terrawing', 0.5) : undefined),
+  soulblight: (kw) =>
+    kw.includes('CAVALRY') ? at('aos-soulblight-gallop', 0.55)
+      : kw.includes('FLY') ? at('aos-soulblight-vargheist', 0.45) : kw.includes('VAMPIRE') ? undefined : at('aos-soulblight-bone-march', 0.5),
 }
 
 /** F8 army charges: the movement sound of the unit plus the army's own war cry (a Gnashtoof snarls, a Wheela rattles in). */
@@ -555,6 +586,38 @@ const ARMY_CHARGE: Record<string, (kw: readonly string[]) => EventSound[]> = {
     kw.includes('WAR MACHINE') ? at('aos-kharadron-airship-engine', 0.8) : kw.includes('FLY') ? at('aos-kharadron-propeller', 0.8) : at('aos-armoured-march', 0.7),
     at('aos-kharadron-war-cry', 0.8),
   ],
+  stormcast: (kw) => [
+    kw.includes('FLY') ? at('aos-stormcast-wings', 0.8) : kw.includes('CAVALRY') ? at('aos-stormcast-gryph-shriek', 0.8) : at('aos-armoured-march', 0.7),
+    at('aos-stormcast-war-cry', 0.8),
+  ],
+  skaven: (kw) => [
+    kw.includes('CLANRATS') || kw.includes('HERO') ? at('aos-skaven-scurry', 0.8) : at('aos-orruk-stomp', 0.7),
+    at('aos-skaven-chitter', 0.8),
+  ],
+  seraphon: (kw) =>
+    kw.includes('FLY') ? [at('aos-seraphon-terrawing', 0.8)]
+      : kw.includes('BEAST') ? [at('aos-seraphon-fire-breath', 0.6)] : [at('aos-armoured-march', 0.6), at('aos-seraphon-war-cry', 0.8)],
+  soulblight: (kw) =>
+    kw.includes('CAVALRY') ? [at('aos-soulblight-gallop', 0.9), at('aos-soulblight-hiss', 0.7)]
+      : kw.includes('FLY') ? [at('aos-soulblight-vargheist', 0.85)]
+        : kw.includes('VAMPIRE') ? [at('aos-armoured-march', 0.6), at('aos-soulblight-hiss', 0.8)] : [at('aos-soulblight-bone-march', 0.8)],
+}
+
+/** F12 army spells, prayers and roars, by ability id: the Lord-Veritant's holy flame, Grey Seer warp lightning,
+ *  Seraphon celestial chimes, the Vampire Lord's dark magic. */
+const AOS_ABILITY_SOUND: Record<string, EventSound> = {
+  'stormcast.ability.cleansing-fires': at('aos-stormcast-holy-flame'),
+  'skaven.ability.wither': at('aos-skaven-warp-lightning'),
+  'skaven.ability.skitterleap': at('aos-skaven-warp-lightning', 0.8),
+  'skaven.ability.cage-of-warp-lightning': at('aos-skaven-warp-lightning'),
+  'seraphon.ability.blessed-by-the-old-ones': at('aos-seraphon-chimes', 0.8),
+  'seraphon.ability.scaled-aegis': at('aos-seraphon-chimes', 0.8),
+  'seraphon.ability.vengeance-of-azyr': at('aos-seraphon-chimes', 0.8),
+  'seraphon.ability.savage-bellow': at('aos-seraphon-war-cry'),
+  'seraphon.ability.nerve-shredding-screeches': at('aos-seraphon-terrawing'),
+  'soulblight.ability.vile-transference': at('aos-soulblight-dark-spell'),
+  'soulblight.ability.spirit-gale': at('aos-soulblight-dark-spell'),
+  'soulblight.ability.cloud-of-bats': at('aos-soulblight-vargheist', 0.7),
 }
 
 /** Sounds to play for one engine event. `perspective` (the human seat) is optional — omit it to get
@@ -667,6 +730,11 @@ export function soundsForEvent(event: GameEvent, perspective?: PlayerId, lookup?
       return perspective && event.player === perspective ? [{ id: 'narr-battle-tactic-complete' }] : []
     case 'TacticCommandUsed':
       return [{ id: 'stratagem-whoosh', opts: { volume: 0.5 } }, { id: 'aos-marshal-command', opts: { volume: 0.8 } }]
+
+    case 'AbilityTriggered': {
+      const sound = AOS_ABILITY_SOUND[event.abilityId]
+      return sound ? [sound] : []
+    }
 
     case 'StratagemUsed':
       // A command ability: the marshal bellows the order (the 42k "Stratagem!" line is not Spearhead's word for it).

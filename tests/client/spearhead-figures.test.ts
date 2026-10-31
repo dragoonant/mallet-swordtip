@@ -49,6 +49,28 @@ const NEW_MODELS: Array<[string, string, string]> = [
   ['kharadron.unit.skywardens', 'skywarden', 'ko-skywarden'],
   ['kharadron.unit.skywardens', 'skywarden-volley', 'ko-skywarden-volley'],
   ['kharadron.unit.arkanaut-frigate', 'frigate', 'ko-frigate'],
+  // Stormcast Eternals, Skaven, Seraphon and Soulblight Gravelords (F12).
+  ['stormcast.unit.lord-vigilant', 'lord-vigilant', 'sce-lord-vigilant'],
+  ['stormcast.unit.lord-veritant', 'lord-veritant', 'sce-lord-veritant'],
+  ['stormcast.unit.prosecutors', 'prosecutor', 'sce-prosecutor'],
+  ['stormcast.unit.liberators', 'liberator', 'sce-liberator'],
+  ['stormcast.unit.liberators', 'liberator-grandhammer', 'sce-liberator-grandhammer'],
+  ['skaven.unit.grey-seer', 'grey-seer', 'skv-grey-seer'],
+  ['skaven.unit.clanrats', 'clanrat', 'skv-clanrat'],
+  ['skaven.unit.stormfiends', 'stormfiend-gauntlets', 'skv-stormfiend-gauntlets'],
+  ['skaven.unit.stormfiends', 'stormfiend-windlaunchers', 'skv-stormfiend-windlaunchers'],
+  ['skaven.unit.stormfiends', 'stormfiend-ratling', 'skv-stormfiend-ratling'],
+  ['skaven.unit.warp-lightning-cannon', 'warp-lightning-cannon', 'skv-warp-lightning-cannon'],
+  ['seraphon.unit.sunblood-pack', 'sunblood', 'ser-sunblood'],
+  ['seraphon.unit.sunblood-pack', 'bodyguard', 'ser-saurus-bodyguard'],
+  ['seraphon.unit.saurus-warriors', 'warrior', 'ser-saurus-warrior'],
+  ['seraphon.unit.hunters-of-huanchi', 'hunter', 'ser-hunter'],
+  ['seraphon.unit.terrawings', 'terrawing', 'ser-terrawing'],
+  ['seraphon.unit.spawn-of-chotec', 'spawn', 'ser-spawn-of-chotec'],
+  ['soulblight.unit.vampire-lord', 'vampire-lord', 'sbg-vampire-lord'],
+  ['soulblight.unit.deathrattle-skeletons', 'deathrattle-skeleton', 'sbg-skeleton'],
+  ['soulblight.unit.blood-knights', 'blood-knight', 'sbg-blood-knight'],
+  ['soulblight.unit.vargheists', 'vargheist', 'sbg-vargheist'],
 ]
 
 describe('Spearhead figures and board', () => {
@@ -100,8 +122,8 @@ describe('Spearhead figures and board', () => {
     expect(checked).toBeGreaterThanOrEqual(MODELS.length + NEW_MODELS.length)
   })
 
-  it('FIG-AOS-007 the army painter has measured source hues for the six armies with their own bands, and every figure fix names a declared slug', () => {
-    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron']) {
+  it('FIG-AOS-007 the army painter has measured source hues for the ten armies with their own bands, and every figure fix names a declared slug', () => {
+    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron', 'stormcast', 'skaven', 'seraphon', 'soulblight']) {
       const h = SOURCE_HUES[army]
       expect(h, army).toBeDefined()
       expect(h.major ?? h.minor, army).toBeTruthy()

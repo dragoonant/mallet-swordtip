@@ -1,0 +1,53 @@
+[
+  {
+    "id": "seraphon.unit.terrawings",
+    "faction": "seraphon",
+    "name": "Terrawings",
+    "keywords": [
+      "BEAST",
+      "FLY",
+      "REINFORCEMENTS"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "SERAPHON"
+    ],
+    "stats": {
+      "M": 12,
+      "W": 2,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "terrawing",
+        "name": "Terrawing",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "seraphon.weapon.snapping-beaks"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "seraphon.ability.nerve-shredding-screeches"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

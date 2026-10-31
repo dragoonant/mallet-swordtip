@@ -1,0 +1,17 @@
+{
+  "id": "soulblight",
+  "name": "Soulblight Gravelords",
+  "factionKeyword": "SOULBLIGHT GRAVELORDS",
+  "armyRule": "soulblight.ability.bloodcrave-hunt",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#8c1c2b",
+    "secondary": "#1f3a3f",
+    "trim": "#c2a35a",
+    "metal": "#cfc6a8",
+    "decal": "#e23a3a"
+  },
+  "combatPatrols": [
+    "soulblight.army.bloodcrave-hunt"
+  ]
+}

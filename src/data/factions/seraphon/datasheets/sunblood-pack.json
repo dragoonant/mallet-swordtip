@@ -1,0 +1,75 @@
+[
+  {
+    "id": "seraphon.unit.sunblood-pack",
+    "faction": "seraphon",
+    "name": "Sunblood Pack",
+    "keywords": [
+      "HERO",
+      "INFANTRY",
+      "SAURUS"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "SERAPHON"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 3,
+      "Sv": 4,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "sunblood",
+        "name": "Sunblood",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "champion": true,
+        "base": {
+          "shape": "round",
+          "mm": 40
+        },
+        "weapons": {
+          "default": [
+            "seraphon.weapon.celestite-weapons"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      },
+      {
+        "modelId": "bodyguard",
+        "name": "Saurus Bodyguard",
+        "min": 2,
+        "max": 2,
+        "default": 2,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "seraphon.weapon.celestite-weapons"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "seraphon.ability.scaled-protectors",
+      "seraphon.ability.savage-bellow"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

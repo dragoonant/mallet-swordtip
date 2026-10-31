@@ -1,0 +1,31 @@
+[
+  {
+    "id": "skaven.unit.warp-lightning-cannon",
+    "faction": "skaven",
+    "name": "Warp Lightning Cannon",
+    "keywords": ["WAR MACHINE"],
+    "factionKeywords": ["CHAOS", "SKAVEN"],
+    "stats": { "M": 3, "W": 8, "Sv": 4, "OC": 2 },
+    "composition": [
+      {
+        "modelId": "warp-lightning-cannon",
+        "name": "Warp Lightning Cannon",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "oval", "mm": 120, "mm2": 92 },
+        "weapons": {
+          "default": [
+            "skaven.weapon.warp-lightning-blast",
+            "skaven.weapon.crews-teeth-and-knives"
+          ]
+        },
+        "figure": { "archetype": "vehicle", "kit": "generic-vehicle" }
+      }
+    ],
+    "abilities": ["skaven.ability.warp-lightning-blast"],
+    "coreAbilities": [],
+    "figure": { "archetype": "vehicle", "kit": "generic-vehicle" },
+    "spearhead": true
+  }
+]

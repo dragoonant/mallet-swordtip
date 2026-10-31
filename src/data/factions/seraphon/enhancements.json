@@ -1,0 +1,38 @@
+[
+  {
+    "id": "seraphon.enh.instinctive-commander",
+    "faction": "seraphon",
+    "name": "Instinctive Commander",
+    "text": "In your hero phase, a visible friendly unit wholly within 12\" of the general that is not in combat can, on a 3+, make a Normal Move.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "seraphon.ability.instinctive-commander"
+  },
+  {
+    "id": "seraphon.enh.savage-mauling",
+    "faction": "seraphon",
+    "name": "Savage Mauling",
+    "text": "In any combat phase, an enemy unit in combat with the general can make no Ward rolls for the rest of the turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "seraphon.ability.savage-mauling"
+  },
+  {
+    "id": "seraphon.enh.venomite-swarm",
+    "faction": "seraphon",
+    "name": "Venomite Swarm",
+    "text": "In any combat phase, an enemy unit in combat with the general may suffer D3 mortal damage while the Venomites token remains (a 1 loses the token and does nothing else).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "seraphon.ability.venomite-swarm"
+  },
+  {
+    "id": "seraphon.enh.blessed-by-the-old-ones",
+    "faction": "seraphon",
+    "name": "Blessed by the Old Ones",
+    "text": "If the general is destroyed, at the end of each turn roll a dice: on a 2+ the Sunblood returns on its own anywhere on the battlefield, more than 6\" from enemies, and is your general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "seraphon.ability.blessed-by-the-old-ones"
+  }
+]

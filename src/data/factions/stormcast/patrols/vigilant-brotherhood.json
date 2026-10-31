@@ -1,0 +1,29 @@
+{
+  "id": "stormcast.army.vigilant-brotherhood",
+  "faction": "stormcast",
+  "name": "Vigilant Brotherhood",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "lord-vigilant", "datasheet": "stormcast.unit.lord-vigilant", "size": 1 },
+    { "ref": "lord-veritant", "datasheet": "stormcast.unit.lord-veritant", "size": 1, "tokens": { "gryph-crow": 1 } },
+    { "ref": "prosecutors", "datasheet": "stormcast.unit.prosecutors", "size": 3 },
+    { "ref": "liberators", "datasheet": "stormcast.unit.liberators", "size": 5 }
+  ],
+  "warlord": "lord-vigilant",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "stormcast.ability.shield-of-azyr",
+    "stormcast.ability.storm-charge"
+  ],
+  "regimentAbilities": [
+    { "id": "stormcast.ability.blaze-of-glory", "default": true },
+    { "id": "stormcast.ability.strike-where-needed", "default": false }
+  ],
+  "enhancements": [
+    { "id": "stormcast.enh.hallowed-scrolls", "default": true },
+    { "id": "stormcast.enh.quicksilver-draught", "default": false },
+    { "id": "stormcast.enh.null-pendant", "default": false },
+    { "id": "stormcast.enh.morrdas-talon", "default": false }
+  ]
+}

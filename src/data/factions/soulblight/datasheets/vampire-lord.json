@@ -1,0 +1,27 @@
+[
+  {
+    "id": "soulblight.unit.vampire-lord",
+    "faction": "soulblight",
+    "name": "Vampire Lord",
+    "keywords": ["HERO", "WIZARD", "INFANTRY", "VAMPIRE"],
+    "factionKeywords": ["DEATH", "SOULBLIGHT GRAVELORDS"],
+    "stats": { "M": 6, "W": 5, "Sv": 3, "OC": 2, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "vampire-lord",
+        "name": "Vampire Lord",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": { "default": ["soulblight.weapon.dynastic-war-relic"] },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["soulblight.ability.vile-transference"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true,
+    "wizard": 1
+  }
+]

@@ -20,7 +20,11 @@ describe('Spearhead armies (SPH-2)', () => {
       'kharadron.army.skyhammer-task-force',
       'kruleboyz.army.swampskulka-gang',
       'lumineth.army.hurakan-vanguard',
+      'seraphon.army.sunblooded-prowlers',
+      'skaven.army.warpspark-clawpack',
       'slaves.army.darkoath-raiders',
+      'soulblight.army.bloodcrave-hunt',
+      'stormcast.army.vigilant-brotherhood',
     ])
     for (const a of armies) expect(a.units.some((u) => u.ref === a.warlord)).toBe(true)
   })

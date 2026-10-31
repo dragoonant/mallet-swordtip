@@ -1,0 +1,26 @@
+[
+  {
+    "id": "soulblight.unit.vargheists",
+    "faction": "soulblight",
+    "name": "Vargheists",
+    "keywords": ["INFANTRY", "VAMPIRE", "FLY"],
+    "factionKeywords": ["DEATH", "SOULBLIGHT GRAVELORDS"],
+    "stats": { "M": 12, "W": 4, "Sv": 5, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "vargheist",
+        "name": "Vargheist",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 50 },
+        "weapons": { "default": ["soulblight.weapon.murderous-fangs-and-talons"] },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["soulblight.ability.the-scent-of-gore"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

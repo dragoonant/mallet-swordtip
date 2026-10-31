@@ -13,12 +13,12 @@
 // The "damage counter" of CORE-13.4 is the single damaged model's `woundsRemaining` (a unit is *damaged* while some
 // model has fewer wounds than its Health), so Heal effects only have to raise `woundsRemaining`.
 // RNG consumption order (CORE-11.9): per target, per profile: hits -> wounds -> saves -> damage dice; then wards.
-import type { WeaponAbilityName } from '../data/types'
+import type { WeaponAbility, WeaponAbilityName } from '../data/types'
 import { clampHitWoundModifier, clampStat, netSaveModifier, parseDiceExpr } from './dice'
 import type { AttackRollContext } from './events'
 import { coherencyGroups, distance, ENGAGEMENT_H, EPS, horizontalGap, isCoherent } from './geometry'
 import type { AttackContext, RollModifierResult } from './hooks'
-import { codeHookFor, hookService } from './hooks-impl'
+import { codeHookFor, hookService, sourcesFor } from './hooks-impl'
 import { cardChargeDamage, cardHitRule, cardIgnoresRend, cardSaveModifier, cardWard, cardWoundModifier } from './cardFlags'
 import { losService } from './los'
 import type { AdvanceResult, DecisionHandler, EngineContext } from './modules'
@@ -27,7 +27,7 @@ import { weaponService } from './weapons'
 import {
   EngineInvariantError,
   type AttackGroup, type AttackKind, type DeclaredTarget, type DiceRoll, type GameState, type Model, type ModelId, type PlayerId,
-  type RollModifier, type RuntimeWeapon, type Unit, type UnitId, type Vec3, type WeaponId,
+  type RollModifier, type RuntimeAbility, type RuntimeWeapon, type Unit, type UnitId, type Vec3, type WeaponId,
 } from './types'
 
 // overwatchHitOn is kept for the 42k call sites; AoS has no Fire Overwatch
@@ -226,12 +226,12 @@ interface StageResult { roll: DiceRoll; outs: DieOut[] }
 function runStage(ctx: EngineContext, p: StageParams): StageResult {
   const s = ctx.state
   const isSave = p.purpose === 'save'
-  type Ent = { mods: number[]; ignore: boolean; autoPass: boolean; autoFail: boolean; crit: number; rr: { kind: string; id: string }[] }
+  type Ent = { mods: number[]; ignore: boolean; ignoreNeg: boolean; autoPass: boolean; autoFail: boolean; crit: number; rr: { kind: string; id: string }[] }
   const cache = new Map<number, Ent>()
   const entFor = (u: number, idx: number, roll: DiceRoll): Ent => {
     const hit = cache.get(u)
     if (hit) return hit
-    const ent: Ent = { mods: [], ignore: false, autoPass: false, autoFail: false, crit: 7, rr: [] }
+    const ent: Ent = { mods: [], ignore: false, ignoreNeg: false, autoPass: false, autoFail: false, crit: 7, rr: [] }
     const got = hookService.collect(ctx, p.hook, { attack: p.actx, roll: { purpose: p.purpose, roll, dieIndex: idx, unmodified: u, rerolled: false } })
     for (const g of got) {
       if (g.result.kind !== 'roll') continue
@@ -241,6 +241,7 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
       if (p.companion && !isSave && friendly && (r.modifier ?? 0) > 0) continue
       if (r.modifier) ent.mods.push(r.modifier)
       if (r.ignoreModifiers) ent.ignore = true
+      if (r.ignoreNegative) ent.ignoreNeg = true
       if (r.autoPass) ent.autoPass = true
       if (r.autoFail) ent.autoFail = true
       if (r.critThreshold !== undefined) ent.crit = Math.min(ent.crit, r.critThreshold)
@@ -252,11 +253,14 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
   const evalDie = (u: number, idx: number, roll: DiceRoll): DieOut & { rr: Ent['rr'] } => {
     const ent = entFor(u, idx, roll)
     let final: number
+    // F12 (SBG-ENH Aura of Night, Effect.ignoreNegativeModifiers): negative modifiers (card ones included) are dropped; rend is not
+    // a modifier and still applies
+    const raw = [...p.statics.map((m) => m.value), ...ent.mods]
+    const mods = ent.ignoreNeg ? raw.filter((m) => m > 0) : raw
     if (isSave) {
-      const mods = [...p.statics.map((m) => m.value), ...ent.mods]
       final = u - p.rend + (ent.ignore ? 0 : netSaveModifier(mods))
     } else {
-      const sum = [...p.statics.map((m) => m.value), ...ent.mods].reduce((a, b) => a + b, 0)
+      const sum = mods.reduce((a, b) => a + b, 0)
       final = u + (ent.ignore ? 0 : clampHitWoundModifier(sum))
     }
     const success = !ent.autoFail && u !== 1 && (p.onlySix ? u === 6 : (ent.autoPass || final >= p.needed))
@@ -304,6 +308,20 @@ function applyDamageMods(d: number, m: { delta: number; halve: boolean; reductio
   v -= m.reduction
   return Math.max(1, v)
 }
+
+// F12 (SKV-AB-3 Shock Gauntlets): hits one critical hit scores for CRIT_2_HITS; no value = 2
+function critHitCount(ctx: EngineContext, value: WeaponAbility['value'], player: PlayerId, unitId: UnitId, modelId: ModelId, weaponId: WeaponId): number {
+  if (value === undefined || value === null) return 2
+  return Math.max(1, ctx.rollExpr(value, { purpose: 'ability', player, unitId, modelId, weaponId }).total)
+}
+// F12 (SKV-AB-5 Warp Lightning Blast): mortal damage one HIT_MORTAL hit inflicts; no value = 1 (dice values roll per hit)
+function mortalPerHit(ctx: EngineContext, value: WeaponAbility['value'], player: PlayerId, unitId: UnitId, modelId: ModelId, weaponId: WeaponId): number {
+  if (value === undefined || value === null) return 1
+  return Math.max(0, ctx.rollExpr(value, { purpose: 'ability', player, unitId, modelId, weaponId }).total)
+}
+
+// F12 (SER C4): unmodified save 1s of the running attack sequence, per target unit (null outside attackService.advance)
+let saveOnesTally: Record<UnitId, number> | null = null
 
 // ---------- pools ----------
 interface Pool { unitId: UnitId; points: number; by: DestroyedBy; source: AttackRollContext | { abilityId: string }; mortal: boolean; attackerUnitId: UnitId | null }
@@ -353,27 +371,34 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   if (kind === 'ranged' && guardedHero(s, batch.targetUnitId)) hitMods.push({ source: 'guardedHero', value: -1 })
   const cardHit = cardHitRule(s, attackerUnitId, batch.targetUnitId, kind)
   if (cardHit.modifier) hitMods.push({ source: 'card', value: cardHit.modifier })
+  // criticals: one crit ability per weapon (CORE-12.1, first listed). F12: HIT_MORTAL (SKV-AB-5) turns every hit into mortal
+  // damage and makes no wound roll, so no crit ability applies to it; CRIT_2_HITS may carry a value = hits per critical hit
+  const critEntry = ew.abilities.find((a) => a.ability === 'CRIT_MORTAL' || a.ability === 'CRIT_2_HITS' || a.ability === 'CRIT_AUTO_WOUND')
+  const hitMortal = ew.abilities.find((a) => a.ability === 'HIT_MORTAL')
+  const critAb = hitMortal ? undefined : critEntry?.ability
   let hitOuts: DieOut[]
+  let copiesOf: number[] = []
   if (ew.skill === null) {
     hitOuts = Array.from({ length: total }, () => ({ u: 0, final: 0, success: true, critical: false }))
   } else {
     const st = runStage(ctx, { hook: 'onHitRoll', purpose: 'hit', count: total, actx, attackerPlayer, roller: attackerPlayer, needed: ew.skill, statics: hitMods, rend: 0, companion, unitId: attackerUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: lead, onlySix: cardHit.onlySix })
     hitOuts = st.outs
-    st.outs.forEach((o, i) => ctx.emit({ type: 'HitRolled', attack: rctx, die: o.u, final: o.final, hit: o.success, critical: o.critical, extraHits: o.critical && hasAb(ew, 'CRIT_2_HITS') ? 1 : 0, auto: false, rollId: st.roll.id, dieIndex: i, player: attackerPlayer }))
+    // F12 (SKV-AB-3): hits scored by each critical hit, one roll per critical hit (attacker's roll) when the value is dice
+    copiesOf = st.outs.map((o) => (o.success && o.critical && critAb === 'CRIT_2_HITS' ? critHitCount(ctx, critEntry?.value, attackerPlayer, attackerUnitId, lead, ew.id) : 1))
+    st.outs.forEach((o, i) => ctx.emit({ type: 'HitRolled', attack: rctx, die: o.u, final: o.final, hit: o.success, critical: o.critical, extraHits: Math.max(0, copiesOf[i] - 1), auto: false, rollId: st.roll.id, dieIndex: i, player: attackerPlayer }))
   }
-  // criticals: one crit ability per weapon (CORE-12.1, first listed)
-  const critAb = ew.abilities.find((a) => a.ability === 'CRIT_MORTAL' || a.ability === 'CRIT_2_HITS' || a.ability === 'CRIT_AUTO_WOUND')?.ability
   let needWound = 0
   let autoWounds = 0
   let mortal = 0
   const dmgMods = damageModifiers(ctx, actx)
-  for (const o of hitOuts) {
-    if (!o.success) continue
-    if (o.critical && critAb === 'CRIT_MORTAL') { mortal += damageOf(ctx, ew, actx, attackerPlayer, dmgMods); continue }
-    const copies = o.critical && critAb === 'CRIT_2_HITS' ? 2 : 1
+  hitOuts.forEach((o, i) => {
+    if (!o.success) return
+    if (hitMortal) { mortal += mortalPerHit(ctx, hitMortal.value, attackerPlayer, attackerUnitId, lead, ew.id); return }
+    if (o.critical && critAb === 'CRIT_MORTAL') { mortal += damageOf(ctx, ew, actx, attackerPlayer, dmgMods); return }
+    const copies = copiesOf[i] ?? 1
     if (o.critical && critAb === 'CRIT_AUTO_WOUND') autoWounds += copies
     else needWound += copies
-  }
+  })
   addToPool(pools, batch.targetUnitId, mortal, by, rctx, true, attackerUnitId)
 
   // 2. wound
@@ -395,6 +420,9 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
     const st = runStage(ctx, { hook: 'onSaveRoll', purpose: 'save', count: wounds, actx, attackerPlayer, roller: targetPlayer, needed: sv, statics: saveCard ? [{ source: 'card', value: saveCard }] : [], rend, companion: false, unitId: batch.targetUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: rep.id })
     st.outs.forEach((o, i) => ctx.emit({ type: 'SaveRolled', attack: rctx, modelId: rep.id, kind: 'armour', die: o.u, final: o.final, needed: sv, saved: o.success, rollId: st.roll.id, dieIndex: i, player: targetPlayer }))
     unsaved = st.outs.filter((o) => !o.success).length
+    // F12 (SER C4): unmodified 1s on save dice, per target unit, for EngineCodeHook.afterAttackSequence
+    const ones = st.outs.filter((o) => o.u === 1).length
+    if (saveOnesTally && ones > 0) saveOnesTally[batch.targetUnitId] = (saveOnesTally[batch.targetUnitId] ?? 0) + ones
   }
 
   // 4. damage
@@ -468,10 +496,19 @@ function wardThreshold(ctx: EngineContext, unitId: UnitId, rep: Model, mortal: b
   return cardWard(s, unitId, best === null ? null : { needed: best, modifier: Math.max(-1, Math.min(1, modifier)) })
 }
 
-// the model that takes the next damage point: the damaged model first, then the model farthest from the attacker
-function nextTarget(state: GameState, models: Model[], attackerUnitId: UnitId | null): Model {
-  const damaged = models.filter((m) => m.woundsRemaining < modelStats(state, m).W)
+// a champion model (composition `champion: true`: the Slaves Godspeaker, the Seraphon Sunblood)
+function isChampion(state: GameState, m: Model): boolean {
+  const ds = state.datasheets[state.units[m.unitId]?.datasheetId ?? '']
+  return ds?.models.find((p) => p.modelId === m.datasheetModelId)?.champion === true
+}
+
+// the model that takes the next damage point: the damaged model first, then the model farthest from the attacker. F12 (SER C3):
+// champion models take damage last (only once no other model is left)
+function nextTarget(state: GameState, all: Model[], attackerUnitId: UnitId | null): Model {
+  const damaged = all.filter((m) => m.woundsRemaining < modelStats(state, m).W)
   if (damaged.length > 0) return damaged.reduce((a, b) => (b.woundsRemaining < a.woundsRemaining ? b : a))
+  const rank = all.filter((m) => !isChampion(state, m))
+  const models = rank.length > 0 ? rank : all
   const att = attackerUnitId ? boardModels(state, attackerUnitId) : []
   if (att.length === 0) return models[models.length - 1]
   let best = models[0], bestD = -1
@@ -501,7 +538,10 @@ function resolvePool(ctx: EngineContext, unitId: UnitId, pool: Pool): void {
       ctx.emit({ type: 'FeelNoPainRolled', unitId, modelId: rep.id, die, needed: ward.needed - ward.modifier, ignored, player: unit.player })
     }
     points -= warded
+    afterWardRoll(ctx, unitId, [...roll.dice], ward.needed)
   }
+  // F12 (SER C2): the first damage point allocated to the unit this phase may be ignored
+  points = ignoreFirstPoint(ctx, unitId, points)
   // KRU-ENH Egomaniak (EngineCodeHook.redirectDamage, F8): after the ward, each remaining point may move to another unit
   const moved = points > 0 ? redirectPoints(ctx, unitId, points) : null
   if (moved) points -= moved.points
@@ -514,6 +554,7 @@ function resolvePool(ctx: EngineContext, unitId: UnitId, pool: Pool): void {
     m.woundsRemaining -= take
     points -= take
     dealt.set(m.id, (dealt.get(m.id) ?? 0) + take)
+    tallyFightDamage(s, pool, take)
     if (m.woundsRemaining <= 0) {
       flushDamage(ctx, unit, dealt, pool)
       slain += slayModel(ctx, m.id, pool.by)
@@ -552,6 +593,7 @@ function redirectPoints(ctx: EngineContext, unitId: UnitId, points: number): { t
 function allocatePoints(ctx: EngineContext, unitId: UnitId, points: number, pool: Pool): void {
   const s = ctx.state
   const unit = s.units[unitId]
+  points = ignoreFirstPoint(ctx, unitId, points)
   let models = unitModels(s, unitId)
   let slain = 0
   const dealt = new Map<ModelId, number>()
@@ -561,6 +603,7 @@ function allocatePoints(ctx: EngineContext, unitId: UnitId, points: number, pool
     m.woundsRemaining -= take
     points -= take
     dealt.set(m.id, (dealt.get(m.id) ?? 0) + take)
+    tallyFightDamage(s, pool, take)
     if (m.woundsRemaining <= 0) {
       flushDamage(ctx, unit, dealt, pool)
       slain += slayModel(ctx, m.id, pool.by)
@@ -572,6 +615,71 @@ function allocatePoints(ctx: EngineContext, unitId: UnitId, points: number, pool
   }
   flushDamage(ctx, unit, dealt, pool)
   ctx.emit({ type: 'DamagePoolResolved', unitId, points: 0, warded: 0, slain, player: unit.player })
+}
+
+// ---------- F12 helpers of the damage sequence ----------
+// SCE-AB-4 (EngineCodeHook.afterWardRoll): every source entry held by the warded unit observes the roll
+function afterWardRoll(ctx: EngineContext, unitId: UnitId, dice: number[], needed: number): void {
+  for (const entry of sourcesFor(ctx.state)) {
+    if (entry.holderUnitId !== unitId) continue
+    codeHookFor(entry.code)?.afterWardRoll?.(ctx, entry, { unitId, dice, needed })
+  }
+}
+
+// SER-AB-1 (EngineCodeHook.ignoresFirstDamagePerPhase): drops one point the first time the unit would take damage this phase
+const IGNORE1 = 'ignore1:'
+function ignoreFirstPoint(ctx: EngineContext, unitId: UnitId, points: number): number {
+  const s = ctx.state
+  if (points <= 0 || s.phaseState.marks.includes(IGNORE1 + unitId)) return points
+  const source = hookService.ignoresFirstDamageBy(s, unitId)
+  if (!source) return points
+  s.phaseState.marks.push(IGNORE1 + unitId)
+  ctx.emit({ type: 'DamageIgnored', unitId, points: 1, source, player: s.units[unitId].player })
+  return points - 1
+}
+
+// SBG-BT-2 The Hunger: damage points a unit's melee attacks allocated this phase (after wards), phase mark fightDmg:<unitId>=<n>
+const FIGHT_DMG = 'fightDmg:'
+function tallyFightDamage(state: GameState, pool: Pool, take: number): void {
+  if (take <= 0 || pool.by.kind !== 'melee' || !pool.by.unitId) return
+  const key = `${FIGHT_DMG}${pool.by.unitId}=`
+  const prev = state.phaseState.marks.find((m) => m.startsWith(key))
+  const n = (prev ? Number(prev.slice(key.length)) : 0) + take
+  state.phaseState.marks = state.phaseState.marks.filter((m) => !m.startsWith(key))
+  state.phaseState.marks.push(key + n)
+}
+export function fightDamageAllocated(state: GameState, unitId: UnitId): number {
+  const key = `${FIGHT_DMG}${unitId}=`
+  const m = state.phaseState.marks.find((x) => x.startsWith(key))
+  return m ? Number(m.slice(key.length)) : 0
+}
+export function clearFightDamage(state: GameState, unitId: UnitId): void {
+  const key = `${FIGHT_DMG}${unitId}=`
+  state.phaseState.marks = state.phaseState.marks.filter((m) => !m.startsWith(key))
+}
+
+// SBG-BT-2: a unit's Fight activation is over (phases/fight.ts, after deferred mortals): the codes of its datasheet abilities and its
+// player's battle traits / regiment ability get EngineCodeHook.onOwnFightResolved with the damage it allocated; the tally is cleared
+export function ownFightResolved(ctx: EngineContext, unitId: UnitId): void {
+  const s = ctx.state
+  const damageAllocated = fightDamageAllocated(s, unitId)
+  clearFightDamage(s, unitId)
+  const unit = s.units[unitId]
+  if (!unit) return
+  for (const ab of ownAbilityCodes(s, unit)) codeHookFor(ab.code)?.onOwnFightResolved?.(ctx, { ability: ab, unitId, damageAllocated })
+}
+
+// SER-AB-6 (EngineCodeHook.afterAttackSequence): every source entry on the board, once per (source, holder, active effect)
+function afterAttackSequence(ctx: EngineContext, attackerUnitId: UnitId, saveOnes: Record<UnitId, number>): void {
+  const seen = new Set<string>()
+  for (const entry of sourcesFor(ctx.state)) {
+    const spec = codeHookFor(entry.code)
+    if (!spec?.afterAttackSequence) continue
+    const k = `${entry.source.id}|${entry.holderUnitId}|${entry.active?.id ?? ''}`
+    if (seen.has(k)) continue
+    seen.add(k)
+    spec.afterAttackSequence(ctx, entry, { attackerUnitId, saveOnes: { ...saveOnes } })
+  }
 }
 
 // ---------- LRL-AB-3 Hurricane Winds (F8): who damaged whom with shooting attacks this phase ----------
@@ -675,9 +783,11 @@ export const attackService: AttackService = {
     if (!a) return 'done'
     const pools: Pools = new Map()
     const live = a.targets.filter((t) => s.units[t.targetUnitId]?.location === 'board')
+    const tally: Record<UnitId, number> = {}
     if (live.length > 0) {
       const batches = buildBatches(ctx, a.kind, a.attackerUnitId, live)
-      for (const b of batches) resolveBatch(ctx, a.kind, a.attackerUnitId, b, pools)
+      saveOnesTally = tally
+      try { for (const b of batches) resolveBatch(ctx, a.kind, a.attackerUnitId, b, pools) } finally { saveOnesTally = null }
       for (const g of a.groups) g.resolved = g.attacks
     }
     // mortal damage queued during the ability joins the same pools (CORE-13.3)
@@ -688,8 +798,10 @@ export const attackService: AttackService = {
       addToPool(pools, q.targetUnitId, q.count, by, { abilityId: q.source.split('#')[0] }, true, q.by?.unitId ?? null)
     }
     resolvePools(ctx, pools)
-    if (live.length > 0 || a.targets.length > 0) ctx.emit({ type: 'AttackSequenceEnded', unitId: a.attackerUnitId, kind: a.kind })
+    const ran = live.length > 0 || a.targets.length > 0
+    if (ran) ctx.emit({ type: 'AttackSequenceEnded', unitId: a.attackerUnitId, kind: a.kind })
     s.phaseState.attack = null
+    if (ran) afterAttackSequence(ctx, a.attackerUnitId, tally)
     return 'done'
   },
 
@@ -751,20 +863,25 @@ export const attackService: AttackService = {
 // traits / regiment ability), also when that model was the unit's last: the ordinary onModelDestroyed dispatch skips wiped units.
 // `model` is the snapshot taken at removal (position and wounds at the moment it was slain).
 function ownModelSlain(ctx: EngineContext, unit: Unit, by: DestroyedBy): void {
-  const s = ctx.state
   const model = unit.destroyedModels?.[unit.destroyedModels.length - 1]
   if (!model) return
+  for (const ab of ownAbilityCodes(ctx.state, unit)) codeHookFor(ab.code)?.onOwnModelSlain?.(ctx, { ability: ab, unitId: unit.id, model, by })
+}
+
+// the unit's datasheet abilities plus its player's battle traits and regiment ability, de-duplicated, in that order
+function ownAbilityCodes(s: GameState, unit: Unit): RuntimeAbility[] {
   const ds = s.datasheets[unit.datasheetId]
   const owner = s.players[unit.player]
   const ids = [...(ds?.abilities ?? []), ...(owner?.battleTraitIds ?? []), ...(owner?.regimentAbilityId ? [owner.regimentAbilityId] : [])]
+  const out: RuntimeAbility[] = []
   const seen = new Set<string>()
   for (const id of ids) {
     const ab = s.abilities[id]
     if (!ab || seen.has(id)) continue
     seen.add(id)
-    const spec = codeHookFor(ab.code)
-    spec?.onOwnModelSlain?.(ctx, { ability: ab, unitId: unit.id, model, by })
+    out.push(ab)
   }
+  return out
 }
 
 // ---------- mortal damage held until a Fight ability has resolved (STD-AB-4 Glorious Death) ----------

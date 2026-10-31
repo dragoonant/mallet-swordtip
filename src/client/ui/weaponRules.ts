@@ -18,7 +18,10 @@ export function abilityLine(a: RuntimeWeapon['abilities'][number]): { name: stri
     case 'COMPANION': return { name: 'Companion', text: 'An animal companion: this weapon is not used as the main attack of its bearer and is fought alongside its other weapons.' }
     case 'SHOOT_IN_COMBAT': return { name: 'Shoot in Combat', text: 'May be fired even while the unit is in combat, but only at a unit it is in combat with.' }
     case 'CHARGE_DAMAGE': return { name: 'Charge (+1 Damage)', text: 'Does 1 extra Damage if the bearing unit charged this turn.' }
-    case 'CRIT_2_HITS': return { name: 'Crit (2 Hits)', text: 'A critical hit counts as two hits.' }
+    case 'CRIT_2_HITS': return v === undefined || v === null
+      ? { name: 'Crit (2 Hits)', text: 'A critical hit counts as two hits.' }
+      : { name: `Crit (${v} Hits)`, text: `A critical hit scores ${v} hits instead of one${typeof v === 'string' ? ', rolled for each critical hit' : ''}.` }
+    case 'HIT_MORTAL': return { name: 'See ability', text: `No wound or save rolls: every hit deals ${v ?? 1} mortal damage.` }
     case 'CRIT_AUTO_WOUND': return { name: 'Crit (Auto-wound)', text: 'A critical hit wounds automatically, skipping the wound roll.' }
     case 'CRIT_MORTAL': return { name: 'Crit (Mortal)', text: 'A critical hit deals its Damage as mortal damage and the attack sequence ends there.' }
     case 'TWIN_LINKED': return { name: 'Twin-linked', text: 'Two barrels working together: wound rolls may be re-rolled.' }

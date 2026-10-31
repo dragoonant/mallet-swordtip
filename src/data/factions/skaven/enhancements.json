@@ -1,0 +1,38 @@
+[
+  {
+    "id": "skaven.enh.skilled-manipulator",
+    "faction": "skaven",
+    "name": "Skilled Manipulator",
+    "text": "The general has Ward (4+) while it is within 1\" of a friendly Clanrats unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "skaven.ability.skilled-manipulator"
+  },
+  {
+    "id": "skaven.enh.skitterleap",
+    "faction": "skaven",
+    "name": "Skitterleap",
+    "text": "Spell (casting value 6). In your hero phase, if it is cast, take the general off the battlefield and set it up again anywhere on the battlefield more than 6\" from every enemy unit. It cannot use Move abilities in the following movement phase.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "skaven.ability.skitterleap"
+  },
+  {
+    "id": "skaven.enh.scurry-away",
+    "faction": "skaven",
+    "name": "Scurry Away",
+    "text": "In any combat phase, roll a dice. On a 3+ the general's unit can immediately Retreat as though it were your movement phase, and suffers no mortal damage for it.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "skaven.ability.scurry-away"
+  },
+  {
+    "id": "skaven.enh.cage-of-warp-lightning",
+    "faction": "skaven",
+    "name": "Cage of Warp Lightning",
+    "text": "Once per battle, in any combat phase, pick a visible enemy unit within 6\" of the general and roll a dice. On a 2+ that unit has Strike-last for the phase. On a 1 the general suffers 1 mortal damage.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "skaven.ability.cage-of-warp-lightning"
+  }
+]

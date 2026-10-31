@@ -9,7 +9,8 @@ const MOVE = 'mv:declared='
 const ATTACK = 'abil:atk='
 
 export interface DeclaredMove { unitId: UnitId; moveType: MoveType }
-export interface DeclaredAttack { unitId: UnitId; phase: 'shooting' | 'fight'; seq: number }
+// targetUnitIds (F12): the declared attack's target units once known (shooting: from the start; fight: after targets are declared)
+export interface DeclaredAttack { unitId: UnitId; phase: 'shooting' | 'fight'; seq: number; targetUnitIds?: UnitId[] }
 
 function read<T>(state: GameState, prefix: string): T | null {
   const m = state.phaseState.marks.find((x) => x.startsWith(prefix))

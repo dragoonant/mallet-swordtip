@@ -13,7 +13,7 @@ import type { EngineContext } from '../modules'
 import { keywordsOf, setModelPos, spawnDestroyedUnitCopy, unitModels, datasheetOf } from '../state'
 import type { GameState, PlayerId, UnitId } from '../types'
 import { announce } from './aos-common'
-import { reinforcementFormation, reinforcementOptions, writePlaceRequest } from './aos-moves'
+import { reinforcementFormation, reinforcementOptions, writePlaceRequest, type PlaceShape } from './aos-moves'
 
 export const CFR_ID = 'core.ability.call-for-reinforcements'
 export const CFR_CODE = 'spearheadCallForReinforcements'
@@ -83,19 +83,20 @@ export const spearheadCallForReinforcements: EngineCodeHook = {
   name: CFR_CODE, kind: 'ability', hook: 'onAbilityDeclared', run: () => undefined, activate: hook,
 }
 
-// the replacement's placement options (called by abilities.ts when it raises the placement decision)
-export function replacementOptions(state: GameState, unitId: UnitId) {
+// the replacement's placement options (called by abilities.ts when it raises the placement decision). `shape` (F12) comes from the
+// pending PlaceRequest (aos-moves placeShapeOf): Endless Legions drops the edge band, Blessed by the Old Ones sets up anywhere
+export function replacementOptions(state: GameState, unitId: UnitId, shape: PlaceShape = {}) {
   const u = state.units[unitId]
   if (!u) return []
-  return reinforcementOptions(state, u.player, unitModels(state, unitId), datasheetOf(state, unitId).coherencyRange, 5)
+  return reinforcementOptions(state, u.player, unitModels(state, unitId), datasheetOf(state, unitId).coherencyRange, 5, shape)
 }
 
 // set the replacement down at the spot an option id names; false when that spot is no longer legal
-export function placeReplacement(ctx: EngineContext, unitId: UnitId, centre: { x: number; z: number }): boolean {
+export function placeReplacement(ctx: EngineContext, unitId: UnitId, centre: { x: number; z: number }, shape: PlaceShape = {}): boolean {
   const s = ctx.state
   const u = s.units[unitId]
   if (!u) return false
-  const placements = reinforcementFormation(s, u.player, unitModels(s, unitId), datasheetOf(s, unitId).coherencyRange, centre)
+  const placements = reinforcementFormation(s, u.player, unitModels(s, unitId), datasheetOf(s, unitId).coherencyRange, centre, shape)
   if (!placements) return false
   for (const p of placements) { const m = s.models[p.modelId]; if (m) setModelPos(m, p.pos, p.facing) }
   u.location = 'board'

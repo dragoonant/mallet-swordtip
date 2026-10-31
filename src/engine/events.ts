@@ -80,6 +80,11 @@ export interface DamagePoolResolved extends EventBase { type: 'DamagePoolResolve
 // KRU-ENH Egomaniak (EngineCodeHook.redirectDamage): `points` damage points of a pool were moved off `fromUnitId` onto `toUnitId`
 // after the ward rolls (13-engine-port-plan F8 note)
 export interface DamageRedirected extends EventBase { type: 'DamageRedirected'; fromUnitId: UnitId; toUnitId: UnitId; points: number }
+// F12 (SER-AB-1 Scaled Protectors, EngineCodeHook.ignoresFirstDamagePerPhase): `points` damage points that would have been
+// allocated to `unitId` were ignored; `source` = the ability that ignored them
+export interface DamageIgnored extends EventBase { type: 'DamageIgnored'; unitId: UnitId; points: number; source: string }
+// SPH-2.7 (F12): tokens taken from a unit; `remaining` = what it still holds
+export interface TokenRemoved extends EventBase { type: 'TokenRemoved'; unitId: UnitId; token: string; count: number; remaining: number }
 // SPH-12 (P1): a replacement unit was set up for a destroyed Reinforcements unit
 export interface UnitReplaced extends EventBase { type: 'UnitReplaced'; unitId: UnitId; replacementOf: UnitId }
 export interface FeelNoPainRolled extends EventBase { type: 'FeelNoPainRolled'; unitId: UnitId; modelId: ModelId; die: number; needed: number; ignored: boolean }
@@ -93,7 +98,8 @@ export interface LeaderDetached extends EventBase { type: 'LeaderDetached'; lead
 
 // charge
 export interface ChargeDeclared extends EventBase { type: 'ChargeDeclared'; unitId: UnitId; targetUnitIds: UnitId[]; heroic: boolean }
-export interface ChargeRolled extends EventBase { type: 'ChargeRolled'; unitId: UnitId; dice: [number, number]; total: number; needed: number | null }
+// allDice (F12, SCE-AB-5): every die rolled when the unit rolled more than two (dice keeps the first two)
+export interface ChargeRolled extends EventBase { type: 'ChargeRolled'; unitId: UnitId; dice: [number, number]; total: number; needed: number | null; allDice?: number[] }
 export interface ChargeFailed extends EventBase { type: 'ChargeFailed'; unitId: UnitId }
 export interface ChargeMoved extends EventBase { type: 'ChargeMoved'; unitId: UnitId; paths: Record<ModelId, Path> }
 export interface PiledIn extends EventBase { type: 'PiledIn'; unitId: UnitId; paths: Record<ModelId, Path> }
@@ -134,7 +140,7 @@ export interface DecisionRequested extends EventBase { type: 'DecisionRequested'
 
 export type GameEvent =
   | GameCreated | RoundStarted | RoundEnded | TurnStarted | PhaseStarted | PhaseEnded | GameEnded | SidesChosen | FirstTurnChosen | UnitDeployed
-  | PriorityRolled | UnderdogDetermined | InitiativeSeized | DamagePoolResolved | DamageRedirected | UnitReplaced
+  | PriorityRolled | UnderdogDetermined | InitiativeSeized | DamagePoolResolved | DamageRedirected | DamageIgnored | TokenRemoved | UnitReplaced
   | TwistDrawn | TwistPicked | TacticsDrawn | TacticDiscarded | TacticScored | TacticCommandUsed
   | CpChanged | BattleShockTested | BattleShocked | BattleShockRecovered | OathTargetChosen | WaaaghCalled
   | MoveDeclared | UnitMoved | UnitAdvanced | UnitFellBack | UnitRemainedStationary | DesperateEscapeRolled | ReinforcementsArrived | UnitRemovedFromBattlefield | UnitLostInReserves | CoherencyCulled

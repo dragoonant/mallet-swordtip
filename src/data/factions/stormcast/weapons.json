@@ -1,0 +1,107 @@
+[
+  {
+    "id": "stormcast.weapon.hallowed-greataxe",
+    "name": "Hallowed Greataxe",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 3,
+    "wound": 3,
+    "rend": 2,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "stormcast.weapon.gryph-stalker-beak-and-talons",
+    "name": "Gryph-stalker's Beak and Talons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "stormcast.weapon.staff-of-abjuration",
+    "name": "Staff of Abjuration",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 3,
+    "abilities": []
+  },
+  {
+    "id": "stormcast.weapon.judgement-blade",
+    "name": "Judgement Blade",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": [
+      { "ability": "ANTI", "keyword": "WIZARD", "value": 1 },
+      { "ability": "ANTI", "keyword": "PRIEST", "value": 1 }
+    ]
+  },
+  {
+    "id": "stormcast.weapon.stormcall-javelin-ranged",
+    "name": "Stormcall Javelin",
+    "type": "ranged",
+    "range": 10,
+    "A": 1,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "stormcast.weapon.stormcall-javelin",
+    "name": "Stormcall Javelin",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "stormcast.weapon.warhammer",
+    "name": "Warhammer",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      { "ability": "CRIT_MORTAL" }
+    ]
+  },
+  {
+    "id": "stormcast.weapon.grandhammer",
+    "name": "Grandhammer",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "CRIT_MORTAL" }
+    ]
+  }
+]

@@ -192,7 +192,11 @@ function doResolve(ctx: EngineContext): 'pending' | 'selectUnit' {
   const unitId = readMark(s, 'sh:resolveUnit')
   if (!unitId) return 'selectUnit'
   // LRL-BT-3 Gale Force (F8): reactions to declaring a Shoot attack, the shooting player only, before any dice
-  if (ctx.services.abilities.runReactionWindow?.(ctx, s.units[unitId]?.player ?? s.activePlayer, { kind: 'youDeclaredAttack', unitId, phase: 'shooting' }, `sh:${unitId}`)) return 'pending'
+  const atk = s.phaseState.attack && s.phaseState.attack.attackerUnitId === unitId ? s.phaseState.attack : null
+  const shooter = s.units[unitId]?.player ?? s.activePlayer
+  if (ctx.services.abilities.runReactionWindow?.(ctx, shooter, { kind: 'youDeclaredAttack', unitId, phase: 'shooting', ...(atk ? { targetUnitIds: [...atk.targetUnitIds] } : {}) }, `sh:${unitId}`)) return 'pending'
+  // SKV-RA-1 (F12): the opponent's reactions to the declared Shoot attack (targets known), before any dice
+  if (atk && ctx.services.abilities.runReactionWindow?.(ctx, ctx.opponentOf(shooter), { kind: 'opponentDeclaredAttack', unitId, phase: 'shooting', targetUnitIds: [...atk.targetUnitIds] }, `sht:${unitId}`)) return 'pending'
   // CORE-3.2: the active player is always offered first
   if (ctx.window('shooting.targetsDeclared', unitId, ctx.order.active(), { unitId })) return 'pending'
   if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'

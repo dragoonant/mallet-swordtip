@@ -47,7 +47,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
     if (psychic || /force|stave|staff|goad/.test(text)) return 'force'
     // Tyranid claws, talons and teeth rend and slash, so they voice as the cutting sound; only a klaw/fist
     // (or a plain crushing profile) is the heavy crunch.
-    if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks|hoove?s/.test(text)) return 'crush'
+    if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks|hoove?s|clubbing|celestite.club|war-relic/.test(text)) return 'crush'
     if (/choppa|chain|sword|blade|axe|eviscerator|knife|knives|reaper|claw|talon|teeth|jaws|snappa|stikka|maw|hyperphase|mandible|flail|whip|glaive|spear|lance|khopesh|fang/.test(text)) return 'chain'
     return strength >= 8 ? 'crush' : 'chain'
   }
@@ -58,6 +58,12 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
   if (/windblast|vortex|wind.s.vengeance/.test(text)) return 'psychic'
   if (/skyhook/.test(text)) return 'heavy'
   if (/crossbow|beast.skewer|volley.gun/.test(text)) return 'shoota'
+  // F12: a Stormcast javelin is a lightning bolt (a spell-streak), the Skaven ratling cannons a rattle of slugs, their windlaunchers
+  // a heavy lobbed globe, the Seraphon dartpipe a spit of needles and the Spawn's glob of flame acid a gout of fire.
+  if (/javelin/.test(text)) return 'psychic'
+  if (/ratling/.test(text)) return 'shoota'
+  if (/windlauncher/.test(text)) return 'heavy'
+  if (/dartpipe|blowpipe/.test(text)) return 'shoota'
   // A macro plasma *incinerator* is a plasma gun, not a flame template.
   if (/plasma.*incinerat/.test(text)) return 'heavy'
   // TORRENT is the rules-level marker for a flame template (no hit roll, auto-hits).
@@ -99,7 +105,7 @@ export interface VfxClassification {
 
 /** Engine faction ids by the prefix of a weapon id ('ork.w.shoota'), for weapons classified with no faction given. */
 const ID_PREFIX_FACTION: [string, string][] = [
-  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
+  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['stormcast.', 'stormcast'], ['skaven.', 'skaven'], ['seraphon.', 'seraphon'], ['soulblight.', 'soulblight'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
   ['am.', 'astra-militarum'], ['lov.', 'leagues-of-votann'], ['gk.', 'grey-knights'], ['csm', 'chaos-space-marines'], ['we.', 'world-eaters'], ['ade', 'adepta-sororitas'], ['cus.', 'adeptus-custodes'], ['drk.', 'drukhari'], ['ael.', 'aeldari'], ['adm.', 'adeptus-mechanicus'], ['dg.', 'death-guard'], ['ths.', 'thousand-sons'], ['sw.', 'space-wolves'], ['da.', 'dark-angels'], ['ba.', 'blood-angels'], ['dw.', 'deathwatch'], ['bt.', 'black-templars'],
 ]
 
@@ -119,6 +125,13 @@ export function classifyVfxFamily(weaponId: string, weapon: WeaponData | undefin
   if (/wind.s.vengeance/.test(text)) return kw('pulse')
   if (/skyhook/.test(text)) return kw('missile')
   if (/volley.gun/.test(text)) return kw('dakka')
+  // F12: Skaven warp lightning is a spell-streak, ratling cannons a dakka rattle and windlaunchers lobbed globes; a Stormcast javelin is a
+  // bright lightning-pulse and a Seraphon dartpipe a needle of venom.
+  if (/warp.?lightning/.test(text)) return kw('psychic')
+  if (/ratling/.test(text)) return kw('dakka')
+  if (/windlauncher/.test(text)) return kw('grenade')
+  if (/stormcall|javelin/.test(text)) return kw('pulse')
+  if (/dartpipe|blowpipe/.test(text)) return kw('bio')
   if (/volley.pistol|privateer|vulcaniser|aethershot|carbine/.test(text)) return kw('flintlock')
   if (/crossbow|beast.skewer|grot.bow|windcharger.bow/.test(text)) return kw('bolt')
   // Spat, flung or sprayed biomass: Tyranid guns, and the cult's webber.

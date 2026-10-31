@@ -1,0 +1,27 @@
+{
+  "id": "skaven.army.warpspark-clawpack",
+  "faction": "skaven",
+  "name": "Warpspark Clawpack",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "grey-seer", "datasheet": "skaven.unit.grey-seer", "size": 1 },
+    { "ref": "stormfiends", "datasheet": "skaven.unit.stormfiends", "size": 3 },
+    { "ref": "warp-lightning-cannon", "datasheet": "skaven.unit.warp-lightning-cannon", "size": 1 },
+    { "ref": "clanrats-1", "datasheet": "skaven.unit.clanrats", "size": 10 },
+    { "ref": "clanrats-2", "datasheet": "skaven.unit.clanrats", "size": 10 }
+  ],
+  "warlord": "grey-seer",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": ["skaven.ability.always-three-clawsteps-ahead"],
+  "regimentAbilities": [
+    { "id": "skaven.ability.endless-swarm-of-rats", "default": true },
+    { "id": "skaven.ability.warpstone-laced-armour", "default": false }
+  ],
+  "enhancements": [
+    { "id": "skaven.enh.skilled-manipulator", "default": true },
+    { "id": "skaven.enh.skitterleap", "default": false },
+    { "id": "skaven.enh.scurry-away", "default": false },
+    { "id": "skaven.enh.cage-of-warp-lightning", "default": false }
+  ]
+}

@@ -302,7 +302,8 @@ export function spawnUnitCopy(state: GameState, sourceUnitId: UnitId, modelCount
 // C3 (Send in the Next Wave): a fresh copy of a destroyed unit, at full strength, set aside in Reserves. The new unit has id
 // `${source}~${n}`; its models are rebuilt from the source's living and destroyed models (same datasheet model, weapons,
 // base and height, full Wounds, no one-shot weapons used). No leader link, enhancement or warlord flag.
-export function spawnDestroyedUnitCopy(ctx: EngineContext, sourceUnitId: UnitId): Unit {
+// F12 (SER-ENH Blessed by the Old Ones): opts.onlyModels keeps only the models whose datasheet modelId is listed.
+export function spawnDestroyedUnitCopy(ctx: EngineContext, sourceUnitId: UnitId, opts: { onlyModels?: string[] } = {}): Unit {
   const s = ctx.state
   const src = s.units[sourceUnitId]
   if (!src) throw new EngineInvariantError(`spawnDestroyedUnitCopy: unknown unit ${sourceUnitId}`)
@@ -313,7 +314,7 @@ export function spawnDestroyedUnitCopy(ctx: EngineContext, sourceUnitId: UnitId)
   const byId = new Map<string, Model>()
   for (const m of src.destroyedModels ?? []) byId.set(m.id, m)
   for (const id of src.models) if (s.models[id]) byId.set(id, s.models[id])
-  const sources = [...byId.values()].sort((a, b) => indexOf(a.id) - indexOf(b.id))
+  const sources = [...byId.values()].sort((a, b) => indexOf(a.id) - indexOf(b.id)).filter((m) => !opts.onlyModels || opts.onlyModels.includes(m.datasheetModelId))
   const ds = datasheetOf(s, sourceUnitId)
   const modelIds: ModelId[] = []
   sources.forEach((m, i) => {

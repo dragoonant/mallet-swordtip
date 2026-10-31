@@ -1,0 +1,68 @@
+[
+  {
+    "id": "soulblight.weapon.dynastic-war-relic",
+    "name": "Dynastic War-relic",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "soulblight.weapon.ancient-weapon",
+    "name": "Ancient Weapon",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "soulblight.weapon.templar-lance-or-blade",
+    "name": "Templar Lance or Templar Blade",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      { "ability": "CHARGE_DAMAGE", "value": 1 }
+    ]
+  },
+  {
+    "id": "soulblight.weapon.nightmares-hooves-and-teeth",
+    "name": "Nightmare's Hooves and Teeth",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 5,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "soulblight.weapon.murderous-fangs-and-talons",
+    "name": "Murderous Fangs and Talons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "CRIT_2_HITS" }
+    ]
+  }
+]

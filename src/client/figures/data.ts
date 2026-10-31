@@ -241,6 +241,24 @@ const KNOWN_KIT: Record<string, KitId> = {
   'kharadron.unit.arkanaut-company-gunners': 'lov-hearthkyn',
   'kharadron.unit.skywardens': 'lov-hearthkyn',
   'kharadron.unit.arkanaut-frigate': 'tau-devilfish',
+  // Stormcast, Skaven, Seraphon and Soulblight: stand-ins shown only until the GLB loads, nearest existing 42k kit per warscroll.
+  'stormcast.unit.lord-vigilant': 'cdm-bloodcrusher',
+  'stormcast.unit.lord-veritant': 'ade-canoness',
+  'stormcast.unit.prosecutors': 'ael-guardian',
+  'stormcast.unit.liberators': 'dw-intercessor',
+  'skaven.unit.grey-seer': 'ael-farseer',
+  'skaven.unit.clanrats': 'csm-cultist',
+  'skaven.unit.stormfiends': 'ork-deff-dread',
+  'skaven.unit.warp-lightning-cannon': 'am-field-gun',
+  'seraphon.unit.sunblood-pack': 'we-berzerker',
+  'seraphon.unit.saurus-warriors': 'we-berzerker',
+  'seraphon.unit.hunters-of-huanchi': 'csm-cultist',
+  'seraphon.unit.terrawings': 'cdm-flesh-hound',
+  'seraphon.unit.spawn-of-chotec': 'cdm-flesh-hound',
+  'soulblight.unit.vampire-lord': 'lov-kahl',
+  'soulblight.unit.deathrattle-skeletons': 'csm-cultist',
+  'soulblight.unit.blood-knights': 'cdm-bloodcrusher',
+  'soulblight.unit.vargheists': 'cdm-flesh-hound',
 }
 
 /** Models of a mixed unit that look different from the rest of it (a flamer sister is not a rifle sister), keyed
@@ -250,6 +268,8 @@ const KNOWN_KIT_BY_MODEL: Record<string, KitId> = {
   'kharadron.unit.arkanaut-company-gunners/arkanaut-volley': 'lov-hearthkyn-magna',
   'kharadron.unit.arkanaut-company-gunners/arkanaut-skyhook': 'lov-hearthkyn-hylas',
   'kharadron.unit.skywardens/skywarden-volley': 'lov-hearthkyn-magna',
+  // The Sunblood leads his Bodyguards: the champion's stand-in is the berzerker champion.
+  'seraphon.unit.sunblood-pack/sunblood': 'we-berzerker-champion',
   'da.intercessor-squad/sergeant': 'da-sergeant',
   'da.intercessor-squad/intercessor': 'da-intercessor',
   'da.chaplain-mordekai/mordekai': 'da-chaplain',
@@ -708,6 +728,27 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   'kharadron.unit.arkanaut-company-gunners': 0.95,
   'kharadron.unit.skywardens': 1.0,
   'kharadron.unit.arkanaut-frigate': 2.4,
+  // Stormcast: the Lord-Vigilant rides a Gryph-stalker on a 90x52mm oval, Liberators and Prosecutors are tall armoured footsoldiers.
+  'stormcast.unit.lord-vigilant': 2.0,
+  'stormcast.unit.lord-veritant': 1.25,
+  'stormcast.unit.prosecutors': 1.35,
+  'stormcast.unit.liberators': 1.25,
+  // Skaven: Clanrats are hunched and small, the Grey Seer a little taller, Stormfiends hulking on 60mm bases, the Cannon a war-cart on a 120x92mm oval.
+  'skaven.unit.grey-seer': 1.15,
+  'skaven.unit.clanrats': 0.95,
+  'skaven.unit.stormfiends': 2.0,
+  'skaven.unit.warp-lightning-cannon': 2.0,
+  // Seraphon: broad saurus, small skinks, flying Terrawings, the Spawn a big low beast on a 90x52mm oval.
+  'seraphon.unit.sunblood-pack': 1.35,
+  'seraphon.unit.saurus-warriors': 1.25,
+  'seraphon.unit.hunters-of-huanchi': 0.95,
+  'seraphon.unit.terrawings': 1.4,
+  'seraphon.unit.spawn-of-chotec': 1.6,
+  // Soulblight: a lord a head above the skeletons, Blood Knights mounted on 75x42mm ovals, Vargheists crouched on 50mm bases.
+  'soulblight.unit.vampire-lord': 1.35,
+  'soulblight.unit.deathrattle-skeletons': 1.1,
+  'soulblight.unit.blood-knights': 1.9,
+  'soulblight.unit.vargheists': 1.7,
   // Space Wolves: the Invictor Tactical Warsuit is a tall bipedal walker on a 90mm base.
   'sw.invictor-tactical-warsuit': 2.4,
   'sw.battle-leader-thoryk': 1.2,

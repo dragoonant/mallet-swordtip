@@ -1,0 +1,140 @@
+[
+  {
+    "id": "soulblight.ability.bloodcrave-hunt",
+    "name": "Bloodcrave Hunt",
+    "text": "Army marker for the Soulblight Gravelords Bloodcrave Hunt. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "soulblight.ability.deaths-descent",
+    "name": "Death's Descent",
+    "text": "The Vargheists are not set up in the deployment phase: they start in reserve and arrive through Swoop Down.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "soulblight.ability.swoop-down",
+    "name": "Swoop Down",
+    "text": "In your movement phase from battle round 3, set this unit up anywhere on the battlefield, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["CORE"],
+    "fromRound": 3,
+    "params": { "fromRound": 3, "minEnemyDistance": 6, "anywhere": true }
+  },
+  {
+    "id": "soulblight.ability.the-hunger",
+    "name": "The Hunger",
+    "text": "Each time a friendly Vampire unit has fought, it heals as many damage points as its attacks allocated to enemy models.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "soulblightTheHunger",
+    "params": { "keyword": "VAMPIRE", "priority": "P1" }
+  },
+  {
+    "id": "soulblight.ability.endless-legions",
+    "name": "Endless Legions",
+    "text": "Once per battle, in your movement phase, pick a friendly Deathrattle Skeletons unit that has been destroyed. Set up a replacement unit of it with D6 models wholly in your territory, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["CORE"],
+    "limit": "oncePerBattle",
+    "code": "soulblightEndlessLegions",
+    "params": { "dice": "D6", "minEnemyDistance": 6, "datasheet": "deathrattle-skeletons", "priority": "P2" }
+  },
+  {
+    "id": "soulblight.ability.ruinous-chargers",
+    "name": "Ruinous Chargers",
+    "text": "Once per battle, in any charge phase, pick your Blood Knights if they charged this turn. Each enemy unit they passed across in that charge suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "any" },
+    "limit": "oncePerBattle",
+    "code": "soulblightRuinousChargers",
+    "params": { "mortal": "D3", "datasheet": "blood-knights", "priority": "P2" }
+  },
+  {
+    "id": "soulblight.ability.vile-transference",
+    "name": "Vile Transference",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible enemy unit within 6\" of this unit. If the spell is cast, roll as many dice as that unit's Health characteristic: for each 5+, it suffers 1 mortal damage and this unit heals 1 damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "soulblightVileTransference",
+    "params": { "range": 6, "successOn": 5, "mortalPerSuccess": 1, "healPerSuccess": 1, "priority": "P2" }
+  },
+  {
+    "id": "soulblight.ability.skeleton-legion",
+    "name": "Skeleton Legion",
+    "text": "In your combat phase, roll a dice for each slain model of this unit. For each 6, return 1 slain model to it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "your" },
+    "code": "soulblightSkeletonLegion",
+    "params": { "successOn": 6, "shardSuccessOn": 5, "shardRange": 9, "priority": "P1" }
+  },
+  {
+    "id": "soulblight.ability.riders-of-ruin",
+    "name": "Riders of Ruin",
+    "text": "Models of this unit can pass across enemy Infantry models as if this unit had Fly.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "passAcrossKeyword": "INFANTRY" }
+  },
+  {
+    "id": "soulblight.ability.the-scent-of-gore",
+    "name": "The Scent of Gore",
+    "text": "Add 1 to wound rolls for this unit's attacks that target a damaged unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "soulblightScentOfGore",
+    "effect": { "modifyRoll": { "roll": "wound", "value": 1 } }
+  },
+  {
+    "id": "soulblight.ability.grave-sand-shard",
+    "name": "Grave-Sand Shard",
+    "text": "Once per battle, when you use Skeleton Legion for a unit within 9\" of the bearer, add 1 to each of its legion rolls.",
+    "trigger": "activated",
+    "timing": { "kind": "reaction", "trigger": "youDeclared", "abilityId": "soulblight.ability.skeleton-legion" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "code": "soulblightGraveSandShard",
+    "params": { "range": 9, "bonus": 1, "priority": "P2" }
+  },
+  {
+    "id": "soulblight.ability.cloud-of-bats",
+    "name": "Cloud of Bats",
+    "text": "Once per battle, in your movement phase, take the bearer off the battlefield and set them up again anywhere, more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["CORE"],
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "code": "soulblightCloudOfBats",
+    "params": { "minEnemyDistance": 6, "priority": "P2" }
+  },
+  {
+    "id": "soulblight.ability.aura-of-night",
+    "name": "Aura of Night",
+    "text": "Ignore negative modifiers to save rolls for shooting attacks that target the bearer.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": { "when": { "weaponType": "ranged" }, "ignoreNegativeModifiers": "save" }
+  },
+  {
+    "id": "soulblight.ability.spirit-gale",
+    "name": "Spirit Gale",
+    "text": "Spell (casting value 7). In your hero phase, make a casting roll for the bearer. If it is cast, every enemy unit on the battlefield suffers 1 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 7,
+    "scope": { "who": "bearer" },
+    "code": "soulblightSpiritGale",
+    "params": { "mortal": 1, "priority": "P2" }
+  }
+]

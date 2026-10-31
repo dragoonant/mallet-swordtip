@@ -1,0 +1,38 @@
+[
+  {
+    "id": "soulblight.enh.grave-sand-shard",
+    "faction": "soulblight",
+    "name": "Grave-Sand Shard",
+    "text": "Once per battle, when you use Skeleton Legion for a unit within 9\" of the general, add 1 to each of its legion rolls.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "soulblight.ability.grave-sand-shard"
+  },
+  {
+    "id": "soulblight.enh.cloud-of-bats",
+    "faction": "soulblight",
+    "name": "Cloud of Bats",
+    "text": "Once per battle, in your movement phase, take the general off the battlefield and set them up again anywhere, more than 6\" from every enemy unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "soulblight.ability.cloud-of-bats"
+  },
+  {
+    "id": "soulblight.enh.aura-of-night",
+    "faction": "soulblight",
+    "name": "Aura of Night",
+    "text": "Ignore negative modifiers to save rolls for shooting attacks that target the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "soulblight.ability.aura-of-night"
+  },
+  {
+    "id": "soulblight.enh.spirit-gale",
+    "faction": "soulblight",
+    "name": "Spirit Gale",
+    "text": "Spell (casting value 7). In your hero phase the general can cast it: every enemy unit on the battlefield suffers 1 mortal damage.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "soulblight.ability.spirit-gale"
+  }
+]

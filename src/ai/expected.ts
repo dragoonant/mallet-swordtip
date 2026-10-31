@@ -52,7 +52,15 @@ export function expectedAttack(
   const hit = weapon.skill === null ? 1 : rollP(weapon.skill, opts.hitMod ?? (opts.cover ? -1 : 0))
   const wound = rollP(weapon.wound, opts.woundMod ?? 0)
   let hits = n * hit
-  if (weaponService.hasAbility(weapon, 'CRIT_2_HITS')) hits += n / 6
+  // F12: HIT_MORTAL (every hit = `value` mortal damage, no wound / save roll); CRIT_2_HITS may score `value` hits per crit
+  const hitMortal = weapon.abilities.find((a) => a.ability === 'HIT_MORTAL')
+  if (hitMortal) {
+    let damage = hits * (hitMortal.value === undefined ? 1 : diceExprMean(hitMortal.value))
+    if (tStats.ward !== null) damage *= 1 - rollP(tStats.ward, 0)
+    return { damage, modelsKilled: Math.min(target.models.length, damage / Math.max(1, tStats.W)) }
+  }
+  const crit2 = weapon.abilities.find((a) => a.ability === 'CRIT_2_HITS')
+  if (crit2) hits += (n / 6) * ((crit2.value === undefined ? 2 : diceExprMean(crit2.value)) - 1)
   let wounds = hits * wound
   if (weaponService.hasAbility(weapon, 'CRIT_AUTO_WOUND')) wounds += hits * (1 / 6) * (1 - wound)
 

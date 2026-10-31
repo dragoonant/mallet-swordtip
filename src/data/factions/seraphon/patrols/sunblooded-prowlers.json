@@ -1,0 +1,93 @@
+{
+  "id": "seraphon.army.sunblooded-prowlers",
+  "faction": "seraphon",
+  "name": "Sunblooded Prowlers",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "sunblood-pack",
+      "datasheet": "seraphon.unit.sunblood-pack",
+      "size": 3,
+      "tokens": {
+        "venomites": 1
+      }
+    },
+    {
+      "ref": "saurus-a",
+      "datasheet": "seraphon.unit.saurus-warriors",
+      "size": 5
+    },
+    {
+      "ref": "saurus-b",
+      "datasheet": "seraphon.unit.saurus-warriors",
+      "size": 5
+    },
+    {
+      "ref": "hunters-a",
+      "datasheet": "seraphon.unit.hunters-of-huanchi",
+      "size": 5,
+      "reserve": {
+        "ability": "seraphon.ability.chameleon-ambush"
+      }
+    },
+    {
+      "ref": "hunters-b",
+      "datasheet": "seraphon.unit.hunters-of-huanchi",
+      "size": 5,
+      "reserve": {
+        "ability": "seraphon.ability.chameleon-ambush"
+      }
+    },
+    {
+      "ref": "terrawings",
+      "datasheet": "seraphon.unit.terrawings",
+      "size": 3
+    },
+    {
+      "ref": "spawn",
+      "datasheet": "seraphon.unit.spawn-of-chotec",
+      "size": 1,
+      "tokens": {
+        "sun-acolyte": 3
+      },
+      "reserve": {
+        "ability": "seraphon.ability.chameleon-ambush"
+      }
+    }
+  ],
+  "warlord": "sunblood-pack",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "seraphon.ability.hidden-hunters",
+    "seraphon.ability.vengeance-of-azyr"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "seraphon.ability.scaled-aegis",
+      "default": true
+    },
+    {
+      "id": "seraphon.ability.followers-of-huanchi",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "seraphon.enh.instinctive-commander",
+      "default": false
+    },
+    {
+      "id": "seraphon.enh.savage-mauling",
+      "default": false
+    },
+    {
+      "id": "seraphon.enh.venomite-swarm",
+      "default": true
+    },
+    {
+      "id": "seraphon.enh.blessed-by-the-old-ones",
+      "default": false
+    }
+  ]
+}

@@ -26,6 +26,7 @@ import { notImplementedHandle, type AdvanceResult, type EngineContext, type Phas
 import { boardUnitsOf, datasheetOf, enemyModelsOnBoard, hasKeyword, setModelPos, unitModels, unitModelsForCoherency } from '../state'
 import { optionActions, translatePlacements } from './legal'
 import { reformChargeCandidates } from './reform'
+import { pathBlockingEnemies, recordPassedAcross, unitsPassedAcrossPaths } from '../factions/aos-moves'
 import type { Action, ModelPlacement } from '../actions'
 import {
   EngineInvariantError,
@@ -53,11 +54,18 @@ function optionCheck(pending: PendingDecision, action: Action): Rejection | null
 
 // ---------- eligibility (CORE-9.1) ----------
 
-// can the unit's nearest model reach ½" of some enemy model with a roll of at most 12 (2D6)?
+// F12 (SCE-AB-5 Heralds of Righteousness): how many dice the unit rolls to charge: 2 (1 while ensnared by Grasping Vines) plus
+// Effect.extraChargeDice (hookService.chargeDiceBonus); all dice are summed. Exported for the AI's charge odds and the client.
+export function chargeDiceCount(state: GameState, unitId: UnitId): number {
+  return Math.max(1, cardChargeDice(state, unitId) + hookService.chargeDiceBonus(state, unitId))
+}
+
+// can the unit's nearest model reach ½" of some enemy model with the best roll its charge dice can make (6 per die)?
 function enemyWithinReach(state: GameState, unitId: UnitId): boolean {
   const mine = unitModelsForCoherency(state, unitId)
   const enemies = enemyModelsOnBoard(state, state.units[unitId].player)
-  for (const m of mine) for (const e of enemies) if (horizontalGap(m, e) - CHARGE_END <= 12 + EPS) return true
+  const best = 6 * chargeDiceCount(state, unitId)
+  for (const m of mine) for (const e of enemies) if (horizontalGap(m, e) - CHARGE_END <= best + EPS) return true
   return false
 }
 
@@ -82,7 +90,9 @@ function eligibleChargers(state: GameState, player: PlayerId): UnitId[] {
 }
 
 // ---------- geometry ----------
-interface ChargeGeometry { models: Model[]; enemies: Model[]; otherFriendly: Model[]; fly: boolean }
+// pathEnemies (F12, SBG-AB-2): the enemy models that block the charge PATH (passAcrossKeyword units dropped); `enemies` still
+// decides end overlap and the charge end
+interface ChargeGeometry { models: Model[]; enemies: Model[]; otherFriendly: Model[]; fly: boolean; pathEnemies: Model[] }
 
 function chargeGeometry(state: GameState, unitId: UnitId): ChargeGeometry {
   const models = unitModelsForCoherency(state, unitId)
@@ -90,7 +100,8 @@ function chargeGeometry(state: GameState, unitId: UnitId): ChargeGeometry {
   const mine = new Set(leaderService.halves(state, unitId))
   const otherFriendly: Model[] = []
   for (const u of boardUnitsOf(state, player)) if (!mine.has(u.id)) otherFriendly.push(...unitModels(state, u.id))
-  return { models, enemies: enemyModelsOnBoard(state, player), otherFriendly, fly: models.length > 0 && models.every((m) => hasKeyword(state, m.unitId, 'FLY')) }
+  const enemies = enemyModelsOnBoard(state, player)
+  return { models, enemies, otherFriendly, fly: models.length > 0 && models.every((m) => hasKeyword(state, m.unitId, 'FLY')), pathEnemies: pathBlockingEnemies(state, unitId, enemies) }
 }
 
 /** How far the charging unit's closest model has to travel to get within ½" of the closest enemy model — the number a 2D6
@@ -169,7 +180,7 @@ export function chargeMoveRejection(state: GameState, unitId: UnitId, roll: numb
     const extra = terrainService.extraMoveCost(state, r.model, r.path)
     if (extra > 0 && r.distance + extra > roll + 1e-3) return { code: 'E_OUT_OF_RANGE', reason: `${r.model.id} would need ${(r.distance + extra).toFixed(2)}" including climbs > ${roll}"`, details: { modelId: r.model.id } }
     // CORE-6.5: no passing through other models (FLY ignores them); passing through enemy combat ranges is fine (CORE-9.2)
-    if (!geo.fly && pathCrossesModels(fp, r.path, [...geo.enemies, ...geo.otherFriendly])) return { code: 'E_OVERLAP', reason: `${r.model.id}'s path would cross another model`, details: { modelId: r.model.id } }
+    if (!geo.fly && pathCrossesModels(fp, r.path, [...geo.pathEnemies, ...geo.otherFriendly])) return { code: 'E_OVERLAP', reason: `${r.model.id}'s path would cross another model`, details: { modelId: r.model.id } }
   }
   if (!chargeEndsLegally(state, geo, finals)) return { code: 'E_ENGAGEMENT', reason: 'the charge must end with a model within ½" of a visible enemy model', details: {} }
   return null
@@ -212,8 +223,9 @@ export function legalChargeMoves(state: GameState, unitId: UnitId, roll: number,
   const tried = new Set<string>()
   const coherency = datasheetOf(state, unitId).coherencyRange ?? 0.5
   const blockers: Footprint[] = [...geo.enemies, ...geo.otherFriendly]
+  const pathBlockers: Footprint[] = [...geo.pathEnemies, ...geo.otherFriendly]
   const fields = new Map<string, PathField | null>()
-  const env: FitEnv = { state, geo, roll, blockers, fields, coherency }
+  const env: FitEnv = { state, geo, roll, blockers, pathBlockers, fields, coherency }
   let checks = 0
   const MAX_CHECKS = 60
   const offer = (placements: ModelPlacement[] | null): boolean => {
@@ -322,12 +334,13 @@ function approachPoint(m: Model, facing: number, e: Model, gap: number): { to: V
 }
 
 // ---------- shortest ways round (½" grid Dijkstra per model and facing, cached per legalChargeMoves call) ----------
-interface FitEnv { state: GameState; geo: ChargeGeometry; roll: number; blockers: Footprint[]; fields: Map<string, PathField | null>; coherency: number }
+// blockers: models no base may end on; pathBlockers (F12): models no path may cross (passAcrossKeyword units dropped)
+interface FitEnv { state: GameState; geo: ChargeGeometry; roll: number; blockers: Footprint[]; pathBlockers: Footprint[]; fields: Map<string, PathField | null>; coherency: number }
 interface PathField { x0: number; z0: number; h: number; nx: number; nz: number; dist: Float64Array; prev: Int32Array }
 const FIELD_H = 0.5
 
 function buildField(env: FitEnv, m: Model, facing: number): PathField | null {
-  const { state, roll, blockers } = env
+  const { state, roll, pathBlockers: blockers } = env
   const h = FIELD_H
   const hw = state.board.w / 2, hh = state.board.h / 2
   const x0 = Math.max(-hw, m.pos.x - roll), x1 = Math.min(hw, m.pos.x + roll)
@@ -393,7 +406,7 @@ function fieldFor(env: FitEnv, m: Model, facing: number): PathField | null {
 // a model's way to `to`: the straight line, a one-bend detour, else the grid's shortest way round pulled tight; null when nothing
 // fits the roll
 function chargePath(env: FitEnv, m: Model, to: Vec3, facing = m.facing): Vec3[] | null {
-  const { state, geo, roll, blockers } = env
+  const { state, geo, roll, pathBlockers: blockers } = env
   const fp: Footprint = { pos: to, facing, base: m.base }
   const lenOf = (path: Vec3[]): number => { let len = 0; for (let i = 1; i < path.length; i++) len += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z); return len }
   const clear = (path: Vec3[]): boolean => {
@@ -553,7 +566,8 @@ function driveCharge(ctx: EngineContext): 'pending' | 'progress' {
   s.step = 'roll'
   if (charge.roll === null) {
     // Grasping Vines (cards): an ensnared unit rolls one fewer dice
-    let roll = ctx.rollOnce(`charge:${unitId}`, { purpose: 'charge', player: unit.player, sides: 6, count: cardChargeDice(s, unitId), mode: 'sum', unitId })
+    // F12 (SCE-AB-5): Effect.extraChargeDice adds dice, all summed
+    let roll = ctx.rollOnce(`charge:${unitId}`, { purpose: 'charge', player: unit.player, sides: 6, count: chargeDiceCount(s, unitId), mode: 'sum', unitId })
     if (roll === null) return 'pending'
     // ability re-rolls of a charge roll that falls short (STD-ENH-3 Champion of Raids; rerolls.ts)
     const short = neededChargeDistance(s, unitId)
@@ -569,7 +583,7 @@ function driveCharge(ctx: EngineContext): 'pending' | 'progress' {
       u.turn.chargeRollUnmodified = raw
       u.turn.usedCoreThisPhase = true // CORE-3.4: the Core slot is spent even when the charge fails (CORE-9.3)
     }
-    ctx.emit({ type: 'ChargeRolled', unitId, dice: charge.roll as [number, number], total, needed: neededChargeDistance(s, unitId) })
+    ctx.emit({ type: 'ChargeRolled', unitId, dice: charge.roll as [number, number], total, needed: neededChargeDistance(s, unitId), ...(roll.dice.length > 2 ? { allDice: [...roll.dice] } : {}) })
   }
 
   // a roll too short to reach any enemy fails at once; the unit stays put (CORE-9.3)
@@ -596,6 +610,9 @@ function applyChargeMove(ctx: EngineContext, charge: ChargeState, action: Extrac
   })
   if (result.rejection) throw new EngineInvariantError('charge: stored placements failed re-validation', { rejection: result.rejection })
   const resolved: ResolvedPlacement[] = result.resolved
+  // F12 (SBG C3): enemy units the charge paths passed across (passedAcrossThisPhase; SBG-RA-2 Ruinous Chargers)
+  const paths = Object.fromEntries(resolved.filter((r) => r.distance > EPS).map((r) => [r.model.id, r.path]))
+  recordPassedAcross(s, charge.unitId, unitsPassedAcrossPaths(s, charge.unitId, paths))
   for (const r of resolved) if (r.distance > EPS) setModelPos(r.model, r.to, r.facing)
   for (const id of leaderService.halves(s, charge.unitId)) {
     const u = s.units[id]

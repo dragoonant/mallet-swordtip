@@ -1,0 +1,35 @@
+[
+  {
+    "id": "stormcast.unit.prosecutors",
+    "faction": "stormcast",
+    "name": "Prosecutors",
+    "keywords": ["INFANTRY", "FLY", "REINFORCEMENTS"],
+    "factionKeywords": ["ORDER", "STORMCAST ETERNALS"],
+    "stats": { "M": 12, "W": 2, "Sv": 3, "OC": 1 },
+    "coherencyRange": 2,
+    "composition": [
+      {
+        "modelId": "prosecutor",
+        "name": "Prosecutor",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": [
+            "stormcast.weapon.stormcall-javelin-ranged",
+            "stormcast.weapon.stormcall-javelin"
+          ]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": [
+      "stormcast.ability.heralds-of-righteousness",
+      "stormcast.ability.skirmishers"
+    ],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

@@ -309,6 +309,41 @@ descriptor `params.window: 'phaseStart'`; `moveUnitCandidatesFor` exported with 
 | Re-formed candidates (`phases/reform.ts`): line (zig-zag for 7+), line turned side-on (a column), block, wedge, arc around an anchor; slots to the nearest models; one-bend routes; the caller validates. Movement adds them when no candidate uses 60% of the allowance; charge adds them when no slide or per-model fit lands. Humans see them as suggested moves; the AI's private `src/ai/moves.ts` extras can now lean on the engine list | `phases/reform.ts`, `phases/movement.ts`, `phases/charge.ts` | F10 |
 | Start-of-charge-phase window: `runWindow('chargeStart')` before the first charge pick (marked `ch:startDone`); offers descriptors with `params.window: 'phaseStart'` on a charge-phase timing, or any ability whose code hook names `startOfPhase: 'charge'` (Champion of Raids; its data still says the movement phase) | `phases/charge.ts`, `abilities.ts`, `code-hooks.ts`, `factions/slaves.ts` | STD-ENH-3 |
 
+### 3.11 F12 engine-core: generic mechanisms for Stormcast Eternals, Skaven, Seraphon and Soulblight (additive)
+
+Frozen contracts, additive only: `hooks.ts` `RollModifierResult` `+ ignoreNegative?: boolean`; `EFFECT_HOOKS` `+ extraChargeDice: []`,
+`passAcrossKeyword: []`, `ignoreNegativeModifiers: [roll hooks]`. `events.ts` `+ DamageIgnored { unitId, points, source }`,
+`+ TokenRemoved { unitId, token, count, remaining }`, `ChargeRolled + allDice?: number[]` (dice keeps the first two).
+`src/data/types.ts` + `common.schema.json`: `Effect + extraChargeDice?: number`, `+ passAcrossKeyword?: Keyword`,
+`+ ignoreNegativeModifiers?: RollName`; `WeaponAbilityName + 'HIT_MORTAL'` (value = mortal damage per hit, default 1);
+`CRIT_2_HITS` reads an optional `value` (hits per critical hit, default 2, dice rolled per crit). No `types.ts` / `actions.ts` change.
+Non-frozen: `EngineCodeHook + afterWardRoll, ignoresFirstDamagePerPhase, afterAttackSequence, whileDestroyed, onOwnFightResolved`;
+`AbilityWindow + 'attackTargeted'`; `ReactionTrigger` becomes a union `+ { kind: 'opponentDeclaredAttack'; targetUnitIds }`;
+`DeclaredAttack + targetUnitIds?`; `SlideOpts + normalMove`; `PlaceRequest + edgeBand?, minEnemyDistance?, anywhere?`.
+
+| Mechanism | Where | For |
+|---|---|---|
+| `grantExtraFight(state, unitId, { strikeLastAfterFirst })`: phase mark `fi:extra:<unit>`; a fought unit stays pickable once (never in the Strike-first step); after its first activation `strikeLast` sets `turn.fightsLast`. Each activation runs on fresh progress keys (`fi:acts:<unit>` counter: windows, pile-in, targets, Attacks rolls) | `phases/fight.ts` | SCE-AB-1 |
+| `Effect.extraChargeDice` → `hookService.chargeDiceBonus`; `chargeDiceCount(state, unitId)` (exported) = 2 (1 ensnared) + bonus, all summed; reach pre-check 6 per die; AI `chargeProb(needed, dice)` | `hooks-impl.ts`, `phases/charge.ts`, `src/ai/utility.ts` | SCE-AB-5 |
+| `EngineCodeHook.afterWardRoll(ctx, entry, { unitId, dice, needed })` for every source the warded unit holds, after the roll | `attack.ts` | SCE-AB-4 |
+| Free-Retreat reaction shape shared: `freeRetreatHook(name, summary)`, `freeRetreatTargets`, `retreatingUnit`, `freeRetreatAvailable` (honours `oncePerBattle`); Slaves registers through it, `slavesFreeRetreatAvailable` is now an alias | `factions/aos-common.ts`, `factions/slaves.ts` | SCE-RA-1 |
+| `removeTokens(ctx, unitId, token, count?)` emits `TokenRemoved` | `factions/aos-common.ts` | SCE-AB-4, SER-AB-6 |
+| `SlideOpts.normalMove`: no model's straight path may come within an enemy combat range (FLY exempt); implies `mayNotEndInCombat`. approximation: rigid slide | `factions/aos-moves.ts` | SKV-BT-1 (SER C6 approximation) |
+| Opponent reaction window: shooting `doResolve` (after the youDeclared window) and fight (after targets are declared, before the dice) call `runReactionWindow(ctx, opponent, { kind: 'opponentDeclaredAttack', unitId, phase, targetUnitIds }, 'sht:'/'fit:'+unit)`; descriptors `{ kind: 'reaction', trigger: 'opponentDeclaredAttack' }` match only window `attackTargeted`; `readDeclaredAttack(state).targetUnitIds` | `abilities.ts`, `declared.ts`, `phases/shooting.ts`, `phases/fight.ts` | SKV-RA-1 |
+| `CRIT_2_HITS` value; `HIT_MORTAL` (every hit → mortal pool, no wound / save stage, no crit ability) | `attack.ts`, client `weaponRules.ts`, AI `expected.ts` | SKV-AB-3, SKV-AB-5 |
+| Granted weapon abilities reach Companion weapons only when the effect has `affectsCompanion` (`weaponAbilitiesFor(..., { companionOnly })`) | `hooks-impl.ts`, `weapons.ts` | SER-RA-2, SER-AB-2 |
+| `ignoresFirstDamagePerPhase` → `hookService.ignoresFirstDamage(By)`: resolvePool (after wards, before redirect) and allocatePoints drop 1 point once per phase (mark `ignore1:<unit>`), emit `DamageIgnored` | `attack.ts`, `hooks-impl.ts` | SER-AB-1 |
+| Champions (composition `champion: true`) take damage last (`nextTarget`; a damaged model still goes first) | `attack.ts` | SER C3 (also the Slaves Godspeaker) |
+| `afterAttackSequence(ctx, entry, { attackerUnitId, saveOnes })` after `AttackSequenceEnded`, unmodified save 1s per target unit | `attack.ts` | SER-AB-6 |
+| `whileDestroyed` hooks: a destroyed, not replaced unit's datasheet abilities / enhancements stay activatable; `params.mandatory` removes the pass. `spawnDestroyedUnitCopy(ctx, id, { onlyModels })`. `PlaceRequest.anywhere { minEnemyDistance }` → whole-board formation | `abilities.ts`, `state.ts`, `factions/aos-moves.ts`, `factions/spearhead-core.ts` | SER-ENH |
+| Fight damage tally `fightDmg:<unit>` (melee pools, after wards; `fightDamageAllocated` / `clearFightDamage`) and `ownFightResolved` → `EngineCodeHook.onOwnFightResolved(ctx, { ability, unitId, damageAllocated })` after deferred mortals | `attack.ts`, `phases/fight.ts` | SBG-BT-2 |
+| `Effect.passAcrossKeyword` → `hookService.passAcrossKeywords`; `pathBlockingEnemies` drops those enemy models from the move / charge path tests (end overlap and combat range unchanged) | `factions/aos-moves.ts`, `phases/movement.ts`, `phases/charge.ts` | SBG-AB-2 |
+| Charges record the enemy units their paths passed across (`passedAcrossThisPhase`) | `phases/charge.ts` | SBG-RA-2 |
+| `PlaceRequest.edgeBand: false` / `minEnemyDistance` (`placeShapeOf`, `reinforcementFormation/Options(..., shape)`, `replacementOptions/placeReplacement(..., shape)`) | `factions/aos-moves.ts`, `factions/spearhead-core.ts`, `abilities.ts` | SBG-RA-1 |
+| `Effect.ignoreNegativeModifiers: RollName` → `{ kind: 'roll', ignoreNegative }`; `runStage` drops negative modifiers (card ones too), rend untouched | `hooks-impl.ts`, `attack.ts` | SBG-ENH Aura of Night |
+
+Tests: `tests/engine/engine-f12.test.ts` (F12-<spec id>).
+
 ## 4. Client impact
 
 ### 4.1 Counts

@@ -46,6 +46,9 @@ export type WeaponAbilityName =
   | 'PISTOL' | 'HAZARDOUS' | 'PRECISION' | 'EXTRA_ATTACKS' | 'ONE_SHOT' | 'PSYCHIC' | 'CUSTOM'
   // AoS (13-port-plan §3.2). 'ANTI' is reused as Anti-X (+1 Rend) with `keyword` ('@charged' = target charged this turn)
   | 'CRIT_2_HITS' | 'CRIT_AUTO_WOUND' | 'CRIT_MORTAL' | 'CHARGE_DAMAGE' | 'COMPANION' | 'SHOOT_IN_COMBAT'
+  // F12 (SKV-AB-5 Warp Lightning Blast): every successful hit inflicts `value` mortal damage (default 1) and makes no wound roll.
+  // CRIT_2_HITS (F12, SKV-AB-3): an optional `value` is the number of hits one critical hit scores (default 2; 'D6' rolls per crit)
+  | 'HIT_MORTAL'
 
 export interface WeaponAbility { ability: WeaponAbilityName; value?: DiceExpr; keyword?: Keyword; ref?: Id }
 
@@ -152,6 +155,14 @@ export interface Effect {
   // GLO-AB-1 (Great Snarlin' Howl): a stat modifier that also reaches Companion weapons (weapons.ts effectiveWeapon); every
   // other friendly stat modifier skips them (CORE-12.4)
   affectsCompanion?: true
+  // ---- F12 engine-core (Stormcast, Skaven, Seraphon, Soulblight) ----
+  // SCE-AB-5 Heralds of Righteousness: extra dice for the unit's charge roll (all dice summed; hookService.chargeDiceBonus)
+  extraChargeDice?: number
+  // SBG-AB-2 Riders of Ruin: the unit's moves and charges may pass across enemy models of units with this keyword (path checks
+  // only; ending on top of them and combat-range rules are unchanged). hookService.passAcrossKeywords
+  passAcrossKeyword?: Keyword
+  // SBG-ENH Aura of Night: negative modifiers to this roll of the holder are ignored (Rend is not a modifier and still applies)
+  ignoreNegativeModifiers?: RollName
 }
 export type EffectList = Effect | Effect[]
 

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "seraphon.unit.spawn-of-chotec",
+    "faction": "seraphon",
+    "name": "Spawn of Chotec",
+    "keywords": [
+      "BEAST",
+      "SKINK"
+    ],
+    "factionKeywords": [
+      "ORDER",
+      "SERAPHON"
+    ],
+    "stats": {
+      "M": 5,
+      "W": 8,
+      "Sv": 5,
+      "OC": 1
+    },
+    "composition": [
+      {
+        "modelId": "spawn",
+        "name": "Spawn of Chotec",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "oval",
+          "mm": 90,
+          "mm2": 52
+        },
+        "weapons": {
+          "default": [
+            "seraphon.weapon.glob-of-flame-acid",
+            "seraphon.weapon.fiery-maw"
+          ]
+        },
+        "figure": {
+          "archetype": "monster",
+          "kit": "generic-monster"
+        }
+      }
+    ],
+    "abilities": [
+      "seraphon.ability.sun-acolytes"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "monster",
+      "kit": "generic-monster"
+    },
+    "spearhead": true
+  }
+]

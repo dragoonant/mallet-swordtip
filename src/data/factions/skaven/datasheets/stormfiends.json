@@ -1,0 +1,52 @@
+[
+  {
+    "id": "skaven.unit.stormfiends",
+    "faction": "skaven",
+    "name": "Stormfiends",
+    "keywords": ["INFANTRY"],
+    "factionKeywords": ["CHAOS", "SKAVEN"],
+    "stats": { "M": 6, "W": 6, "Sv": 4, "OC": 2 },
+    "composition": [
+      {
+        "modelId": "stormfiend-windlaunchers",
+        "name": "Stormfiend with Windlaunchers",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 60 },
+        "weapons": {
+          "default": ["skaven.weapon.windlaunchers", "skaven.weapon.clubbing-blows"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      },
+      {
+        "modelId": "stormfiend-ratling",
+        "name": "Stormfiend with Ratling Cannons",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 60 },
+        "weapons": {
+          "default": ["skaven.weapon.ratling-cannons", "skaven.weapon.clubbing-blows"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      },
+      {
+        "modelId": "stormfiend-gauntlets",
+        "name": "Stormfiend with Shock Gauntlets",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 60 },
+        "weapons": {
+          "default": ["skaven.weapon.shock-gauntlets"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["skaven.ability.shock-gauntlets"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

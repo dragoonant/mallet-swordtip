@@ -19,7 +19,7 @@ import { parseDiceExpr, rollSum } from './dice'
 import { codeHookFor } from './hooks-impl'
 import type { DecisionHandler, EngineContext } from './modules'
 import type { ActivatedAbilityHook } from './hooks'
-import { applyRetreat, applySlide, parseAt, parseSlide, readMoveQueue, readPlaceRequest, retreatOptions, slideOptions, writeMoveQueue, writePlaceRequest } from './factions/aos-moves'
+import { applyRetreat, applySlide, parseAt, parseSlide, placeShapeOf, readMoveQueue, readPlaceRequest, retreatOptions, slideOptions, writeMoveQueue, writePlaceRequest } from './factions/aos-moves'
 import { CFR_ID, SYNTHETIC_ABILITIES, discardReplacement, placeReplacement, replaceableUnits, replacementOptions } from './factions/spearhead-core'
 import { applyRedeploy, fallbackRedeploy, readRedeploy, redeployable, redeployOptions, redeployShapeOf, writeRedeploy } from './redeploy'
 import { readDeclaredAttack, writeDeclaredAttack } from './declared'
@@ -34,14 +34,19 @@ import type { AbilityId, DiceRoll, GameState, Phase, PlayerId, RuntimeAbility, U
 // 'attackDeclared' (runReactionWindow: reaction descriptors { trigger 'youDeclared', keyword 'ATTACK' }).
 // F10 start-of-phase windows: 'chargeStart' (the charge phase opens, before any unit is picked to charge): phase descriptors with
 // params.window 'phaseStart', or any activated ability whose code hook names startOfPhase (Champion of Raids).
+// F12 'attackTargeted': the OTHER player's window once a Shoot / Fight attack has been declared and its targets are known (reaction
+// descriptors { trigger 'opponentDeclaredAttack' }; SKV-RA-1 Warpstone-Laced Armour). readDeclaredAttack(state).targetUnitIds
+// names the targets.
 export type AbilityWindow =
   | 'hero' | 'movement' | 'shooting' | 'charge' | 'fight'
   | 'startOfTurn' | 'endOfTurn' | 'startOfRound' | 'endOfRound' | 'deployment'
-  | 'moveDeclared' | 'moveEnded' | 'attackDeclared'
+  | 'moveDeclared' | 'moveEnded' | 'attackDeclared' | 'attackTargeted'
   | 'chargeStart'
 
-// what a reaction window reacts to (F8, LRL-BT-3 Gale Force)
-export interface ReactionTrigger { kind: 'youDeclaredAttack'; unitId: UnitId; phase: 'shooting' | 'fight' }
+// what a reaction window reacts to (F8, LRL-BT-3 Gale Force; F12 opponentDeclaredAttack, SKV-RA-1)
+export type ReactionTrigger =
+  | { kind: 'youDeclaredAttack'; unitId: UnitId; phase: 'shooting' | 'fight'; targetUnitIds?: UnitId[] }
+  | { kind: 'opponentDeclaredAttack'; unitId: UnitId; phase: 'shooting' | 'fight'; targetUnitIds: UnitId[] }
 
 export interface UsableAbility {
   abilityId: AbilityId
@@ -70,7 +75,7 @@ const PHASE_OF_WINDOW: Partial<Record<AbilityWindow, Phase>> = { hero: 'command'
 const DISPLAY_WINDOW: Record<AbilityWindow, TimingWindowId> = {
   hero: 'command.end', movement: 'movement.end', shooting: 'shooting.attacksResolved', charge: 'charge.moveEnded', fight: 'fight.attacksResolved',
   startOfTurn: 'turn.start', endOfTurn: 'turn.end.abilities', startOfRound: 'round.start', endOfRound: 'round.end', deployment: 'deployment.unit',
-  moveDeclared: 'movement.start', moveEnded: 'movement.unitMoved', attackDeclared: 'shooting.targetsDeclared', chargeStart: 'charge.start',
+  moveDeclared: 'movement.start', moveEnded: 'movement.unitMoved', attackDeclared: 'shooting.targetsDeclared', attackTargeted: 'shooting.targetsDeclared', chargeStart: 'charge.start',
 }
 
 // ---------- candidates and gates ----------
@@ -112,6 +117,14 @@ function candidates(state: GameState, player: PlayerId): Candidate[] {
     for (const id of ds.abilities) add(state.abilities[id], unit.id)
     for (const a of enhancements) if (unit.models.includes(a.bearerModelId as string)) add(a, unit.id)
   }
+  // F12 (SER-ENH Blessed by the Old Ones): abilities whose code hook says whileDestroyed stay usable by a destroyed, not replaced unit
+  for (const unit of Object.values(state.units)) {
+    if (unit.player !== player || unit.location !== 'destroyed' || unit.replaced) continue
+    const ds = state.datasheets[unit.datasheetId]
+    const gone = new Set((unit.destroyedModels ?? []).map((m) => m.id))
+    const own = [...(ds?.abilities ?? []).map((id) => state.abilities[id]), ...enhancements.filter((a) => gone.has(a.bearerModelId as string))]
+    for (const a of own) if (a && codeHookFor(a.code)?.whileDestroyed) add(a, unit.id)
+  }
   const p = state.players[player]
   if (p.regimentAbilityId) add(state.abilities[p.regimentAbilityId], null)
   for (const id of p.battleTraitIds) add(state.abilities[id], null)
@@ -125,12 +138,14 @@ function timingMatches(state: GameState, ab: RuntimeAbility, player: PlayerId, w
   // F8 reaction windows: only the declaring player's runWindow call reaches them, so "your" is implied
   if (window === 'moveEnded') return false
   if (t.kind === 'reaction') {
+    // F12: reactions to the opponent's declared attack only answer the 'attackTargeted' window
+    if (t.trigger === 'opponentDeclaredAttack') return window === 'attackTargeted'
     if (t.trigger !== 'youDeclared') return false
     if (window === 'moveDeclared') return t.abilityId === 'core.move'
     if (window === 'attackDeclared') return t.keyword === 'ATTACK'
     return false
   }
-  if (window === 'attackDeclared') return false
+  if (window === 'attackDeclared' || window === 'attackTargeted') return false
   // start-of-phase abilities (F10): only their own phase's start window offers them, and that window offers nothing else
   const startPhase = codeHookFor(ab.code)?.startOfPhase ?? (t.kind === 'phase' && ab.params?.window === 'phaseStart' ? t.phase : null)
   const START_OF: Partial<Record<AbilityWindow, Phase>> = { chargeStart: 'charge' }
@@ -237,9 +252,11 @@ function nextStep(ctx: EngineContext, window: AbilityWindow, k: string): 'pendin
   const s = ctx.state
   const place = readPlaceRequest(s)
   if (place) {
-    const opts = replacementOptions(s, place.unitId)
+    // F12: the request may reshape where the unit goes (edgeBand / minEnemyDistance / anywhere; SBG C4, SER C5)
+    const shape = placeShapeOf(place)
+    const opts = replacementOptions(s, place.unitId, shape)
     if (opts.length === 0) { discardReplacement(s, place.unitId); writePlaceRequest(s, null); return 'again' }
-    if (opts.length === 1) { placeReplacement(ctx, place.unitId, opts[0].centre); writePlaceRequest(s, null); return 'again' }
+    if (opts.length === 1) { placeReplacement(ctx, place.unitId, opts[0].centre, shape); writePlaceRequest(s, null); return 'again' }
     const data: WindowData = { window, k, place: true }
     ctx.decide({
       kind: 'chooseOption', player: place.player, window: DISPLAY_WINDOW[window], canPass: false,
@@ -312,8 +329,10 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
       if (usable.length === 0) return false
       const choices = usable.map((c) => ({ id: `${c.ab.id}#${c.unitId ?? '-'}`, abilityId: c.ab.id, unitId: c.unitId }))
       const data: WindowData = { window, k, choices }
+      // F12: a descriptor with params.mandatory (Blessed by the Old Ones) cannot be passed while it is on offer
+      const mandatory = usable.some((c) => c.ab.params?.mandatory === true)
       ctx.decide({
-        kind: 'chooseOption', player, window: DISPLAY_WINDOW[window], canPass: true,
+        kind: 'chooseOption', player, window: DISPLAY_WINDOW[window], canPass: !mandatory,
         context: { topic: 'abilityUse', unitId: null, abilityId: null, data: data as unknown as Record<string, unknown> },
         options: usable.map((c, i) => ({ id: choices[i].id, label: `${c.ab.name} (${unitName(s, c.unitId)})`, action: optionAction(player, choices[i].id) })),
       })
@@ -405,6 +424,8 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
 
 // F8 (LRL-BT-3): reactions to declaring an attack. The declaration is recorded once per key (readDeclaredAttack, with a phase
 // sequence number), then the declaring player's 'attackDeclared' window runs like any other.
+// F12: an 'opponentDeclaredAttack' trigger adds the targets to the same declaration (no new seq) and runs the opponent's
+// 'attackTargeted' window instead.
 function runReactionWindow(ctx: EngineContext, player: PlayerId, trigger: ReactionTrigger, key: string): boolean {
   const s = ctx.state
   if (s.pending) return true
@@ -412,9 +433,11 @@ function runReactionWindow(ctx: EngineContext, player: PlayerId, trigger: Reacti
   if (!s.phaseState.marks.includes(once)) {
     s.phaseState.marks.push(once)
     const prev = readDeclaredAttack(s)
-    writeDeclaredAttack(s, { unitId: trigger.unitId, phase: trigger.phase, seq: (prev?.seq ?? 0) + 1 })
+    const targets = trigger.targetUnitIds ? { targetUnitIds: [...trigger.targetUnitIds] } : {}
+    if (trigger.kind === 'opponentDeclaredAttack' && prev && prev.unitId === trigger.unitId && prev.phase === trigger.phase) writeDeclaredAttack(s, { ...prev, ...targets })
+    else writeDeclaredAttack(s, { unitId: trigger.unitId, phase: trigger.phase, seq: (prev?.seq ?? 0) + 1, ...targets })
   }
-  return runWindow(ctx, 'attackDeclared', player, key)
+  return runWindow(ctx, trigger.kind === 'opponentDeclaredAttack' ? 'attackTargeted' : 'attackDeclared', player, key)
 }
 
 export const abilityService: AbilityService = {
@@ -495,6 +518,6 @@ function answerPlace(ctx: EngineContext, action: Answer): Rejected {
   if (!req) return { code: 'E_NOT_AN_OPTION', reason: 'abilities: no replacement is waiting to be set up' }
   if (action.type !== 'chooseOption') return { code: 'E_NOT_AN_OPTION', reason: 'abilities: choose where the replacement is set up' }
   const at = parseAt(action.optionId)
-  if (!at || !placeReplacement(ctx, req.unitId, at)) return { code: 'E_TERRITORY', reason: 'the replacement cannot be set up there' }
+  if (!at || !placeReplacement(ctx, req.unitId, at, placeShapeOf(req))) return { code: 'E_TERRITORY', reason: 'the replacement cannot be set up there' }
   writePlaceRequest(s, null)
 }

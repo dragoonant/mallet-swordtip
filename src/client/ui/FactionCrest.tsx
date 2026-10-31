@@ -2,12 +2,13 @@
 // tower with a crossed halberd, Ironjawz a tusked iron jaw under a bolted helm, Slaves to Darkness a horned helm over a
 // snapped chain, Fyreslayers a flame-crested duardin helm over crossed axes, Kruleboyz a crude crimson-and-mustard shield with a
 // three-claw scratch, Gloomspite Gitz a sun disc with a jagged bite out of it, Lumineth a three-curl wind swirl, Kharadron a cog
-// inside a cloud. One 64x64 viewBox each, drawn with
+// inside a cloud, Stormcast a winged hammer-head over a lightning bolt, Skaven a three-scratch rune inside a cracked green stone,
+// Seraphon a stepped-pyramid sun under a star, Soulblight a bat-winged drop of blood. One 64x64 viewBox each, drawn with
 // currentColor plus a handful of fixed accents so a crest reads on dark panels and on a bright active tile.
 import type { CSSProperties } from 'react'
 
 /** Faction ids the game ships a crest for; anything else gets a plain shield with the initial. */
-export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron'
+export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron' | 'stormcast' | 'skaven' | 'seraphon' | 'soulblight'
 
 function CitiesCrest() {
   return (
@@ -172,6 +173,77 @@ function KharadronCrest() {
   )
 }
 
+function StormcastCrest() {
+  // Stormcast Eternals: a winged war-hammer head hovering over a forked lightning bolt. Wings are three stacked feathers a side;
+  // the bolt is a cyan accent so it still reads when the rest is a single colour.
+  const wing = <path d="M19 15 Q9 6 1 11 Q7 12 8 15 Q3 17 2 22 Q8 21 11 22 Q7 26 7 30 Q14 27 18 24 Z" fill="currentColor" />
+  return (
+    <g>
+      {wing}
+      <g transform="translate(64 0) scale(-1 1)">{wing}</g>
+      {/* hammer head: blocky, flared faces either end of a dark waist band */}
+      <path d="M20 6 H44 L46 9 V20 L44 23 H20 L18 20 V9 Z" fill="#0f1119" stroke="currentColor" strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M27 6 H37 V23 H27 Z" fill="currentColor" />
+      <path d="M22 11 H25 M39 11 H42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+      {/* lightning bolt */}
+      <path d="M38 25 L23 43 H31 L25 62 L44 38 H35 L41 25 Z" fill="#7fe3f5" stroke="#0f1119" strokeWidth="1.6" strokeLinejoin="round" />
+    </g>
+  )
+}
+
+function SkavenCrest() {
+  // Skaven: a chipped, glowing warpstone with a crack running down its left side and three claw scratches raked across its face.
+  return (
+    <g>
+      <path d="M32 3 L52 11 L60 32 L49 56 L27 61 L8 48 L5 23 L17 8 Z" fill="#46ad2a" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M32 3 L52 11 L37 23 L17 8 Z" fill="#9cf06a" opacity="0.65" />
+      <path d="M52 11 L60 32 L49 38 L37 23 Z" fill="#2d7a1b" opacity="0.7" />
+      {/* the crack: a dark zigzag through the left face */}
+      <path d="M17 8 L22 17 L15 24 L21 33 L13 41" fill="none" stroke="#0f1119" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
+      {/* the rune: three scratches, ragged and not quite parallel */}
+      <g fill="none" stroke="#0f1119" strokeWidth="4.6" strokeLinecap="round">
+        <path d="M27 20 Q33 31 28 50" />
+        <path d="M37 18 Q43 31 38 52" />
+        <path d="M47 24 Q52 34 48 47" />
+      </g>
+    </g>
+  )
+}
+
+function SeraphonCrest() {
+  // Seraphon: a four-pointed star above a sun rising behind a stepped temple-pyramid.
+  const rays = [-60, -30, 0, 30, 60]
+  return (
+    <g>
+      <path d="M32 1 L34.6 7.4 L41 10 L34.6 12.6 L32 19 L29.4 12.6 L23 10 L29.4 7.4 Z" fill="#8fd0ff" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <g transform="translate(32 40)" fill="currentColor">
+        {rays.map((a) => (
+          <path key={a} d="M-2.6 -17 L0 -24 L2.6 -17 Z" transform={`rotate(${a})`} />
+        ))}
+        <circle r="14" />
+      </g>
+      {/* stepped pyramid with a doorway */}
+      <path d="M5 60 V51 H12 V43 H20 V35 H44 V43 H52 V51 H59 V60 Z" fill="#0f1119" stroke="currentColor" strokeWidth="2.6" strokeLinejoin="round" />
+      <path d="M12 51 H52 M20 43 H44" stroke="currentColor" strokeWidth="1.8" opacity="0.6" />
+      <path d="M28 60 V52 a4 4 0 0 1 8 0 V60 Z" fill="currentColor" />
+    </g>
+  )
+}
+
+function SoulblightCrest() {
+  // Soulblight Gravelords: a drop of blood with a bat's scalloped wing out either side and a pair of small fangs in the drop.
+  const wing = <path d="M19 33 Q10 19 1 21 Q5 25 4 29 Q8 28 9 33 Q12 32 14 37 Q17 36 19 41 Z" fill="currentColor" />
+  return (
+    <g>
+      {wing}
+      <g transform="translate(64 0) scale(-1 1)">{wing}</g>
+      <path d="M32 6 C30 16 16 28 16 42 A16 16 0 0 0 48 42 C48 28 34 16 32 6 Z" fill="#b3162f" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M23 40 Q23 33 28 28" fill="none" stroke="#ffb3bd" strokeWidth="2.6" strokeLinecap="round" opacity="0.8" />
+      <path d="M26 46 L29 55 L32 46 Z M32 46 L35 55 L38 46 Z" fill="#f4eee0" />
+    </g>
+  )
+}
+
 function FallbackCrest({ initial }: { initial: string }) {
   return (
     <g>
@@ -192,7 +264,7 @@ export function FactionCrest({ faction, name, size = 48, style }: { faction: str
       data-testid={`faction-crest-${faction}`}
       style={{ display: 'block', flex: 'none', ...style }}
     >
-      {faction === 'cities' ? <CitiesCrest /> : faction === 'ironjawz' ? <IronjawzCrest /> : faction === 'slaves' ? <SlavesCrest /> : faction === 'fyreslayers' ? <FyreslayersCrest /> : faction === 'kruleboyz' ? <KruleboyzCrest /> : faction === 'gloomspite' ? <GloomspiteCrest /> : faction === 'lumineth' ? <LuminethCrest /> : faction === 'kharadron' ? <KharadronCrest /> : <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />}
+      {faction === 'cities' ? <CitiesCrest /> : faction === 'ironjawz' ? <IronjawzCrest /> : faction === 'slaves' ? <SlavesCrest /> : faction === 'fyreslayers' ? <FyreslayersCrest /> : faction === 'kruleboyz' ? <KruleboyzCrest /> : faction === 'gloomspite' ? <GloomspiteCrest /> : faction === 'lumineth' ? <LuminethCrest /> : faction === 'kharadron' ? <KharadronCrest /> : faction === 'stormcast' ? <StormcastCrest /> : faction === 'skaven' ? <SkavenCrest /> : faction === 'seraphon' ? <SeraphonCrest /> : faction === 'soulblight' ? <SoulblightCrest /> : <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />}
     </svg>
   )
 }

@@ -200,9 +200,9 @@ change outside the faction file.
 | SCE-AB-6 Skirmishers | (a) | Datasheet `coherencyRange: 2` (CORE-1.6). First army to use it; movement, charge, fight, setup, cards, reinforcement and redeploy planners already read it. |
 | SCE-ENH Hallowed Scrolls | (a) | Passive enhancement, scope bearer, `{ feelNoPain: 5 }` (as Masterwrought Armour / Armour of Gork). |
 | SCE-ENH Morrda's Talon | (a) | Passive enhancement, scope bearer, `{ when: { weaponId: 'stormcast.weapon.hallowed-greataxe' }, grantWeaponAbility: { ability: 'CRIT_MORTAL' } }` (hooks-impl merges granted weapon abilities, as Champion Duellist). |
-| SCE-BT-1 Shield of Azyr | (b) `stormcastGrant` | One generic grant hook for the three plain "give X to a unit" abilities. Activated; resolve grants `params.grant` (Effect[]) to the declared target, or to the user's own unit when the descriptor declares no target, for the descriptor `duration`, via `ctx.services.effects.grant(…, { sourceAbilityId, sourceUnitId, scope: { who: 'self' }, duration })`, then `announce` with the descriptor name. The effects sit in `params.grant`, **not** `effect`, so `unitHasEffectFlag` never reads them as a passive. Shield of Azyr: `phase command / your`, `limit oncePerTurnArmy`, declare any friendly unit, `params.grant [{ feelNoPain: 5 }]`, `duration untilNextTurn`. |
-| SCE-BT-2 Storm Charge | (b) `stormcastGrant` | `phase charge / your`, `params.window 'phaseStart'` (the F10 `chargeStart` window, before any unit is picked to charge, so the timing is exact), `limit oncePerBattle`, declare a friendly unit (`targets` keeps those `!inCombat`), `params.grant [{ chargeAfterAdvance: true }]`, `duration untilEndOfTurn` (hooks-impl answers `onEligibility` charge after `advance`). |
-| SCE-ENH Quicksilver Draught | (b) `stormcastGrant` | `phase fight / any`, `oncePerBattle`, no declare (the bearer's unit), `params.grant [{ fightsFirst: true }]`, `duration untilEndOfPhase`. Offered in combat-phase step 1, before fight.ts snapshots the Strike-first queue (CORE-10.6). |
+| SCE-BT-1 Shield of Azyr | (b) `stormcastShieldOfAzyr` | The three plain "give X to a unit" abilities share one factory (`grantHook` in `stormcast.ts`) and are registered under three code names (`stormcastShieldOfAzyr`, `stormcastStormCharge`, `stormcastQuicksilverDraught`), because `ActivatedAbilityHook.targets` does not receive the ability id and so cannot tell the descriptors apart. Activated; resolve grants `params.grant` (Effect[]) to the declared target, or to the user's own unit when the descriptor declares no target, for the descriptor `duration`, via `ctx.services.effects.grant(…, { sourceAbilityId, sourceUnitId, scope: { who: 'self' }, duration })`, then `announce`. The effects sit in `params.grant`, **not** `effect`, so `unitHasEffectFlag` never reads them as a passive. Shield of Azyr: `phase command / your`, `limit oncePerTurnArmy`, declare any friendly unit, `params.grant [{ feelNoPain: 5 }]`, `duration untilNextTurn`. |
+| SCE-BT-2 Storm Charge | (b) `stormcastStormCharge` | `phase charge / your`, `params.window 'phaseStart'` (the F10 `chargeStart` window, before any unit is picked to charge, so the timing is exact), `limit oncePerBattle`, declare a friendly unit (`targets` keeps those `!inCombat`), `params.grant [{ chargeAfterAdvance: true }]`, `duration untilEndOfTurn` (hooks-impl answers `onEligibility` charge after `advance`). |
+| SCE-ENH Quicksilver Draught | (b) `stormcastQuicksilverDraught` | `phase fight / any`, `oncePerBattle`, no declare (the bearer's unit), `params.grant [{ fightsFirst: true }]`, `duration untilEndOfPhase`. Offered in combat-phase step 1, before fight.ts snapshots the Strike-first queue (CORE-10.6). |
 | SCE-RA-1 Strike Where Needed | (b) `stormcastStrikeWhereNeeded` | The STD-RA-2 Fearless Invaders shape, as its own hook (that one announces under its own name): data timing `{ kind: 'reaction', trigger: 'youDeclared', abilityId: 'core.move' }` (abilities.ts offers it in the F8 `moveDeclared` window, before the retreat D3 roll), `limit oncePerBattle`. `canUse`/`targets`: `readDeclaredMove(state)` is a `fallBack` by a friendly unit. Resolve grants `[{ noRetreatDamage: true }, { chargeAfterFallBack: true }]` until end of turn. Factor `retreatingUnit` / `invadersTargets` out of `slaves.ts` into `aos-common.ts` (or export them) rather than copying. AI: generalise `slavesFreeRetreatAvailable` to accept this code too and to honour `oncePerBattle`. |
 | SCE-RA-2 Blaze of Glory | (b) `stormcastBlazeOfGlory` | Activated, `phase fight / any`, `oncePerBattle`, declare friendly `inEngagement`. Resolve grants an empty marker effect (scope self, `untilEndOfPhase`). `onOwnModelSlain` (attack.ts `ownModelSlain` already dispatches the regiment ability): when the slain model's unit carries this marker, roll D6 (`params.succeedOn` 4); on success pick an enemy unit in combat with that unit (the attacker `by.unitId` when it is in combat with it, else the one with the fewest wounds left; judged from the slain model's snapshot when it was the last), and deal `params.mortal` (1) through `deferMortalAfterFight` inside an attack sequence, `inflictMortal` otherwise (as GLO-RA-2 Frazzleboom). |
 | SCE-ENH Null Pendant | (b) `stormcastNullPendant` | Activated, `endOfTurn / any`, `oncePerBattle` (the `turn.end.abilities` step runs before `turn.end.control`, CORE-4.19, so it lands on this turn's control check). `canUse`: the general's unit contests ≥1 objective that an enemy unit also contests. Resolve: one D6 per enemy unit contesting any objective the general contests (`unitContestsObjective`); each 2+ is stored in `mission.custom.sceNull[enemyUnitId] = { roll, round, turn }`; a battle-long marker on the bearer (`ensureEffects`, as LRL Scattered to the Winds) lets `produce` at `onObjectiveControl` return `{ kind: 'stat', delta: -roll }` for `contestingUnitId` while the stored round/turn is the current one. The caller keeps the CORE-17.4 floor of 1. |
@@ -258,7 +258,7 @@ change outside the faction file.
 7. **Blaze of Glory** [RULING]: it triggers on any slain model of the unit this phase (combat attacks, mortal damage), not only on
    melee kills; the enemy unit must be in combat with the slain model's unit when the roll is made.
 8. **Ward sources:** Shield of Azyr (5+, any unit), Hallowed Scrolls (5+, general), Gryph-crow (5+, Lord-Veritant). None stack.
-9. **AI:** Shield of Azyr — the friendly unit in combat with the most enemy attacks nearby, else the unit holding the most contested
+9. **AI:** (the ability-use options carry no unit hint, so `stormcastAbilityTiming` falls back to the general for the three general-bound abilities: Quicksilver Draught, Null Pendant, Deliver Judgement) Shield of Azyr — the friendly unit in combat with the most enemy attacks nearby, else the unit holding the most contested
    objective; Storm Charge — only for a unit that ran this turn and has an enemy within its charge reach; Strike Where Needed — the
    first Retreat it can cover; Blaze of Glory — the friendly unit in combat with the most models (Liberators), at the start of a
    combat phase in which an enemy unit in combat with it is still to fight; Deliver Judgement — Liberators, then Prosecutors, only
@@ -324,13 +324,27 @@ still alive). No champion (Prime) or musician variants: the Spearhead gives them
 
 ## 11. Implementation notes
 
-Not built yet. Planned layout, following the eight shipped armies: data `src/data/factions/stormcast/` (`faction.json`,
-`abilities.json`, `enhancements.json`, `weapons.json`, `datasheets/*.json`, `patrols/vigilant-brotherhood.json` with the
-Gryph-crow token on the Lord-Veritant entry and the regiment / enhancement defaults of §8.10 first), hooks
-`src/engine/factions/stormcast.ts` (`...stormcastHooks` in `code-hooks.ts`), tests `tests/engine/stormcast.test.ts` and
-`tests/data/stormcast.test.ts` (one test per SCE- id), AI hints `stormcastAbilityTiming` / `stormcastTargetBonus` /
-`stormcastModeBonus` read from `src/ai/utility.ts`. Engine changes C1-C3 land first (one engine-core stage) with notes in
-`docs/spec/13-engine-port-plan.md`; everything else is data plus the faction file.
+Built (F12). Data `src/data/factions/stormcast/` (`faction.json`, `abilities.json`, `enhancements.json`, `weapons.json`,
+`datasheets/{lord-vigilant,lord-veritant,prosecutors,liberators}.json`, `patrols/vigilant-brotherhood.json` with the Gryph-crow
+token on the Lord-Veritant entry; Blaze of Glory and Hallowed Scrolls are the defaults and come first, Strike Where Needed and
+Morrda's Talon are the last entries and so the sim's variant games), hooks `src/engine/factions/stormcast.ts` (`...stormcastHooks`
+in `code-hooks.ts`), AI hints `stormcastAbilityTiming` / `stormcastTargetBonus` / `stormcastModeBonus` read from
+`src/ai/utility.ts` next to the other armies' (three one-line hooks; the dispatch there is by code prefix). Tests:
+`tests/engine/stormcast.test.ts` (SCE-BT, RA, ENH, AB, WEAP, FLY, ARMY-3, plus SCE-REG and the AI hints) and
+`tests/data/stormcast.test.ts` (SCE-ARMY-1, 2, 4, SCE-WS). Engine changes C1-C3 landed in the engine-core stage
+(`docs/spec/13-engine-port-plan.md` §3.11); everything else is data plus the faction file.
+
+Shipped behaviours worth knowing:
+- Plan the Attack stores its pick in `mission.custom.scePlan[player]`; a marker effect (`untilEndOfTurn`) is kept on every friendly
+  unit on the battlefield while the pick names the current turn (`ensureEffects` runs at the top of each ability window, so a unit set
+  up later in the turn is marked before the next attack). The Companion Beak and Talons get the +1 to hit as well (a hit modifier).
+- Null Pendant keeps its rolls in `mission.custom.sceNull[enemyUnitId]` (roll, round, turn, owner) and `produce` at
+  `onObjectiveControl` subtracts them; stale rolls are dropped by `ensureEffects`.
+- Blaze of Glory is a marker effect on the picked unit for the phase; the vengeance mortal damage uses `deferMortalAfterFight` inside
+  an attack sequence and `attackService.queueMortalWounds` otherwise. When the slain model's attacker is in combat with the unit it is
+  the one hit, otherwise the enemy unit in combat with the fewest wounds left.
+- The sim exercises every ability (24+ games with each enhancement), the bot picks the first of the best-first Plan the Attack
+  objectives, and holds Storm Charge, Quicksilver Draught, Null Pendant, Blaze of Glory and Deliver Judgement until they matter.
 
 Existing mechanisms this army reuses: `moveDeclared` reaction window (F8, Strike Where Needed), `chargeStart` window
 (F10, Storm Charge), effect flags `noRetreatDamage` / `chargeAfterFallBack` / `chargeAfterAdvance` / `fightsFirst`,

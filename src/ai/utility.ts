@@ -13,11 +13,16 @@ import { createRng, restoreRng, type Rng } from '../engine/rng'
 import { deployTerrainBlock } from '../engine/terrain'
 import { terrainLineClear } from '../engine/los'
 import { hookService } from '../engine/hooks-impl'
+import { chargeDiceCount } from '../engine/phases/charge'
 import { tacticOdds } from '../engine/cards'
 import { kruleboyzAbilityTiming, kruleboyzTargetBonus } from '../engine/factions/kruleboyz'
 import { gloomspiteAbilityTiming, retreatsAndCharges } from '../engine/factions/gloomspite'
 import { kharadronAbilityTiming, kharadronActivationBonus, kharadronDeployBonus, kharadronModeBonus, kharadronMoveBonus, kharadronTargetBonus } from '../engine/factions/kharadron'
+import { stormcastAbilityTiming, stormcastModeBonus, stormcastTargetBonus } from '../engine/factions/stormcast'
 import { slavesFreeRetreatAvailable } from '../engine/factions/slaves'
+import { soulblightAbilityTiming, soulblightChargeBonus, soulblightModeBonus, soulblightTargetBonus } from '../engine/factions/soulblight'
+import { skavenAbilityTiming, skavenTargetBonus } from '../engine/factions/skaven'
+import { seraphonAbilityTiming, seraphonTargetBonus } from '../engine/factions/seraphon'
 import { citiesHoldWeight } from '../engine/factions/cities'
 import { extraMoveCandidates } from './moves'
 import { underdogCardChase, underdogExposure, underdogObjectiveScale } from './underdogs'
@@ -182,7 +187,23 @@ export function engagedEnemyUnits(state: GameState, player: PlayerId, unitId: Un
 
 // 2D6 ≥ n probability table (40-ai.md §5)
 const CHARGE_PROB: Record<number, number> = { 2: 1, 3: 0.972, 4: 0.917, 5: 0.833, 6: 0.722, 7: 0.583, 8: 0.417, 9: 0.278, 10: 0.167, 11: 0.083, 12: 0.028 }
-export function chargeProb(needed: number): number {
+// F12 (SCE-AB-5): P(sum of `dice` D6 ≥ n) for any dice count (engine chargeDiceCount), exact by convolution
+const SUM_DIST = new Map<number, number[]>()
+function atLeastNd6(dice: number, n: number): number {
+  let dist = SUM_DIST.get(dice)
+  if (!dist) {
+    dist = [1]
+    for (let d = 0; d < dice; d++) {
+      const next = new Array(dist.length + 6).fill(0)
+      dist.forEach((p, s) => { for (let f = 1; f <= 6; f++) next[s + f] += p / 6 })
+      dist = next
+    }
+    SUM_DIST.set(dice, dist)
+  }
+  return dist.reduce((a, p, s) => a + (s >= n ? p : 0), 0)
+}
+export function chargeProb(needed: number, dice = 2): number {
+  if (dice !== 2) return needed <= dice ? 1 : atLeastNd6(Math.max(1, dice), needed)
   if (needed <= 2) return 1
   if (needed >= 12) return needed === 12 ? CHARGE_PROB[12] : 0
   return CHARGE_PROB[needed] ?? 0.417
@@ -266,9 +287,9 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
       const chargeNow = state.phase === 'movement' && mt !== 'advance' && (mt !== 'fallBack' || retreatsAndCharges(state, unitId)) && !hookService.chargeForbidden(state, unitId)
       const gap = placementGapTo(state, placements, enemy.unitId)
       const trade = chargeTrade(state, player, unitId, enemy.unitId)
-      if (chargeNow) chargeNowP = chargeProb(Math.ceil(Math.max(0, gap - 0.5)))
+      if (chargeNow) chargeNowP = chargeProb(Math.ceil(Math.max(0, gap - 0.5)), chargeDiceCount(state, unitId))
       if (chargeNow) score += chargeNowP * trade * (hammer ? 1 : 0.6)
-      else if (!final) score += chargeProb(Math.ceil(Math.max(0, gap - 0.5 - stats0(state, unitId).M))) * trade * (hammer ? 0.35 : 0.2)
+      else if (!final) score += chargeProb(Math.ceil(Math.max(0, gap - 0.5 - stats0(state, unitId).M)), chargeDiceCount(state, unitId)) * trade * (hammer ? 0.35 : 0.2)
     }
     if (hasAnyRangedWeapon(state, unitId)) {
       const range = bestRangedRangeOfUnit(state, unitId)
@@ -876,7 +897,7 @@ function scoreDeclareCharge(state: GameState, player: PlayerId, pending: Pending
     const retShare = finalTurnOf(state, player) ? 0.15 : comesAnyway ? 0.45 : 0.7
     let payoff = dmg * unitValue(state, targetId) * 0.02 - ret * unitValue(state, unitId) * 0.02 * riskMult * retShare
     payoff += chargeObjectiveSwing(state, player, unitId, targetId, dmg, wounds)
-    let p = chargeProb(Math.ceil(needed))
+    let p = chargeProb(Math.ceil(needed), chargeDiceCount(state, unitId))
     if (reroll) p = 1 - (1 - p) * (1 - p)
     let s = p * payoff - (1 - p) * 0.4
     if (myObjectives.length > 0 && !myObjectives.some((o) => unitModels(state, targetId).some((m) => withinObjectiveRange(m, o)))) s -= 0.6 + leaveCost
@@ -993,6 +1014,14 @@ function abilityTiming(state: GameState, player: PlayerId, abilityId: string, un
   if (gloTiming !== null) return gloTiming
   const koTiming = code?.startsWith('kharadron') ? kharadronAbilityTiming(state, player, code, unitId) : null
   if (koTiming !== null) return koTiming
+  const sbgTiming = code?.startsWith('soulblight') ? soulblightAbilityTiming(state, player, code, unitId) : null
+  if (sbgTiming !== null) return sbgTiming
+  const sceTiming = code?.startsWith('stormcast') ? stormcastAbilityTiming(state, player, code, unitId) : null
+  if (sceTiming !== null) return sceTiming
+  const skvTiming = code?.startsWith('skaven') ? skavenAbilityTiming(state, player, code, unitId) : null
+  if (skvTiming !== null) return skvTiming
+  const serTiming = code?.startsWith('seraphon') ? seraphonAbilityTiming(state, player, code, unitId) : null
+  if (serTiming !== null) return serTiming
   if (code === 'fyreslayersPlantTheIcon') {
     // once per battle, Ward for one turn: wait for the turn the units around the Battlesmith are actually fighting
     const src = unitId ? centerOfUnit(state, unitId) : null
@@ -1025,8 +1054,8 @@ function chargeRerollGain(state: GameState, player: PlayerId, unitId: UnitId): n
   let best = 0
   for (const e of boardUnitsOf(state, other(player))) {
     const gap = minGapBetweenUnits(state, unitId, e.id)
-    if (gap <= ENGAGEMENT_H || gap > 12.5) continue
-    const p = chargeProb(Math.ceil(Math.max(0, gap - 0.5)))
+    if (gap <= ENGAGEMENT_H || gap > 6 * chargeDiceCount(state, unitId) + 0.5) continue
+    const p = chargeProb(Math.ceil(Math.max(0, gap - 0.5)), chargeDiceCount(state, unitId))
     const gain = (1 - (1 - p) * (1 - p)) - p
     best = Math.max(best, gain * (unitMeleeDamage(state, unitId, e.id, { charged: true }) * unitValue(state, e.id) * 0.02 + 1))
   }
@@ -1043,6 +1072,14 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
   if (kruBonus !== null) return kruBonus
   const koBonus = code?.startsWith('kharadron') ? kharadronTargetBonus(state, player, code, unitId) : null
   if (koBonus !== null) return koBonus
+  const sbgBonus = code?.startsWith('soulblight') ? soulblightTargetBonus(state, player, code, unitId) : null
+  if (sbgBonus !== null) return sbgBonus
+  const sceBonus = code?.startsWith('stormcast') ? stormcastTargetBonus(state, player, code, unitId) : null
+  if (sceBonus !== null) return sceBonus
+  const skvBonus = code?.startsWith('skaven') ? skavenTargetBonus(state, player, code, unitId) : null
+  if (skvBonus !== null) return skvBonus
+  const serBonus = code?.startsWith('seraphon') ? seraphonTargetBonus(state, player, code, unitId) : null
+  if (serBonus !== null) return serBonus
   if (code === 'citiesIronweldDiscipline') {
     // the Cannon fires at it: expected damage, not size
     let best = 0
@@ -1063,8 +1100,8 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
     const move = stats0(state, unitId)?.M ?? 0
     for (const e of boardUnitsOf(state, other(player))) {
       const gap = minGapBetweenUnits(state, unitId, e.id)
-      if (gap > 12.5 + move) continue
-      const p = gap <= ENGAGEMENT_H ? 1 : chargeProb(Math.ceil(Math.max(0, gap - 0.5 - move)))
+      if (gap > 6 * chargeDiceCount(state, unitId) + 0.5 + move) continue
+      const p = gap <= ENGAGEMENT_H ? 1 : chargeProb(Math.ceil(Math.max(0, gap - 0.5 - move)), chargeDiceCount(state, unitId))
       best = Math.max(best, p * unitMeleeDamage(state, unitId, e.id, { charged: gap > ENGAGEMENT_H }) * unitValue(state, e.id) * 0.02)
     }
     return best * 1.5
@@ -1082,8 +1119,8 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
 // spots without swamping the ability's own score.
 function abilityPlacementScore(state: GameState, pending: PendingDecision, optionId: string): number | null {
   if (pending.kind !== 'chooseOption') return null
-  const data = pending.context.data as { redeploy?: boolean; move?: boolean } | undefined
-  if (!data?.redeploy && !data?.move) return null
+  const data = pending.context.data as { redeploy?: boolean; move?: boolean; place?: boolean } | undefined
+  if (!data?.redeploy && !data?.move && !data?.place) return null
   const unitId = (pending.context as { unitId?: UnitId | null }).unitId
   const unit = unitId ? state.units[unitId] : undefined
   if (!unitId || !unit) return null
@@ -1106,6 +1143,10 @@ function abilityModeBonus(state: GameState, pending: PendingDecision, optionId: 
   const koCode = abilityId ? state.abilities[abilityId]?.code : undefined
   const koMode = koCode?.startsWith('kharadron') ? kharadronModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId) : null
   if (koMode !== null) return koMode
+  const sbgMode = koCode?.startsWith('soulblight') ? soulblightModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId) : null
+  if (sbgMode !== null) return sbgMode
+  const sceMode = koCode?.startsWith('stormcast') ? stormcastModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId) : null
+  if (sceMode !== null) return sceMode
   const placed = abilityPlacementScore(state, pending, optionId)
   if (placed !== null) return placed
   const target = selectedAbilityTarget(state, pending)
@@ -1126,7 +1167,7 @@ function scoreAction(state: GameState, player: PlayerId, pending: PendingDecisio
     case 'declareTargets': return action.type === 'declareTargets' ? scoreDeclareTargets(state, pending, action) : 0
     case 'declareCharge': return action.type === 'declareCharge' || action.type === 'pass' ? scoreDeclareCharge(state, player, pending, action as DeclareChargeAction | { type: 'pass' }) : 0
     // passing a charge move after a good roll throws the charge away (and the Core slot with it): only when no move is offered
-    case 'chargeMove': return action.type === 'chargeMove' ? 100 + scorePosition(state, player, action.unitId, action.placements, true) : 0
+    case 'chargeMove': return action.type === 'chargeMove' ? 100 + scorePosition(state, player, action.unitId, action.placements, true) + (soulblightChargeBonus(state, player, action.unitId, action.placements) ?? 0) : 0
     case 'pileIn': return action.type === 'pileIn' ? scorePosition(state, player, action.unitId, action.placements, true) : 0
     case 'consolidate': return action.type === 'consolidate' ? scorePosition(state, player, action.unitId, action.placements, true) : 0
     case 'chooseFightUnit': return scoreChooseFightUnit(state, player, action)

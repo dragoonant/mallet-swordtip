@@ -1,5 +1,6 @@
-// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (Cities of
-// Sigmar, Ironjawz, Slaves to Darkness, Fyreslayers, Kruleboyz, Gloomspite Gitz, Lumineth Realm-lords or Kharadron Overlords; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
+// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (any of the twelve:
+// Cities of Sigmar, Fyreslayers, Lumineth Realm-lords, Kharadron Overlords, Stormcast Eternals, Seraphon, Slaves to Darkness, Skaven,
+// Soulblight Gravelords, Ironjawz, Kruleboyz and Gloomspite Gitz; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
 // device, and Start. The battleplan is fixed (Fire and Jade, standard terrain); only its realm side (Aqshy, Ghyran or random) is picked.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
 import { FactionCrest } from './FactionCrest'
@@ -23,10 +24,24 @@ export const FACTION_BLURBS: Record<string, string> = {
   gloomspite: 'A howling pack of grot wolf-riders and a rickety sun-stealing war-cart: quick to flank, quick to run, and quicker to come back and stab you in the back.',
   lumineth: 'Serene wind-aelves who fight with the weather: a spirit of the gale, cloud-borne mages and mounted archers, and a wall of pikes, steering the whole board toward one leeward edge.',
   kharadron: 'Brass-and-aether sky-duardin: a volley-gun company that shoots even in melee, flying skywardens and a fat armoured airship that ferries units across the field.',
+  stormcast: 'Lightning-forged knights in gold and midnight blue: a gryph-riding lord, a blindfolded witch-hunter whose crow keeps him safe, hammer-wielding Liberators and javelin-throwing winged Prosecutors who drop in from the sky.',
+  skaven: 'A seething tide of ratmen from under the cities: swarms of Clanrats that keep coming back, hulking Stormfiends, a scheming Grey Seer and a warp-lightning cannon that fries whatever it points at.',
+  seraphon: 'Lizard-warriors of the star-jungle: a Sunblood with hard-to-kill bodyguards, blowpipe skinks who ambush from hiding, flapping Terrawings and a fire-spitting beast whose acolytes keep it fighting.',
+  soulblight: 'A vampire lord at the head of a night-court hunt: an endless line of rattling skeletons, charging Blood Knights and bat-winged Vargheists, and a pale lord who casts spells and vanishes in a cloud of bats.',
 }
 
+// The Grand Alliance of each army: the coloured edge on its tile and the line under its blurb.
+export const FACTION_ALLIANCE: Record<string, 'Order' | 'Chaos' | 'Death' | 'Destruction'> = {
+  cities: 'Order', fyreslayers: 'Order', lumineth: 'Order', kharadron: 'Order', stormcast: 'Order', seraphon: 'Order',
+  slaves: 'Chaos', skaven: 'Chaos',
+  soulblight: 'Death',
+  ironjawz: 'Destruction', kruleboyz: 'Destruction', gloomspite: 'Destruction',
+}
+const ALLIANCE_COLOR: Record<string, string> = { Order: '#6fa8ff', Chaos: '#c966e0', Death: '#5fd8b0', Destruction: '#ec8a3c' }
+
 // Preferred card order on the start screen (anything else follows, in data order).
-const FACTION_ORDER = ['cities', 'ironjawz', 'slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron']
+// Grouped by Grand Alliance (Order, Chaos, Death, Destruction), so each alliance sits together in the grid and shares an edge colour.
+const FACTION_ORDER = ['cities', 'fyreslayers', 'lumineth', 'kharadron', 'stormcast', 'seraphon', 'slaves', 'skaven', 'soulblight', 'ironjawz', 'kruleboyz', 'gloomspite']
 
 // Own-words one-liners for the regiment abilities and enhancements shown on the cards; the full rules text from the data is the
 // tooltip. An id without an entry here falls back to its data text.
@@ -71,6 +86,30 @@ export const OPTION_BLURBS: Record<string, string> = {
   'kharadron.enh.masterwrought-armour': 'Your general shrugs off damage on a 6+ (Ward).',
   'kharadron.enh.flask-of-vintage-gorogna': 'Once per battle, in a hero phase, your general heals D6 damage.',
   'kharadron.enh.no-reward-without-risk': 'Once per battle, a nearby unit that declares a charge may re-roll the charge roll.',
+  'stormcast.ability.blaze-of-glory': 'Once per battle, in a combat phase, a unit in combat may hit an enemy with 1 mortal damage on a 4+ for each of its models slain.',
+  'stormcast.ability.strike-where-needed': 'Once per battle, a unit can retreat without the mortal damage and still charge afterwards.',
+  'stormcast.enh.hallowed-scrolls': 'Your general shrugs off damage on a 5+ (Ward).',
+  'stormcast.enh.quicksilver-draught': 'Once per battle, in a combat phase, your general strikes first for the rest of that phase.',
+  'stormcast.enh.null-pendant': "Once per battle, at the end of a turn, enemies on your general's objective may lose control: roll per unit, and each 2+ is taken off its score.",
+  'stormcast.enh.morrdas-talon': "Your general's greataxe causes mortal damage on a critical hit.",
+  'skaven.ability.endless-swarm-of-rats': 'When a Clanrats unit uses Seething Swarm, it brings back D6 slain models instead of D3.',
+  'skaven.ability.warpstone-laced-armour': 'Once per battle, when the enemy attacks your Stormfiends, they have a 5+ Ward until the end of the turn.',
+  'skaven.enh.skilled-manipulator': 'Your general has a 4+ Ward while standing within 1" of Clanrats.',
+  'skaven.enh.skitterleap': 'A spell (6): in your hero phase, whisk your general off the board and set it down anywhere more than 6" from the enemy.',
+  'skaven.enh.scurry-away': "In a combat phase, on a 3+ your general's unit retreats at once, with no mortal damage.",
+  'skaven.enh.cage-of-warp-lightning': 'Once per battle, in a combat phase, a nearby enemy unit strikes last on a 2+, but a 1 hurts your general.',
+  'seraphon.ability.scaled-aegis': 'Once a turn, in your hero phase, on a 3+ a Saurus unit gets a 6+ Ward until your next turn.',
+  'seraphon.ability.followers-of-huanchi': "Once a turn, in your shooting phase, on a 3+ a Skink unit's ranged weapons wound automatically on a critical hit.",
+  'seraphon.enh.instinctive-commander': 'In your hero phase, on a 3+ a nearby friendly unit that is not in combat makes a Normal Move.',
+  'seraphon.enh.savage-mauling': 'In a combat phase, an enemy unit fighting your general can make no Ward rolls for the rest of the turn.',
+  'seraphon.enh.venomite-swarm': 'In a combat phase, while the Venomites token lasts, an enemy fighting your general may take D3 mortal damage (a 1 loses the token).',
+  'seraphon.enh.blessed-by-the-old-ones': "If your general falls, roll at each turn's end: on a 2+ the Sunblood returns and leads again.",
+  'soulblight.ability.endless-legions': 'Once per battle, a destroyed Skeletons unit is replaced by D6 models set up in your territory, clear of the enemy.',
+  'soulblight.ability.ruinous-chargers': 'Once per battle, after your Blood Knights charge, each enemy unit they rode past takes D3 mortal damage.',
+  'soulblight.enh.spirit-gale': 'A spell (7): in your hero phase, every enemy unit on the board takes 1 mortal damage.',
+  'soulblight.enh.grave-sand-shard': 'Once per battle, Skeleton Legion rolls for a unit near your general get +1.',
+  'soulblight.enh.cloud-of-bats': 'Once per battle, in your movement phase, your general vanishes in a flurry of bats and lands anywhere more than 6" from the enemy.',
+  'soulblight.enh.aura-of-night': 'Negative modifiers to saves against shooting aimed at your general are ignored.',
   'cities.enh.flask-of-lethisian-darkwater': 'Once per battle, your general heals D6 damage.',
   'cities.enh.heirloom-blade': 'Your general\'s longsword hits harder against armour: +1 Rend.',
   'cities.enh.brazier-of-holy-flame': 'At the end of any turn, up to D3 fallen Steelhelms stand up near your general.',
@@ -85,6 +124,7 @@ interface FactionChoice {
   id: string
   label: string
   blurb: string
+  alliance: string
 }
 
 function randomSeed(): string {
@@ -140,12 +180,17 @@ html[data-ff="compact"] .ss-check { display: flex; align-items: center; gap: 10p
 html[data-ff="compact"] .ss-field { display: flex; flex-direction: column; gap: 6px; }
 html[data-ff="compact"] .ss-card button[aria-pressed] { font-size: 12px !important; }
 html[data-ff="compact"] .ss-secondary { font-size: 13px; }
-/* Eight army tiles: 4 x 2 everywhere; a phone held sideways has the width for one row of 8 and not the height for two. */
+/* Twelve army tiles, grouped by Grand Alliance: 4 x 3 in a desktop column and on a phone held upright; a phone held sideways has the
+   width for 6 x 2 (iPhone 15 Pro landscape, 852x393: each tile ~130px wide with a two-line name). */
 html[data-ff="compact"] .ss-armies { gap: 4px !important; }
 html[data-ff="compact"] .ss-armies button { padding: 4px 2px !important; font-size: 10.5px !important; gap: 2px !important; }
-html[data-ff="compact"] .ss-armies .ss-badge { width: 40px !important; height: 40px !important; }
-html[data-ff="compact"] .ss-armies .ss-badge svg { width: 34px; height: 34px; }
-@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; } }
+html[data-ff="compact"] .ss-armies .ss-badge { width: 36px !important; height: 36px !important; }
+html[data-ff="compact"] .ss-armies .ss-badge svg { width: 32px; height: 32px; }
+@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; } }
+.ss-armies button { border-top-width: 3px !important; }
+${Object.entries(ALLIANCE_COLOR).map(([name, c]) => `.ss-armies button[data-alliance="${name}"] { border-top-color: ${c} !important; }`).join(' ')}
+.ss-alliance { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: ${colors.muted}; margin-top: -4px; }
+.ss-alliance i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 `
 
 // Automated browsers (Playwright) skip the intro so E2E runs don't wait on it.
@@ -157,7 +202,7 @@ const label: CSSProperties = { fontSize: 12, textTransform: 'uppercase', letterS
 const row: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
 const input: CSSProperties = { ...buttonBase, flex: 1, cursor: 'text' }
 const blurb: CSSProperties = { ...mutedText, marginTop: -8 }
-// Eight armies sit four by two (the CSS class widens it to one row of eight on a phone held sideways); never an orphan card.
+// Twelve armies sit four by three (the CSS class makes it six by two on a phone held sideways); never an orphan card.
 const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }
 const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 4px', fontSize: 11.5, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
 const factionBadge: CSSProperties = { width: 52, height: 52, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }
@@ -173,9 +218,9 @@ const pickItem: CSSProperties = { display: 'flex', flexDirection: 'column', alig
 const pickName: CSSProperties = { fontWeight: 700, fontSize: 13 }
 const pickText: CSSProperties = { fontSize: 11.5, color: 'inherit', opacity: 0.78, fontWeight: 400 }
 
-function FactionCard({ id, name, active, onPick, testId }: { id: string; name: string; active: boolean; onPick: () => void; testId?: string }) {
+function FactionCard({ id, name, alliance, active, onPick, testId }: { id: string; name: string; alliance: string; active: boolean; onPick: () => void; testId?: string }) {
   return (
-    <button type="button" data-testid={testId} style={{ ...(active ? buttonActive : buttonBase), ...factionCard }} aria-pressed={active} onClick={onPick}>
+    <button type="button" data-testid={testId} data-alliance={alliance || undefined} style={{ ...(active ? buttonActive : buttonBase), ...factionCard }} aria-pressed={active} onClick={onPick}>
       <span className="ss-badge" style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={44} /></span>
       <span>{name}</span>
     </button>
@@ -294,7 +339,7 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
     if (!bundle) return []
     const ids = [...new Set(spearheadArmies(bundle).map((p) => p.faction))]
     const rank = (id: string) => { const i = FACTION_ORDER.indexOf(id); return i < 0 ? FACTION_ORDER.length : i }
-    return ids.map((id) => ({ id, label: bundle.factions[id]?.name ?? id, blurb: FACTION_BLURBS[id] ?? '' })).sort((a, b) => rank(a.id) - rank(b.id))
+    return ids.map((id) => ({ id, label: bundle.factions[id]?.name ?? id, blurb: FACTION_BLURBS[id] ?? '', alliance: FACTION_ALLIANCE[id] ?? '' })).sort((a, b) => rank(a.id) - rank(b.id))
   }, [bundle])
   const factionId = resolveFactionId(faction)
   const activeFaction = factions.find((f) => f.id === factionId)
@@ -378,9 +423,10 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         <div style={label}>Your Army</div>
         <div className="ss-armies" style={factionGrid} data-testid="setup-patrol-A">
           {factions.map((f) => (
-            <FactionCard key={f.id} id={f.id} testId={`setup-army-A-${f.id}`} name={f.label} active={f.id === factionId} onPick={() => setFaction(f.id)} />
+            <FactionCard key={f.id} id={f.id} testId={`setup-army-A-${f.id}`} name={f.label} alliance={f.alliance} active={f.id === factionId} onPick={() => setFaction(f.id)} />
           ))}
         </div>
+        {activeFaction?.alliance && <div className="ss-alliance" data-testid="setup-alliance-A"><i style={{ background: ALLIANCE_COLOR[activeFaction.alliance] }} />Grand Alliance: {activeFaction.alliance}</div>}
         {activeFaction?.blurb && <p style={blurb}>{activeFaction.blurb}</p>}
         {bundle && <ArmyOptions bundle={bundle} factionKey={faction} regiment={regimentA} setRegiment={setRegimentA} enhancement={enhancementA} setEnhancement={setEnhancementA} who="A" />}
 
@@ -430,9 +476,10 @@ export function StartScreen({ onStarted }: { onStarted: () => void }) {
         <div style={label}>Opponent's Army</div>
         <div className="ss-armies" style={factionGrid} data-testid="setup-opponent-faction">
           {factions.map((f) => (
-            <FactionCard key={f.id} id={f.id} testId={`setup-army-B-${f.id}`} name={f.label} active={f.id === opponentFaction} onPick={() => setOpponentFaction(f.id)} />
+            <FactionCard key={f.id} id={f.id} testId={`setup-army-B-${f.id}`} name={f.label} alliance={f.alliance} active={f.id === opponentFaction} onPick={() => setOpponentFaction(f.id)} />
           ))}
         </div>
+        {opponentActive?.alliance && <div className="ss-alliance" data-testid="setup-alliance-B"><i style={{ background: ALLIANCE_COLOR[opponentActive.alliance] }} />Grand Alliance: {opponentActive.alliance}</div>}
         {opponentActive?.blurb && <p style={blurb}>{opponentActive.blurb}</p>}
         {bundle && <ArmyOptions bundle={bundle} factionKey={opponentFaction} regiment={regimentB} setRegiment={setRegimentB} enhancement={enhancementB} setEnhancement={setEnhancementB} who="B" />}
 

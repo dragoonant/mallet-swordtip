@@ -1,0 +1,92 @@
+[
+  {
+    "id": "seraphon.weapon.celestite-weapons",
+    "name": "Celestite Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "seraphon.weapon.celestite-club",
+    "name": "Celestite Club",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "seraphon.weapon.dartpipe",
+    "name": "Dartpipe",
+    "type": "ranged",
+    "range": 10,
+    "A": 2,
+    "skill": 3,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "seraphon.weapon.feeble-claws",
+    "name": "Feeble Claws",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "seraphon.weapon.snapping-beaks",
+    "name": "Snapping Beaks",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "seraphon.weapon.glob-of-flame-acid",
+    "name": "Glob of Flame Acid",
+    "type": "ranged",
+    "range": 16,
+    "A": 1,
+    "skill": 4,
+    "wound": 2,
+    "rend": 2,
+    "D": "D3+3",
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "seraphon.weapon.fiery-maw",
+    "name": "Fiery Maw",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 2,
+    "D": 3,
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  }
+]

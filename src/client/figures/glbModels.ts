@@ -58,6 +58,31 @@ export const DECLARED_GLB_SLUGS: readonly string[] = [
   'ko-skywarden',
   'ko-skywarden-volley',
   'ko-frigate',
+  // Stormcast Eternals: Vigilant Brotherhood. (sce-gryph-crow is the Lord-Veritant's crow token: a unit counter, not a model, so it has no entry here.)
+  'sce-lord-vigilant',
+  'sce-lord-veritant',
+  'sce-prosecutor',
+  'sce-liberator',
+  'sce-liberator-grandhammer',
+  // Skaven: Warpspark Clawpack.
+  'skv-grey-seer',
+  'skv-clanrat',
+  'skv-stormfiend-gauntlets',
+  'skv-stormfiend-windlaunchers',
+  'skv-stormfiend-ratling',
+  'skv-warp-lightning-cannon',
+  // Seraphon: Sunblooded Prowlers. (ser-venomites and ser-sun-acolyte are token counters, not models.)
+  'ser-sunblood',
+  'ser-saurus-bodyguard',
+  'ser-saurus-warrior',
+  'ser-hunter',
+  'ser-terrawing',
+  'ser-spawn-of-chotec',
+  // Soulblight Gravelords: Bloodcrave Hunt. (The skeleton champion, standard and Kastellan looks are optional and no warscroll model uses them.)
+  'sbg-vampire-lord',
+  'sbg-skeleton',
+  'sbg-blood-knight',
+  'sbg-vargheist',
 ]
 
 /** The declared slugs whose file exists: the only ones the game ever requests. */
@@ -111,6 +136,31 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'kharadron.unit.skywardens/skywarden': 'ko-skywarden',
   'kharadron.unit.skywardens/skywarden-volley': 'ko-skywarden-volley',
   'kharadron.unit.arkanaut-frigate/frigate': 'ko-frigate',
+  // Stormcast Eternals. The Grandhammer Liberator is its own model (its weapon differs), so a player can see whether it still stands.
+  'stormcast.unit.lord-vigilant/lord-vigilant': 'sce-lord-vigilant',
+  'stormcast.unit.lord-veritant/lord-veritant': 'sce-lord-veritant',
+  'stormcast.unit.prosecutors/prosecutor': 'sce-prosecutor',
+  'stormcast.unit.liberators/liberator': 'sce-liberator',
+  'stormcast.unit.liberators/liberator-grandhammer': 'sce-liberator-grandhammer',
+  // Skaven. Each Stormfiend is its own model: their guns differ.
+  'skaven.unit.grey-seer/grey-seer': 'skv-grey-seer',
+  'skaven.unit.clanrats/clanrat': 'skv-clanrat',
+  'skaven.unit.stormfiends/stormfiend-gauntlets': 'skv-stormfiend-gauntlets',
+  'skaven.unit.stormfiends/stormfiend-windlaunchers': 'skv-stormfiend-windlaunchers',
+  'skaven.unit.stormfiends/stormfiend-ratling': 'skv-stormfiend-ratling',
+  'skaven.unit.warp-lightning-cannon/warp-lightning-cannon': 'skv-warp-lightning-cannon',
+  // Seraphon. The Sunblood and his Bodyguards are separate models (the Sunblood's survival switches Scaled Protectors).
+  'seraphon.unit.sunblood-pack/sunblood': 'ser-sunblood',
+  'seraphon.unit.sunblood-pack/bodyguard': 'ser-saurus-bodyguard',
+  'seraphon.unit.saurus-warriors/warrior': 'ser-saurus-warrior',
+  'seraphon.unit.hunters-of-huanchi/hunter': 'ser-hunter',
+  'seraphon.unit.terrawings/terrawing': 'ser-terrawing',
+  'seraphon.unit.spawn-of-chotec/spawn': 'ser-spawn-of-chotec',
+  // Soulblight Gravelords.
+  'soulblight.unit.vampire-lord/vampire-lord': 'sbg-vampire-lord',
+  'soulblight.unit.deathrattle-skeletons/deathrattle-skeleton': 'sbg-skeleton',
+  'soulblight.unit.blood-knights/blood-knight': 'sbg-blood-knight',
+  'soulblight.unit.vargheists/vargheist': 'sbg-vargheist',
 }
 
 /** Render-time corrections for GLBs whose baked `figure` node came out of the pipeline at the wrong size or facing.

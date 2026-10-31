@@ -20,6 +20,10 @@ import { luminethHooks } from './factions/lumineth'
 import { kharadronHooks } from './factions/kharadron'
 import { gloomspiteHooks } from './factions/gloomspite'
 import { kruleboyzHooks } from './factions/kruleboyz'
+import { stormcastHooks } from './factions/stormcast'
+import { skavenHooks } from './factions/skaven'
+import { seraphonHooks } from './factions/seraphon'
+import { soulblightHooks } from './factions/soulblight'
 import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
   ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, Model, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
@@ -148,6 +152,26 @@ export interface EngineCodeHook extends CodeHook {
   // F10: an activated ability offered at the start of this phase (abilities.ts start-of-phase windows, e.g. 'chargeStart') instead
   // of where its data timing puts it (STD-ENH-3 Champion of Raids: "your Charge phase", whose data names the movement phase's end)
   startOfPhase?: Phase
+  // ---- F12 engine items (Stormcast, Skaven, Seraphon, Soulblight; 13-engine-port-plan §3.11) ----
+  // SCE-AB-4 Sense Unholy Sorcery: called by attack.ts resolvePool once per ward roll, after the dice are read, for every source
+  // entry HELD by the warded unit (holderUnitId === info.unitId). `dice` = the unmodified ward dice, `needed` = the ward value.
+  // The dice of that roll keep the ward they were rolled against (a token removed here only matters for the next roll).
+  afterWardRoll?(ctx: EngineContext, entry: HookSourceEntry, info: { unitId: UnitId; dice: number[]; needed: number }): void
+  // SER-AB-1 Scaled Protectors: true = the first damage point allocated to `unitId` each phase is ignored (attack.ts resolvePool,
+  // after the ward rolls and before any redirect, and allocatePoints). Folded by hookService.ignoresFirstDamage; asked of every
+  // source entry on the board after its gate. The phase mark `ignore1:<unitId>` records that the point was spent.
+  ignoresFirstDamagePerPhase?(state: GameState, entry: HookSourceEntry, unitId: UnitId): boolean
+  // SER-AB-6 Sun Acolytes: called by attack.ts once an attack sequence (shooting or fight activation, queued mortals included) has
+  // ended, for every source entry on the board. `saveOnes` = unmodified 1s rolled on save dice this sequence, per target unit.
+  afterAttackSequence?(ctx: EngineContext, entry: HookSourceEntry, info: { attackerUnitId: UnitId; saveOnes: Record<UnitId, number> }): void
+  // SER-ENH Blessed by the Old Ones: abilities.ts also offers this code's activated descriptor while its holder unit is destroyed
+  // (location 'destroyed', not replaced). The user unitId is the destroyed unit. With descriptor params.mandatory: true the
+  // abilityUse decision has no pass while it is offered.
+  whileDestroyed?: boolean
+  // SBG-BT-2 The Hunger: called by phases/fight.ts once a unit's Fight activation has fully resolved (after deferred mortals),
+  // for the codes of the fighting unit's datasheet abilities, its player's battle traits and regiment ability (as onOwnModelSlain).
+  // damageAllocated = damage points its melee attacks allocated this activation (after wards; attack.ts fightDamageAllocated).
+  onOwnFightResolved?(ctx: EngineContext, info: { ability: RuntimeAbility; unitId: UnitId; damageAllocated: number }): void
 }
 
 // a battlefield edge: axis 'z' sign -1 = the edge at z = -h/2, axis 'x' sign 1 = the edge at x = +w/2 (types.ts EdgeRef)
@@ -258,6 +282,10 @@ export const codeHooks: Record<string, EngineCodeHook> = {
   ...kharadronHooks,
   ...gloomspiteHooks,
   ...kruleboyzHooks,
+  ...soulblightHooks,
+  ...stormcastHooks,
+  ...skavenHooks,
+  ...seraphonHooks,
   // core Spearhead abilities no data file names (Call for Reinforcements, SPH-12); abilities.ts adds their descriptor itself
   [spearheadCallForReinforcements.name]: spearheadCallForReinforcements,
 }

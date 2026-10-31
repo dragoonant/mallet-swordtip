@@ -1,0 +1,17 @@
+{
+  "id": "seraphon",
+  "name": "Seraphon",
+  "factionKeyword": "SERAPHON",
+  "armyRule": "seraphon.ability.sunblooded-prowlers",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#1f9e9a",
+    "secondary": "#e8dcb5",
+    "trim": "#d9a936",
+    "metal": "#8a7a4a",
+    "decal": "#58b6ff"
+  },
+  "combatPatrols": [
+    "seraphon.army.sunblooded-prowlers"
+  ]
+}

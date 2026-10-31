@@ -1,0 +1,17 @@
+{
+  "id": "skaven",
+  "name": "Skaven",
+  "factionKeyword": "SKAVEN",
+  "armyRule": "skaven.ability.warpspark-clawpack",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#6e5a47",
+    "secondary": "#9a948a",
+    "trim": "#c98f8f",
+    "metal": "#8a5f33",
+    "decal": "#66e03a"
+  },
+  "combatPatrols": [
+    "skaven.army.warpspark-clawpack"
+  ]
+}

@@ -449,6 +449,16 @@ export function UnitCard() {
           Control {control.join(' / ')}
         </div>
       )}
+      {/* Unit counters (Gryph-crow, Venomites, Sun Acolytes): not models on the board, so the card is where a player sees they are still there. */}
+      {Object.entries(unit.tokens ?? {}).some(([, n]) => n > 0) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }} data-testid="unit-card-tokens">
+          {Object.entries(unit.tokens ?? {}).filter(([, n]) => n > 0).map(([k, n]) => (
+            <span key={k} data-testid={`unit-card-token-${k}`} style={{ fontSize: 12, padding: '1px 7px', borderRadius: 10, border: `1px solid ${colors.border}`, background: 'rgba(255,255,255,0.07)' }}>
+              {prettifyId(k)}{n > 1 ? ` ×${n}` : ''}
+            </span>
+          ))}
+        </div>
+      )}
       <div data-testid="unit-card-wounds">
         <WoundRows state={state} unitId={unit.id} rows={rows} />
       </div>

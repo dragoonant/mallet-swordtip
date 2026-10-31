@@ -66,6 +66,9 @@ loadout. The Vampire Lord is the only **Wizard**: the keyword is printed with no
   is a new unit (core 24.2) with **starting size = the D6 rolled**, so Skeleton Legion can only bring it back up to that number.
   [RULING] The destroyed unit must not already have been replaced (by the Attack on Two Fronts card); it is marked `replaced`
   afterwards. The replacement is set up this turn (CORE-6.13).
+  [RULING] A destroyed replacement (itself a new unit) can be the pick as long as it is not marked `replaced`; the once-per-battle limit
+  makes this at most one use anyway. Whether the ability is offered only checks that one model has a legal spot; if the D6 roll then
+  gives more models than fit anywhere, the replacement is dropped (the original stays unreplaced) and the use is spent.
 
 ### SBG-RA-2 `soulblight.ability.ruinous-chargers` — Ruinous Chargers
 - **Timing:** Once per battle, **any charge phase**. The opponent's charge phase matters for the Counter-Charge battle tactic command.
@@ -87,7 +90,8 @@ loadout. The Vampire Lord is the only **Wizard**: the keyword is printed with no
 | `soulblight.enh.spirit-gale` | Spirit Gale | **Your hero phase** (no once-per-battle limit) | Declare: casting roll of 2D6. Effect: on **7+**, inflict **1 mortal damage on each enemy unit** on the battlefield. |
 
 - Cloud of Bats: [interp] usable while the general is in combat (nothing forbids it). It is not a Retreat, so there is no mortal
-  damage. Being set up, the general cannot use Move abilities for the rest of the phase (CORE-6.13).
+  damage. Being set up, the general cannot use Move abilities for the rest of the phase (CORE-6.13). [RULING] Built on the Magmic
+  Tunnels redeploy: the player picks the spot, and passing on the spot decision leaves the general where it stands (the use is spent).
 - Aura of Night: [RULING] Rend is a characteristic subtracted from the roll, not a modifier (CORE-2.5 interp in 10-rules-core), so
   Rend still applies. Only negative save modifiers (an ability's or a card's "−1 to save rolls") are dropped. Positive modifiers
   still apply, capped at +1.
@@ -208,7 +212,7 @@ faction file (detailed below the table).
 | SBG-AB-1 Vile Transference | (b) `soulblightVileTransference` | Activated, `phase command / your`, `keywords ['SPELL']`, `castingValue: 6` (abilities.ts calls `castingRoll`). Targets: enemy units visible (los.ts) and `unitsWithin(self, t, 6)`. Resolve: `n` = `modelStats(first live model).W` dice via `ctx.roll`, `k` = count ≥ `params.successOn` (5); `inflictMortal(ctx, use, target, k)`, then `healUnit(ctx, self, k, id)`. |
 | SBG-ENH Spirit Gale | (b) `soulblightSpiritGale` | Enhancement, activated, `phase command / your`, no limit, `keywords ['SPELL']`, `castingValue: 7`, caster = bearer. Resolve: `inflictMortal(ctx, use, e, 1)` for every enemy unit `onBoard`. |
 | SBG-AB-4 Skeleton Legion | (b) `soulblightSkeletonLegion` | Shape of `kharadronLeaveNoDuardin` / `fyreslayersHornOfGrimnir`: `phase fight / your`, self target, `canUse` = `returnableModels(self) > 0`; roll `returnableModels` D6s (one per slain model, capped by starting size), count ≥ `params.successOn` (6), or ≥ 5 in the shard mode; `returnSlainModels(ctx, self, count, id)`. `modesFor` adds a "Use Grave-Sand Shard" mode while the shard is unspent (see next row). |
-| SBG-ENH Grave-Sand Shard | (b) `soulblightGraveSandShard` | Marker hook like A Proper Ruckus (IJZ-3.2): the reaction timing is never offered by the loop. Skeleton Legion's `modesFor` offers the shard mode when the player's general bears it, `mission.custom.sbgShard[player]` is unset, and `unitsWithin(skeletons, general, 9)`. Choosing it sets the ledger. |
+| SBG-ENH Grave-Sand Shard | (b) `soulblightGraveSandShard` | Marker hook like A Proper Ruckus (IJZ-3.2): the reaction timing is never offered by the loop. Skeleton Legion's `modesFor` offers the shard mode when the player's general bears it, the shard's ability has no entry in `players[p].abilityUses` (its `limit` is `oncePerBattle`), and `unitsWithin(skeletons, general, 9)`. Choosing it pushes that ability use (the ledger) and lowers the legion target to 5. |
 | SBG-ENH Aura of Night | (a) + (c) C5 | Passive enhancement, scope bearer, `{ when: { weaponType: 'ranged' }, ignoreNegativeModifiers: 'save' }` (new Effect field, C5). |
 | SBG-ENH Cloud of Bats | (b) `soulblightCloudOfBats` | Enhancement, `phase movement / your`, `oncePerBattle`, `keywords ['CORE']`. `canUse`: general on board and `redeployOptions(state, general, 6).length > 0`. Resolve: `requestRedeploy(s, { abilityId, player, unitIds: [general], minEnemyDistance: 6, markSetUp: true })` (Magmic Tunnels path; abilities.ts asks the spot). Offered in the end-of-phase window. |
 | SBG-RA-1 Endless Legions | (b) `soulblightEndlessLegions` + (c) C4 | Army ability, `phase movement / your`, `oncePerBattle`, `keywords ['CORE']`. Targets: own units `location 'destroyed'`, `isDatasheet(…, 'deathrattle-skeletons')`, `!replaced`, with a legal spot (C4 options non-empty). Resolve: roll D6, `spawnUnitCopy(s, orig, n)` (state.ts; startingStrength = n), `copy.replacementOf = orig`, `orig.replaced = true`, `writePlaceRequest(s, { …, edgeBand: false, minEnemyDistance: 6 })` (C4). |
@@ -262,13 +266,16 @@ faction file (detailed below the table).
 4. **Skeletons:** Skeleton Legion is offered at the start of your combat phase (CORE-10.1). Endless Legions brings a destroyed unit
    back with D6 models in the end-of-movement window, so it can charge that turn (set up this turn only blocks Move abilities in
    the movement phase, CORE-6.13).
-5. **AI:** Vile Transference when the Lord is damaged or a target with Health ≥ 3 is within 6"; otherwise Spirit Gale when the
-   enhancement is taken. Cloud of Bats: when the Lord is in combat with more enemy Health than its own wounds left, or to reach
-   an objective out of the enemy's reach (spot nearest an objective that is >6" from enemies). Endless Legions: as soon as a
-   Skeletons unit is destroyed (spot nearest an objective in own territory). Ruinous Chargers: whenever it would hit ≥ 1 unit. Charge path for Blood Knights: prefer
-   paths that cross enemy Infantry when Ruinous Chargers is unspent. Skeleton Legion: always. Grave-Sand Shard: the first time
-   ≥ 4 models are slain in a unit within 9" of the general. Swoop Down: round 3, spot nearest a contested objective or a damaged
-   enemy unit (The Scent of Gore).
+5. **AI** (hints in `soulblight.ts`, wired into `src/ai/utility.ts`; the ability-use options carry no unit, so the casters are looked up as
+   the player's general). Spells: the Lord has one cast per hero phase, so the bot compares expected mortal damage, Vile Transference
+   `P(2D6 >= 6) * Health / 3` (x1.5 while the Lord is damaged) against Spirit Gale `P(2D6 >= 7) * enemy units on the table`, and
+   declines the lesser one (timing -3). Vile Transference picks the target with the most Health. Cloud of Bats: when the Lord is in
+   combat with more enemy Health than its own wounds left, or, from round 2, to reach an objective it does not stand on that is not
+   ours and has no enemy model within 9" of its centre; the spot is the best-scoring redeploy option. Endless Legions: as soon as a
+   Skeletons unit is destroyed; the spot is scored like a move (`abilityPlacementScore` now also reads `place` decisions). Ruinous
+   Chargers: whenever offered; a Blood Knights charge path that crosses enemy units earns +4 per unit (max 2) while it is unspent
+   (`soulblightChargeBonus`; the engine's charge candidates rarely cross anything, so it fires seldom). Skeleton Legion: always;
+   the Grave-Sand Shard mode when 4 or more models are slain, else the plain mode. Swoop Down: the engine's arrival from round 3.
 6. **Ward sources:** every unit has Ward (6+) from its warscroll; nothing improves it.
 7. **Defaults for the sim:** regiment Endless Legions and enhancement Spirit Gale; variant games Ruinous Chargers and Grave-Sand Shard
    (Cloud of Bats and Aura of Night as further variants).
@@ -299,6 +306,10 @@ faction file (detailed below the table).
 | SBG-WEAP-1 | Templar weapons deal 2 damage on a turn the Blood Knights charged (Charge +1 Damage); Nightmare's Hooves ignore friendly buffs (Companion). |
 | SBG-WEAP-2 | Murderous Fangs and Talons: a critical hit scores 2 hits. |
 | SBG-FLY-1 | Vargheists move over models (Fly); Blood Knights do not cross non-Infantry models. |
+| SBG-REG | Every `code` in the Soulblight data resolves to a registered hook; activated ones carry an `activate` block. |
+| SBG-DATA-1..4 | Shipped data: Spearhead army checks and schema validation; warscroll stats, keywords and Ward; weapon profiles; the real game builds with every regiment ability / enhancement choice (Vargheists in reserve). |
+| SBG-AI | AI hints: spell choice by expected damage, Cloud of Bats timing, shard mode, Blood Knights charge-path bonus. |
+| SBG-E2E | Full AI games of the Bloodcrave Hunt run to the end without a rejection and use its abilities. |
 
 ---
 
@@ -326,9 +337,10 @@ champions, banners and musicians nothing in this Spearhead.
 
 ## 11. Implementation notes
 
-Not built yet. Planned: data `src/data/factions/soulblight/` (faction, datasheets ×4, weapons, abilities, enhancements, patrol
-`bloodcrave-hunt` with the Vargheists `reserve` entry); hooks `src/engine/factions/soulblight.ts` (`...soulblightHooks` in
-`code-hooks.ts`: `soulblightScentOfGore`, `soulblightVileTransference`, `soulblightSpiritGale`, `soulblightSkeletonLegion`,
-`soulblightGraveSandShard`, `soulblightCloudOfBats`, `soulblightEndlessLegions`, `soulblightRuinousChargers`, `soulblightTheHunger`);
-engine items C1–C5 (§7) with notes in `docs/spec/13-engine-port-plan.md`; AI timing in `src/ai/utility.ts` per §8.5; tests
-`tests/engine/soulblight.test.ts` and `tests/data/soulblight.test.ts`, one test per SBG- id.
+Built (F12). Data: `src/data/factions/soulblight/` (faction, 4 datasheets, weapons, abilities, enhancements, patrol `bloodcrave-hunt` with the
+Vargheists `reserve` entry). Hooks: `src/engine/factions/soulblight.ts` (`...soulblightHooks` in `code-hooks.ts`: `soulblightScentOfGore`,
+`soulblightVileTransference`, `soulblightSpiritGale`, `soulblightSkeletonLegion`, `soulblightGraveSandShard`, `soulblightCloudOfBats`,
+`soulblightEndlessLegions`, `soulblightRuinousChargers`, `soulblightTheHunger`). Engine items C1-C5 (§7) are in with notes in
+`docs/spec/13-engine-port-plan.md` §3.11. AI hints per §8.5 (`src/ai/utility.ts` calls `soulblightAbilityTiming`, `soulblightTargetBonus`,
+`soulblightModeBonus`, `soulblightChargeBonus`). Tests: `tests/engine/soulblight.test.ts` (one test per SBG- id) and
+`tests/data/soulblight.test.ts`.

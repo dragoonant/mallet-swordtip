@@ -1,0 +1,135 @@
+[
+  {
+    "id": "skaven.ability.warpspark-clawpack",
+    "name": "Warpspark Clawpack",
+    "text": "Army marker for the Skaven Warpspark Clawpack. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "skaven.ability.always-three-clawsteps-ahead",
+    "name": "Always Three Clawsteps Ahead",
+    "text": "Once per enemy movement phase, pick a friendly unit that is not in combat. It can make a Normal Move as though it were your own movement phase: up to its Move, never passing through or ending inside an enemy combat range.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "enemy" },
+    "limit": "oncePerTurnArmy",
+    "keywords": ["MOVE"],
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "skavenThreeClawsteps",
+    "params": { "army": true, "priority": "P2" }
+  },
+  {
+    "id": "skaven.ability.warpstone-laced-armour",
+    "name": "Warpstone-Laced Armour",
+    "text": "Once per battle, when your opponent declares a Shoot or Fight attack that targets your Stormfiends, they have Ward (5+) until the end of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "reaction", "trigger": "opponentDeclaredAttack" },
+    "limit": "oncePerBattle",
+    "duration": "untilEndOfTurn",
+    "code": "skavenWarpstoneArmour",
+    "params": { "ward": 5, "priority": "P2" }
+  },
+  {
+    "id": "skaven.ability.endless-swarm-of-rats",
+    "name": "Endless Swarm of Rats",
+    "text": "Whenever a friendly Clanrats unit uses Seething Swarm, it returns D6 slain models instead of D3.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "skaven.ability.will-of-the-horned-rat",
+    "name": "Will of the Horned Rat",
+    "text": "In your hero phase, pick a friendly unit wholly within 13\" of this unit and roll a dice. On a 3+, add the number rolled to that unit's control score until the start of your next turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilNextTurn",
+    "code": "skavenWillOfTheHornedRat",
+    "params": { "range": 13, "succeedOn": 3, "priority": "P2" }
+  },
+  {
+    "id": "skaven.ability.wither",
+    "name": "Wither",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible enemy unit within 13\" of this unit. If the spell is cast, that unit suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "skavenWither",
+    "params": { "range": 13, "damage": "D3", "priority": "P2" }
+  },
+  {
+    "id": "skaven.ability.shock-gauntlets",
+    "name": "Shock Gauntlets",
+    "text": "When an attack with this unit's Shock Gauntlets scores a critical hit, it scores D6 hits instead of 1. Roll the dice for each critical hit; each of those hits makes its own wound roll.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" }
+  },
+  {
+    "id": "skaven.ability.warp-lightning-blast",
+    "name": "Warp Lightning Blast",
+    "text": "All attacks made with the Warp Lightning Blast in one phase must target the same enemy unit. Each hit inflicts 1 mortal damage on the target and the attack sequence ends there (no wound or save roll).",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" }
+  },
+  {
+    "id": "skaven.ability.seething-swarm",
+    "name": "Seething Swarm",
+    "text": "At the end of any turn, return up to D3 slain models to this unit. It can be used while the unit is in combat.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurn",
+    "code": "skavenSeethingSwarm",
+    "params": { "returnModels": "D3", "priority": "P2" }
+  },
+  {
+    "id": "skaven.ability.skilled-manipulator",
+    "name": "Skilled Manipulator",
+    "text": "The bearer has Ward (4+) while it is within 1\" of a friendly Clanrats unit.",
+    "trigger": "feelNoPainRoll",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": {
+      "when": { "friendlyKeywordWithin": { "keyword": "CLANRATS", "within": 1 } },
+      "feelNoPain": 4
+    }
+  },
+  {
+    "id": "skaven.ability.skitterleap",
+    "name": "Skitterleap",
+    "text": "Spell (casting value 6). In your hero phase, if it is cast, take the bearer off the battlefield and set it up again anywhere on the battlefield more than 6\" from every enemy unit. It cannot use Move abilities in the following movement phase.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "scope": { "who": "bearer" },
+    "code": "skavenSkitterleap",
+    "params": { "minEnemyDistance": 6, "priority": "P2" }
+  },
+  {
+    "id": "skaven.ability.scurry-away",
+    "name": "Scurry Away",
+    "text": "In any combat phase, roll a dice. On a 3+ the bearer's unit can immediately Retreat as though it were your movement phase, and suffers no mortal damage for it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "scope": { "who": "bearer" },
+    "roll": { "dice": "D6", "succeedOn": 3 },
+    "code": "skavenScurryAway",
+    "params": { "priority": "P2" }
+  },
+  {
+    "id": "skaven.ability.cage-of-warp-lightning",
+    "name": "Cage of Warp Lightning",
+    "text": "Once per battle, in any combat phase, pick a visible enemy unit within 6\" of the bearer and roll a dice. On a 2+ that unit has Strike-last for the phase. On a 1 the bearer suffers 1 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "skavenCageOfWarpLightning",
+    "params": { "range": 6, "priority": "P2" }
+  }
+]

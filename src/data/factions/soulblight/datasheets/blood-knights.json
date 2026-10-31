@@ -1,0 +1,31 @@
+[
+  {
+    "id": "soulblight.unit.blood-knights",
+    "faction": "soulblight",
+    "name": "Blood Knights",
+    "keywords": ["CAVALRY", "VAMPIRE"],
+    "factionKeywords": ["DEATH", "SOULBLIGHT GRAVELORDS"],
+    "stats": { "M": 10, "W": 3, "Sv": 3, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "blood-knight",
+        "name": "Blood Knight",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "oval", "mm": 75, "mm2": 42 },
+        "weapons": {
+          "default": [
+            "soulblight.weapon.templar-lance-or-blade",
+            "soulblight.weapon.nightmares-hooves-and-teeth"
+          ]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["soulblight.ability.riders-of-ruin"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "id": "soulblight.army.bloodcrave-hunt",
+  "faction": "soulblight",
+  "name": "Bloodcrave Hunt",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "vampire-lord", "datasheet": "soulblight.unit.vampire-lord", "size": 1 },
+    { "ref": "skeletons-a", "datasheet": "soulblight.unit.deathrattle-skeletons", "size": 10 },
+    { "ref": "skeletons-b", "datasheet": "soulblight.unit.deathrattle-skeletons", "size": 10 },
+    { "ref": "blood-knights", "datasheet": "soulblight.unit.blood-knights", "size": 5 },
+    {
+      "ref": "vargheists",
+      "datasheet": "soulblight.unit.vargheists",
+      "size": 3,
+      "reserve": { "ability": "soulblight.ability.swoop-down" }
+    }
+  ],
+  "warlord": "vampire-lord",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "soulblight.ability.deaths-descent",
+    "soulblight.ability.the-hunger"
+  ],
+  "regimentAbilities": [
+    { "id": "soulblight.ability.endless-legions", "default": true },
+    { "id": "soulblight.ability.ruinous-chargers", "default": false }
+  ],
+  "enhancements": [
+    { "id": "soulblight.enh.spirit-gale", "default": true },
+    { "id": "soulblight.enh.grave-sand-shard", "default": false },
+    { "id": "soulblight.enh.cloud-of-bats", "default": false },
+    { "id": "soulblight.enh.aura-of-night", "default": false }
+  ]
+}

@@ -57,7 +57,8 @@ export interface HookQueries {
   // R-1.9-clamped characteristic after modifyStat/setStat effects (weapon stats need `weapon`, model stats `modelId`)
   statFor(state: GameState, query: StatQuery, base: number): number
   // the weapon's own abilities plus grantWeaponAbility effects for this model (Champion Duellist, Veil of Time, Epic Challenge)
-  weaponAbilitiesFor(state: GameState, modelId: ModelId, weapon: RuntimeWeapon, attack?: AttackContext): WeaponAbility[]
+  // F12 (SER C1): opts.companionOnly = the weapon is a Companion weapon: only grants whose effect carries affectsCompanion apply
+  weaponAbilitiesFor(state: GameState, modelId: ModelId, weapon: RuntimeWeapon, attack?: AttackContext, opts?: { companionOnly?: boolean }): WeaponAbility[]
   // datasheet + faction keywords plus grantKeyword effects
   keywordsFor(state: GameState, unitId: UnitId): string[]
   // onEligibility folded: true when some effect allows the check (charge after Advance/Fall Back, shoot after …, Fights First)
@@ -121,6 +122,14 @@ export interface HookQueries {
   // GLO-BT-1 (F8): true when an effect with `flag` applies to the unit: an ActiveEffect (effectService.activeFor) or a passive
   // descriptor the unit holds itself (battle trait, regiment ability, datasheet ability, enhancement), gate and `when` passed
   unitHasEffectFlag(state: GameState, unitId: UnitId, flag: 'noRetreatDamage' | 'moveThroughModels' | 'shootAfterFallBack' | 'chargeAfterFallBack'): boolean
+  // ---- F12 ----
+  // SCE-AB-5: extra charge dice (Effect.extraChargeDice summed over the unit's own passive descriptors and ActiveEffects)
+  chargeDiceBonus(state: GameState, unitId: UnitId): number
+  // SBG-AB-2: keywords whose enemy models the unit's move / charge paths may cross (Effect.passAcrossKeyword)
+  passAcrossKeywords(state: GameState, unitId: UnitId): string[]
+  // SER-AB-1: the id of the first source whose ignoresFirstDamagePerPhase answers true for `unitId`, or null
+  ignoresFirstDamageBy(state: GameState, unitId: UnitId): string | null
+  ignoresFirstDamage(state: GameState, unitId: UnitId): boolean
 }
 
 // AoS contest filter a code hook may carry (read structurally so code-hooks.ts can add it to EngineCodeHook later)
@@ -382,6 +391,7 @@ function keyApplies(entry: HookSourceEntry, key: keyof Effect, effect: Effect, h
     case 'modifyRoll': return ROLL_HOOK[effect.modifyRoll!.roll] === hook
     case 'autoResult': return ROLL_HOOK[effect.autoResult!.roll] === hook
     case 'ignoreModifiers': return effect.ignoreModifiers === 'all' ? hook === 'onHitRoll' || hook === 'onWoundRoll' : ROLL_HOOK[effect.ignoreModifiers!] === hook
+    case 'ignoreNegativeModifiers': return ROLL_HOOK[effect.ignoreNegativeModifiers!] === hook
     case 'invuln': case 'ignoreCover': return hook === 'onSaveRoll'
     case 'feelNoPain': return hook === 'onFeelNoPainRoll'
     case 'lethalOn': case 'stealth': return hook === 'onHitRoll'
@@ -403,6 +413,7 @@ function naturalSide(key: keyof Effect, effect: Effect, hook: HookName): 'attack
   if (key === 'modifyRoll' && (effect.modifyRoll!.roll === 'save' || effect.modifyRoll!.roll === 'feelNoPain')) return 'defender'
   if (key === 'autoResult' && (effect.autoResult!.roll === 'save' || effect.autoResult!.roll === 'feelNoPain')) return 'defender'
   if (key === 'reroll' && (hook === 'onSaveRoll' || hook === 'onFeelNoPainRoll')) return 'defender'
+  if (key === 'ignoreNegativeModifiers' && (effect.ignoreNegativeModifiers === 'save' || effect.ignoreNegativeModifiers === 'feelNoPain')) return 'defender'
   return 'attacker'
 }
 
@@ -531,6 +542,7 @@ function resultFor(ctx: EngineContext | null, state: GameState, hook: HookName, 
     case 'modifyRoll': return { kind: 'roll', modifier: e.modifyRoll!.value, ...(e.modifyRoll!.armourOnly ? { armourOnly: true } : {}) }
     case 'autoResult': return e.autoResult!.outcome === 'pass' ? { kind: 'roll', autoPass: true } : { kind: 'roll', autoFail: true }
     case 'ignoreModifiers': return { kind: 'roll', ignoreModifiers: true }
+    case 'ignoreNegativeModifiers': return { kind: 'roll', ignoreNegative: true }
     case 'invuln': return { kind: 'roll', invuln: e.invuln }
     case 'ignoreCover': return { kind: 'roll', ignoreCover: true }
     case 'feelNoPain': return { kind: 'roll', feelNoPain: e.feelNoPain }
@@ -628,6 +640,25 @@ function getStuckIn(state: GameState, unitId: UnitId): { pileIn: number | null; 
 function shockExpiryRound(state: GameState, owner: PlayerId): number {
   if (owner === state.activePlayer) return state.round + 1
   return state.activePlayer === state.firstPlayer ? state.round : state.round + 1
+}
+
+// F12: every value of Effect key `key` that applies to the unit itself: ActiveEffects on it (attached halves included) and the
+// passive descriptors it holds with scope self / bearer (gate and `when` passed). Shared by chargeDiceBonus / passAcrossKeywords.
+function ownEffectValues(state: GameState, unitId: UnitId, key: keyof Effect): unknown[] {
+  const out: unknown[] = []
+  const halves = new Set(leaderService.halves(state, unitId))
+  for (const e of effectService.activeFor(state, unitId)) for (const x of asList(e.effect)) if (x[key] !== undefined) out.push(x[key])
+  for (const entry of sourcesFor(state)) {
+    if (entry.active || !halves.has(entry.holderUnitId)) continue
+    if (entry.scope.who !== 'self' && entry.scope.who !== 'bearer') continue
+    const hits = entry.effects.filter((x) => x[key] !== undefined)
+    if (hits.length === 0 || !gateOpen(state, entry)) continue
+    const holder = state.units[entry.holderUnitId]
+    const env: ConditionEnv = { state, holder, player: holder.player, attack: null, roll: null, weapon: null }
+    if (!evaluateCondition(env, entry.when)) continue
+    for (const x of hits) if (evaluateCondition(env, x.when)) out.push(x[key])
+  }
+  return out
 }
 
 export const hookService: HookService & HookQueries = {
@@ -774,12 +805,14 @@ export const hookService: HookService & HookQueries = {
     return clampStat(q.stat, v)
   },
 
-  weaponAbilitiesFor(state, modelId, weapon, attack) {
+  weaponAbilitiesFor(state, modelId, weapon, attack, opts) {
     const model = state.models[modelId]
     const out: WeaponAbility[] = [...weapon.abilities]
     if (!model) return out
     const data: Data = { queryUnitId: model.unitId, queryModelId: modelId, weapon, stat: 'A', ...(attack ? { attack } : {}) }
     for (const m of matchEffects(state, 'onStatQuery', data, new Set<keyof Effect>(['grantWeaponAbility']))) {
+      // CORE-12.4 / F12 SER C1: a Companion weapon only takes grants that name Companion weapons (affectsCompanion)
+      if (opts?.companionOnly && m.effect.affectsCompanion !== true) continue
       const g = m.effect.grantWeaponAbility!
       if (!out.some((a) => a.ability === g.ability && a.keyword === g.keyword && String(a.value ?? '') === String(g.value ?? ''))) out.push({ ...g })
     }
@@ -1080,6 +1113,27 @@ export const hookService: HookService & HookQueries = {
       if (flagged.some((x) => evaluateCondition(env, x.when))) return true
     }
     return false
+  },
+
+  chargeDiceBonus(state, unitId) {
+    return ownEffectValues(state, unitId, 'extraChargeDice').reduce<number>((a, v) => a + (typeof v === 'number' ? v : 0), 0)
+  },
+
+  passAcrossKeywords(state, unitId) {
+    return [...new Set(ownEffectValues(state, unitId, 'passAcrossKeyword').filter((v): v is string => typeof v === 'string'))]
+  },
+
+  ignoresFirstDamageBy(state, unitId) {
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.ignoresFirstDamagePerPhase || !gateOpen(state, entry)) continue
+      if (spec.ignoresFirstDamagePerPhase(state, entry, unitId)) return entry.source.id
+    }
+    return null
+  },
+
+  ignoresFirstDamage(state, unitId) {
+    return hookService.ignoresFirstDamageBy(state, unitId) !== null
   },
 
   contestAllowed(state, unitId) {

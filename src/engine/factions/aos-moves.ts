@@ -4,13 +4,13 @@
 // destinations. Every option id encodes its own geometry (`mv:<dx>:<dz>` for a rigid slide, `at:<x>:<z>` for a formation centred
 // on a point) so the answer can be recomputed and re-validated when it is applied; nothing here keeps state besides the queue mark.
 import {
-  EPS, anyWithinEngagementRange, basesOverlap, checkPlacements, dist2D, emptyMoveConstraints, pathCrossesModels, whollyOnBoard, whollyWithinPolygon,
-  type Footprint, type ResolvedPlacement,
+  EPS, anyWithinEngagementRange, basesOverlap, checkPlacements, dist2D, emptyMoveConstraints, horizontalGap, pathCrossesModels, samplePath, whollyOnBoard,
+  whollyWithinPolygon, type Footprint, type ResolvedPlacement,
 } from '../geometry'
 import { hookService } from '../hooks-impl'
 import type { ModelPlacement } from '../actions'
 import type { EngineContext } from '../modules'
-import { boardModelsOf, datasheetOf, enemyModelsOnBoard, setModelPos, territoryOf, unitModels } from '../state'
+import { boardModelsOf, datasheetOf, enemyModelsOnBoard, hasKeyword, setModelPos, territoryOf, unitModels } from '../state'
 import { terrainService } from '../terrain'
 import type { EdgeRef, GameState, Model, ModelId, PlayerId, UnitId, Vec2, Vec3 } from '../types'
 import { enemiesInCombat } from './aos-common'
@@ -41,9 +41,12 @@ export interface SlideResult { ok: boolean; reason?: string; resolved?: Resolved
 //                     combat (Careening Destruction; LRL-BT-2 Pulled by the Winds as `mayNotEndInCombat`; KO-AB-2 retreats)
 //  towardEdge         the slide's component toward that battlefield edge must be > 0 (LRL-BT-2 Pulled by the Winds); also
 //                     adds a "Toward the ... edge" heading to slideOptions
+//  normalMove         F12 (SKV-BT-1 Always Three Clawsteps Ahead): the slide is a Normal Move: no model's straight path may come
+//                     within an enemy model's combat range at any point (FLY units ignore that, as in the movement phase), and it
+//                     implies mayNotEndInCombat. approximation: still a rigid slide from the short heading list
 // A Move-ability edge constraint from a code hook (LRL-RA-2 Roaring Headwind, hookService.moveEdgeConstraintFor) is always
 // applied the same way as towardEdge.
-export interface SlideOpts { passThrough?: boolean; mustEndOutOfCombat?: boolean; mayNotEndInCombat?: boolean; towardEdge?: EdgeRef | null }
+export interface SlideOpts { passThrough?: boolean; mustEndOutOfCombat?: boolean; mayNotEndInCombat?: boolean; towardEdge?: EdgeRef | null; normalMove?: boolean }
 
 const edgeVector = (e: EdgeRef): Vec2 => (e.axis === 'x' ? { x: e.sign, z: 0 } : { x: 0, z: e.sign })
 const EDGE_NAMES: Record<string, string> = { 'z:-1': 'the top edge', 'z:1': 'the bottom edge', 'x:-1': 'the left edge', 'x:1': 'the right edge' }
@@ -57,7 +60,7 @@ export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: num
   const models = unitModels(state, unitId)
   if (models.length === 0) return { ok: false, reason: 'no models' }
   if (Math.hypot(dx, dz) > maxDistance + 1e-3) return { ok: false, reason: `further than ${maxDistance}"` }
-  const outOfCombat = opts.mustEndOutOfCombat === true || opts.mayNotEndInCombat === true
+  const outOfCombat = opts.mustEndOutOfCombat === true || opts.mayNotEndInCombat === true || opts.normalMove === true
   if (outOfCombat) mustEndInCombat = false
   for (const edge of [opts.towardEdge ?? null, hookService.moveEdgeConstraintFor(state, unitId)]) {
     if (!edge) continue
@@ -81,6 +84,13 @@ export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: num
     if (r.distance > EPS && terrainService.crossesImpassable(state, r.model, r.path)) return { ok: false, reason: 'impassable terrain in the way' }
   }
   const enemies = enemyModelsOnBoard(state, unit.player)
+  // F12 normalMove: the path may not enter any enemy combat range (CORE-6.4), unless every model can fly
+  if (opts.normalMove && !models.every((m) => hasKeyword(state, m.unitId, 'FLY'))) {
+    for (const r of result.resolved) {
+      if (r.distance <= EPS) continue
+      if (samplePath(r.path).some((p) => anyWithinEngagementRange(fp(r.model, p, r.facing), enemies))) return { ok: false, reason: 'a Normal Move may not pass through combat range' }
+    }
+  }
   const endsInCombat = result.resolved.some((r) => anyWithinEngagementRange(fp(r.model, r.to, r.facing), enemies))
   if (mustEndInCombat && !endsInCombat) return { ok: false, reason: 'a unit that starts in combat must end in combat' }
   if (outOfCombat && endsInCombat) return { ok: false, reason: 'the move may not end in combat' }
@@ -93,7 +103,7 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
   const models = unit ? unitModels(state, unitId) : []
   const out: MoveOption[] = []
   if (!unit || unit.location !== 'board' || models.length === 0) return out
-  const mustEnd = enemiesInCombat(state, unitId).length > 0 && !opts.mustEndOutOfCombat && !opts.mayNotEndInCombat
+  const mustEnd = enemiesInCombat(state, unitId).length > 0 && !opts.mustEndOutOfCombat && !opts.mayNotEndInCombat && !opts.normalMove
   const c = centroidOf(models)
   const enemies = enemyModelsOnBoard(state, unit.player)
   const nearestEnemy = enemies.length ? enemies.reduce((a, b) => (dist2D(c, b.pos) < dist2D(c, a.pos) ? b : a)) : null
@@ -111,7 +121,7 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
   }
   heads.push({ dir: { x: 1, z: 0 }, label: 'Slide right' }, { dir: { x: -1, z: 0 }, label: 'Slide left' }, { dir: { x: 0, z: 1 }, label: 'Slide down the table' }, { dir: { x: 0, z: -1 }, label: 'Slide up the table' })
   // diagonals: a unit boxed in on all four sides often still has a diagonal way out (retreats, edge moves)
-  if (opts.towardEdge || opts.mustEndOutOfCombat || opts.mayNotEndInCombat) {
+  if (opts.towardEdge || opts.mustEndOutOfCombat || opts.mayNotEndInCombat || opts.normalMove) {
     const D = Math.SQRT1_2
     heads.push({ dir: { x: D, z: D }, label: 'Slide down and right' }, { dir: { x: -D, z: D }, label: 'Slide down and left' }, { dir: { x: D, z: -D }, label: 'Slide up and right' }, { dir: { x: -D, z: -D }, label: 'Slide up and left' })
   }
@@ -157,6 +167,20 @@ export function applySlide(ctx: EngineContext, unitId: UnitId, dx: number, dz: n
   recordPassedAcross(s, unitId, across)
   ctx.emit({ type: 'UnitMoved', unitId, moveType: 'abilityMove', paths, player: unit.player })
   return true
+}
+
+// ---------- F12 (SBG-AB-2 Riders of Ruin): enemy models a unit's paths may cross ----------
+// the enemy models that still block `unitId`'s move / charge PATH: those of units with a keyword the unit may pass across
+// (hookService.passAcrossKeywords, Effect.passAcrossKeyword) are dropped. End-position overlap and combat-range rules are unchanged.
+export function pathBlockingEnemies(state: GameState, unitId: UnitId, enemies: Model[]): Model[] {
+  const kws = hookService.passAcrossKeywords(state, unitId)
+  if (kws.length === 0) return enemies
+  const passable = new Map<UnitId, boolean>()
+  const ok = (uid: UnitId): boolean => {
+    if (!passable.has(uid)) { const k = hookService.keywordsFor(state, uid); passable.set(uid, kws.some((x) => k.includes(x))) }
+    return passable.get(uid) as boolean
+  }
+  return enemies.filter((e) => !ok(e.unitId))
 }
 
 // ---------- "passed across" (GLO-AB-4 Careening Destruction, KO-AB-6 Bomb Racks; F8) ----------
@@ -251,12 +275,24 @@ function facingFor(state: GameState, player: PlayerId): number {
   return cz > 0 ? -Math.PI / 2 : Math.PI / 2
 }
 
+// F12 placement shapes (PlaceRequest): edgeBand false = anywhere in friendly territory (SBG-RA-1 Endless Legions); minEnemyDistance =
+// every model more than that far (horizontal gap) from every enemy model; anywhere = the whole battlefield, no edge band (SER-ENH
+// Blessed by the Old Ones). No shape = Call for Reinforcements (territory, 6" edge band, not in combat).
+export interface PlaceShape { edgeBand?: boolean; minEnemyDistance?: number; anywhere?: boolean }
+
+const boardPolygon = (state: GameState): Vec2[] => {
+  const hw = state.board.w / 2, hh = state.board.h / 2
+  return [{ x: -hw, z: -hh }, { x: hw, z: -hh }, { x: hw, z: hh }, { x: -hw, z: hh }]
+}
+
 // a compact blob of the unit's models around `centre`: hex lattice points nearest the centre first, each model on the first
 // point that is wholly in friendly territory, in the 6" edge band, not in combat, clear of everything and legal terrain-wise.
-// null when some model finds no point or the finished unit is out of coherency.
-export function reinforcementFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2): ModelPlacement[] | null {
+// null when some model finds no point or the finished unit is out of coherency. `shape` (F12) relaxes / tightens the area.
+export function reinforcementFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2, shape: PlaceShape = {}): ModelPlacement[] | null {
   if (models.length === 0) return null
-  const territory = territoryOf(state, player)
+  const territory = shape.anywhere ? boardPolygon(state) : territoryOf(state, player)
+  const band = !shape.anywhere && shape.edgeBand !== false
+  const minGap = shape.minEnemyDistance ?? 0
   const mine = new Set(models.map((m) => m.id))
   const others = boardModelsOf(state, player).filter((m) => !mine.has(m.id))
   const enemies = enemyModelsOnBoard(state, player)
@@ -273,9 +309,10 @@ export function reinforcementFormation(state: GameState, player: PlayerId, model
     let chosen: Footprint | null = null
     for (const p of pts) {
       const cand: Footprint = { pos: { x: r3(p.x), y: 0, z: r3(p.z) }, facing, base: m.base }
-      if (!whollyOnBoard(cand, state.board) || !whollyWithinPolygon(cand, territory) || !inEdgeBand(cand, state.board)) continue
+      if (!whollyOnBoard(cand, state.board) || !whollyWithinPolygon(cand, territory) || (band && !inEdgeBand(cand, state.board))) continue
       if (placed.some((o) => basesOverlap(cand, o)) || others.some((o) => basesOverlap(cand, o)) || enemies.some((o) => basesOverlap(cand, o))) continue
       if (anyWithinEngagementRange(cand, enemies)) continue
+      if (minGap > 0 && enemies.some((e) => horizontalGap(cand, e) <= minGap + EPS)) continue
       if (!terrainService.canEndAt(state, m, cand.pos).ok) continue
       chosen = cand
       break
@@ -291,15 +328,17 @@ export function reinforcementFormation(state: GameState, player: PlayerId, model
   return check.rejection ? null : out
 }
 
-// up to `max` legal, well-separated spots for the replacement: scans the territory on a 1.5" grid
-export function reinforcementOptions(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, max = 5): { id: string; label: string; centre: Vec2 }[] {
-  const poly = territoryOf(state, player)
+// up to `max` legal, well-separated spots for the replacement: scans the territory on a 1.5" grid (the whole board on a 2" grid
+// for an `anywhere` shape)
+export function reinforcementOptions(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, max = 5, shape: PlaceShape = {}): { id: string; label: string; centre: Vec2 }[] {
+  const poly = shape.anywhere ? boardPolygon(state) : territoryOf(state, player)
   const xs = poly.map((p) => p.x), zs = poly.map((p) => p.z)
   const found: Vec2[] = []
-  for (let z = Math.min(...zs); z <= Math.max(...zs) + EPS; z += 1.5) {
-    for (let x = Math.min(...xs); x <= Math.max(...xs) + EPS; x += 1.5) {
+  const stepIn = shape.anywhere ? 2 : 1.5
+  for (let z = Math.min(...zs); z <= Math.max(...zs) + EPS; z += stepIn) {
+    for (let x = Math.min(...xs); x <= Math.max(...xs) + EPS; x += stepIn) {
       const centre = { x: r3(x), z: r3(z) }
-      if (reinforcementFormation(state, player, models, coherencyRange, centre)) found.push(centre)
+      if (reinforcementFormation(state, player, models, coherencyRange, centre, shape)) found.push(centre)
     }
   }
   if (found.length === 0) return []
@@ -314,7 +353,7 @@ export function reinforcementOptions(state: GameState, player: PlayerId, models:
   }
   const pos = (v: Vec2): string => {
     const lo = long === 'x' ? (v.x < -state.board.w / 6 ? 'left' : v.x > state.board.w / 6 ? 'right' : 'centre') : (v.z < -state.board.h / 6 ? 'top' : v.z > state.board.h / 6 ? 'bottom' : 'centre')
-    return `${lo} of your edge`
+    return shape.anywhere || shape.edgeBand === false ? `${lo} of the ${shape.anywhere ? 'battlefield' : 'territory'}` : `${lo} of your edge`
   }
   return picks.map((c) => ({ id: `at:${fmt(c.x)}:${fmt(c.z)}`, label: `Set up at the ${pos(c)} (${c.x.toFixed(0)}, ${c.z.toFixed(0)})`, centre: c }))
 }
@@ -326,7 +365,16 @@ export function parseAt(optionId: string): Vec2 | null {
 
 
 // ---------- a replacement unit waiting for its spot ----------
-export interface PlaceRequest { abilityId: string; player: PlayerId; unitId: UnitId; replacementOf: UnitId }
+// F12: edgeBand (default true) / minEnemyDistance (default: only "not in combat") reshape a territory set-up (SBG-RA-1);
+// anywhere sets the unit up anywhere on the battlefield more than minEnemyDistance from every enemy model (SER-ENH)
+export interface PlaceRequest {
+  abilityId: string; player: PlayerId; unitId: UnitId; replacementOf: UnitId
+  edgeBand?: boolean; minEnemyDistance?: number; anywhere?: { minEnemyDistance: number }
+}
+export function placeShapeOf(r: PlaceRequest): PlaceShape {
+  if (r.anywhere) return { anywhere: true, edgeBand: false, minEnemyDistance: r.anywhere.minEnemyDistance }
+  return { ...(r.edgeBand === false ? { edgeBand: false } : {}), ...(r.minEnemyDistance !== undefined ? { minEnemyDistance: r.minEnemyDistance } : {}) }
+}
 const PLACE_PREFIX = 'abil:place='
 export function readPlaceRequest(state: GameState): PlaceRequest | null {
   const m = state.phaseState.marks.find((x) => x.startsWith(PLACE_PREFIX))

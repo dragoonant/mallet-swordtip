@@ -1,0 +1,159 @@
+[
+  {
+    "id": "stormcast.ability.vigilant-brotherhood",
+    "name": "Vigilant Brotherhood",
+    "text": "Army marker for the Stormcast Eternals Vigilant Brotherhood. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "stormcast.ability.shield-of-azyr",
+    "name": "Shield of Azyr",
+    "text": "Once per turn, in your hero phase, pick any friendly unit. It has Ward (5+) until the start of your next turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "limit": "oncePerTurnArmy",
+    "duration": "untilNextTurn",
+    "code": "stormcastShieldOfAzyr",
+    "params": { "grant": [{ "feelNoPain": 5 }], "priority": "P1" }
+  },
+  {
+    "id": "stormcast.ability.storm-charge",
+    "name": "Storm Charge",
+    "text": "Once per battle, at the start of your charge phase, pick a friendly unit that is not in combat. This turn it can use Charge abilities even though it used a Run ability.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "your" },
+    "limit": "oncePerBattle",
+    "duration": "untilEndOfTurn",
+    "code": "stormcastStormCharge",
+    "params": { "window": "phaseStart", "grant": [{ "chargeAfterAdvance": true }], "priority": "P2" }
+  },
+  {
+    "id": "stormcast.ability.strike-where-needed",
+    "name": "Strike Where Needed",
+    "text": "Once per battle, when a friendly unit declares a Retreat, it suffers no mortal damage for retreating and can still use Charge abilities later this turn.",
+    "trigger": "activated",
+    "timing": { "kind": "reaction", "trigger": "youDeclared", "abilityId": "core.move" },
+    "limit": "oncePerBattle",
+    "code": "stormcastStrikeWhereNeeded",
+    "params": { "priority": "P2" }
+  },
+  {
+    "id": "stormcast.ability.blaze-of-glory",
+    "name": "Blaze of Glory",
+    "text": "Once per battle, in any combat phase, pick a friendly unit in combat. Until the end of the phase, each time a model of that unit is slain, roll a dice. On a 4+, an enemy unit in combat with it suffers 1 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "duration": "untilEndOfPhase",
+    "code": "stormcastBlazeOfGlory",
+    "params": { "succeedOn": 4, "mortal": 1, "priority": "P2" }
+  },
+  {
+    "id": "stormcast.ability.hallowed-scrolls",
+    "name": "Hallowed Scrolls",
+    "text": "The bearer has Ward (5+).",
+    "trigger": "feelNoPainRoll",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": { "feelNoPain": 5 }
+  },
+  {
+    "id": "stormcast.ability.morrdas-talon",
+    "name": "Morrda's Talon",
+    "text": "The bearer's Hallowed Greataxe has Crit (Mortal).",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": { "when": { "weaponId": "stormcast.weapon.hallowed-greataxe" }, "grantWeaponAbility": { "ability": "CRIT_MORTAL" } }
+  },
+  {
+    "id": "stormcast.ability.quicksilver-draught",
+    "name": "Quicksilver Draught",
+    "text": "Once per battle, in any combat phase, the bearer has Strike-first for the rest of that phase.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "duration": "untilEndOfPhase",
+    "scope": { "who": "bearer" },
+    "code": "stormcastQuicksilverDraught",
+    "params": { "grant": [{ "fightsFirst": true }], "priority": "P3" }
+  },
+  {
+    "id": "stormcast.ability.null-pendant",
+    "name": "Null Pendant",
+    "text": "Once per battle, at the end of any turn, roll a dice for each enemy unit contesting the same objective as the bearer. For each 2+, subtract the roll from that unit's control score this turn.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "code": "stormcastNullPendant",
+    "params": { "succeedOn": 2, "priority": "P3" }
+  },
+  {
+    "id": "stormcast.ability.deliver-judgement",
+    "name": "Deliver Judgement",
+    "text": "Once per battle, in any combat phase, pick a friendly non-Hero unit wholly within 12\" of this unit. This phase that unit can use 2 Fight abilities; after it uses the first, it has Strike-last for the rest of the phase.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "code": "stormcastDeliverJudgement",
+    "params": { "range": 12, "priority": "P2" }
+  },
+  {
+    "id": "stormcast.ability.plan-the-attack",
+    "name": "Plan the Attack",
+    "text": "In your hero phase, pick an objective you do not control. For the rest of the turn, add 1 to hit rolls for friendly units' combat attacks that target an enemy unit contesting that objective.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "code": "stormcastPlanTheAttack",
+    "params": { "modifier": 1, "priority": "P2" }
+  },
+  {
+    "id": "stormcast.ability.cleansing-fires",
+    "name": "Cleansing Fires",
+    "text": "In your hero phase, pick a visible enemy unit within 12\" of this unit and make a chanting roll of 3+. If it works, roll a dice for each model in that unit; each 5+ inflicts 1 mortal damage on it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "roll": { "dice": "D6", "succeedOn": 3 },
+    "code": "stormcastCleansingFires",
+    "params": { "range": 12, "successOn": 5, "priority": "P2" }
+  },
+  {
+    "id": "stormcast.ability.sense-unholy-sorcery",
+    "name": "Sense Unholy Sorcery",
+    "text": "While this unit's Gryph-crow is on the battlefield, this unit has Ward (5+). If you roll an unmodified 1 on a ward roll for this unit, the Gryph-crow is removed from the battlefield.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "stormcastSenseUnholySorcery",
+    "params": { "ward": 5, "token": "gryph-crow" }
+  },
+  {
+    "id": "stormcast.ability.heralds-of-righteousness",
+    "name": "Heralds of Righteousness",
+    "text": "This unit rolls 1 extra dice when it makes a charge roll.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "extraChargeDice": 1 }
+  },
+  {
+    "id": "stormcast.ability.skirmishers",
+    "name": "Skirmishers",
+    "text": "This unit's coherency range is 2\" instead of 1/2\".",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" }
+  },
+  {
+    "id": "stormcast.ability.stalwart-defenders",
+    "name": "Stalwart Defenders",
+    "text": "Add 3 to this unit's control score while it contests an objective that is wholly within friendly territory.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "stormcastStalwartDefenders",
+    "params": { "control": 3 }
+  }
+]

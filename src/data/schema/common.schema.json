@@ -681,6 +681,16 @@
         },
         "affectsCompanion": {
           "const": true
+        },
+        "extraChargeDice": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "passAcrossKeyword": {
+          "$ref": "#/$defs/Keyword"
+        },
+        "ignoreNegativeModifiers": {
+          "$ref": "#/$defs/RollName"
         }
       },
       "not": {
@@ -963,7 +973,8 @@
         "CRIT_MORTAL",
         "CHARGE_DAMAGE",
         "COMPANION",
-        "SHOOT_IN_COMBAT"
+        "SHOOT_IN_COMBAT",
+        "HIT_MORTAL"
       ]
     },
     "WeaponAbility": {

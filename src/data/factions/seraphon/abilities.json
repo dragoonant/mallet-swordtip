@@ -1,0 +1,368 @@
+[
+  {
+    "id": "seraphon.ability.sunblooded-prowlers",
+    "name": "Sunblooded Prowlers",
+    "text": "Army marker for the Sunblooded Prowlers. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "seraphon.ability.hidden-hunters",
+    "name": "Hidden Hunters",
+    "text": "Both Hunters of Huanchi units and the Spawn of Chotec are not set up in the deployment phase: they start in reserve and arrive through Chameleon Ambush.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "seraphon.ability.chameleon-ambush",
+    "name": "Chameleon Ambush",
+    "text": "In your movement phase from battle round 3, set this unit up anywhere on the battlefield, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "movement",
+      "whose": "your"
+    },
+    "keywords": [
+      "CORE"
+    ],
+    "fromRound": 3,
+    "params": {
+      "fromRound": 3,
+      "minEnemyDistance": 6,
+      "anywhere": true
+    }
+  },
+  {
+    "id": "seraphon.ability.vengeance-of-azyr",
+    "name": "Vengeance of Azyr",
+    "text": "At the end of any turn, roll a dice for each enemy unit that is in combat with a friendly Saurus unit. On a 4+ that enemy unit suffers 1 mortal damage.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "endOfTurn",
+      "whose": "any"
+    },
+    "code": "seraphonVengeanceOfAzyr",
+    "params": {
+      "mortal": 1,
+      "succeedOn": 4,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "seraphon.ability.scaled-aegis",
+    "name": "Scaled Aegis",
+    "text": "Once per turn for the army, in your hero phase, pick a friendly Saurus unit and roll a dice. On a 3+ it has Ward (6+) until the start of your next turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "limit": "oncePerTurnArmy",
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "duration": "untilNextTurn",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "keyword": "SAURUS"
+        }
+      }
+    ],
+    "code": "seraphonScaledAegis",
+    "params": {
+      "ward": 6,
+      "army": true,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "seraphon.ability.followers-of-huanchi",
+    "name": "Followers of Huanchi",
+    "text": "Once per turn for the army, in your shooting phase, pick a friendly Skink unit and roll a dice. On a 3+ the ranged weapons of that unit, Companion weapons included, have Crit (Auto-wound) for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "shooting",
+      "whose": "your"
+    },
+    "limit": "oncePerTurnArmy",
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "duration": "untilEndOfTurn",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "keyword": "SKINK"
+        }
+      }
+    ],
+    "code": "seraphonFollowersOfHuanchi",
+    "params": {
+      "army": true,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "seraphon.ability.instinctive-commander",
+    "name": "Instinctive Commander",
+    "text": "In your hero phase, pick a visible friendly unit wholly within 12\" of the general that is not in combat and roll a dice. On a 3+ that unit can make a Normal Move as if it were your movement phase.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "code": "seraphonInstinctiveCommander",
+    "params": {
+      "range": 12,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "seraphon.ability.savage-mauling",
+    "name": "Savage Mauling",
+    "text": "In any combat phase, pick an enemy unit in combat with the general. No Ward rolls can be made for that unit for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "seraphonSavageMauling",
+    "params": {
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "seraphon.ability.venomite-swarm",
+    "name": "Venomite Swarm",
+    "text": "In any combat phase, pick an enemy unit in combat with the general. If the general still has its Venomites token, roll a D3. On a 1 the token is removed; on a 2 or 3 the enemy unit suffers that much mortal damage.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "code": "seraphonVenomiteSwarm",
+    "params": {
+      "token": "venomites",
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "seraphon.ability.blessed-by-the-old-ones",
+    "name": "Blessed by the Old Ones",
+    "text": "At the end of any turn in which the general has been destroyed, this ability must be used: roll a dice. On a 2+ set up a new unit of just the Sunblood anywhere on the battlefield, every model more than 6\" from every enemy unit. That unit is your general.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "endOfTurn",
+      "whose": "any"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 2
+    },
+    "code": "seraphonBlessedByTheOldOnes",
+    "params": {
+      "mandatory": true,
+      "minEnemyDistance": 6,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "seraphon.ability.scaled-protectors",
+    "name": "Scaled Protectors",
+    "text": "While this unit includes its Sunblood: the first damage point that would be allocated to it in each phase is ignored, and add 1 to its control score.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "seraphonScaledProtectors",
+    "params": {
+      "model": "sunblood",
+      "control": 1
+    }
+  },
+  {
+    "id": "seraphon.ability.savage-bellow",
+    "name": "Savage Bellow",
+    "text": "In your hero phase, pick a visible friendly unit wholly within 12\" of this unit (this unit can pick itself) and roll a dice. On a 3+ the weapons of that unit, Companion weapons included, have Crit (2 Hits) for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 3
+    },
+    "duration": "untilEndOfTurn",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly",
+        "filter": {
+          "within": {
+            "of": "self",
+            "inches": 12
+          }
+        }
+      }
+    ],
+    "code": "seraphonSavageBellow",
+    "params": {
+      "range": 12,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "seraphon.ability.ordered-cohorts",
+    "name": "Ordered Cohorts",
+    "text": "Add 1 to save rolls for this unit while it is contesting an objective you control.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "when": {
+        "unitOnObjectiveControlledBy": "self"
+      },
+      "modifyRoll": {
+        "roll": "save",
+        "value": 1
+      }
+    }
+  },
+  {
+    "id": "seraphon.ability.star-venom",
+    "name": "Star-Venom",
+    "text": "In any shooting phase, pick an enemy unit that had damage points allocated to it this turn by this unit's Dartpipe attacks and roll a dice. On a 2+ subtract 1 from the wound rolls of that unit's combat attacks for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "shooting",
+      "whose": "any"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 2
+    },
+    "duration": "untilEndOfTurn",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "code": "seraphonStarVenom",
+    "params": {
+      "stat": "wound",
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "seraphon.ability.nerve-shredding-screeches",
+    "name": "Nerve-Shredding Screeches",
+    "text": "In any combat phase, pick an enemy unit in combat with this unit and roll a dice. On a 4+ subtract 1 from the hit rolls of that unit's combat attacks for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "fight",
+      "whose": "any"
+    },
+    "roll": {
+      "dice": "D6",
+      "succeedOn": 4
+    },
+    "duration": "untilEndOfTurn",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "code": "seraphonScreeches",
+    "params": {
+      "stat": "hit",
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "seraphon.ability.sun-acolytes",
+    "name": "Sun Acolytes",
+    "text": "This unit starts with 3 Sun Acolyte tokens. Add 1 to its control score for each token it still has; with none left its control score is at most 1. Each unmodified save roll of 1 for this unit removes a token once the Attack ability that caused it has finished.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "seraphonSunAcolytes",
+    "params": {
+      "token": "sun-acolyte"
+    }
+  }
+]

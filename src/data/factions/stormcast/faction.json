@@ -1,0 +1,17 @@
+{
+  "id": "stormcast",
+  "name": "Stormcast Eternals",
+  "factionKeyword": "STORMCAST ETERNALS",
+  "armyRule": "stormcast.ability.vigilant-brotherhood",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#c9a24a",
+    "secondary": "#1c2f6b",
+    "trim": "#dfe6ee",
+    "metal": "#d8b45a",
+    "decal": "#7fe3f5"
+  },
+  "combatPatrols": [
+    "stormcast.army.vigilant-brotherhood"
+  ]
+}

@@ -29,7 +29,7 @@ import { losService } from '../los'
 import { terrainService } from '../terrain'
 import { notImplementedHandle, type AdvanceResult, type EngineContext, type PhaseModule } from '../modules'
 import { writeDeclaredMove } from '../declared'
-import { recordPassedAcross, unitsPassedAcrossPaths } from '../factions/aos-moves'
+import { pathBlockingEnemies, recordPassedAcross, unitsPassedAcrossPaths } from '../factions/aos-moves'
 import {
   boardModelsOf, boardUnitsOf, datasheetOf, deploymentZone, enemyModelsOnBoard, hasKeyword, keywordsOf, modelStats, setModelPos,
   unitModels, unitModelsForCoherency,
@@ -155,6 +155,8 @@ function resolveMove(state: GameState, unitId: UnitId, moveType: MoveType, place
   })
   if (result.rejection) return result
   const groups = enemyGroups(state, player)
+  // F12 (SBG-AB-2): enemy models of units the mover may pass across do not block its path
+  const pathEnemies = pathBlockingEnemies(state, unitId, enemies)
   for (const r of result.resolved) {
     const fp: Footprint = { pos: r.to, facing: r.facing, base: r.model.base }
     const fly = flyOf(state, r.model) || unitMovesThroughModels(state, r.model.unitId)
@@ -178,7 +180,7 @@ function resolveMove(state: GameState, unitId: UnitId, moveType: MoveType, place
       }
       if (!fly) {
         // CORE-6.5: models may not pass through other models, friendly or enemy
-        if (pathCrossesModels(fp, r.path, [...enemies, ...otherFriendly])) {
+        if (pathCrossesModels(fp, r.path, [...pathEnemies, ...otherFriendly])) {
           return { rejection: { code: 'E_OVERLAP', reason: `${r.model.id}'s path would cross another model`, details: { modelId: r.model.id } } }
         }
         // CORE-6.4: a Normal Move or Run may not enter combat at any point (Retreat may cross combat ranges)

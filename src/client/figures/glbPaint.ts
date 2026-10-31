@@ -48,6 +48,15 @@ export const SOURCE_HUES: Record<string, { major: string | null; minor: string |
   gloomspite: { major: '#626d4d', minor: '#5e3937' },
   lumineth: { major: '#8ab0b5', minor: '#caa7c3' },
   kharadron: { major: '#6a4b4c', minor: '#988365' },
+  // The four F12 armies, measured the same way from the baked textures (linear-space HSV, saturated texels only):
+  // Stormcast: midnight-blue cloth and panels (hue 232) as the major, burnished gold plate (hue 31) as the minor; the white feathers and silver trim are neutral.
+  // Skaven: brown fur (hue 19, 60% of the saturated texels) as the major, the pink tails, noses and rags (hue 343) as the minor; rust iron and warp-green glow are left alone.
+  // Seraphon: teal scales (hue 183) as the major, gold plate (hue 38) as the minor; the Spawn's orange and the Terrawings' plum sit between the bands.
+  // Soulblight: crimson lacquer (hue 357-4, dark) as the major, tarnished gold and bone trim (hue 40) as the minor; skin and leather brown (hue 26) are left alone.
+  stormcast: { major: '#454a61', minor: '#997f58' },
+  skaven: { major: '#7a5e4c', minor: '#b08090' },
+  seraphon: { major: '#408c8f', minor: '#baa268' },
+  soulblight: { major: '#613938', minor: '#978b6d' },
   // Black plate has no hue to remap; the bone-coloured tabards/trim are the only repaintable colour.
   'black-templars': { major: null, minor: '#e6dfc8' },
 }

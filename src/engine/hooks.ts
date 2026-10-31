@@ -102,6 +102,8 @@ export interface RollModifierResult {
   extraDice?: number
   // onWoundRoll: AP improves by this much for an attack whose unmodified wound roll was a critical wound (ADE Ascetic Discipline)
   critWoundAp?: number
+  // F12 (SBG-ENH Aura of Night, Effect.ignoreNegativeModifiers): negative modifiers to this roll are dropped (rend still applies)
+  ignoreNegative?: boolean
 }
 export interface StatModifierResult { kind: 'stat'; delta?: number; set?: number; cap?: number; halve?: boolean }
 export interface AttackCountResult { kind: 'attacks'; delta?: number }
@@ -247,6 +249,11 @@ export const EFFECT_HOOKS: Record<keyof Effect, HookName[]> = {
   hiddenBeyond: [],
   // GLO-AB-1: a flag on a modifyStat entry, read by statFor (companionOnly queries)
   affectsCompanion: [],
+  // F12: read directly by phases/charge.ts (hookService.chargeDiceBonus) and movement.ts / charge.ts path checks (passAcrossKeywords)
+  extraChargeDice: [],
+  passAcrossKeyword: [],
+  // F12: a roll-hook result ({ kind: 'roll', ignoreNegative }) at the named roll's hook
+  ignoreNegativeModifiers: ['onHitRoll', 'onWoundRoll', 'onSaveRoll', 'onChargeRoll', 'onFeelNoPainRoll'],
 }
 
 // hooks a descriptor must be registered at: its trigger's hook plus every hook its effect keys need

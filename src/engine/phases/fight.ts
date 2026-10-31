@@ -16,7 +16,7 @@
 // anything cleverer is the player's own placement, validated by `pileInRejection`.
 import { commandWindow } from '../cards'
 import type { Action, ModelPlacement, WeaponTarget } from '../actions'
-import { attackService, drainAfterFightMortal, enemyUnitsInCombat, isInCombat, rollAttackCount } from '../attack'
+import { attackService, drainAfterFightMortal, enemyUnitsInCombat, isInCombat, ownFightResolved, rollAttackCount } from '../attack'
 import {
   basesOverlap, checkPlacements, distance, emptyMoveConstraints, ENGAGEMENT_H, EPS, horizontalGap, isCoherent, pathCrossesModels,
   whollyOnBoard, type Footprint,
@@ -60,6 +60,35 @@ function writeMark(state: GameState, key: string, value: string): void {
   state.phaseState.marks.push(prefix + value)
 }
 
+// ---------- F12 (SCE-AB-1 Deliver Judgement): a second Fight for one unit ----------
+// grantExtraFight writes the phase mark fi:extra:<unitId> = { left, strikeLast }. A unit that has fought stays pickable while
+// `left > 0` (still CORE-10.2 eligible, still subject to Strike-last waiting; never in the Strike-first step). With strikeLast the
+// unit gets Strike-last once its first activation is over (CORE-10.7; CORE-10.8 still cancels it against Strike-first). The second
+// activation runs on fresh progress keys (activation counter fi:acts:<unitId>), so its windows, pile-in, targets and Attacks rolls
+// are its own. Ability limits (CORE-3.3 / 3.4) are per ability use and are not re-checked here: a Fight is not an activated ability.
+interface ExtraFight { left: number; strikeLast: boolean }
+const EXTRA = 'fi:extra:'
+const ACTS = 'fi:acts:'
+
+export function grantExtraFight(state: GameState, unitId: UnitId, opts: { strikeLastAfterFirst?: boolean } = {}): void {
+  const strikeLast = opts.strikeLastAfterFirst === true
+  writeMark(state, EXTRA + unitId, JSON.stringify({ left: 1, strikeLast } satisfies ExtraFight))
+  // granted after the unit already fought: the Strike-last applies at once
+  const fight = state.phaseState.fight as FightState | null
+  if (strikeLast && fight?.fought.includes(unitId) && state.units[unitId]) state.units[unitId].turn.fightsLast = true
+}
+export function extraFightOf(state: GameState, unitId: UnitId): ExtraFight | null {
+  const raw = readMark(state, EXTRA + unitId)
+  return raw === null ? null : (JSON.parse(raw) as ExtraFight)
+}
+const extraLeft = (state: GameState, unitId: UnitId): boolean => (extraFightOf(state, unitId)?.left ?? 0) > 0
+// how many activations the unit has started this phase; the progress-key suffix of the current one ('' for the first)
+const activationsOf = (state: GameState, unitId: UnitId): number => Number(readMark(state, ACTS + unitId) ?? '0')
+function actKey(state: GameState, unitId: UnitId): string {
+  const n = activationsOf(state, unitId)
+  return n > 1 ? `${unitId}~${n}` : unitId
+}
+
 // ---------- eligibility and order (CORE-10.2-10.8) ----------
 function eligibleToFight(state: GameState, unitId: UnitId): boolean {
   const u = state.units[unitId]
@@ -94,7 +123,8 @@ function eligibleFighters(state: GameState, player: PlayerId, step: FightState['
   const othersWaiting = Object.values(state.units).some((u) => u.location === 'board' && !fought.has(u.id) && u.id !== fight.currentUnitId && isInCombat(state, u.id) && !hasStrikeLast(state, u.id))
   const out: UnitId[] = []
   for (const u of boardUnitsOf(state, player)) {
-    if (fought.has(u.id) || u.id === fight.currentUnitId || !eligibleToFight(state, u.id)) continue
+    // F12: a unit with an extra Fight left may be picked again, but only after the Strike-first step
+    if ((fought.has(u.id) && (step === 'fightsFirst' || !extraLeft(state, u.id))) || u.id === fight.currentUnitId || !eligibleToFight(state, u.id)) continue
     if (snapshot && !snapshot.has(u.id)) continue
     if (step === 'remaining' && hasStrikeLast(state, u.id) && othersWaiting) continue
     out.push(u.id)
@@ -131,7 +161,9 @@ export function legalTargetsFor(state: GameState, _unitId: UnitId, model: Model,
 }
 
 export function attacksFor(ctx: EngineContext, modelId: ModelId, weaponId: WeaponId, targetUnitId: UnitId | null = null): number {
-  const key = `fi:atk:${modelId}:${weaponId}`
+  const owner = ctx.state.models[modelId]?.unitId
+  const acts = owner ? activationsOf(ctx.state, owner) : 0
+  const key = `fi:atk:${modelId}:${weaponId}${acts > 1 ? `~${acts}` : ''}`
   const cached = readMark(ctx.state, key)
   if (cached !== null) return Number(cached)
   const n = rollAttackCount(ctx, modelId, weaponId, targetUnitId)
@@ -269,11 +301,12 @@ function legalPileIns(state: GameState, unitId: UnitId, dist: number, limit = 3)
 
 function doPileIn(ctx: EngineContext, unitId: UnitId): 'pending' | 'progress' {
   const s = ctx.state
-  if (ctx.marked(`fi:piledIn:${unitId}`)) return 'progress'
+  const act = actKey(s, unitId)
+  if (ctx.marked(`fi:piledIn:${act}`)) return 'progress'
   const dist = hookService.pileInDistance?.(s, unitId, 3) ?? 3
   // offered only when some model can actually move (otherwise there is nothing to decide)
   const planned = unitModels(s, unitId).length === 0 ? [] : planPileIn(s, unitId, dist)
-  if (planned.length === 0 || pileInRejection(s, unitId, dist, planned) !== null) { ctx.once(`fi:piledIn:${unitId}`); return 'progress' }
+  if (planned.length === 0 || pileInRejection(s, unitId, dist, planned) !== null) { ctx.once(`fi:piledIn:${act}`); return 'progress' }
   ctx.decide({
     kind: 'pileIn', player: s.units[unitId].player, window: 'fight.unitSelected', canPass: false,
     context: { unitId, distance: dist }, constraints: emptyMoveConstraints(dist, { coherency: true }),
@@ -291,7 +324,7 @@ function applyPileIn(ctx: EngineContext, unitId: UnitId, action: Extract<Action,
   if (checked.rejection) throw new EngineInvariantError('fight: stored pile-in placements failed re-validation', { rejection: checked.rejection })
   for (const r of checked.resolved) if (r.distance > EPS) { r.model.pos = r.to; r.model.facing = r.facing }
   ctx.emit({ type: 'PiledIn', unitId, paths: Object.fromEntries(checked.resolved.filter((r) => r.distance > EPS).map((r) => [r.model.id, r.path])) })
-  ctx.once(`fi:piledIn:${unitId}`)
+  ctx.once(`fi:piledIn:${actKey(s, unitId)}`)
 }
 
 // ---------- declare targets and attacks ----------
@@ -313,15 +346,16 @@ function weaponEntries(ctx: EngineContext, unitId: UnitId): WeaponEntry[] {
 
 function doDeclareTargets(ctx: EngineContext, unitId: UnitId): 'pending' | 'progress' {
   const s = ctx.state
-  if (ctx.marked(`fi:declared:${unitId}`)) return 'progress'
+  const act = actKey(s, unitId)
+  if (ctx.marked(`fi:declared:${act}`)) return 'progress'
   const weapons = weaponEntries(ctx, unitId)
-  if (!weapons.some((w) => w.legalTargets.length > 0 && w.attacks > 0)) { ctx.once(`fi:declared:${unitId}`); return 'progress' }
+  if (!weapons.some((w) => w.legalTargets.length > 0 && w.attacks > 0)) { ctx.once(`fi:declared:${act}`); return 'progress' }
   const engagedWith = [...new Set(weapons.flatMap((w) => w.legalTargets))]
   // one possible enemy unit: nothing to choose, declare everything at it
   if (engagedWith.length === 1) {
     const targets: DeclaredTarget[] = weapons.map((w) => ({ modelId: w.modelId, weaponId: w.weaponId, targetUnitId: engagedWith[0], profileGroup: w.profileGroup, attacks: w.attacks }))
     attackService.begin(ctx, { kind: 'melee', attackerUnitId: unitId, overwatch: false, targets })
-    ctx.once(`fi:declared:${unitId}`)
+    ctx.once(`fi:declared:${act}`)
     return 'progress'
   }
   ctx.decide({
@@ -352,15 +386,16 @@ function validateDeclareTargets(pending: Extract<PendingDecision, { kind: 'decla
 function applyDeclareTargets(ctx: EngineContext, action: Extract<Action, { type: 'declareTargets' }>): void {
   const declared: DeclaredTarget[] = action.targets.map((t: WeaponTarget) => ({ modelId: t.modelId, weaponId: t.weaponId, targetUnitId: t.targetUnitId, profileGroup: t.profileGroup ?? null, attacks: t.attacks ?? null }))
   attackService.begin(ctx, { kind: 'melee', attackerUnitId: action.unitId, overwatch: false, targets: declared })
-  ctx.once(`fi:declared:${action.unitId}`)
+  ctx.once(`fi:declared:${actKey(ctx.state, action.unitId)}`)
 }
 
 function doAttacks(ctx: EngineContext, unitId: UnitId): 'pending' | 'progress' {
   const s = ctx.state
   if (!s.phaseState.attack) return 'progress'
-  if (!ctx.marked(`fi:tdWindow:${unitId}`)) {
-    if (ctx.window('fight.targetsDeclared', unitId, ctx.order.active(), { unitId })) return 'pending'
-    ctx.once(`fi:tdWindow:${unitId}`)
+  const act = actKey(s, unitId)
+  if (!ctx.marked(`fi:tdWindow:${act}`)) {
+    if (ctx.window('fight.targetsDeclared', act, ctx.order.active(), { unitId })) return 'pending'
+    ctx.once(`fi:tdWindow:${act}`)
   }
   if (attackService.advance(ctx) === 'pending') return 'pending'
   return 'progress'
@@ -387,6 +422,12 @@ function doFightSelect(ctx: EngineContext): 'pending' | 'nextStep' | 'done' {
 function finishUnit(ctx: EngineContext, unitId: UnitId, player: PlayerId): void {
   const s = ctx.state
   const fight = s.phaseState.fight as FightState
+  // F12: the extra Fight is spent by the second activation; after the first, a strikeLast grant gives the unit Strike-last
+  const extra = extraFightOf(s, unitId)
+  if (extra) {
+    if (fight.fought.includes(unitId)) writeMark(s, EXTRA + unitId, JSON.stringify({ ...extra, left: 0 }))
+    else if (extra.strikeLast && s.units[unitId]) s.units[unitId].turn.fightsLast = true
+  }
   if (s.units[unitId]) s.units[unitId].turn.foughtThisPhase = true
   if (!fight.fought.includes(unitId)) fight.fought.push(unitId)
   fight.nextToSelect = otherPlayer(player)
@@ -399,14 +440,15 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
   const fight = s.phaseState.fight as FightState
   const unitId = fight.currentUnitId as UnitId
   const unit = s.units[unitId]
-  if (!unit || unit.location !== 'board') { drainAfterFightMortal(ctx); finishUnit(ctx, unitId, unit?.player ?? s.activePlayer); return 'progress' }
+  if (!unit || unit.location !== 'board') { drainAfterFightMortal(ctx); ownFightResolved(ctx, unitId); finishUnit(ctx, unitId, unit?.player ?? s.activePlayer); return 'progress' }
+  const act = actKey(s, unitId)
 
-  if (!ctx.marked(`fi:selWindow:${unitId}`)) {
-    if (ctx.window('fight.unitSelected', unitId, ctx.order.active(), { unitId })) return 'pending'
-    ctx.once(`fi:selWindow:${unitId}`)
+  if (!ctx.marked(`fi:selWindow:${act}`)) {
+    if (ctx.window('fight.unitSelected', act, ctx.order.active(), { unitId })) return 'pending'
+    ctx.once(`fi:selWindow:${act}`)
   }
   // LRL-BT-3 Gale Force (F8): reactions to declaring a Fight attack, the fighting unit's player only, before the pile-in
-  if (ctx.services.abilities.runReactionWindow?.(ctx, unit.player, { kind: 'youDeclaredAttack', unitId, phase: 'fight' }, `fi:${unitId}`)) return 'pending'
+  if (ctx.services.abilities.runReactionWindow?.(ctx, unit.player, { kind: 'youDeclaredAttack', unitId, phase: 'fight' }, `fi:${act}`)) return 'pending'
   if (fight.subStep === 'pileIn') {
     if (doPileIn(ctx, unitId) === 'pending') return 'pending'
     fight.subStep = 'declareTargets'
@@ -416,15 +458,20 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
     fight.subStep = 'attacks'
   }
   if (fight.subStep === 'attacks') {
+    // SKV-RA-1 (F12): the opponent's reactions to this declared Fight attack, targets known, before any dice
+    const atk = s.phaseState.attack
+    if (atk && atk.attackerUnitId === unitId && ctx.services.abilities.runReactionWindow?.(ctx, otherPlayer(unit.player), { kind: 'opponentDeclaredAttack', unitId, phase: 'fight', targetUnitIds: [...atk.targetUnitIds] }, `fit:${act}`)) return 'pending'
     if (doAttacks(ctx, unitId) === 'pending') return 'pending'
-    if (!ctx.marked(`fi:arWindow:${unitId}`)) {
-      if (ctx.window('fight.attacksResolved', unitId, ctx.order.active(), { unitId })) return 'pending'
-      ctx.once(`fi:arWindow:${unitId}`)
+    if (!ctx.marked(`fi:arWindow:${act}`)) {
+      if (ctx.window('fight.attacksResolved', act, ctx.order.active(), { unitId })) return 'pending'
+      ctx.once(`fi:arWindow:${act}`)
     }
     if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
   }
   // STD-AB-4 Glorious Death: mortal damage held back during the attacks lands once this Fight ability has fully resolved
   drainAfterFightMortal(ctx)
+  // SBG-BT-2 (F12): the fighting unit's own after-the-Fight hooks (The Hunger), then the activation is over
+  ownFightResolved(ctx, unitId)
   finishUnit(ctx, unitId, unit.player)
   return 'progress'
 }
@@ -514,6 +561,7 @@ export const fightModule: PhaseModule = {
       const fight = s.phaseState.fight as FightState
       fight.currentUnitId = action.unitId
       fight.subStep = 'pileIn'
+      writeMark(s, ACTS + action.unitId, String(activationsOf(s, action.unitId) + 1)) // F12: fresh progress keys per activation
       ctx.emit({ type: 'FightUnitSelected', unitId: action.unitId, step: fight.step })
       return
     }

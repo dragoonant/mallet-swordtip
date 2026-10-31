@@ -260,7 +260,7 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'soulreaper', faction: 'thousand-sons', label: 'Scarab Terminator (soulreaper cannon)' },
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'hellfyre', faction: 'thousand-sons', label: 'Scarab Terminator (hellfyre rack)' },
   { datasheetId: 'ths.tzaangors', modelId: 'tzaangor', faction: 'thousand-sons', label: 'Tzaangor' },
-  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron)
+  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight)
   { datasheetId: 'cities.unit.freeguild-cavalier-marshal', modelId: 'cavalier-marshal', faction: 'cities', label: 'Cavalier-Marshal' },
   { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm', faction: 'cities', label: 'Steelhelm' },
   { datasheetId: 'cities.unit.freeguild-cavaliers', modelId: 'cavalier', faction: 'cities', label: 'Freeguild Cavalier' },
@@ -299,6 +299,27 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'kharadron.unit.skywardens', modelId: 'skywarden', faction: 'kharadron', label: 'Skywarden' },
   { datasheetId: 'kharadron.unit.skywardens', modelId: 'skywarden-volley', faction: 'kharadron', label: 'Skywarden (Volley Gun)' },
   { datasheetId: 'kharadron.unit.arkanaut-frigate', modelId: 'frigate', faction: 'kharadron', label: 'Arkanaut Frigate' },
+  { datasheetId: 'stormcast.unit.lord-vigilant', modelId: 'lord-vigilant', faction: 'stormcast', label: 'Lord-Vigilant on Gryph-stalker' },
+  { datasheetId: 'stormcast.unit.lord-veritant', modelId: 'lord-veritant', faction: 'stormcast', label: 'Lord-Veritant' },
+  { datasheetId: 'stormcast.unit.prosecutors', modelId: 'prosecutor', faction: 'stormcast', label: 'Prosecutor' },
+  { datasheetId: 'stormcast.unit.liberators', modelId: 'liberator', faction: 'stormcast', label: 'Liberator' },
+  { datasheetId: 'stormcast.unit.liberators', modelId: 'liberator-grandhammer', faction: 'stormcast', label: 'Liberator (Grandhammer)' },
+  { datasheetId: 'skaven.unit.grey-seer', modelId: 'grey-seer', faction: 'skaven', label: 'Grey Seer' },
+  { datasheetId: 'skaven.unit.clanrats', modelId: 'clanrat', faction: 'skaven', label: 'Clanrat' },
+  { datasheetId: 'skaven.unit.stormfiends', modelId: 'stormfiend-gauntlets', faction: 'skaven', label: 'Stormfiend (Shock Gauntlets)' },
+  { datasheetId: 'skaven.unit.stormfiends', modelId: 'stormfiend-windlaunchers', faction: 'skaven', label: 'Stormfiend (Windlaunchers)' },
+  { datasheetId: 'skaven.unit.stormfiends', modelId: 'stormfiend-ratling', faction: 'skaven', label: 'Stormfiend (Ratling Cannons)' },
+  { datasheetId: 'skaven.unit.warp-lightning-cannon', modelId: 'warp-lightning-cannon', faction: 'skaven', label: 'Warp Lightning Cannon' },
+  { datasheetId: 'seraphon.unit.sunblood-pack', modelId: 'sunblood', faction: 'seraphon', label: 'Sunblood' },
+  { datasheetId: 'seraphon.unit.sunblood-pack', modelId: 'bodyguard', faction: 'seraphon', label: 'Saurus Bodyguard' },
+  { datasheetId: 'seraphon.unit.saurus-warriors', modelId: 'warrior', faction: 'seraphon', label: 'Saurus Warrior' },
+  { datasheetId: 'seraphon.unit.hunters-of-huanchi', modelId: 'hunter', faction: 'seraphon', label: 'Hunter of Huanchi' },
+  { datasheetId: 'seraphon.unit.terrawings', modelId: 'terrawing', faction: 'seraphon', label: 'Terrawing' },
+  { datasheetId: 'seraphon.unit.spawn-of-chotec', modelId: 'spawn', faction: 'seraphon', label: 'Spawn of Chotec' },
+  { datasheetId: 'soulblight.unit.vampire-lord', modelId: 'vampire-lord', faction: 'soulblight', label: 'Vampire Lord' },
+  { datasheetId: 'soulblight.unit.deathrattle-skeletons', modelId: 'deathrattle-skeleton', faction: 'soulblight', label: 'Deathrattle Skeleton' },
+  { datasheetId: 'soulblight.unit.blood-knights', modelId: 'blood-knight', faction: 'soulblight', label: 'Blood Knight' },
+  { datasheetId: 'soulblight.unit.vargheists', modelId: 'vargheist', faction: 'soulblight', label: 'Vargheist' },
 ]
 
 // Figures are true tabletop-miniature scale (~1-2 world-inches tall — see resolveBase), so packing

@@ -30,10 +30,9 @@ import type { EngineCodeHook } from '../code-hooks'
 import type { Effect } from '../../data/types'
 import type { DiceRoll, GameState, PlayerId, UnitId } from '../types'
 import { distance, ENGAGEMENT_H, EPS } from '../geometry'
-import { readDeclaredMove } from '../declared'
 import { deferMortalAfterFight } from '../attack'
 import { cardName, setOath, tacticOdds } from '../cards'
-import { announce, inCombat, liveModels, onBoard, paramOf, paramsByCode, whollyWithinUnit } from './aos-common'
+import { announce, freeRetreatAvailable, freeRetreatHook, inCombat, liveModels, onBoard, paramOf, paramsByCode, whollyWithinUnit } from './aos-common'
 
 const noop = () => undefined
 const num = (v: unknown, fallback: number): number => (typeof v === 'number' ? v : fallback)
@@ -87,44 +86,11 @@ const rageActivate: ActivatedAbilityHook = {
 const slavesRageOfArkhar: EngineCodeHook = { name: 'slavesRageOfArkhar', kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: rageActivate }
 
 // ---------- STD-RA-2 Fearless Invaders ----------
-// Offered in the 'moveDeclared' window (data params.window): the friendly unit in combat that has just declared a Retreat, before
-// the retreat's mortal damage is rolled. At the end of the movement phase (the plain phase window) the retreat is already over and
-// the unit is out of combat, so the ability could never do anything there.
-const retreatingUnit = (state: GameState, player: PlayerId): UnitId | null => {
-  const d = readDeclaredMove(state)
-  const u = d && d.moveType === 'fallBack' ? onBoard(state, d.unitId) : null
-  return u && u.player === player && inCombat(state, u.id) ? u.id : null
-}
-const invadersTargets = (state: GameState, _unitId: UnitId | null, player?: PlayerId): UnitId[] => {
-  const id = retreatingUnit(state, player ?? state.activePlayer)
-  return id ? [id] : []
-}
-
-// AI hint (src/ai/utility.ts scoreDeclareMove): the player can still swear Fearless Invaders this turn, so a Retreat it declares now
-// would cost no mortal damage and leave the unit free to charge again
-export function slavesFreeRetreatAvailable(state: GameState, player: PlayerId): boolean {
-  const reg = state.abilities[state.players[player]?.regimentAbilityId ?? '']
-  if (!reg || reg.code !== 'slavesFearlessInvaders') return false
-  if (state.activePlayer !== player || state.phase !== 'movement') return false
-  return !state.players[player].abilityUses.some((u) => u.abilityId === reg.id && u.round === state.round && u.turn === state.activePlayer)
-}
-
-const invadersActivate: ActivatedAbilityHook = {
-  canUse(state, _unitId, use) {
-    const targets = invadersTargets(state, null, use.player)
-    const picked = use.targetUnitIds?.[0]
-    return targets.length > 0 && (!picked || targets.includes(picked))
-  },
-  targets: invadersTargets as ActivatedAbilityHook['targets'],
-  resolve(ctx, use) {
-    const target = use.targetUnitIds[0]
-    if (!target || !onBoard(ctx.state, target)) return
-    const effects: Effect[] = [{ chargeAfterFallBack: true }, { noRetreatDamage: true }]
-    ctx.services.effects.grant(ctx, target, effects, { sourceAbilityId: use.abilityId, sourceUnitId: use.unitId, scope: { who: 'self' }, duration: 'untilEndOfTurn' })
-    announce(ctx, use, target, 'Fearless Invaders: a retreat this turn costs no mortal damage and the unit can still charge')
-  },
-}
-const slavesFearlessInvaders: EngineCodeHook = { name: 'slavesFearlessInvaders', kind: 'ability', hook: 'onAbilityDeclared', run: noop, activate: invadersActivate }
+// The shape lives in aos-common (freeRetreatHook, F12) so other armies' free-Retreat reactions (SCE-RA-1 Strike Where Needed) share it
+// under their own code name; this one announces as Fearless Invaders.
+// AI hint (src/ai/utility.ts scoreDeclareMove): kept under its old name; it accepts every registered free-Retreat code now
+export const slavesFreeRetreatAvailable = freeRetreatAvailable
+const slavesFearlessInvaders: EngineCodeHook = freeRetreatHook('slavesFearlessInvaders', 'Fearless Invaders: a retreat this turn costs no mortal damage and the unit can still charge')
 
 // ---------- STD-ENH-3 Champion of Raids ----------
 const CODE_RAIDS = 'slavesChampionOfRaids'

@@ -307,12 +307,25 @@ Spearhead gives no champion, standard or musician rules, so no variants. Gnawfea
 
 ## 11. Implementation notes
 
-Not built yet. Planned files: data `src/data/factions/skaven/` (faction.json, datasheets/{grey-seer, stormfiends,
-warp-lightning-cannon, clanrats}.json, weapons.json, abilities.json, enhancements.json, patrols/warpspark-clawpack.json),
-hooks `src/engine/factions/skaven.ts` (`...skavenHooks` in `code-hooks.ts`), tests `tests/engine/skaven.test.ts` and
-`tests/data/skaven.test.ts` (one test per SKV- id). Patrol `battleTraits: ['skaven.ability.always-three-clawsteps-ahead']`,
-regiment list Endless Swarm (default) then Warpstone-Laced Armour, enhancement list Skilled Manipulator (default),
-Skitterleap, Scurry Away, Cage of Warp Lightning. Figure mapping keys `<datasheet id>/<modelId>`.
+Built (F12). Data: `src/data/factions/skaven/` (faction.json, datasheets/{grey-seer, stormfiends, warp-lightning-cannon,
+clanrats}.json, weapons.json, abilities.json, enhancements.json, patrols/warpspark-clawpack.json). Hooks:
+`src/engine/factions/skaven.ts` (`...skavenHooks` in `code-hooks.ts`; AI hints `skavenAbilityTiming` / `skavenTargetBonus` wired in
+`src/ai/utility.ts`). Tests: `tests/engine/skaven.test.ts`, `tests/data/skaven.test.ts` (one test per SKV- id, plus SKV-REG,
+SKV-DATA and SKV-AI). Patrol `battleTraits: ['skaven.ability.always-three-clawsteps-ahead']`, regiment list Endless Swarm (default)
+then Warpstone-Laced Armour, enhancement list Skilled Manipulator (default), Skitterleap, Scurry Away, Cage of Warp Lightning.
+Figure mapping keys `<datasheet id>/<modelId>` (`skaven.unit.stormfiends/stormfiend-gauntlets` etc.; the figure files are not
+part of the rules stage).
+
+Deviations from the plan above, found while building:
+- Scurry Away grants no `noRetreatDamage` effect: the ability's queued Retreat (`applyRetreat`) never deals retreat damage, so the
+  effect would only leak into a later Retreat of the same turn.
+- Always Three Clawsteps Ahead carries the `MOVE` keyword (informational) and is offered in the end-of-movement window of the
+  enemy phase (`abilities.runWindow('movement')`), not at any moment during it. The "not set up this turn" gate is unnecessary:
+  CORE-6.13 only bars the owner's own movement phase.
+- The Seething Swarm return uses `returnSlainModels` (CORE-6.14): a returned model needs a coherent spot clear of enemy combat
+  ranges, so a unit reduced to very few models in a tight line can get back fewer models than rolled.
+- Skitterleap's set-up offers the engine's six best well-separated spots (closest to the enemy first), not every legal point.
+- The AI damage estimate for Warpstone-Laced Armour / Scurry Away lives in `skaven.ts` (it does not import `src/ai`).
 
 ---
 

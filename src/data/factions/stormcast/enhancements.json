@@ -1,0 +1,38 @@
+[
+  {
+    "id": "stormcast.enh.hallowed-scrolls",
+    "faction": "stormcast",
+    "name": "Hallowed Scrolls",
+    "text": "The general has Ward (5+).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "stormcast.ability.hallowed-scrolls"
+  },
+  {
+    "id": "stormcast.enh.quicksilver-draught",
+    "faction": "stormcast",
+    "name": "Quicksilver Draught",
+    "text": "Once per battle, in any combat phase, the general has Strike-first for the rest of that phase.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "stormcast.ability.quicksilver-draught"
+  },
+  {
+    "id": "stormcast.enh.null-pendant",
+    "faction": "stormcast",
+    "name": "Null Pendant",
+    "text": "Once per battle, at the end of any turn, roll a dice for each enemy unit contesting the same objective as the general. For each 2+, subtract the roll from that unit's control score this turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "stormcast.ability.null-pendant"
+  },
+  {
+    "id": "stormcast.enh.morrdas-talon",
+    "faction": "stormcast",
+    "name": "Morrda's Talon",
+    "text": "The general's Hallowed Greataxe has Crit (Mortal).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "stormcast.ability.morrdas-talon"
+  }
+]
