@@ -1,0 +1,253 @@
+[
+  {
+    "id": "nighthaunt.ability.slasher-host",
+    "name": "Slasher Host",
+    "text": "Army marker for the Nighthaunt Slasher Host. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    }
+  },
+  {
+    "id": "nighthaunt.ability.ethereal",
+    "name": "Ethereal",
+    "text": "Ignore all modifiers, good and bad, to save rolls for friendly units. A weapon's Rend is one of them, so the save is the bare die against the Save characteristic.",
+    "trigger": "saveRoll",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "ignoreModifiers": "save"
+    }
+  },
+  {
+    "id": "nighthaunt.ability.wave-of-terror",
+    "name": "Wave of Terror",
+    "text": "In any charge phase, after a friendly unit has made a charge move with a charge roll of 10 or more, pick an enemy unit within 1\" of it. That enemy unit has Strike-last for the rest of the turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "charge",
+      "whose": "any"
+    },
+    "keywords": [
+      "UNLIMITED"
+    ],
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "nighthauntWaveOfTerror",
+    "params": {
+      "minRoll": 10,
+      "range": 1,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "nighthaunt.ability.death-stalkers",
+    "name": "Death Stalkers",
+    "text": "Once, at the start of the first battle round, pick any enemy unit. For the rest of the battle, melee weapons used for attacks that target that unit have +1 Rend.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "startOfRound",
+      "whose": "any"
+    },
+    "limit": "oncePerBattle",
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "enemy"
+      }
+    ],
+    "duration": "battle",
+    "code": "nighthauntDeathStalkers",
+    "params": {
+      "rend": 1,
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "nighthaunt.ability.chorus-of-terror",
+    "name": "Chorus of Terror",
+    "text": "Subtract 1 from hit rolls for combat attacks that target a friendly unit that charged this turn.",
+    "trigger": "hitRoll",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "attacker"
+    },
+    "effect": {
+      "when": {
+        "unitCharged": true,
+        "weaponType": "melee"
+      },
+      "modifyRoll": {
+        "roll": "hit",
+        "value": -1
+      }
+    }
+  },
+  {
+    "id": "nighthaunt.ability.discorporate",
+    "name": "Discorporate",
+    "text": "In your hero phase, pick a friendly unit wholly within 9\" of this unit (this unit counts). It has Ward (5+) until the start of your next turn.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "declare": [
+      {
+        "role": "unit",
+        "owner": "friendly"
+      }
+    ],
+    "duration": "untilNextTurn",
+    "code": "nighthauntDiscorporate",
+    "params": {
+      "range": 9,
+      "grant": [
+        {
+          "feelNoPain": 5
+        }
+      ],
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "nighthaunt.ability.drawn-to-war",
+    "name": "Drawn to War",
+    "text": "Your general has Ward (4+) while it is within 1\" of this unit.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "nighthauntDrawnToWar",
+    "params": {
+      "range": 1,
+      "ward": 4
+    }
+  },
+  {
+    "id": "nighthaunt.ability.reaped-like-corn",
+    "name": "Reaped Like Corn",
+    "text": "Combat attacks made by this unit score a critical hit on an unmodified hit roll of 5+ instead of 6 while the target unit has 5 or more models.",
+    "trigger": "hitRoll",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "code": "nighthauntReapedLikeCorn",
+    "params": {
+      "critOn": 5,
+      "minModels": 5
+    }
+  },
+  {
+    "id": "nighthaunt.ability.chilling-horde",
+    "name": "Chilling Horde",
+    "text": "Add 1 to wound rolls for this unit's combat attacks if it charged this turn.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "self"
+    },
+    "effect": {
+      "when": {
+        "unitCharged": true,
+        "weaponType": "melee"
+      },
+      "modifyRoll": {
+        "roll": "wound",
+        "value": 1
+      }
+    }
+  },
+  {
+    "id": "nighthaunt.ability.soulfire-ring",
+    "name": "Soulfire Ring",
+    "text": "At the end of any turn, if the bearer slew any models in combat this turn, Heal (D6) the bearer.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "endOfTurn",
+      "whose": "any"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "nighthauntSoulfireRing",
+    "params": {
+      "heal": "D6",
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "nighthaunt.ability.cloaked-in-shadow",
+    "name": "Cloaked in Shadow",
+    "text": "In each phase, only 1 enemy unit can pick the bearer as a target of its attacks. The first enemy unit that targets the bearer that phase keeps the claim.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "nighthauntCloakedInShadow"
+  },
+  {
+    "id": "nighthaunt.ability.beacon-of-nagashizzar",
+    "name": "Beacon of Nagashizzar",
+    "text": "Once per battle, in your hero phase, return 1 slain model to each friendly unit on the battlefield.",
+    "trigger": "activated",
+    "timing": {
+      "kind": "phase",
+      "phase": "command",
+      "whose": "your"
+    },
+    "limit": "oncePerBattle",
+    "scope": {
+      "who": "bearer"
+    },
+    "code": "nighthauntBeaconOfNagashizzar",
+    "params": {
+      "count": 1,
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "nighthaunt.ability.shadows-edge",
+    "name": "Shadow's Edge",
+    "text": "The bearer's Sword of Stolen Hours has Crit (Mortal) as well as Crit (Auto-wound). Pick one before the attack.",
+    "trigger": "always",
+    "timing": {
+      "kind": "passive"
+    },
+    "scope": {
+      "who": "bearer"
+    },
+    "effect": {
+      "when": {
+        "weaponId": "nighthaunt.weapon.sword-of-stolen-hours"
+      },
+      "grantWeaponAbility": {
+        "ability": "CRIT_MORTAL"
+      }
+    }
+  }
+]

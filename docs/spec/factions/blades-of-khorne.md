@@ -62,8 +62,9 @@ standard or musician rules); they exist only as visibly different figures and ba
 - Notes: "slew with a Fight ability" = an enemy model was slain by damage from that unit's combat attacks (their Crit
   (Mortal) damage included). Mortal damage from other abilities (e.g. Furious Bites) does not count. Using it again on a
   unit that already has it changes nothing; the AI never does.
-- RULING (CORE-12.1): when a weapon then has two critical-hit abilities (Weapons of the Hunt: Crit (2 Hits) + Crit
-  (Mortal)), the attacker picks one per weapon per attack sequence; see C4 for how the engine picks.
+- RULING (core rules 20.0, settled F14): when a weapon then has two critical-hit abilities (Weapons of the Hunt: Crit (2 Hits)
+  + Crit (Mortal)), the attacking player picks one of them before the attack sequence starts (one pick per weapon per target
+  unit per Shoot / Fight ability); the engine asks it as a `critChoice` decision, and the AI picks by expected damage (C4).
 
 ---
 
@@ -183,7 +184,7 @@ faction code hook in `src/engine/factions/khorne.ts`, exported as `khorneHooks` 
 `healUnit`, `isDamaged`, `isDatasheet`, `announce`, `paramOf`. (c) = engine change outside the faction file (C1–C4 below).
 
 **Quarry helper (b):** the quarry is stored as a token `quarry: 1` on the enemy unit (SPH-2.7 tokens; `UnitCard` already
-lists tokens, so players see it). `khorneQuarryOf(state, player)` = the unit not owned by `player`, location board or reserve
+lists tokens, so players see it). `khorneQuarryOf(state, player)` = the unit not owned by `player`, location `board` or `reserves`
 (not destroyed), with `tokens.quarry > 0`. This works in a Khorne mirror match too (each army's quarry sits on the other
 army's units). `quarryOnBoard(state, player)` = the same, location board only.
 
@@ -200,7 +201,7 @@ army's units). `quarryOnBoard(state, player)` = the same, location board only.
 | BOK-BT-2 Blood-Drenched | (b) `khorneBloodDrenched` + (c) C1 | Battle trait, `timing endOfTurn / any`, `limit oncePerTurnArmy`, `declare [{ role: 'unit', owner: 'friendly' }]`. `targets` = friendly units on board with `slewInFightThisTurn(state, id)` and not already holding this effect. Resolve: `effects.grant(ctx, id, { grantWeaponAbility: { ability: 'CRIT_MORTAL' }, when: { weaponType: 'melee' } }, { scope: { who: 'self' }, duration: 'battle' })`. |
 | BOK-RA-1 The Scent of Blood | (a) + (b) gate `khorneScentOfBlood` + (c) C1 | Passive regiment descriptor (sits on every friendly unit), scope self, `effect [{ modifyRoll: { roll: 'hit', value: 1 }, when: { weaponType: 'melee' } }, { modifyRoll: { roll: 'wound', value: 1 }, when: { weaponType: 'melee' } }]`, `code khorneScentOfBlood` whose `gate(state, holder, entry, data)` returns `damagedThisTurn(state, data.attack.targetUnitId)` (false with no attack in `data`). |
 | BOK-RA-2 Savagery Upon Savagery | (b) `khorneSavagery` | Regiment ability, `timing phase fight / any`, `limit oncePerBattle`, `declare [{ role: 'unit', owner: 'friendly' }]`. Targets = friendly units on board and `inCombat`. Resolve: `n = HERO keyword ? rollExpr('D3') : 1`; grant `{ modifyStat: { stat: 'A', value: n }, when: { weaponType: 'melee' } }`, scope self, `duration 'untilEndOfTurn'`. Offered in the start-of-combat window and between fight activations. |
-| BOK-ENH Killing Pounce | (b) `khorneKillingPounce` + (c) C3 | Enhancement, `timing phase charge / any`, `params.window 'phaseStart'` (F10 chargeStart window), `limit oncePerBattle`. `canUse` = general on board, not in combat, and `quarryOnBoard`. Resolve: grant the general `{ extraChargeDice: 1 }` until end of turn (`chargeDiceCount` = 3; never above 3 in this army) and record the commitment (the granted ActiveEffect carries `code khorneKillingPounce`). The same hook answers C3 `chargeMustEndInCombatWith(state, entry, unitId)` = `[quarry]` while that ActiveEffect is on `unitId` (`entry.active` set). |
+| BOK-ENH Killing Pounce | (b) `khorneKillingPounce` + (c) C3 | Enhancement, `timing phase charge / your` (shipped as `your`: only the owner charges, and the F10 chargeStart window only runs for the active player), `params.window 'phaseStart'` (F10 chargeStart window), `limit oncePerBattle`. `canUse` = general on board, not in combat, and `quarryOnBoard`. Resolve: grant the general `{ extraChargeDice: 1 }` until end of turn (`chargeDiceCount` = 3; never above 3 in this army) and record the commitment (the granted ActiveEffect carries `code khorneKillingPounce`). The same hook answers C3 `chargeMustEndInCombatWith(state, entry, unitId)` = `[quarry]` while that ActiveEffect is on `unitId` (`entry.active` set). |
 | BOK-ENH Furious Bites | (b) `khorneFuriousBites` | Enhancement, `timing endOfTurn / any` (once per turn by CORE-3.4 since end of turn is one phase). `canUse` = general on board and the quarry is in `enemiesInCombat(state, general)`. Resolve: `inflictMortal(ctx, use, quarry, rollExpr('D3'))`. No roll to pass. |
 | BOK-AB-1 Stalk the Prey | (b) `khorneStalkThePrey` + (c) C2 | Datasheet ability, `timing phase command / any`, keyword `MOVE`. `canUse` = on board and at least one legal slide for 6" exists (cheap pre-check; the real distance is rolled). Resolve: `d = rollExpr('D6')`; `writeMoveQueue(s, { abilityId, player, maxDistance: d, queue: [self], opts })` with `opts = inCombat(self) ? { endFree: true } : { mayNotEndInCombat: true }` plus `closerToUnit: quarry` when `quarryOnBoard`. If no slide is legal after the roll, the move is skipped (announce "no legal move"). |
 | BOK-AB-3 Pack Hunters | (b) `khornePackHunters` | Datasheet ability, `timing phase fight / any`, `declare [{ role: 'unit', owner: 'enemy' }]`. Targets = enemy units in `enemiesInCombat(state, self)` that are also in combat with a friendly unit `isDatasheet(…, 'khorne.unit.flesh-hounds')` on board. Resolve: grant self `{ lethalOn: 5, when: { weaponType: 'melee' } }` (crit threshold 5 at onHitRoll, hooks-impl `lethalOn`), `duration 'untilEndOfTurn'`, and store the target in a ledger `mission.custom.bokPack[effectId] = targetUnitId`; `gateEffect(state, holder, entry, data)` passes only when `data.attack.targetUnitId === ledger[entry.active.id]` (the `luminethHurricaneWinds` / `citiesConsecrate` gateEffect pattern). Prune ledger entries whose effect is gone at the next grant. |
@@ -224,15 +225,17 @@ army's units). `quarryOnBoard(state, player)` = the same, location board only.
   unitId)` over every source entry (ActiveEffects included). `charge.ts` passes the result as `MoveConstraints.mustEndInEngagementWith`
   (already supported by `geometry.ts checkPlacements`; engagement = combat range 3") in `chargeMoveRejection` and the
   candidate builder, and the reach pre-check / AI `chargeProb` measure only to those units. Empty / null = no constraint.
-- **C4 crit choice** (`attack.ts`, CORE-12.1): when an effective weapon has more than one of `CRIT_MORTAL` / `CRIT_2_HITS` /
-  `CRIT_AUTO_WOUND`, pick the one with the higher expected damage against the batch's target instead of "first listed":
-  `CRIT_MORTAL` = Damage; `CRIT_2_HITS` = hits per crit (its `value`, default 2) × P(wound) × P(save fails after rend) ×
-  Damage; `CRIT_AUTO_WOUND` = P(save fails after rend) × Damage; ties keep the first listed. [interp] the attacker would choose; the engine chooses for both humans
-  and AI (no extra decision). Weapons of the Hunt with Crit (Mortal) then use Crit (Mortal) against any save of 5+ or better
-  and Crit (2 Hits) against 6+ or no save. Additive: no current weapon has two crit abilities.
+- **C4 crit choice** (`attack.ts`, core 20.0; **built in F14**, see `13-engine-port-plan.md` §3.12): the core rules say the
+  attacking player picks one of a weapon's critical-hit abilities before the attack sequence starts, so when an
+  effective weapon has more than one of `CRIT_MORTAL` / `CRIT_2_HITS` / `CRIT_AUTO_WOUND`, `attackService.advance` raises a
+  `chooseOption` (topic `critChoice`) for the attacking player before any dice. Each option's `hint.value` is its expected damage
+  per critical hit against that target (`critExpectedDamage`): `CRIT_MORTAL` = Damage; `CRIT_2_HITS` = hits per crit (its
+  `value`, default 2) × P(wound) × P(save fails after Rend) × Damage; `CRIT_AUTO_WOUND` = P(save fails after Rend) × Damage. The
+  AI takes the highest, so Weapons of the Hunt with Crit (Mortal) use Crit (Mortal) against any save of 5+ or better and Crit
+  (2 Hits) against 6+ or no save; a human chooses freely. The army files need nothing for it.
 
-None of C1–C4 touches `src/engine/{types,actions,events,hooks,rng,decider,index}.ts` or `src/data/types.ts`; C2–C4 need a
-row in `docs/spec/13-engine-port-plan.md` (a new §3.x for this army).
+C1–C3 touch no frozen contract; C4 adds `ChooseOptionTopic 'critChoice'` (`types.ts`) and its route in `index.ts` (additive).
+All four are built and recorded in `docs/spec/13-engine-port-plan.md` §3.12 (F14 engine-core).
 
 ---
 
@@ -285,7 +288,7 @@ row in `docs/spec/13-engine-port-plan.md` (a new §3.x for this army).
 | BOK-AB-3 | Pack Hunters: only an enemy unit in combat with both the Claws and a friendly Flesh Hounds unit can be picked; Claws' melee attacks against it crit on unmodified 5+ until end of turn; other targets crit on 6 only. |
 | BOK-WEAP-1 | Savage Maws and Goreslick Claws: Rend 2 against a Hero, Rend 1 otherwise. |
 | BOK-WEAP-2 | Weapons of the Hunt: each critical hit scores 2 hits. |
-| BOK-WEAP-3 | Weapons of the Hunt with Blood-Drenched: the engine picks Crit (Mortal) against a 5+ or better save and Crit (2 Hits) against a 6+ save (C4). |
+| BOK-WEAP-3 | Weapons of the Hunt with Blood-Drenched: the attacking player is asked to pick Crit (Mortal) or Crit (2 Hits) before the dice (core 20.0); the AI picks Crit (Mortal) against a 5+ or better save and Crit (2 Hits) against a 6+ save (C4). |
 | BOK-ENG-C1 | Turn ledger: `damagedThisTurn` / `slewInFightThisTurn` are true after the event in this turn and false in the next. |
 | BOK-ENG-C2 | Slide `closerToUnit` rejects a slide that does not reduce the gap; `endFree` lets an in-combat unit end out of combat. |
 | BOK-ENG-C3 | `chargeMustEndInCombatWith` rejects a charge that ends ½" from another enemy but not in combat with the named unit. |
@@ -318,11 +321,16 @@ Blood Whelp figure may stand in for any missing variant.
 
 ## 11. Implementation notes
 
-Not built yet. Planned layout: data `src/data/factions/khorne/` (faction.json, datasheets/{karanak, flesh-hounds,
+Built (F14). Layout: data `src/data/factions/khorne/` (faction.json, datasheets/{karanak, flesh-hounds,
 claws-of-karanak}.json, weapons.json, abilities.json, enhancements.json, patrols/fangs-of-the-blood-god.json); hooks
 `src/engine/factions/khorne.ts` (`...khorneHooks` in `code-hooks.ts`; AI hints `khorneAbilityTiming` / `khorneTargetBonus`
 wired in `src/ai/utility.ts` as for Skaven). Tests: `tests/engine/khorne.test.ts`, `tests/data/khorne.test.ts` (one test per
-BOK- id). Patrol `battleTraits: ['khorne.ability.the-quarry', 'khorne.ability.blood-drenched']`, regiment list The Scent of
+BOK- id; BOK-ENG-C1..C3 and BOK-WEAP-3 re-checked there on the real data, the generic mechanisms are in `engine-f14.test.ts`).
+Shipped details: the quarry token is `quarry: 1` on the enemy unit (`khorneQuarryOf` / `quarryOnBoard` are exported); Stalk the
+Prey rolls its D6 at resolve and skips the move with a note when no slide that far is legal; Pack Hunters' ledger is
+`mission.custom.bokPack`; the AI only spends Savagery on a unit that has not fought yet and gains at least 0.75 expected damage,
+and Killing Pounce when 2 dice reach the quarry with under 60 % and 3 dice with at least 40 %. The client still has to learn the
+army (start-screen blurb, crest, figure mapping `khorne.unit.*`); the hook file needs nothing from it. Patrol `battleTraits: ['khorne.ability.the-quarry', 'khorne.ability.blood-drenched']`, regiment list The Scent of
 Blood (default) then Savagery Upon Savagery, enhancement list Evasive Hunter (default), Sustained by Gore, Killing Pounce,
 Furious Bites. Figure mapping keys `<datasheet id>/<modelId>` (`khorne.unit.claws-of-karanak/packlord`, `/hound-of-wrath`,
 `/brutaliser`, `/blood-whelp`). Order of work: C1–C4 first (generic), then data, then the hooks.

@@ -20,7 +20,8 @@
 //        more than params.minEnemyDistance from every enemy (redeploy.ts, the Magmic Tunnels path).
 //  soulblightSpiritGale (ENH-4)       Spell (castingValue 7) cast by the bearer; 1 mortal damage on every enemy unit on the battlefield.
 //  soulblightScentOfGore (AB-3)       descriptor { modifyRoll wound +1 } scope self; the gate closes unless the attack's target is damaged.
-//  Riders of Ruin (passAcrossKeyword INFANTRY) and Aura of Night (ignoreNegativeModifiers save vs ranged) are plain descriptors.
+//  Riders of Ruin (passAcrossKeyword INFANTRY) and Aura of Night (ignoreNegativeModifiers save vs ranged) are plain descriptors;
+//  F14 RULING: Rend is a negative modifier to the save roll (core 17.0), so Aura of Night ignores Rend too (attack.ts runStage).
 //
 //  AI hints: soulblightAbilityTiming / soulblightTargetBonus / soulblightModeBonus / soulblightChargeBonus below are read by
 //  src/ai/utility.ts (abilityTiming / abilityTargetBonus / abilityModeBonus / scoreAction).

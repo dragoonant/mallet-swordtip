@@ -1,0 +1,30 @@
+{
+  "id": "sylvaneth.army.spitewing-flight",
+  "faction": "sylvaneth",
+  "name": "Spitewing Flight",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "arch-revenant", "datasheet": "sylvaneth.unit.arch-revenant", "size": 1 },
+    { "ref": "gossamid-archers", "datasheet": "sylvaneth.unit.gossamid-archers", "size": 5 },
+    { "ref": "spiterider-lancers", "datasheet": "sylvaneth.unit.spiterider-lancers", "size": 3 },
+    { "ref": "revenant-seekers", "datasheet": "sylvaneth.unit.revenant-seekers", "size": 3 }
+  ],
+  "warlord": "arch-revenant",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "sylvaneth.ability.target-of-vengeance",
+    "sylvaneth.ability.airborne-cohesion",
+    "sylvaneth.ability.song-of-the-hunt"
+  ],
+  "regimentAbilities": [
+    { "id": "sylvaneth.ability.lifebringers", "default": true },
+    { "id": "sylvaneth.ability.leaves-on-the-wind", "default": false }
+  ],
+  "enhancements": [
+    { "id": "sylvaneth.enh.head-of-the-hunt", "default": true },
+    { "id": "sylvaneth.enh.bold-spirit", "default": false },
+    { "id": "sylvaneth.enh.cunning-pursuer", "default": false },
+    { "id": "sylvaneth.enh.zephyrkin", "default": false }
+  ]
+}

@@ -3,12 +3,13 @@
 // snapped chain, Fyreslayers a flame-crested duardin helm over crossed axes, Kruleboyz a crude crimson-and-mustard shield with a
 // three-claw scratch, Gloomspite Gitz a sun disc with a jagged bite out of it, Lumineth a three-curl wind swirl, Kharadron a cog
 // inside a cloud, Stormcast a winged hammer-head over a lightning bolt, Skaven a three-scratch rune inside a cracked green stone,
-// Seraphon a stepped-pyramid sun under a star, Soulblight a bat-winged drop of blood. One 64x64 viewBox each, drawn with
+// Seraphon a stepped-pyramid sun under a star, Soulblight a bat-winged drop of blood, Blades of Khorne a hound skull over crossed blades,
+// Maggotkin of Nurgle three flies circling a cracked bell, Nighthaunt a hooded wisp holding a lantern, Sylvaneth a spiral of thorned leaves. One 64x64 viewBox each, drawn with
 // currentColor plus a handful of fixed accents so a crest reads on dark panels and on a bright active tile.
 import type { CSSProperties } from 'react'
 
 /** Faction ids the game ships a crest for; anything else gets a plain shield with the initial. */
-export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron' | 'stormcast' | 'skaven' | 'seraphon' | 'soulblight'
+export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron' | 'stormcast' | 'skaven' | 'seraphon' | 'soulblight' | 'khorne' | 'nurgle' | 'nighthaunt' | 'sylvaneth'
 
 function CitiesCrest() {
   return (
@@ -244,6 +245,108 @@ function SoulblightCrest() {
   )
 }
 
+function KhorneCrest() {
+  // Blades of Khorne (Fangs of the Blood God): a hound's skull, long muzzle and two pricked ears, over two crossed blades, a drop of blood
+  // on one fang. Original line work; deliberately not any rune or skull sigil.
+  return (
+    <g>
+      {/* crossed blades: tapered, hilts low, tips high either side of the skull */}
+      <g fill="currentColor" opacity="0.8">
+        <path d="M2 27 L47 52 L43 58 Z" />
+        <path d="M62 27 L17 52 L21 58 Z" />
+      </g>
+      <g stroke="currentColor" strokeWidth="3.6" strokeLinecap="round">
+        <line x1="41" y1="49" x2="48" y2="60" />
+        <line x1="23" y1="49" x2="16" y2="60" />
+        <line x1="45" y1="55" x2="54" y2="62" />
+        <line x1="19" y1="55" x2="10" y2="62" />
+      </g>
+      <g transform="translate(32 4) scale(0.86) translate(-32 -4)">
+      {/* ears */}
+      <path d="M15 7 L27 16 L16 27 Z M49 7 L37 16 L48 27 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.6" strokeLinejoin="round" />
+      {/* skull: round cranium narrowing into a muzzle */}
+      <path d="M17 27 Q17 13 32 13 Q47 13 47 27 Q47 33 42 37 L40 44 L24 44 L22 37 Q17 33 17 27 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      {/* furious eye sockets and the nose */}
+      <path d="M21 24 L30 28 L28 33 L21 30 Z M43 24 L34 28 L36 33 L43 30 Z" fill="#0f1119" />
+      <path d="M29 37 H35 L32 41 Z" fill="#0f1119" />
+      <path d="M26 44 H38" stroke="#0f1119" strokeWidth="2" />
+      {/* fangs hanging from the upper jaw, one dripping */}
+      <path d="M26 44 L28.5 54 L31 44 Z M33 44 L35.5 54 L38 44 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M35.5 55 Q33.6 58.5 35.5 61 Q37.4 58.5 35.5 55 Z" fill="#c4282c" />
+      </g>
+    </g>
+  )
+}
+
+function NurgleCrest() {
+  // Maggotkin of Nurgle (Bleak Host): a cracked iron bell hung from a ring, a sickly dashed orbit round it and three fat flies on the orbit.
+  const fly = (x: number, y: number, rot: number, key: string) => (
+    <g key={key} transform={`translate(${x} ${y}) rotate(${rot}) scale(1.2)`}>
+      <ellipse cx="-3.6" cy="-1.2" rx="2.4" ry="4.4" transform="rotate(-28 -3.6 -1.2)" fill="currentColor" opacity="0.55" stroke="currentColor" strokeWidth="0.8" />
+      <ellipse cx="3.6" cy="-1.2" rx="2.4" ry="4.4" transform="rotate(28 3.6 -1.2)" fill="currentColor" opacity="0.55" stroke="currentColor" strokeWidth="0.8" />
+      <ellipse cx="0" cy="0.8" rx="3.3" ry="4.2" fill="#a8c43a" stroke="#0f1119" strokeWidth="1" />
+      <circle cx="0" cy="-3.6" r="2.3" fill="#a8c43a" stroke="#0f1119" strokeWidth="1" />
+    </g>
+  )
+  return (
+    <g>
+      <circle cx="32" cy="33" r="22" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2.5 3.5" opacity="0.4" />
+      {/* the bell: ring, domed body flaring to a lip, clapper */}
+      <circle cx="32" cy="16" r="3.2" fill="none" stroke="currentColor" strokeWidth="2.4" />
+      <path d="M22 45 Q22 27 32 22 Q42 27 42 45 L46.5 49 H17.5 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.6" strokeLinejoin="round" />
+      {/* the crack: a dark zigzag from the shoulder down through the lip */}
+      <path d="M32 22 L28.5 31 L34.5 36 L29.5 43 L33 49" fill="none" stroke="#0f1119" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+      {[fly(11.5, 21, -35, 'a'), fly(52.5, 21, 35, 'b'), fly(32, 58, 180, 'c')]}
+    </g>
+  )
+}
+
+function NighthauntCrest() {
+  // Nighthaunt (Slasher Host): a hooded wisp, face a black hollow with two soulfire eyes, its torn hem trailing off, a lantern hung from one hand.
+  return (
+    <g>
+      <path d="M31 5 Q16 8 16 28 Q16 37 21 43 Q14 51 17 61 Q23 54 26 59 Q29 52 33 59 Q36 53 40 59 Q44 52 45 43 Q48 36 47 27 Q46 8 31 5 Z" fill="currentColor" />
+      <path d="M31 11 Q22 14 22 27 Q22 36 31 40 Q40 36 40 27 Q40 14 31 11 Z" fill="#0f1119" />
+      <ellipse cx="27" cy="26" rx="2.4" ry="3.2" fill="#8cf0b4" />
+      <ellipse cx="35" cy="26" rx="2.4" ry="3.2" fill="#8cf0b4" />
+      {/* the reaching arm and the lantern on its hook */}
+      <path d="M43 40 Q49 40 52 35" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+      <line x1="53" y1="35" x2="53" y2="31" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M48.5 31 L53 26.5 L57.5 31 Z" fill="currentColor" />
+      <rect x="49" y="31" width="8" height="12" rx="1.2" fill="#0f1119" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M53 33 Q55.4 37 53 41 Q50.6 37 53 33 Z" fill="#8cf0b4" />
+    </g>
+  )
+}
+
+function SylvanethCrest() {
+  // Sylvaneth (Spitewing Flight): a thorned vine winding out in a spiral, a pointed leaf at each turn, an amber seed at the heart.
+  const pts = Array.from({ length: 60 }, (_, i) => {
+    const t = (i / 59) * Math.PI * 4.1
+    const r = 3 + t * 1.95
+    return { x: 32 + r * Math.cos(t - 1), y: 32 + r * Math.sin(t - 1), t }
+  })
+  const stem = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+  const leaves = [10, 20, 30, 40, 50, 59].map((i) => {
+    const p = pts[i]
+    const deg = ((p.t - 1) * 180) / Math.PI // radial direction at this point
+    return <path key={`l${i}`} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${(deg + 90 - 40).toFixed(0)})`} d="M0 0 Q7 -5 0.8 -17 Q-6 -7 0 0 Z" fill="currentColor" />
+  })
+  const thorns = [5, 15, 25, 35, 45, 55].map((i) => {
+    const p = pts[i]
+    const deg = ((p.t - 1) * 180) / Math.PI
+    return <path key={`t${i}`} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${(deg + 90).toFixed(0)})`} d="M-2 0 L0 -6.5 L2 0 Z" fill="currentColor" />
+  })
+  return (
+    <g>
+      <path d={stem} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      {thorns}
+      {leaves}
+      <circle cx={pts[0].x} cy={pts[0].y} r="3.4" fill="#e0b040" stroke="#0f1119" strokeWidth="1" />
+    </g>
+  )
+}
+
 function FallbackCrest({ initial }: { initial: string }) {
   return (
     <g>
@@ -264,7 +367,7 @@ export function FactionCrest({ faction, name, size = 48, style }: { faction: str
       data-testid={`faction-crest-${faction}`}
       style={{ display: 'block', flex: 'none', ...style }}
     >
-      {faction === 'cities' ? <CitiesCrest /> : faction === 'ironjawz' ? <IronjawzCrest /> : faction === 'slaves' ? <SlavesCrest /> : faction === 'fyreslayers' ? <FyreslayersCrest /> : faction === 'kruleboyz' ? <KruleboyzCrest /> : faction === 'gloomspite' ? <GloomspiteCrest /> : faction === 'lumineth' ? <LuminethCrest /> : faction === 'kharadron' ? <KharadronCrest /> : faction === 'stormcast' ? <StormcastCrest /> : faction === 'skaven' ? <SkavenCrest /> : faction === 'seraphon' ? <SeraphonCrest /> : faction === 'soulblight' ? <SoulblightCrest /> : <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />}
+      {faction === 'cities' ? <CitiesCrest /> : faction === 'ironjawz' ? <IronjawzCrest /> : faction === 'slaves' ? <SlavesCrest /> : faction === 'fyreslayers' ? <FyreslayersCrest /> : faction === 'kruleboyz' ? <KruleboyzCrest /> : faction === 'gloomspite' ? <GloomspiteCrest /> : faction === 'lumineth' ? <LuminethCrest /> : faction === 'kharadron' ? <KharadronCrest /> : faction === 'stormcast' ? <StormcastCrest /> : faction === 'skaven' ? <SkavenCrest /> : faction === 'seraphon' ? <SeraphonCrest /> : faction === 'soulblight' ? <SoulblightCrest /> : faction === 'khorne' ? <KhorneCrest /> : faction === 'nurgle' ? <NurgleCrest /> : faction === 'nighthaunt' ? <NighthauntCrest /> : faction === 'sylvaneth' ? <SylvanethCrest /> : <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />}
     </svg>
   )
 }

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "nighthaunt.enh.shadows-edge",
+    "faction": "nighthaunt",
+    "name": "Shadow's Edge",
+    "text": "The general's Sword of Stolen Hours has Crit (Mortal) as well as Crit (Auto-wound); pick one before the attack.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nighthaunt.ability.shadows-edge"
+  },
+  {
+    "id": "nighthaunt.enh.soulfire-ring",
+    "faction": "nighthaunt",
+    "name": "Soulfire Ring",
+    "text": "At the end of any turn, if the general slew any models in combat this turn, Heal (D6) the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nighthaunt.ability.soulfire-ring"
+  },
+  {
+    "id": "nighthaunt.enh.cloaked-in-shadow",
+    "faction": "nighthaunt",
+    "name": "Cloaked in Shadow",
+    "text": "In each phase, only 1 enemy unit can pick the general as a target of its attacks.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nighthaunt.ability.cloaked-in-shadow"
+  },
+  {
+    "id": "nighthaunt.enh.beacon-of-nagashizzar",
+    "faction": "nighthaunt",
+    "name": "Beacon of Nagashizzar",
+    "text": "Once per battle, in your hero phase, return 1 slain model to each friendly unit on the battlefield.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nighthaunt.ability.beacon-of-nagashizzar"
+  }
+]

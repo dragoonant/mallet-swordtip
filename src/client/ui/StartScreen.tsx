@@ -1,6 +1,6 @@
-// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (any of the twelve:
+// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (any of the sixteen:
 // Cities of Sigmar, Fyreslayers, Lumineth Realm-lords, Kharadron Overlords, Stormcast Eternals, Seraphon, Slaves to Darkness, Skaven,
-// Soulblight Gravelords, Ironjawz, Kruleboyz and Gloomspite Gitz; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
+// Soulblight Gravelords, Ironjawz, Kruleboyz, Gloomspite Gitz, Blades of Khorne, Maggotkin of Nurgle, Nighthaunt and Sylvaneth; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
 // device, and Start. The battleplan is fixed (Fire and Jade, standard terrain); only its realm side (Aqshy, Ghyran or random) is picked.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
 import { FactionCrest } from './FactionCrest'
@@ -28,20 +28,25 @@ export const FACTION_BLURBS: Record<string, string> = {
   skaven: 'A seething tide of ratmen from under the cities: swarms of Clanrats that keep coming back, hulking Stormfiends, a scheming Grey Seer and a warp-lightning cannon that fries whatever it points at.',
   seraphon: 'Lizard-warriors of the star-jungle: a Sunblood with hard-to-kill bodyguards, blowpipe skinks who ambush from hiding, flapping Terrawings and a fire-spitting beast whose acolytes keep it fighting.',
   soulblight: 'A vampire lord at the head of a night-court hunt: an endless line of rattling skeletons, charging Blood Knights and bat-winged Vargheists, and a pale lord who casts spells and vanishes in a cloud of bats.',
+  khorne: 'A bloodthirsty hunting pack: a three-headed daemon hound and his snarling Flesh Hounds, fed by fanatics with hooked axes, who mark one enemy as their quarry and fight harder for every wound it already bears.',
+  nurgle: 'A shambling plague-host that refuses to stay dead: a bookkeeping daemon, a rot-fly rider, bloated Blightkings and a rabble of one-eyed Plaguebearers, every one of them ward-hardened and spreading disease with each lucky blow.',
+  nighthaunt: 'A wailing grave-host of chained and scythe-swinging spirits led by a ghost knight: hard to hurt, gliding over walls and bodies, and sweeping across the field in a cold wave of terror.',
+  sylvaneth: 'A swift hunting flight of tree-spirits: a glaive-wielding Arch-Revenant, hovering Gossamid archers and dragonspite riders who swoop in, all chasing one marked quarry and singing louder with each kill.',
 }
 
 // The Grand Alliance of each army: the coloured edge on its tile and the line under its blurb.
 export const FACTION_ALLIANCE: Record<string, 'Order' | 'Chaos' | 'Death' | 'Destruction'> = {
   cities: 'Order', fyreslayers: 'Order', lumineth: 'Order', kharadron: 'Order', stormcast: 'Order', seraphon: 'Order',
-  slaves: 'Chaos', skaven: 'Chaos',
-  soulblight: 'Death',
+  sylvaneth: 'Order',
+  slaves: 'Chaos', skaven: 'Chaos', khorne: 'Chaos', nurgle: 'Chaos',
+  soulblight: 'Death', nighthaunt: 'Death',
   ironjawz: 'Destruction', kruleboyz: 'Destruction', gloomspite: 'Destruction',
 }
 const ALLIANCE_COLOR: Record<string, string> = { Order: '#6fa8ff', Chaos: '#c966e0', Death: '#5fd8b0', Destruction: '#ec8a3c' }
 
 // Preferred card order on the start screen (anything else follows, in data order).
 // Grouped by Grand Alliance (Order, Chaos, Death, Destruction), so each alliance sits together in the grid and shares an edge colour.
-const FACTION_ORDER = ['cities', 'fyreslayers', 'lumineth', 'kharadron', 'stormcast', 'seraphon', 'slaves', 'skaven', 'soulblight', 'ironjawz', 'kruleboyz', 'gloomspite']
+const FACTION_ORDER = ['cities', 'fyreslayers', 'lumineth', 'kharadron', 'stormcast', 'seraphon', 'sylvaneth', 'slaves', 'skaven', 'khorne', 'nurgle', 'soulblight', 'nighthaunt', 'ironjawz', 'kruleboyz', 'gloomspite']
 
 // Own-words one-liners for the regiment abilities and enhancements shown on the cards; the full rules text from the data is the
 // tooltip. An id without an entry here falls back to its data text.
@@ -118,6 +123,30 @@ export const OPTION_BLURBS: Record<string, string> = {
   'ironjawz.enhancement.trophy-skulls': 'Your general counts as Control 5 on objectives.',
   'ironjawz.enhancement.armour-of-gork': 'Your general shrugs off damage on a 6+ (Ward).',
   'ironjawz.enhancement.mega-bossy': 'After your general charges, nearby units add 1 to their charge rolls.',
+  'khorne.ability.the-scent-of-blood': 'Combat attacks against an enemy unit that has already taken damage this turn add 1 to hit and 1 to wound.',
+  'khorne.ability.savagery-upon-savagery': 'Once per battle, in a combat phase, a unit in combat gets +1 Attacks on its melee weapons (+D3 for a Hero) until the turn ends.',
+  'khorne.enh.evasive-hunter': 'Shooting attacks aimed at your general hit and wound at -1.',
+  'khorne.enh.sustained-by-gore': 'At the end of any turn, your general heals D3 damage.',
+  'khorne.enh.killing-pounce': 'Once per battle, in your charge phase, your general rolls one extra charge die, but then has to finish the charge in combat with your quarry.',
+  'khorne.enh.furious-bites': 'At the end of any turn, if your general is fighting your quarry, the quarry takes D3 mortal damage.',
+  'nurgle.ability.infested-with-wonders': 'When a friendly model is slain, an enemy unit touching it may take 1 mortal damage on a 4+ before it is removed.',
+  'nurgle.ability.locus-of-fecundity': 'Once a turn, in your hero phase, a friendly unit heals D3 damage.',
+  'nurgle.enh.pestilent-breath': 'In your shooting phase, an enemy unit within 7" of your general takes 1 mortal damage for each of its models that rolls a 5+.',
+  'nurgle.enh.summoner-of-plaguebearers': 'At the end of any turn, a Plaguebearers unit close to your general gets one slain model back.',
+  'nurgle.enh.gardener-of-nurgle': 'If your general holds an objective alone, a 3+ in your movement phase makes it desecrated: your units there get a 4+ Ward until the enemy takes it.',
+  'nurgle.enh.gift-of-febrile-frenzy': 'Once per battle, in a combat phase, friendly units close to your general add 1 to the Attacks of their melee weapons.',
+  'nighthaunt.ability.chorus-of-terror': 'Hit rolls for combat attacks against a friendly unit that charged this turn are at -1.',
+  'nighthaunt.ability.death-stalkers': 'Once, at the start of round 1, mark an enemy unit: your melee weapons have +1 Rend against it for the rest of the battle.',
+  'nighthaunt.enh.shadows-edge': "Your general's sword gains Crit (Mortal) next to Crit (Auto-wound); you pick which one applies before each attack.",
+  'nighthaunt.enh.soulfire-ring': 'At the end of any turn, if your general slew models in combat, it heals D6 damage.',
+  'nighthaunt.enh.cloaked-in-shadow': 'In each phase only one enemy unit may target your general with its attacks.',
+  'nighthaunt.enh.beacon-of-nagashizzar': 'Once per battle, in your hero phase, every friendly unit gets one slain model back.',
+  'sylvaneth.ability.lifebringers': 'Once a turn, at the end of any turn, every friendly unit heals D3 damage (rolled for each unit).',
+  'sylvaneth.ability.leaves-on-the-wind': 'Once per battle, at the end of any turn, a friendly unit in combat can retreat at once, with no mortal damage.',
+  'sylvaneth.enh.head-of-the-hunt': "While your quarry is within 9\" and visible, your general's melee weapons have +1 Rend.",
+  'sylvaneth.enh.bold-spirit': 'Once per battle, in a hero phase, friendly units close to your general add 1 to the wound rolls of their combat attacks for the turn.',
+  'sylvaneth.enh.cunning-pursuer': 'While your general is in combat, friendly units within 12" add 1 to their charge rolls (2 if it fights your quarry).',
+  'sylvaneth.enh.zephyrkin': 'After your general charges and fights, it may move up to 2D6" but cannot end that move in combat.',
 }
 
 interface FactionChoice {
@@ -180,13 +209,16 @@ html[data-ff="compact"] .ss-check { display: flex; align-items: center; gap: 10p
 html[data-ff="compact"] .ss-field { display: flex; flex-direction: column; gap: 6px; }
 html[data-ff="compact"] .ss-card button[aria-pressed] { font-size: 12px !important; }
 html[data-ff="compact"] .ss-secondary { font-size: 13px; }
-/* Twelve army tiles, grouped by Grand Alliance: 4 x 3 in a desktop column and on a phone held upright; a phone held sideways has the
-   width for 6 x 2 (iPhone 15 Pro landscape, 852x393: each tile ~130px wide with a two-line name). */
+/* Sixteen army tiles, grouped by Grand Alliance: 4 x 4 in a desktop column and on a phone held upright; a phone held sideways has the
+   width for 8 x 2 (iPhone 15 Pro landscape, 852x393: each tile ~95px wide with a two-line name and a 30px crest). */
 html[data-ff="compact"] .ss-armies { gap: 4px !important; }
 html[data-ff="compact"] .ss-armies button { padding: 4px 2px !important; font-size: 10.5px !important; gap: 2px !important; }
 html[data-ff="compact"] .ss-armies .ss-badge { width: 36px !important; height: 36px !important; }
 html[data-ff="compact"] .ss-armies .ss-badge svg { width: 32px; height: 32px; }
-@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; } }
+@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; }
+  html[data-ff="compact"] .ss-armies button { font-size: 9.5px !important; min-height: 64px; padding: 3px 1px !important; }
+  html[data-ff="compact"] .ss-armies .ss-badge { width: 30px !important; height: 30px !important; }
+  html[data-ff="compact"] .ss-armies .ss-badge svg { width: 27px; height: 27px; } }
 .ss-armies button { border-top-width: 3px !important; }
 ${Object.entries(ALLIANCE_COLOR).map(([name, c]) => `.ss-armies button[data-alliance="${name}"] { border-top-color: ${c} !important; }`).join(' ')}
 .ss-alliance { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: ${colors.muted}; margin-top: -4px; }
@@ -202,7 +234,7 @@ const label: CSSProperties = { fontSize: 12, textTransform: 'uppercase', letterS
 const row: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
 const input: CSSProperties = { ...buttonBase, flex: 1, cursor: 'text' }
 const blurb: CSSProperties = { ...mutedText, marginTop: -8 }
-// Twelve armies sit four by three (the CSS class makes it six by two on a phone held sideways); never an orphan card.
+// Sixteen armies sit four by four (the CSS class makes it eight by two on a phone held sideways); never an orphan card.
 const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }
 const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 4px', fontSize: 11.5, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
 const factionBadge: CSSProperties = { width: 52, height: 52, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }

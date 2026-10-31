@@ -1,0 +1,38 @@
+[
+  {
+    "id": "nurgle.enh.summoner-of-plaguebearers",
+    "faction": "nurgle",
+    "name": "Summoner of Plaguebearers",
+    "text": "At the end of any turn, pick a friendly Plaguebearers unit wholly within 14\" of the general and return 1 slain model to it.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nurgle.ability.summoner-of-plaguebearers"
+  },
+  {
+    "id": "nurgle.enh.gardener-of-nurgle",
+    "faction": "nurgle",
+    "name": "Gardener of Nurgle",
+    "text": "In your movement phase, if the general contests an objective that no enemy model contests, roll a dice. On a 3+ the objective becomes desecrated for you. Friendly units have Ward (4+) while they contest a desecrated objective. It stops being desecrated when your opponent gains control of it.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nurgle.ability.gardener-of-nurgle"
+  },
+  {
+    "id": "nurgle.enh.pestilent-breath",
+    "faction": "nurgle",
+    "name": "Pestilent Breath",
+    "text": "In your shooting phase, pick an enemy unit within 7\" of the general and roll a dice for each model in it. Each 5+ inflicts 1 mortal damage on that unit. This is not a Shoot ability.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nurgle.ability.pestilent-breath"
+  },
+  {
+    "id": "nurgle.enh.gift-of-febrile-frenzy",
+    "faction": "nurgle",
+    "name": "Gift of Febrile Frenzy",
+    "text": "Once per battle, in any combat phase, until the end of the phase friendly units wholly within 7\" of the general add 1 to the Attacks of their melee weapons. Companion weapons are not affected.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "nurgle.ability.gift-of-febrile-frenzy"
+  }
+]

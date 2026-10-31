@@ -1,0 +1,17 @@
+{
+  "id": "khorne",
+  "name": "Blades of Khorne",
+  "factionKeyword": "KHORNE",
+  "armyRule": "khorne.ability.fangs-of-the-blood-god",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#a3141c",
+    "secondary": "#2b2224",
+    "trim": "#e8dcc4",
+    "metal": "#7a5a2a",
+    "decal": "#ff8a2a"
+  },
+  "combatPatrols": [
+    "khorne.army.fangs-of-the-blood-god"
+  ]
+}

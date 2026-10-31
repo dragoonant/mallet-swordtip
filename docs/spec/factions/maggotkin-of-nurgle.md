@@ -321,15 +321,32 @@ gives no champion, standard or musician rules, so no variants. Bubonic Cell figu
 
 ## 11. Implementation notes
 
-Not built yet. Planned layout, following Skaven: data `src/data/factions/nurgle/` (faction.json, datasheets/{spoilpox-scrivener,
-pusgoyle-blightlord, putrid-blightkings, plaguebearers}.json, weapons.json, abilities.json, enhancements.json,
-patrols/bleak-host.json); hooks `src/engine/factions/nurgle.ts` (`...nurgleHooks` in `code-hooks.ts`; AI hints wired in
-`src/ai/utility.ts`); tests `tests/engine/nurgle.test.ts`, `tests/data/nurgle.test.ts`, one test per MON- id. Patrol
-`battleTraits: ['nurgle.ability.the-infectious-hosts', 'nurgle.ability.diseased', 'nurgle.ability.nurgles-embrace']`,
-regiment list Infested with Wonders (default) then Locus of Fecundity, enhancement list Pestilent Breath (default), Summoner of
-Plaguebearers, Gardener of Nurgle, Gift of Febrile Frenzy. Figure mapping keys `<datasheet id>/<modelId>`.
+Built (F14). Data `src/data/factions/nurgle/` (faction.json, datasheets/{spoilpox-scrivener, pusgoyle-blightlord, putrid-blightkings,
+plaguebearers}.json, weapons.json, abilities.json, enhancements.json, patrols/bleak-host.json); hooks `src/engine/factions/nurgle.ts`
+(`...nurgleHooks` in `code-hooks.ts`); AI hints `nurgleAbilityTiming` / `nurgleTargetBonus` / `nurgleModeBonus`, wired in
+`src/ai/utility.ts` beside the other armies; tests `tests/engine/nurgle.test.ts`, `tests/data/nurgle.test.ts`, one test per MON- id.
+Patrol `battleTraits: ['nurgle.ability.the-infectious-hosts', 'nurgle.ability.diseased', 'nurgle.ability.nurgles-embrace']`, regiment
+list Infested with Wonders (default) then Locus of Fecundity, enhancement list Pestilent Breath (default), Summoner of Plaguebearers,
+Gardener of Nurgle, Gift of Febrile Frenzy. Figure mapping keys `<datasheet id>/<modelId>`; model ids `spoilpox-scrivener`,
+`pusgoyle-blightlord`, `putrid-blightking`, `plaguebearer`.
 
----
+As built, where it differs from or adds to §7:
+- C1 (`onOwnCriticalHits`) and the C2 readout hook (`resourceReadout`, folded by `factionResources`) came from the engine-core stage
+  (13-engine-port-plan §3.12). `nurgleDiseased` implements both; the HUD itself is client work, not done here.
+- Nurgle's Embrace raises its question in the `turn.end.abilities` window as a `chooseOption` with topic `abilityChoice` and
+  `data.code: 'nurgleEmbrace'`; `hookService.handler` hands the answer to the hook's `answer`, `pass` means "stop". Each option's
+  `hint` is `{ value, unitId }` (a likely kill, then the enemy Hero, then the busiest fight) so the AI takes the best target.
+  `embraceTargets(state, player)` is exported for tests and the client.
+- Gardener of Nurgle is not offered for an objective that is already desecrated for the player (it would change nothing); the site it
+  picks is the eligible one nearest the board centre. The ward effect carries the enhancement ability's own id, so a mirror match shares one
+  `mnDesecrated` map (an objective is only ever desecrated for one player).
+- Relentless Attackers refuses Infantry targets whose printed Health is 6 or more (its dice could never score), in the target list,
+  not only in `canUse`. Printed Health is read from the datasheet model's `stats.W`.
+- Infested with Wonders also triggers for models removed by the coherency check (the engine routes those through the same slain-model
+  path); approximation: the engine picks the enemy unit (fewest wounds left, ties by unit id).
+- Sim (`npm run sim -- --games 20 --seed 5 --ai --armies nurgle,<other>`, default regiment and enhancement on games 0-1 of each four, variants on
+  games 2-3): vs Cities 15-4 (1 draw), Ironjawz 12-6 (2), Kharadron 17-3, Stormcast 17-3, Slaves 19-1; no violations.
+  Nurgle wins easily because every warscroll prints Ward 5+; no tuning was done.
 
 ## Appendix A — Bubonic Cell (separate PDF; out of scope)
 

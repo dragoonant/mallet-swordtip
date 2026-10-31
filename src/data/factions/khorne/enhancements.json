@@ -1,0 +1,38 @@
+[
+  {
+    "id": "khorne.enh.evasive-hunter",
+    "faction": "khorne",
+    "name": "Evasive Hunter",
+    "text": "Shooting attacks that target the general get -1 to hit and -1 to wound.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "khorne.ability.evasive-hunter"
+  },
+  {
+    "id": "khorne.enh.sustained-by-gore",
+    "faction": "khorne",
+    "name": "Sustained by Gore",
+    "text": "At the end of any turn, heal D3 damage on the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "khorne.ability.sustained-by-gore"
+  },
+  {
+    "id": "khorne.enh.killing-pounce",
+    "faction": "khorne",
+    "name": "Killing Pounce",
+    "text": "Once per battle, in your charge phase, the general rolls one extra charge die for the turn, but its charge then has to end in combat with your quarry.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "khorne.ability.killing-pounce"
+  },
+  {
+    "id": "khorne.enh.furious-bites",
+    "faction": "khorne",
+    "name": "Furious Bites",
+    "text": "At the end of any turn, if the general is in combat with your quarry, the quarry suffers D3 mortal damage.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "khorne.ability.furious-bites"
+  }
+]

@@ -1,0 +1,53 @@
+[
+  {
+    "id": "nighthaunt.unit.spirit-hosts",
+    "faction": "nighthaunt",
+    "name": "Spirit Hosts",
+    "keywords": [
+      "INFANTRY",
+      "FLY"
+    ],
+    "factionKeywords": [
+      "DEATH",
+      "NIGHTHAUNT"
+    ],
+    "stats": {
+      "M": 8,
+      "W": 3,
+      "Sv": 4,
+      "OC": 1,
+      "ward": 6
+    },
+    "composition": [
+      {
+        "modelId": "spirit-host",
+        "name": "Spirit Host",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": {
+          "shape": "round",
+          "mm": 50
+        },
+        "weapons": {
+          "default": [
+            "nighthaunt.weapon.spectral-claws-and-daggers"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "nighthaunt.ability.drawn-to-war"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

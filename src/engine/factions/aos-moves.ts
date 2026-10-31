@@ -10,6 +10,7 @@ import {
 import { hookService } from '../hooks-impl'
 import type { ModelPlacement } from '../actions'
 import type { EngineContext } from '../modules'
+import type { AbilityWindow } from '../abilities'
 import { boardModelsOf, datasheetOf, enemyModelsOnBoard, hasKeyword, setModelPos, territoryOf, unitModels } from '../state'
 import { terrainService } from '../terrain'
 import type { EdgeRef, GameState, Model, ModelId, PlayerId, UnitId, Vec2, Vec3 } from '../types'
@@ -44,9 +45,29 @@ export interface SlideResult { ok: boolean; reason?: string; resolved?: Resolved
 //  normalMove         F12 (SKV-BT-1 Always Three Clawsteps Ahead): the slide is a Normal Move: no model's straight path may come
 //                     within an enemy model's combat range at any point (FLY units ignore that, as in the movement phase), and it
 //                     implies mayNotEndInCombat. approximation: still a rigid slide from the short heading list
+//  closerToUnit       F14 (BOK-AB-1 Stalk the Prey): the closest-model gap to that unit must strictly shrink ("end closer to it");
+//                     ignored while that unit is not on the battlefield. slideOptions puts a "Toward <name>" heading first
+//  endFree            F14 (BOK-AB-1): a unit that starts in combat need not end in combat (overrides the IJZ-2.2 default) and need
+//                     not leave it either
+//  noCombatPath       F14 (SYL-AB-2 Zephyrspites): the normalMove path test applied even when every model has FLY, plus
+//                     mayNotEndInCombat; slideOptions offers nothing at all to a unit that starts in combat
 // A Move-ability edge constraint from a code hook (LRL-RA-2 Roaring Headwind, hookService.moveEdgeConstraintFor) is always
 // applied the same way as towardEdge.
-export interface SlideOpts { passThrough?: boolean; mustEndOutOfCombat?: boolean; mayNotEndInCombat?: boolean; towardEdge?: EdgeRef | null; normalMove?: boolean }
+export interface SlideOpts {
+  passThrough?: boolean; mustEndOutOfCombat?: boolean; mayNotEndInCombat?: boolean; towardEdge?: EdgeRef | null; normalMove?: boolean
+  closerToUnit?: UnitId | null; endFree?: boolean; noCombatPath?: boolean
+}
+
+// F14: the closest-model gap between the unit (optionally slid by dx, dz) and another unit; Infinity when either has no models
+export function unitGapAfter(state: GameState, unitId: UnitId, otherUnitId: UnitId, dx = 0, dz = 0): number {
+  const theirs = state.units[otherUnitId]?.location === 'board' ? unitModels(state, otherUnitId) : []
+  let best = Infinity
+  for (const m of unitModels(state, unitId)) {
+    const at = fp(m, { x: m.pos.x + dx, y: m.pos.y, z: m.pos.z + dz })
+    for (const t of theirs) best = Math.min(best, horizontalGap(at, t))
+  }
+  return best
+}
 
 const edgeVector = (e: EdgeRef): Vec2 => (e.axis === 'x' ? { x: e.sign, z: 0 } : { x: 0, z: e.sign })
 const EDGE_NAMES: Record<string, string> = { 'z:-1': 'the top edge', 'z:1': 'the bottom edge', 'x:-1': 'the left edge', 'x:1': 'the right edge' }
@@ -60,8 +81,12 @@ export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: num
   const models = unitModels(state, unitId)
   if (models.length === 0) return { ok: false, reason: 'no models' }
   if (Math.hypot(dx, dz) > maxDistance + 1e-3) return { ok: false, reason: `further than ${maxDistance}"` }
-  const outOfCombat = opts.mustEndOutOfCombat === true || opts.mayNotEndInCombat === true || opts.normalMove === true
-  if (outOfCombat) mustEndInCombat = false
+  const outOfCombat = opts.mustEndOutOfCombat === true || opts.mayNotEndInCombat === true || opts.normalMove === true || opts.noCombatPath === true
+  if (outOfCombat || opts.endFree) mustEndInCombat = false
+  const closer = opts.closerToUnit && state.units[opts.closerToUnit]?.location === 'board' ? opts.closerToUnit : null
+  if (closer && !(unitGapAfter(state, unitId, closer, dx, dz) < unitGapAfter(state, unitId, closer) - EPS)) {
+    return { ok: false, reason: `the move must end closer to ${state.units[closer].name}` }
+  }
   for (const edge of [opts.towardEdge ?? null, hookService.moveEdgeConstraintFor(state, unitId)]) {
     if (!edge) continue
     const v = edgeVector(edge)
@@ -84,8 +109,9 @@ export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: num
     if (r.distance > EPS && terrainService.crossesImpassable(state, r.model, r.path)) return { ok: false, reason: 'impassable terrain in the way' }
   }
   const enemies = enemyModelsOnBoard(state, unit.player)
-  // F12 normalMove: the path may not enter any enemy combat range (CORE-6.4), unless every model can fly
-  if (opts.normalMove && !models.every((m) => hasKeyword(state, m.unitId, 'FLY'))) {
+  // F12 normalMove: the path may not enter any enemy combat range (CORE-6.4), unless every model can fly; F14 noCombatPath: not
+  // even then
+  if (opts.noCombatPath || (opts.normalMove && !models.every((m) => hasKeyword(state, m.unitId, 'FLY')))) {
     for (const r of result.resolved) {
       if (r.distance <= EPS) continue
       if (samplePath(r.path).some((p) => anyWithinEngagementRange(fp(r.model, p, r.facing), enemies))) return { ok: false, reason: 'a Normal Move may not pass through combat range' }
@@ -103,7 +129,10 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
   const models = unit ? unitModels(state, unitId) : []
   const out: MoveOption[] = []
   if (!unit || unit.location !== 'board' || models.length === 0) return out
-  const mustEnd = enemiesInCombat(state, unitId).length > 0 && !opts.mustEndOutOfCombat && !opts.mayNotEndInCombat && !opts.normalMove
+  const inCombat = enemiesInCombat(state, unitId).length > 0
+  // F14 noCombatPath: every path would start inside a combat range, so a unit in combat cannot make the move at all
+  if (opts.noCombatPath && inCombat) return out
+  const mustEnd = inCombat && !opts.mustEndOutOfCombat && !opts.mayNotEndInCombat && !opts.normalMove && !opts.endFree
   const c = centroidOf(models)
   const enemies = enemyModelsOnBoard(state, unit.player)
   const nearestEnemy = enemies.length ? enemies.reduce((a, b) => (dist2D(c, b.pos) < dist2D(c, a.pos) ? b : a)) : null
@@ -111,6 +140,13 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
   const heads: { dir: Vec2; label: string }[] = []
   if (opts.towardEdge) heads.push({ dir: edgeVector(opts.towardEdge), label: `Toward ${edgeName(opts.towardEdge)}` })
   const unit2 = (to: Vec2): Vec2 | null => { const d = dist2D(c, to); return d < 1e-6 ? null : { x: (to.x - c.x) / d, z: (to.z - c.z) / d } }
+  // F14 closerToUnit: head for that unit's model nearest the centroid first
+  const closerUnit = opts.closerToUnit && state.units[opts.closerToUnit]?.location === 'board' ? state.units[opts.closerToUnit] : null
+  if (closerUnit) {
+    const near = unitModels(state, closerUnit.id).reduce<Model | null>((a, b) => (!a || dist2D(c, b.pos) < dist2D(c, a.pos) ? b : a), null)
+    const v = near ? unit2(near.pos) : null
+    if (v) heads.push({ dir: v, label: `Toward ${closerUnit.name}` })
+  }
   if (nearestEnemy) {
     const v = unit2(nearestEnemy.pos)
     if (v) { heads.push({ dir: v, label: 'Toward the nearest enemy' }); heads.push({ dir: { x: -v.x, z: -v.z }, label: 'Back away from the nearest enemy' }) }
@@ -121,7 +157,7 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
   }
   heads.push({ dir: { x: 1, z: 0 }, label: 'Slide right' }, { dir: { x: -1, z: 0 }, label: 'Slide left' }, { dir: { x: 0, z: 1 }, label: 'Slide down the table' }, { dir: { x: 0, z: -1 }, label: 'Slide up the table' })
   // diagonals: a unit boxed in on all four sides often still has a diagonal way out (retreats, edge moves)
-  if (opts.towardEdge || opts.mustEndOutOfCombat || opts.mayNotEndInCombat || opts.normalMove) {
+  if (opts.towardEdge || opts.mustEndOutOfCombat || opts.mayNotEndInCombat || opts.normalMove || opts.closerToUnit || opts.noCombatPath || opts.endFree) {
     const D = Math.SQRT1_2
     heads.push({ dir: { x: D, z: D }, label: 'Slide down and right' }, { dir: { x: -D, z: D }, label: 'Slide down and left' }, { dir: { x: D, z: -D }, label: 'Slide up and right' }, { dir: { x: -D, z: -D }, label: 'Slide up and left' })
   }
@@ -245,7 +281,10 @@ export function applyRetreat(ctx: EngineContext, unitId: UnitId, optionId: strin
 // ---------- queue of units still to be offered a move (A Proper Ruckus moves several in turn) ----------
 // kind 'slide' (default) offers slideOptions(..., opts); 'retreat' offers retreatOptions (F8). The abilities loop
 // (abilities.ts nextStep) asks one unit at a time; pass = the unit stays.
-export interface MoveQueue { abilityId: string; player: PlayerId; maxDistance: number; queue: UnitId[]; kind?: 'slide' | 'retreat'; opts?: SlideOpts }
+// F14 (SYL C2) atWindow: the queue waits, untouched, until an ability window of that name runs (e.g. 'shooting' = the
+// shooting:after:<unitId> window after the activation, 'fightAfter' = right after a unit's Fight; abilities.ts AbilityWindow).
+// A queue still waiting when the phase ends is dropped with the phase marks.
+export interface MoveQueue { abilityId: string; player: PlayerId; maxDistance: number; queue: UnitId[]; kind?: 'slide' | 'retreat'; opts?: SlideOpts; atWindow?: AbilityWindow }
 const QUEUE_PREFIX = 'abil:mq='
 
 export function readMoveQueue(state: GameState): MoveQueue | null {

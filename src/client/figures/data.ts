@@ -259,6 +259,22 @@ const KNOWN_KIT: Record<string, KitId> = {
   'soulblight.unit.deathrattle-skeletons': 'csm-cultist',
   'soulblight.unit.blood-knights': 'cdm-bloodcrusher',
   'soulblight.unit.vargheists': 'cdm-flesh-hound',
+  // F14 armies: stand-ins shown only until the GLB loads, nearest existing 42k kit per warscroll.
+  'khorne.unit.karanak': 'cdm-flesh-hound',
+  'khorne.unit.flesh-hounds': 'cdm-flesh-hound',
+  'khorne.unit.claws-of-karanak': 'we-berzerker',
+  'nurgle.unit.spoilpox-scrivener': 'ael-farseer',
+  'nurgle.unit.pusgoyle-blightlord': 'cdm-bloodcrusher',
+  'nurgle.unit.putrid-blightkings': 'we-berzerker',
+  'nurgle.unit.plaguebearers': 'csm-cultist',
+  'nighthaunt.unit.knight-of-shrouds': 'ael-farseer',
+  'nighthaunt.unit.spirit-hosts': 'csm-cultist',
+  'nighthaunt.unit.grimghast-reapers': 'csm-cultist',
+  'nighthaunt.unit.chainrasps': 'csm-cultist',
+  'sylvaneth.unit.arch-revenant': 'ael-farseer',
+  'sylvaneth.unit.gossamid-archers': 'ael-guardian',
+  'sylvaneth.unit.spiterider-lancers': 'cdm-bloodcrusher',
+  'sylvaneth.unit.revenant-seekers': 'cdm-bloodcrusher',
 }
 
 /** Models of a mixed unit that look different from the rest of it (a flamer sister is not a rifle sister), keyed
@@ -268,6 +284,10 @@ const KNOWN_KIT_BY_MODEL: Record<string, KitId> = {
   'kharadron.unit.arkanaut-company-gunners/arkanaut-volley': 'lov-hearthkyn-magna',
   'kharadron.unit.arkanaut-company-gunners/arkanaut-skyhook': 'lov-hearthkyn-hylas',
   'kharadron.unit.skywardens/skywarden-volley': 'lov-hearthkyn-magna',
+  // Claws of Karanak: the Packlord leads, the Hound of Wrath is a hound, the Brutalisers and Whelps are cultists.
+  'khorne.unit.claws-of-karanak/packlord': 'we-berzerker-champion',
+  'khorne.unit.claws-of-karanak/hound-of-wrath': 'cdm-flesh-hound',
+  'khorne.unit.claws-of-karanak/blood-whelp': 'csm-cultist',
   // The Sunblood leads his Bodyguards: the champion's stand-in is the berzerker champion.
   'seraphon.unit.sunblood-pack/sunblood': 'we-berzerker-champion',
   'da.intercessor-squad/sergeant': 'da-sergeant',
@@ -749,6 +769,28 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   'soulblight.unit.deathrattle-skeletons': 1.1,
   'soulblight.unit.blood-knights': 1.9,
   'soulblight.unit.vargheists': 1.7,
+  // Khorne: daemon hounds low and chunky on 60x35 / 75x42mm ovals, the cultist pack a little shorter than a footsoldier.
+  'khorne.unit.karanak': 2.0,
+  'khorne.unit.flesh-hounds': 1.2,
+  'khorne.unit.claws-of-karanak': 1.05,
+  'khorne.unit.claws-of-karanak/packlord': 1.2,
+  'khorne.unit.claws-of-karanak/hound-of-wrath': 1.15,
+  'khorne.unit.claws-of-karanak/blood-whelp': 0.95,
+  // Nurgle: bloated Blightkings a head above a Plaguebearer, the Scrivener short and round, the Blightlord a big fly on a 60mm base.
+  'nurgle.unit.spoilpox-scrivener': 1.25,
+  'nurgle.unit.pusgoyle-blightlord': 2.3,
+  'nurgle.unit.putrid-blightkings': 1.4,
+  'nurgle.unit.plaguebearers': 1.05,
+  // Nighthaunt: ghosts float on a tail that reaches the base; hosts are a fat blob on a 50mm base.
+  'nighthaunt.unit.knight-of-shrouds': 1.4,
+  'nighthaunt.unit.spirit-hosts': 1.4,
+  'nighthaunt.unit.grimghast-reapers': 1.15,
+  'nighthaunt.unit.chainrasps': 1.0,
+  // Sylvaneth: spite-borne flyers a touch taller than a footsoldier, dragonspite riders on 60mm bases.
+  'sylvaneth.unit.arch-revenant': 1.5,
+  'sylvaneth.unit.gossamid-archers': 1.25,
+  'sylvaneth.unit.spiterider-lancers': 1.9,
+  'sylvaneth.unit.revenant-seekers': 1.9,
   // Space Wolves: the Invictor Tactical Warsuit is a tall bipedal walker on a 90mm base.
   'sw.invictor-tactical-warsuit': 2.4,
   'sw.battle-leader-thoryk': 1.2,

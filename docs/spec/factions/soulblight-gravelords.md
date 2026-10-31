@@ -92,9 +92,10 @@ loadout. The Vampire Lord is the only **Wizard**: the keyword is printed with no
 - Cloud of Bats: [interp] usable while the general is in combat (nothing forbids it). It is not a Retreat, so there is no mortal
   damage. Being set up, the general cannot use Move abilities for the rest of the phase (CORE-6.13). [RULING] Built on the Magmic
   Tunnels redeploy: the player picks the spot, and passing on the spot decision leaves the general where it stands (the use is spent).
-- Aura of Night: [RULING] Rend is a characteristic subtracted from the roll, not a modifier (CORE-2.5 interp in 10-rules-core), so
-  Rend still applies. Only negative save modifiers (an ability's or a card's "−1 to save rolls") are dropped. Positive modifiers
-  still apply, capped at +1.
+- Aura of Night: [RULING, revised F14] the core rules (17.0 step 3, and the Rend glossary entry) have the defender subtract the
+  weapon's Rend from the save roll, so Rend is a negative modifier to the save roll and Aura of Night ignores it along with every
+  other negative save modifier (an ability's or a card's "−1 to save rolls"). Positive modifiers still apply, capped at +1. (The
+  F12 reading "Rend is not a modifier" is withdrawn; Nighthaunt Ethereal uses the same reading.)
 - Spirit Gale: [interp] treated as a **Spell** with casting value 7, like Guide the Gusts (LRL-AB-1). The PDF prints no Spell keyword,
   but a casting roll only exists for spells. So a double 1 miscasts (D3 mortal damage to the general, no more spells this phase),
   an enemy Wizard may unbind it, and it uses up the Vampire Lord's single cast for the phase (shared with Vile Transference).
@@ -249,7 +250,7 @@ faction file (detailed below the table).
   Effect gains `ignoreNegativeModifiers?: RollName`. hooks-impl answers it at the matching roll hook as
   `{ kind: 'roll', ignoreNegative: true }`, and `RollModifierResult` gains `ignoreNegative?: boolean` (frozen contract: additive, note in
   13-engine-port-plan.md). In `runStage` the save branch uses
-  `netSaveModifier(ent.ignoreNeg ? mods.filter((m) => m > 0) : mods)`. Rend (`p.rend`) is untouched. Card save modifiers
+  `netSaveModifier(ent.ignoreNeg ? mods.filter((m) => m > 0) : mods)`. F14: Rend is dropped too (core 17.0; §5 ruling revised). Card save modifiers
   (`cardSaveModifier`) arrive in `statics` and are filtered the same way.
 
 ---
@@ -296,7 +297,7 @@ faction file (detailed below the table).
 | SBG-RA-3 | Ruinous Chargers: only if the Blood Knights charged this turn; D3 mortal to each enemy unit passed across in that charge; once per battle; usable in the opponent's charge phase. |
 | SBG-ENH-1 | Grave-Sand Shard: legion rolls of 5 also return models, only for Skeletons within 9" of the general, once per battle. |
 | SBG-ENH-2 | Cloud of Bats: once per battle the general is set up again anywhere > 6" from enemies, also from combat, with no retreat damage. |
-| SBG-ENH-3 | Aura of Night: a −1 save modifier is ignored against shooting attacks on the general; Rend still applies; melee attacks unaffected. |
+| SBG-ENH-3 | Aura of Night: a −1 save modifier and the weapon's Rend are ignored against shooting attacks on the general; melee attacks unaffected. |
 | SBG-ENH-4 | Spirit Gale: casting 7+ inflicts 1 mortal on every enemy unit on the battlefield (not reserves); usable every hero phase. |
 | SBG-MAG-1 | The Vampire Lord casts at most one of Vile Transference / Spirit Gale per hero phase; a double 1 miscasts (D3 mortal to the Lord); enemy Wizards may unbind. |
 | SBG-AB-1 | Vile Transference: casting 6+; dice = target's Health characteristic; each 5+ = 1 mortal on the target and Heal (1) on the Lord; target visible and within 6". |

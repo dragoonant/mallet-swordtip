@@ -4,6 +4,7 @@
 // tool buttons, which only ever touch uiStore — never GameState directly.
 import { useEffect, useState, type CSSProperties } from 'react'
 import { unitModels, type Action, type GameState, type Phase, type PlayerId } from '@/engine'
+import { factionResources } from '@/engine/hooks-impl'
 import { useGameStore } from '../store/game'
 import { useCaughtUp, useDisplayState } from '../presentation/presentedStore'
 import { useUiStore } from './uiStore'
@@ -546,6 +547,24 @@ function TacticsLine({ id, state }: { id: PlayerId; state: GameState }) {
   )
 }
 
+/** F14: an army's own counters (Nurgle's Disease n/7, Sylvaneth's Chords n/3), asked of the engine's resourceReadout hooks; the help text is the
+ *  shared tooltip. Armies with none draw nothing. */
+function ResourceLines({ id, state }: { id: PlayerId; state: GameState }) {
+  const list = factionResources(state, id)
+  if (list.length === 0) return null
+  return (
+    <>
+      {list.map((r) => (
+        <Tooltip key={r.id} title={`${r.label}${r.max !== undefined ? ` ${r.value}/${r.max}` : ` ${r.value}`}`} body={r.help} placement="bottom">
+          <div style={{ fontSize: 11.5, color: colors.muted, cursor: 'help' }} data-testid={`hud-resource-${id}-${r.id}`} tabIndex={0}>
+            {r.label} <strong style={{ color: colors.text }}>{r.value}{r.max !== undefined ? `/${r.max}` : ''}</strong>
+          </div>
+        </Tooltip>
+      ))}
+    </>
+  )
+}
+
 function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
   const bundle = useGameStore((s) => s.bundle)
   const [open, setOpen] = useState(false)
@@ -564,6 +583,7 @@ function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
         <div style={{ fontSize: 12, color: colors.muted }} data-testid={`hud-underdog-${id}`}>Underdog</div>
       )}
       <TacticsLine id={id} state={state} />
+      <ResourceLines id={id} state={state} />
       <button style={vpButton} data-testid={`hud-vp-${id}`} onClick={() => setOpen((v) => !v)}>
         VP {p.vp} {scored.length > 0 ? (open ? '▲' : '▼') : ''}
       </button>
@@ -741,6 +761,7 @@ function CompactBadge({ id, state, open, onToggle }: { id: PlayerId; state: Game
   const color = id === 'A' ? colors.playerA : colors.playerB
   const active = state.activePlayer === id
   const scored = state.mission.scored.filter((row) => row.player === id).sort((a, b) => b.round - a.round)
+  const resources = factionResources(state, id)
   return (
     <div style={cBadgeWrap}>
       <button
@@ -753,6 +774,7 @@ function CompactBadge({ id, state, open, onToggle }: { id: PlayerId; state: Game
         <span style={{ ...cBadgeName, color }}>{p.name}</span>
         <span style={cBadgeNums}>
           <span data-testid={`hud-vp-${id}`}>VP {p.vp}</span>{state.underdog === id ? ' · underdog' : ''}
+          {resources.map((r) => <span key={r.id} data-testid={`hud-badge-resource-${id}-${r.id}`}>{` · ${r.label.slice(0, 3)} ${r.value}${r.max !== undefined ? `/${r.max}` : ''}`}</span>)}
         </span>
       </button>
       {open && (
@@ -761,6 +783,7 @@ function CompactBadge({ id, state, open, onToggle }: { id: PlayerId; state: Game
             {p.name} ({id})
           </div>
           <TacticsLine id={id} state={state} />
+          <ResourceLines id={id} state={state} />
           <div style={{ ...vpBreakdown, width: 'auto', maxHeight: 'none', marginTop: 0 }} data-testid={`hud-vp-breakdown-${id}`}>
             {scored.length === 0 && <div style={mutedText}>No VP scored yet.</div>}
             {scored.map((row, i) => (

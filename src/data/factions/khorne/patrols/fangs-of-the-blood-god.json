@@ -1,0 +1,26 @@
+{
+  "id": "khorne.army.fangs-of-the-blood-god",
+  "faction": "khorne",
+  "name": "Fangs of the Blood God",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "karanak", "datasheet": "khorne.unit.karanak", "size": 1 },
+    { "ref": "flesh-hounds-1", "datasheet": "khorne.unit.flesh-hounds", "size": 5 },
+    { "ref": "flesh-hounds-2", "datasheet": "khorne.unit.flesh-hounds", "size": 5 },
+    { "ref": "claws-of-karanak", "datasheet": "khorne.unit.claws-of-karanak", "size": 8 }
+  ],
+  "warlord": "karanak",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": ["khorne.ability.the-quarry", "khorne.ability.blood-drenched"],
+  "regimentAbilities": [
+    { "id": "khorne.ability.the-scent-of-blood", "default": true },
+    { "id": "khorne.ability.savagery-upon-savagery", "default": false }
+  ],
+  "enhancements": [
+    { "id": "khorne.enh.evasive-hunter", "default": true },
+    { "id": "khorne.enh.sustained-by-gore", "default": false },
+    { "id": "khorne.enh.killing-pounce", "default": false },
+    { "id": "khorne.enh.furious-bites", "default": false }
+  ]
+}

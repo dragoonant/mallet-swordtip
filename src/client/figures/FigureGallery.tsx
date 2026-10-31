@@ -260,7 +260,7 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'soulreaper', faction: 'thousand-sons', label: 'Scarab Terminator (soulreaper cannon)' },
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'hellfyre', faction: 'thousand-sons', label: 'Scarab Terminator (hellfyre rack)' },
   { datasheetId: 'ths.tzaangors', modelId: 'tzaangor', faction: 'thousand-sons', label: 'Tzaangor' },
-  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight)
+  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight | khorne | nurgle | nighthaunt | sylvaneth)
   { datasheetId: 'cities.unit.freeguild-cavalier-marshal', modelId: 'cavalier-marshal', faction: 'cities', label: 'Cavalier-Marshal' },
   { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm', faction: 'cities', label: 'Steelhelm' },
   { datasheetId: 'cities.unit.freeguild-cavaliers', modelId: 'cavalier', faction: 'cities', label: 'Freeguild Cavalier' },
@@ -320,6 +320,24 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'soulblight.unit.deathrattle-skeletons', modelId: 'deathrattle-skeleton', faction: 'soulblight', label: 'Deathrattle Skeleton' },
   { datasheetId: 'soulblight.unit.blood-knights', modelId: 'blood-knight', faction: 'soulblight', label: 'Blood Knight' },
   { datasheetId: 'soulblight.unit.vargheists', modelId: 'vargheist', faction: 'soulblight', label: 'Vargheist' },
+  { datasheetId: 'khorne.unit.karanak', modelId: 'karanak', faction: 'khorne', label: 'Karanak' },
+  { datasheetId: 'khorne.unit.flesh-hounds', modelId: 'flesh-hound', faction: 'khorne', label: 'Flesh Hound' },
+  { datasheetId: 'khorne.unit.claws-of-karanak', modelId: 'packlord', faction: 'khorne', label: 'Claws of Karanak (Packlord)' },
+  { datasheetId: 'khorne.unit.claws-of-karanak', modelId: 'hound-of-wrath', faction: 'khorne', label: 'Claws of Karanak (Hound of Wrath)' },
+  { datasheetId: 'khorne.unit.claws-of-karanak', modelId: 'brutaliser', faction: 'khorne', label: 'Claws of Karanak (Brutaliser)' },
+  { datasheetId: 'khorne.unit.claws-of-karanak', modelId: 'blood-whelp', faction: 'khorne', label: 'Claws of Karanak (Blood Whelp)' },
+  { datasheetId: 'nurgle.unit.spoilpox-scrivener', modelId: 'spoilpox-scrivener', faction: 'nurgle', label: 'Spoilpox Scrivener' },
+  { datasheetId: 'nurgle.unit.pusgoyle-blightlord', modelId: 'pusgoyle-blightlord', faction: 'nurgle', label: 'Pusgoyle Blightlord' },
+  { datasheetId: 'nurgle.unit.putrid-blightkings', modelId: 'putrid-blightking', faction: 'nurgle', label: 'Putrid Blightking' },
+  { datasheetId: 'nurgle.unit.plaguebearers', modelId: 'plaguebearer', faction: 'nurgle', label: 'Plaguebearer' },
+  { datasheetId: 'nighthaunt.unit.knight-of-shrouds', modelId: 'knight-of-shrouds', faction: 'nighthaunt', label: 'Knight of Shrouds' },
+  { datasheetId: 'nighthaunt.unit.spirit-hosts', modelId: 'spirit-host', faction: 'nighthaunt', label: 'Spirit Host' },
+  { datasheetId: 'nighthaunt.unit.grimghast-reapers', modelId: 'grimghast-reaper', faction: 'nighthaunt', label: 'Grimghast Reaper' },
+  { datasheetId: 'nighthaunt.unit.chainrasps', modelId: 'chainrasp', faction: 'nighthaunt', label: 'Chainrasp' },
+  { datasheetId: 'sylvaneth.unit.arch-revenant', modelId: 'arch-revenant', faction: 'sylvaneth', label: 'Arch-Revenant' },
+  { datasheetId: 'sylvaneth.unit.gossamid-archers', modelId: 'gossamid-archer', faction: 'sylvaneth', label: 'Gossamid Archer' },
+  { datasheetId: 'sylvaneth.unit.spiterider-lancers', modelId: 'spiterider-lancer', faction: 'sylvaneth', label: 'Spiterider Lancer' },
+  { datasheetId: 'sylvaneth.unit.revenant-seekers', modelId: 'revenant-seeker', faction: 'sylvaneth', label: 'Revenant Seeker' },
 ]
 
 // Figures are true tabletop-miniature scale (~1-2 world-inches tall — see resolveBase), so packing

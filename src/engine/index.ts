@@ -102,6 +102,8 @@ export const DEFAULT_MODULES: ModuleTable = {
     abilityUse: abilityService.handler,
     abilityTarget: abilityService.handler,
     abilityMode: abilityService.handler,
+    // F14 (core 20.0): the attacker's pick between a weapon's critical-hit abilities (attack.ts)
+    critChoice: attackService.handler,
   },
 }
 

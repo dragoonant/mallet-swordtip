@@ -1,0 +1,28 @@
+[
+  {
+    "id": "nurgle.unit.spoilpox-scrivener",
+    "faction": "nurgle",
+    "name": "Spoilpox Scrivener",
+    "keywords": ["HERO", "INFANTRY"],
+    "factionKeywords": ["CHAOS", "MAGGOTKIN OF NURGLE"],
+    "stats": { "M": 4, "W": 5, "Sv": 5, "OC": 2, "ward": 5 },
+    "composition": [
+      {
+        "modelId": "spoilpox-scrivener",
+        "name": "Spoilpox Scrivener",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["nurgle.weapon.disgusting-sneezes", "nurgle.weapon.distended-maw"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["nurgle.ability.keep-counting"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

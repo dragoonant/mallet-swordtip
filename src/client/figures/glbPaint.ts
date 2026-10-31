@@ -57,6 +57,15 @@ export const SOURCE_HUES: Record<string, { major: string | null; minor: string |
   skaven: { major: '#7a5e4c', minor: '#b08090' },
   seraphon: { major: '#408c8f', minor: '#baa268' },
   soulblight: { major: '#613938', minor: '#978b6d' },
+  // The four F14 armies, measured the same way. Khorne: crimson hide (hue 8, two thirds of the saturated texels) as the major, dark brass and bone
+  // collars (hue 57) as the minor; the blackened iron is neutral. Nurgle: dirty cream, mustard and rust (hue 38, 70%) as the major, the olive-green
+  // skin (hue 88) as the minor. Nighthaunt: frost-teal spectral bodies (hue 188, over half) as the major, rust-brown chains and blades (hue 22)
+  // as the minor. Sylvaneth: bark-brown bodies (hue 22, half) as the major, spring-green leaf cloaks and hair (hue 98) as the minor; the teal
+  // wings (hue 182) are the third band and are left alone.
+  khorne: { major: '#77423e', minor: '#726c52' },
+  nurgle: { major: '#887651', minor: '#898f79' },
+  nighthaunt: { major: '#6a8788', minor: '#584439' },
+  sylvaneth: { major: '#8f5b34', minor: '#6e8d4a' },
   // Black plate has no hue to remap; the bone-coloured tabards/trim are the only repaintable colour.
   'black-templars': { major: null, minor: '#e6dfc8' },
 }

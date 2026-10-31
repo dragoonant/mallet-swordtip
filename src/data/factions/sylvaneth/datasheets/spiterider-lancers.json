@@ -1,0 +1,29 @@
+[
+  {
+    "id": "sylvaneth.unit.spiterider-lancers",
+    "faction": "sylvaneth",
+    "name": "Spiterider Lancers",
+    "keywords": ["CAVALRY", "FLY"],
+    "factionKeywords": ["ORDER", "SYLVANETH"],
+    "stats": { "M": 12, "W": 5, "Sv": 4, "OC": 2 },
+    "coherencyRange": 2,
+    "composition": [
+      {
+        "modelId": "spiterider-lancer",
+        "name": "Spiterider Lancer",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 60 },
+        "weapons": {
+          "default": ["sylvaneth.weapon.spiterider-lance", "sylvaneth.weapon.dragonspite-mandibles"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["sylvaneth.ability.spiterider-charge"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

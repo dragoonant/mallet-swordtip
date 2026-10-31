@@ -123,7 +123,9 @@ export interface Effect {
   invuln?: RollTarget
   feelNoPain?: RollTarget
   ignoreCover?: true
-  ignoreModifiers?: 'hit' | 'wound' | 'all'
+  // 'all' = hit and wound rolls. F14 'save' (NH-BT-1 Ethereal): every modifier to the holder's save rolls, Rend included, is
+  // ignored (core 17.0: Rend is subtracted from the save roll)
+  ignoreModifiers?: 'hit' | 'wound' | 'all' | 'save'
   autoResult?: { roll: RollName; outcome: 'pass' | 'fail' }
   grantWeaponAbility?: WeaponAbility
   grantKeyword?: Keyword
@@ -161,7 +163,8 @@ export interface Effect {
   // SBG-AB-2 Riders of Ruin: the unit's moves and charges may pass across enemy models of units with this keyword (path checks
   // only; ending on top of them and combat-range rules are unchanged). hookService.passAcrossKeywords
   passAcrossKeyword?: Keyword
-  // SBG-ENH Aura of Night: negative modifiers to this roll of the holder are ignored (Rend is not a modifier and still applies)
+  // SBG-ENH Aura of Night: negative modifiers to this roll of the holder are ignored. F14 RULING (core 17.0 / glossary): Rend is
+  // subtracted from the save roll, so it is a negative modifier and an ignore on 'save' drops Rend too
   ignoreNegativeModifiers?: RollName
 }
 export type EffectList = Effect | Effect[]

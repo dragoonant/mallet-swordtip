@@ -102,7 +102,8 @@ export interface RollModifierResult {
   extraDice?: number
   // onWoundRoll: AP improves by this much for an attack whose unmodified wound roll was a critical wound (ADE Ascetic Discipline)
   critWoundAp?: number
-  // F12 (SBG-ENH Aura of Night, Effect.ignoreNegativeModifiers): negative modifiers to this roll are dropped (rend still applies)
+  // F12 (SBG-ENH Aura of Night, Effect.ignoreNegativeModifiers): negative modifiers to this roll are dropped; F14: on a save roll
+  // that includes Rend (core 17.0). ignoreModifiers on a save roll drops every modifier and Rend
   ignoreNegative?: boolean
 }
 export interface StatModifierResult { kind: 'stat'; delta?: number; set?: number; cap?: number; halve?: boolean }
@@ -220,7 +221,8 @@ export const EFFECT_HOOKS: Record<keyof Effect, HookName[]> = {
   invuln: ['onSaveRoll'],
   feelNoPain: ['onFeelNoPainRoll'],
   ignoreCover: ['onSaveRoll'],
-  ignoreModifiers: ['onHitRoll', 'onWoundRoll'],
+  // F14: 'save' (NH-BT-1 Ethereal) answers at onSaveRoll, defender side; the save stage then drops Rend as well
+  ignoreModifiers: ['onHitRoll', 'onWoundRoll', 'onSaveRoll'],
   autoResult: ['onHitRoll', 'onWoundRoll', 'onSaveRoll', 'onBattleShockTest', 'onChargeRoll', 'onAdvanceRoll'],
   grantWeaponAbility: ['onStatQuery'],
   grantKeyword: ['onStatQuery'],

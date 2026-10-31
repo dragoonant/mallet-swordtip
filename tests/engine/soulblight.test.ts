@@ -550,7 +550,9 @@ describe('SBG-ENH enhancements', () => {
     expect(offered(Object.assign(game({ enh: GALE }), { phase: 'movement' as const }), 'A', 'movement')).not.toContain(BATS_AB)
   })
 
-  it('SBG-ENH-3 Aura of Night: a -1 save modifier is ignored against shooting attacks on the general; Rend still applies; melee attacks unaffected', () => {
+  // F14 RULING (core 17.0 step 3, glossary: Rend is subtracted from save rolls): Rend is a negative save modifier, so Aura of Night
+  // ignores it too
+  it('SBG-ENH-3 Aura of Night: a -1 save modifier and Rend are ignored against shooting attacks on the general; melee attacks unaffected', () => {
     // the hawk gets a second, ranged weapon: 1 attack, 3+ to hit and wound, Rend 1, Damage 1 (its talons stay melee: same profile)
     const patch = (b: DataBundle): void => {
       b.weapons['fx.w.hawk-talons'] = { ...b.weapons['fx.w.hawk-talons'], A: 1, skill: 3, wound: 3, rend: 1, D: 1, abilities: [] }
@@ -571,8 +573,8 @@ describe('SBG-ENH enhancements', () => {
     const without = saves(GALE, LORD, 'ranged')
     const withAura = saves(AURA, LORD, 'ranged')
     expect(without.final).toBe(1) // die 3, minus the -1 modifier, minus Rend 1
-    expect(withAura.final).toBe(2) // the -1 is dropped, Rend is not
-    expect(withAura.needed).toBe(without.needed) // Rend is untouched
+    expect(withAura.final).toBe(3) // the -1 and Rend 1 are both dropped: the bare die
+    expect(withAura.needed).toBe(without.needed) // the Save characteristic is untouched
     // melee attacks on the general still carry the -1
     expect(saves(AURA, LORD, 'melee').final).toBe(1)
     // another unit of the army does not get it

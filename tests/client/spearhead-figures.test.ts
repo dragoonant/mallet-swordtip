@@ -71,6 +71,25 @@ const NEW_MODELS: Array<[string, string, string]> = [
   ['soulblight.unit.deathrattle-skeletons', 'deathrattle-skeleton', 'sbg-skeleton'],
   ['soulblight.unit.blood-knights', 'blood-knight', 'sbg-blood-knight'],
   ['soulblight.unit.vargheists', 'vargheist', 'sbg-vargheist'],
+  // F14: Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth.
+  ['khorne.unit.karanak', 'karanak', 'bok-karanak'],
+  ['khorne.unit.flesh-hounds', 'flesh-hound', 'bok-flesh-hound'],
+  ['khorne.unit.claws-of-karanak', 'packlord', 'bok-claws-packlord'],
+  ['khorne.unit.claws-of-karanak', 'hound-of-wrath', 'bok-claws-hound-of-wrath'],
+  ['khorne.unit.claws-of-karanak', 'brutaliser', 'bok-claws-brutaliser'],
+  ['khorne.unit.claws-of-karanak', 'blood-whelp', 'bok-claws-blood-whelp'],
+  ['nurgle.unit.spoilpox-scrivener', 'spoilpox-scrivener', 'mon-spoilpox-scrivener'],
+  ['nurgle.unit.pusgoyle-blightlord', 'pusgoyle-blightlord', 'mon-pusgoyle-blightlord'],
+  ['nurgle.unit.putrid-blightkings', 'putrid-blightking', 'mon-putrid-blightking'],
+  ['nurgle.unit.plaguebearers', 'plaguebearer', 'mon-plaguebearer'],
+  ['nighthaunt.unit.knight-of-shrouds', 'knight-of-shrouds', 'nh-knight-of-shrouds'],
+  ['nighthaunt.unit.spirit-hosts', 'spirit-host', 'nh-spirit-host'],
+  ['nighthaunt.unit.grimghast-reapers', 'grimghast-reaper', 'nh-grimghast-reaper'],
+  ['nighthaunt.unit.chainrasps', 'chainrasp', 'nh-chainrasp'],
+  ['sylvaneth.unit.arch-revenant', 'arch-revenant', 'syl-arch-revenant'],
+  ['sylvaneth.unit.gossamid-archers', 'gossamid-archer', 'syl-gossamid-archer'],
+  ['sylvaneth.unit.spiterider-lancers', 'spiterider-lancer', 'syl-spiterider-lancer'],
+  ['sylvaneth.unit.revenant-seekers', 'revenant-seeker', 'syl-revenant-seeker'],
 ]
 
 describe('Spearhead figures and board', () => {
@@ -126,8 +145,8 @@ describe('Spearhead figures and board', () => {
     expect(checked).toBeGreaterThanOrEqual(MODELS.length + NEW_MODELS.length)
   })
 
-  it('FIG-AOS-007 the army painter has measured source hues for the ten armies with their own bands, and every figure fix names a declared slug', () => {
-    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron', 'stormcast', 'skaven', 'seraphon', 'soulblight']) {
+  it('FIG-AOS-007 the army painter has measured source hues for the fourteen armies with their own bands, and every figure fix names a declared slug', () => {
+    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron', 'stormcast', 'skaven', 'seraphon', 'soulblight', 'khorne', 'nurgle', 'nighthaunt', 'sylvaneth']) {
       const h = SOURCE_HUES[army]
       expect(h, army).toBeDefined()
       expect(h.major ?? h.minor, army).toBeTruthy()

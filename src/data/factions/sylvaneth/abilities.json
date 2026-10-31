@@ -1,0 +1,149 @@
+[
+  {
+    "id": "sylvaneth.ability.spitewing-flight",
+    "name": "Spitewing Flight",
+    "text": "Army marker for the Sylvaneth Spitewing Flight. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "sylvaneth.ability.target-of-vengeance",
+    "name": "Target of Vengeance",
+    "text": "At the start of each battle round, if you have no quarry on the battlefield, pick any enemy unit on the battlefield. It is your quarry for the rest of the battle.",
+    "trigger": "activated",
+    "timing": { "kind": "startOfRound", "whose": "any" },
+    "limit": "oncePerRound",
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "sylvanethTargetOfVengeance",
+    "params": { "army": true, "priority": "P1" }
+  },
+  {
+    "id": "sylvaneth.ability.airborne-cohesion",
+    "name": "Airborne Cohesion",
+    "text": "Friendly units have a coherency range of 2\" instead of 1/2\".",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "sylvaneth.ability.song-of-the-hunt",
+    "name": "Song of the Hunt",
+    "text": "You gain 1 chord each time your quarry is destroyed. A friendly unit within 9\" of your quarry gets these bonuses, which stack: with 1 or more chords (Simple) add 1 to its run and charge rolls; with 2 or more (Tuneful) add 1 to its hit rolls; with 3 or more (Melodic) add 1 to its wound rolls.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": [
+      { "modifyRoll": { "roll": "advance", "value": 1 } },
+      { "modifyRoll": { "roll": "charge", "value": 1 } },
+      { "modifyRoll": { "roll": "hit", "value": 1 } },
+      { "modifyRoll": { "roll": "wound", "value": 1 } }
+    ],
+    "code": "sylvanethSongOfTheHunt",
+    "params": { "range": 9, "simple": 1, "tuneful": 2, "melodic": 3 }
+  },
+  {
+    "id": "sylvaneth.ability.leaves-on-the-wind",
+    "name": "Leaves on the Wind",
+    "text": "Once per battle, at the end of any turn, pick a friendly unit that is in combat. It can immediately Retreat as though it were your movement phase, and it suffers no mortal damage for doing so.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly", "state": "inEngagement" }],
+    "code": "sylvanethLeavesOnTheWind",
+    "params": { "army": true, "priority": "P2" }
+  },
+  {
+    "id": "sylvaneth.ability.lifebringers",
+    "name": "Lifebringers",
+    "text": "Once per turn, at the end of any turn, Heal (D3) every friendly unit on the battlefield. Roll the dice separately for each unit.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurnArmy",
+    "code": "sylvanethLifebringers",
+    "params": { "army": true, "heal": "D3", "priority": "P2" }
+  },
+  {
+    "id": "sylvaneth.ability.heartwood-hunting-horn",
+    "name": "Heartwood Hunting Horn",
+    "text": "In your hero phase, pick a visible friendly unit wholly within 12\" of this unit (this unit can pick itself). Until the start of your next turn, when working out which Song of the Hunt bonuses apply to that unit, you count as having 1 more chord than you do.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilNextTurn",
+    "code": "sylvanethHeartwoodHorn",
+    "params": { "range": 12, "priority": "P1" }
+  },
+  {
+    "id": "sylvaneth.ability.zephyrspites",
+    "name": "Zephyrspites",
+    "text": "When you declare a Shoot ability for this unit, once it has been resolved this unit can move up to D6\". No part of that move can enter combat range of an enemy unit, even though the unit can fly.",
+    "trigger": "activated",
+    "timing": { "kind": "reaction", "trigger": "youDeclared", "keyword": "ATTACK" },
+    "keywords": ["MOVE"],
+    "code": "sylvanethZephyrspites",
+    "params": { "priority": "P2" }
+  },
+  {
+    "id": "sylvaneth.ability.spiterider-charge",
+    "name": "Spiterider Charge",
+    "text": "In your charge phase, if this unit charged this phase, pick a visible enemy unit within 1\" of it and roll a dice (D3), adding 1 if the target is your quarry. On a modified 2+, the target suffers mortal damage equal to the modified roll.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "any" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "sylvanethSpiteriderCharge",
+    "params": { "range": 1, "priority": "P1" }
+  },
+  {
+    "id": "sylvaneth.ability.deafening-drone",
+    "name": "Deafening Drone",
+    "text": "In any combat phase, if this unit did not charge this turn, pick an enemy unit in combat with it and roll a dice. If the roll is higher than that unit's Control characteristic, subtract 1 from the Attacks characteristic of its melee weapons (Companion weapons too) for the rest of the turn. Attacks cannot go below 1.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "declare": [{ "role": "unit", "owner": "enemy", "state": "inEngagement" }],
+    "duration": "untilEndOfTurn",
+    "code": "sylvanethDeafeningDrone",
+    "params": { "priority": "P2" }
+  },
+  {
+    "id": "sylvaneth.ability.head-of-the-hunt",
+    "name": "Head of the Hunt",
+    "text": "While your quarry is within 9\" of the bearer and visible to it, the bearer's melee weapons have +1 Rend.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "sylvanethHeadOfTheHunt",
+    "params": { "range": 9, "rend": 1 }
+  },
+  {
+    "id": "sylvaneth.ability.zephyrkin",
+    "name": "Zephyrkin",
+    "text": "When you declare a Fight ability for the bearer's unit and it charged this turn, once that ability has been resolved it can move up to 2D6\". It cannot end that move in combat.",
+    "trigger": "activated",
+    "timing": { "kind": "reaction", "trigger": "youDeclared", "keyword": "ATTACK" },
+    "keywords": ["MOVE"],
+    "scope": { "who": "bearer" },
+    "code": "sylvanethZephyrkin",
+    "params": { "dice": "2D6", "priority": "P2" }
+  },
+  {
+    "id": "sylvaneth.ability.bold-spirit",
+    "name": "Bold Spirit",
+    "text": "Once per battle, in any hero phase, for the rest of the turn add 1 to the wound rolls of combat attacks made by friendly units while they are within the bearer's combat range.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "any" },
+    "limit": "oncePerBattle",
+    "duration": "untilEndOfTurn",
+    "scope": { "who": "bearer" },
+    "code": "sylvanethBoldSpirit",
+    "params": { "range": 3, "priority": "P2" }
+  },
+  {
+    "id": "sylvaneth.ability.cunning-pursuer",
+    "name": "Cunning Pursuer",
+    "text": "While the bearer is in combat, add 1 to the charge rolls of friendly units wholly within 12\" of it, or 2 while it is in combat with your quarry.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "sylvanethCunningPursuer",
+    "params": { "range": 12 }
+  }
+]

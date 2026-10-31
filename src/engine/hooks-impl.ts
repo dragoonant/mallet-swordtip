@@ -12,7 +12,7 @@
 // Non-attack hooks use their subject unit (charging unit, testing unit, queried model …); phase hooks the holder.
 // The same source (ability id / stratagem id) contributes each effect key at most once per evaluation (R-10.11).
 import type { Condition, CoreAbility, DiceExpr, Effect, Scope, StatName, TimingWindowId, Trigger, WeaponAbility } from '../data/types'
-import { codeHooks, type EngineCodeHook } from './code-hooks'
+import { codeHooks, type EngineCodeHook, type FactionResource } from './code-hooks'
 import { clampStat, parseDiceExpr, rollSum } from './dice'
 import { withinObjectiveRange, OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE } from './geometry'
 import {
@@ -130,6 +130,12 @@ export interface HookQueries {
   // SER-AB-1: the id of the first source whose ignoresFirstDamagePerPhase answers true for `unitId`, or null
   ignoresFirstDamageBy(state: GameState, unitId: UnitId): string | null
   ignoresFirstDamage(state: GameState, unitId: UnitId): boolean
+  // ---- F14 (EngineCodeHook fields of the same names; every source entry is asked after its gate) ----
+  // BOK C3: union of chargeMustEndInCombatWith answers for `unitId`, units on the board only ([] = no constraint)
+  chargeMustEndInCombatWithFor(state: GameState, unitId: UnitId): UnitId[]
+  // NH C4: the name of the ability that forbids `fightingUnitId` to pick `targetUnitId` for combat attacks, or null
+  fightTargetForbiddenBy(state: GameState, fightingUnitId: UnitId, targetUnitId: UnitId): string | null
+  fightTargetForbidden(state: GameState, fightingUnitId: UnitId, targetUnitId: UnitId): boolean
 }
 
 // AoS contest filter a code hook may carry (read structurally so code-hooks.ts can add it to EngineCodeHook later)
@@ -163,6 +169,42 @@ export function codeHookFor(name: string | null | undefined): EngineCodeHook | n
 
 // hooks at which some registered code hook `produce`s results (looked up lazily: code-hooks and the faction modules import each other)
 const PRODUCER_HOOKS = { has: (hook: HookName): boolean => Object.values(codeHooks).some((c) => c.producesAt?.includes(hook)) }
+
+// F14 (SYL C1): does any ability of this game name a code hook with statDelta? (statFor skips the extra source walk otherwise)
+const statDeltaCache = new WeakMap<object, boolean>()
+function gameHasStatDelta(state: GameState): boolean {
+  const key = state.abilities as object
+  let v = statDeltaCache.get(key)
+  if (v === undefined) {
+    v = (Object.values(state.abilities) as RuntimeAbility[]).some((a) => !!codeHookFor(a.code)?.statDelta)
+    statDeltaCache.set(key, v)
+  }
+  return v
+}
+
+// F14 (MON C2): the counters `player`'s army shows (Disease 3/7), from the resourceReadout of the codes on the player's battle
+// traits, regiment ability, units' datasheet abilities and enhancements (each ability once, battle traits first). The client
+// HUD renders them beside the command points.
+export function factionResources(state: GameState, player: PlayerId): FactionResource[] {
+  const p = state.players[player]
+  if (!p) return []
+  const ids: string[] = [...p.battleTraitIds, ...(p.regimentAbilityId ? [p.regimentAbilityId] : [])]
+  for (const u of Object.values(state.units)) {
+    if (u.player !== player) continue
+    ids.push(...(state.datasheets[u.datasheetId]?.abilities ?? []))
+    for (const a of Object.values(state.abilities) as RuntimeAbility[]) if (a.source === 'enhancement' && a.bearerModelId && u.models.includes(a.bearerModelId)) ids.push(a.id)
+  }
+  const out: FactionResource[] = []
+  const seen = new Set<string>()
+  for (const id of ids) {
+    const ab = state.abilities[id]
+    if (!ab || seen.has(id)) continue
+    seen.add(id)
+    const r = codeHookFor(ab.code)?.resourceReadout?.(state, ab, player)
+    if (r && !out.some((o) => o.id === r.id)) out.push(r)
+  }
+  return out
+}
 
 export function sourcesFor(state: GameState): HookSourceEntry[] {
   const out: HookSourceEntry[] = []
@@ -414,6 +456,8 @@ function naturalSide(key: keyof Effect, effect: Effect, hook: HookName): 'attack
   if (key === 'autoResult' && (effect.autoResult!.roll === 'save' || effect.autoResult!.roll === 'feelNoPain')) return 'defender'
   if (key === 'reroll' && (hook === 'onSaveRoll' || hook === 'onFeelNoPainRoll')) return 'defender'
   if (key === 'ignoreNegativeModifiers' && (effect.ignoreNegativeModifiers === 'save' || effect.ignoreNegativeModifiers === 'feelNoPain')) return 'defender'
+  // F14 (NH-BT-1 Ethereal): ignoring every modifier to the holder's save rolls is the defender's
+  if (key === 'ignoreModifiers' && effect.ignoreModifiers === 'save') return 'defender'
   return 'attacker'
 }
 
@@ -787,6 +831,14 @@ export const hookService: HookService & HookQueries = {
         else delta += r.delta
       }
     }
+    // F14 (SYL C1): code hooks' statDelta answers (only asked when some ability of this game names such a code)
+    if (gameHasStatDelta(state)) {
+      for (const entry of sourcesFor(state)) {
+        const spec = codeHookFor(entry.code)
+        if (!spec?.statDelta || (q.companionOnly && spec.affectsCompanion !== true) || !gateOpen(state, entry)) continue
+        delta += spec.statDelta(state, entry, q)
+      }
+    }
     // cards: Grasping Vines halves Move, Inspiring Presence adds to Control
     const card = q.companionOnly ? { halve: false, delta: 0 } : cardStatChange(state, q.unitId, q.stat)
     if (card.halve) halve = true
@@ -1134,6 +1186,32 @@ export const hookService: HookService & HookQueries = {
 
   ignoresFirstDamage(state, unitId) {
     return hookService.ignoresFirstDamageBy(state, unitId) !== null
+  },
+
+  chargeMustEndInCombatWithFor(state, unitId) {
+    const out = new Set<UnitId>()
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.chargeMustEndInCombatWith || !gateOpen(state, entry)) continue
+      for (const id of spec.chargeMustEndInCombatWith(state, entry, unitId) ?? []) if (state.units[id]?.location === 'board') out.add(id)
+    }
+    return [...out].sort()
+  },
+
+  fightTargetForbiddenBy(state, fightingUnitId, targetUnitId) {
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.forbidsFightTarget || !gateOpen(state, entry)) continue
+      if (spec.forbidsFightTarget(state, entry, fightingUnitId, targetUnitId)) {
+        const id = entry.source.id
+        return state.abilities[id]?.name ?? state.stratagems[id]?.name ?? id
+      }
+    }
+    return null
+  },
+
+  fightTargetForbidden(state, fightingUnitId, targetUnitId) {
+    return hookService.fightTargetForbiddenBy(state, fightingUnitId, targetUnitId) !== null
   },
 
   contestAllowed(state, unitId) {

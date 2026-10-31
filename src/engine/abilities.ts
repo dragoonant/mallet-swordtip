@@ -42,6 +42,10 @@ export type AbilityWindow =
   | 'startOfTurn' | 'endOfTurn' | 'startOfRound' | 'endOfRound' | 'deployment'
   | 'moveDeclared' | 'moveEnded' | 'attackDeclared' | 'attackTargeted'
   | 'chargeStart'
+  // F14 (SYL C3): right after a unit's Fight ability has resolved (phases/fight.ts, key 'fight:after:<activation>'), for the
+  // fighting unit's player. Offers only descriptors with params.window 'afterFight' (timing phase fight); it exists to run
+  // ensureEffects and drain move queues bound to it (MoveQueue.atWindow 'fightAfter', SYL-ENH-2 Zephyrkin).
+  | 'fightAfter'
 
 // what a reaction window reacts to (F8, LRL-BT-3 Gale Force; F12 opponentDeclaredAttack, SKV-RA-1)
 export type ReactionTrigger =
@@ -69,13 +73,14 @@ export interface AbilityService {
   readonly handler: DecisionHandler
 }
 
-const PHASE_OF_WINDOW: Partial<Record<AbilityWindow, Phase>> = { hero: 'command', movement: 'movement', shooting: 'shooting', charge: 'charge', fight: 'fight', moveDeclared: 'movement', chargeStart: 'charge' }
+const PHASE_OF_WINDOW: Partial<Record<AbilityWindow, Phase>> = { hero: 'command', movement: 'movement', shooting: 'shooting', charge: 'charge', fight: 'fight', moveDeclared: 'movement', chargeStart: 'charge', fightAfter: 'fight' }
 
 // the TimingWindowId shown on the decisions (display only)
 const DISPLAY_WINDOW: Record<AbilityWindow, TimingWindowId> = {
   hero: 'command.end', movement: 'movement.end', shooting: 'shooting.attacksResolved', charge: 'charge.moveEnded', fight: 'fight.attacksResolved',
   startOfTurn: 'turn.start', endOfTurn: 'turn.end.abilities', startOfRound: 'round.start', endOfRound: 'round.end', deployment: 'deployment.unit',
   moveDeclared: 'movement.start', moveEnded: 'movement.unitMoved', attackDeclared: 'shooting.targetsDeclared', attackTargeted: 'shooting.targetsDeclared', chargeStart: 'charge.start',
+  fightAfter: 'fight.attacksResolved',
 }
 
 // ---------- candidates and gates ----------
@@ -157,6 +162,9 @@ function timingMatches(state: GameState, ab: RuntimeAbility, player: PlayerId, w
   // a movement-phase ability with params.window 'moveDeclared' is offered when a unit declares its move, not at the phase's end
   const atDeclare = ab.params?.window === 'moveDeclared'
   if ((window === 'moveDeclared') !== atDeclare) return false
+  // F14: an after-the-Fight descriptor (params.window 'afterFight') is offered by the 'fightAfter' window only, and that window
+  // offers nothing else
+  if ((window === 'fightAfter') !== (ab.params?.window === 'afterFight')) return false
   if (t.kind === 'phase') {
     if (PHASE_OF_WINDOW[window] !== t.phase) return false
   } else if (t.kind !== window) return false
@@ -290,7 +298,8 @@ function nextStep(ctx: EngineContext, window: AbilityWindow, k: string): 'pendin
     return 'again'
   }
   const mq = readMoveQueue(s)
-  if (mq) {
+  // F14 (SYL C2): a queue bound to a window waits for it (as RedeployRequest.atWindow)
+  if (mq && (!mq.atWindow || mq.atWindow === window)) {
     const queue = mq.queue.filter((id) => s.units[id]?.location === 'board')
     while (queue.length > 0) {
       const opts = mq.kind === 'retreat' ? retreatOptions(s, queue[0], mq.maxDistance) : slideOptions(s, queue[0], mq.maxDistance, mq.opts)

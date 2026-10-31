@@ -1,0 +1,38 @@
+[
+  {
+    "id": "sylvaneth.enh.head-of-the-hunt",
+    "faction": "sylvaneth",
+    "name": "Head of the Hunt",
+    "text": "While your quarry is within 9\" of the general and visible to it, the general's melee weapons have +1 Rend.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "sylvaneth.ability.head-of-the-hunt"
+  },
+  {
+    "id": "sylvaneth.enh.bold-spirit",
+    "faction": "sylvaneth",
+    "name": "Bold Spirit",
+    "text": "Once per battle, in any hero phase, add 1 to the wound rolls of combat attacks made by friendly units that are within the general's combat range, for the rest of the turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "sylvaneth.ability.bold-spirit"
+  },
+  {
+    "id": "sylvaneth.enh.cunning-pursuer",
+    "faction": "sylvaneth",
+    "name": "Cunning Pursuer",
+    "text": "While the general is in combat, add 1 to the charge rolls of friendly units wholly within 12\" of it, or 2 while it is in combat with your quarry.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "sylvaneth.ability.cunning-pursuer"
+  },
+  {
+    "id": "sylvaneth.enh.zephyrkin",
+    "faction": "sylvaneth",
+    "name": "Zephyrkin",
+    "text": "When you declare a Fight ability for the general and it charged this turn, once that ability has been resolved the general may move up to 2D6\", but it cannot end that move in combat.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "sylvaneth.ability.zephyrkin"
+  }
+]

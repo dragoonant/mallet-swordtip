@@ -151,9 +151,11 @@ export function enemyUnitIdsOnBoard(state: GameState, player: PlayerId): UnitId[
 }
 
 // CORE-11.3: `model` may target `enemyId` if one of its models is within the model's combat range and visible to it
-export function legalTargetsFor(state: GameState, _unitId: UnitId, model: Model, enemyIds: UnitId[], _friends?: Model[]): UnitId[] {
+export function legalTargetsFor(state: GameState, unitId: UnitId, model: Model, enemyIds: UnitId[], _friends?: Model[]): UnitId[] {
   const out: UnitId[] = []
   for (const enemyId of enemyIds) {
+    // F14 (NH-ENH Cloaked in Shadow): an ability can forbid this target (EngineCodeHook.forbidsFightTarget)
+    if (hookService.fightTargetForbidden(state, unitId, enemyId)) continue
     const em = state.units[enemyId]?.location === 'board' ? unitModels(state, enemyId) : []
     if (em.some((e) => horizontalGap(model, e) <= ENGAGEMENT_H + EPS && losService.visible(state, model.id, e.id))) out.push(enemyId)
   }
@@ -440,8 +442,12 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
   const fight = s.phaseState.fight as FightState
   const unitId = fight.currentUnitId as UnitId
   const unit = s.units[unitId]
-  if (!unit || unit.location !== 'board') { drainAfterFightMortal(ctx); ownFightResolved(ctx, unitId); finishUnit(ctx, unitId, unit?.player ?? s.activePlayer); return 'progress' }
   const act = actKey(s, unitId)
+  if (!unit || unit.location !== 'board') {
+    if (fightResolvedOnce(ctx, unitId, act)) return 'pending'
+    finishUnit(ctx, unitId, unit?.player ?? s.activePlayer)
+    return 'progress'
+  }
 
   if (!ctx.marked(`fi:selWindow:${act}`)) {
     if (ctx.window('fight.unitSelected', act, ctx.order.active(), { unitId })) return 'pending'
@@ -468,12 +474,23 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
     }
     if (s.phaseState.attack && attackService.advance(ctx) === 'pending') return 'pending'
   }
-  // STD-AB-4 Glorious Death: mortal damage held back during the attacks lands once this Fight ability has fully resolved
-  drainAfterFightMortal(ctx)
-  // SBG-BT-2 (F12): the fighting unit's own after-the-Fight hooks (The Hunger), then the activation is over
-  ownFightResolved(ctx, unitId)
+  if (fightResolvedOnce(ctx, unitId, act)) return 'pending'
   finishUnit(ctx, unitId, unit.player)
   return 'progress'
+}
+
+// the end of one Fight activation, once (re-entered after a decision in the fightAfter window): deferred mortals (STD-AB-4 Glorious
+// Death), the fighting unit's own after-the-Fight hooks (SBG-BT-2 The Hunger, F12), then F14 (SYL C3) the fighting player's
+// 'fightAfter' ability window (moves queued for it, SYL-ENH-2 Zephyrkin). true = a decision is pending
+function fightResolvedOnce(ctx: EngineContext, unitId: UnitId, act: string): boolean {
+  const s = ctx.state
+  if (!ctx.marked(`fi:resolved:${act}`)) {
+    drainAfterFightMortal(ctx)
+    ownFightResolved(ctx, unitId)
+    ctx.once(`fi:resolved:${act}`)
+  }
+  const player = s.units[unitId]?.player ?? s.activePlayer
+  return ctx.services.abilities.runWindow(ctx, 'fightAfter', player, `fight:after:${act}`)
 }
 
 // ---------- legal-action candidates ----------

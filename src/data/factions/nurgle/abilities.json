@@ -1,0 +1,157 @@
+[
+  {
+    "id": "nurgle.ability.bleak-host",
+    "name": "Bleak Host",
+    "text": "Army marker for the Maggotkin of Nurgle Bleak Host. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "nurgle.ability.the-infectious-hosts",
+    "name": "The Infectious Hosts",
+    "text": "One Pusgoyle Blightlord unit and one Plaguebearers unit are not set up in the deployment phase: they start in reserve and arrive through Daemonic Summoning.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "nurgle.ability.daemonic-summoning",
+    "name": "Daemonic Summoning",
+    "text": "In your movement phase from battle round 3, set this unit up anywhere on the battlefield, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["CORE"],
+    "fromRound": 3,
+    "params": { "fromRound": 3, "minEnemyDistance": 6, "anywhere": true }
+  },
+  {
+    "id": "nurgle.ability.diseased",
+    "name": "Diseased",
+    "text": "Each time an attack made by a friendly model scores a critical hit, your army gains 1 disease point. You can hold at most 7.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "nurgleDiseased",
+    "params": { "max": 7, "priority": "P1" }
+  },
+  {
+    "id": "nurgle.ability.nurgles-embrace",
+    "name": "Nurgle's Embrace",
+    "text": "Once per turn for the army, at the end of any turn, spend any number of disease points. For each point spent, pick an enemy unit that is in combat with a friendly unit and roll a dice. On a 5+ that unit suffers 1 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurnArmy",
+    "code": "nurgleEmbrace",
+    "params": { "army": true, "succeedOn": 5, "priority": "P1" }
+  },
+  {
+    "id": "nurgle.ability.locus-of-fecundity",
+    "name": "Locus of Fecundity",
+    "text": "Once per turn for the army, in your hero phase, pick a friendly unit and Heal (D3) it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "limit": "oncePerTurnArmy",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "nurgleLocusOfFecundity",
+    "params": { "heal": "D3", "army": true, "priority": "P2" }
+  },
+  {
+    "id": "nurgle.ability.infested-with-wonders",
+    "name": "Infested with Wonders",
+    "text": "Each time a friendly model is slain, before it is removed you may pick an enemy unit within 1\" of it and roll a dice. On a 4+ that unit suffers 1 mortal damage.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "nurgleInfestedWithWonders",
+    "params": { "range": 1, "succeedOn": 4, "mortal": 1, "priority": "P2" }
+  },
+  {
+    "id": "nurgle.ability.keep-counting",
+    "name": "Keep Counting, I'm Watching You",
+    "text": "In your hero phase, pick a friendly Plaguebearers unit wholly within 14\" of this unit and choose one. Tally of Blows: add 1 to the Attacks of the target's melee weapons. Recorded Stamina: add 1 to the target's save rolls. The effect lasts until the start of your next turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "modes": [
+      { "id": "tally-of-blows", "name": "Tally of Blows", "text": "Add 1 to the Attacks of the target's melee weapons until the start of your next turn." },
+      { "id": "recorded-stamina", "name": "Recorded Stamina", "text": "Add 1 to the target's save rolls until the start of your next turn." }
+    ],
+    "duration": "untilNextTurn",
+    "code": "nurgleKeepCounting",
+    "params": { "range": 14, "keyword": "PLAGUEBEARERS", "priority": "P2" }
+  },
+  {
+    "id": "nurgle.ability.wrack-and-ruin",
+    "name": "Wrack and Ruin",
+    "text": "In any charge phase, if this unit charged, pick an enemy unit within 1\" of it and roll a dice. On a 2+ the target suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "any" },
+    "roll": { "dice": "D6", "succeedOn": 2 },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "nurgleWrackAndRuin",
+    "params": { "range": 1, "damage": "D3", "priority": "P2" }
+  },
+  {
+    "id": "nurgle.ability.relentless-attackers",
+    "name": "Relentless Attackers",
+    "text": "At the end of any turn, pick an enemy Infantry unit in combat with this unit and roll a dice for each model of this unit within the target's combat range. Each roll greater than the target's Health characteristic inflicts 1 mortal damage on it.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurn",
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "nurgleRelentlessAttackers",
+    "params": { "keyword": "INFANTRY", "priority": "P2" }
+  },
+  {
+    "id": "nurgle.ability.cloud-of-flies",
+    "name": "Cloud of Flies",
+    "text": "Subtract 1 from hit rolls for shooting attacks that target this unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "stealth": true }
+  },
+  {
+    "id": "nurgle.ability.summoner-of-plaguebearers",
+    "name": "Summoner of Plaguebearers",
+    "text": "At the end of any turn, pick a friendly Plaguebearers unit wholly within 14\" of the bearer and return 1 slain model to it.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurn",
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "nurgleSummoner",
+    "params": { "range": 14, "keyword": "PLAGUEBEARERS", "returnModels": 1, "priority": "P2" }
+  },
+  {
+    "id": "nurgle.ability.gardener-of-nurgle",
+    "name": "Gardener of Nurgle",
+    "text": "In your movement phase, if the bearer contests an objective that no enemy model contests, roll a dice. On a 3+ the objective becomes desecrated for you. Your units have Ward (4+) while they contest a desecrated objective, until your opponent gains control of it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "scope": { "who": "bearer" },
+    "roll": { "dice": "D6", "succeedOn": 3 },
+    "code": "nurgleGardener",
+    "params": { "ward": 4, "priority": "P1" }
+  },
+  {
+    "id": "nurgle.ability.pestilent-breath",
+    "name": "Pestilent Breath",
+    "text": "In your shooting phase, pick an enemy unit within 7\" of the bearer and roll a dice for each model in it. Each 5+ inflicts 1 mortal damage on that unit. This is not a Shoot ability.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "nurglePestilentBreath",
+    "params": { "range": 7, "succeedOn": 5, "priority": "P2" }
+  },
+  {
+    "id": "nurgle.ability.gift-of-febrile-frenzy",
+    "name": "Gift of Febrile Frenzy",
+    "text": "Once per battle, in any combat phase, until the end of the phase friendly units wholly within 7\" of the bearer add 1 to the Attacks of their melee weapons. Companion weapons are not affected.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "duration": "untilEndOfPhase",
+    "code": "nurgleFebrileFrenzy",
+    "params": { "range": 7, "attacks": 1, "priority": "P2" }
+  }
+]

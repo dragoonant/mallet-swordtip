@@ -1,0 +1,130 @@
+[
+  {
+    "id": "khorne.ability.fangs-of-the-blood-god",
+    "name": "Fangs of the Blood God",
+    "text": "Army marker for the Khorne Fangs of the Blood God. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "khorne.ability.the-quarry",
+    "name": "The Quarry",
+    "text": "At the start of every battle round, if you have no quarry, you must pick 1 enemy unit to be your quarry; a unit still in reserve can be picked. You keep that quarry until it is destroyed.",
+    "trigger": "activated",
+    "timing": { "kind": "startOfRound", "whose": "any" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "khorneTheQuarry",
+    "params": { "mandatory": true, "token": "quarry", "priority": "P1" }
+  },
+  {
+    "id": "khorne.ability.blood-drenched",
+    "name": "Blood-Drenched",
+    "text": "Once per turn, at the end of any turn, pick 1 friendly unit that slew an enemy model with a Fight ability this turn. For the rest of the battle that unit's melee weapons have Crit (Mortal).",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurnArmy",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "battle",
+    "code": "khorneBloodDrenched",
+    "params": { "priority": "P2" }
+  },
+  {
+    "id": "khorne.ability.the-scent-of-blood",
+    "name": "The Scent of Blood",
+    "text": "Add 1 to hit rolls and 1 to wound rolls for combat attacks made by friendly units that target an enemy unit that has had damage points allocated to it this turn.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "khorneScentOfBlood",
+    "effect": [
+      { "when": { "weaponType": "melee" }, "modifyRoll": { "roll": "hit", "value": 1 } },
+      { "when": { "weaponType": "melee" }, "modifyRoll": { "roll": "wound", "value": 1 } }
+    ]
+  },
+  {
+    "id": "khorne.ability.savagery-upon-savagery",
+    "name": "Savagery Upon Savagery",
+    "text": "Once per battle, in any combat phase, pick a friendly unit that is in combat. Until the end of the turn its melee weapons have +1 Attacks, or +D3 Attacks if it is a Hero.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly", "state": "inEngagement" }],
+    "duration": "untilEndOfTurn",
+    "code": "khorneSavagery",
+    "params": { "extraAttacks": 1, "heroAttacks": "D3", "priority": "P1" }
+  },
+  {
+    "id": "khorne.ability.stalk-the-prey",
+    "name": "Stalk the Prey",
+    "text": "In any hero phase, roll a dice: this unit can move up to that many inches. If it started the move out of combat it cannot end in combat. While your quarry is on the battlefield the move must end closer to it than it started.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "any" },
+    "keywords": ["MOVE"],
+    "code": "khorneStalkThePrey",
+    "params": { "dice": "D6", "priority": "P2" }
+  },
+  {
+    "id": "khorne.ability.unflagging-hunters",
+    "name": "Unflagging Hunters",
+    "text": "Add 1 to charge rolls for this unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "modifyRoll": { "roll": "charge", "value": 1 } }
+  },
+  {
+    "id": "khorne.ability.pack-hunters",
+    "name": "Pack Hunters",
+    "text": "In any combat phase, pick an enemy unit that is in combat with both this unit and a friendly Flesh Hounds unit. Until the end of the turn, this unit's combat attacks that target it score a critical hit on an unmodified hit roll of 5+.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "duration": "untilEndOfTurn",
+    "code": "khornePackHunters",
+    "params": { "critOn": 5, "hounds": "khorne.unit.flesh-hounds", "priority": "P2" }
+  },
+  {
+    "id": "khorne.ability.sustained-by-gore",
+    "name": "Sustained by Gore",
+    "text": "At the end of any turn, you can Heal (D3) the general.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "scope": { "who": "bearer" },
+    "code": "khorneSustainedByGore",
+    "params": { "heal": "D3", "priority": "P2" }
+  },
+  {
+    "id": "khorne.ability.evasive-hunter",
+    "name": "Evasive Hunter",
+    "text": "Subtract 1 from hit rolls and 1 from wound rolls for shooting attacks that target the general.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "attacker" },
+    "effect": [
+      { "when": { "weaponType": "ranged" }, "modifyRoll": { "roll": "hit", "value": -1 } },
+      { "when": { "weaponType": "ranged" }, "modifyRoll": { "roll": "wound", "value": -1 } }
+    ]
+  },
+  {
+    "id": "khorne.ability.killing-pounce",
+    "name": "Killing Pounce",
+    "text": "Once per battle, in your charge phase, the general rolls 1 extra dice when it makes a charge roll for the rest of the turn (3 dice in total). While it does, its charge must end in combat with your quarry.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "your" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "duration": "untilEndOfTurn",
+    "code": "khorneKillingPounce",
+    "params": { "window": "phaseStart", "extraDice": 1, "priority": "P1" }
+  },
+  {
+    "id": "khorne.ability.furious-bites",
+    "name": "Furious Bites",
+    "text": "At the end of any turn, if the general is in combat with your quarry, that quarry suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "scope": { "who": "bearer" },
+    "code": "khorneFuriousBites",
+    "params": { "damage": "D3", "priority": "P2" }
+  }
+]

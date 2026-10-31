@@ -18,13 +18,17 @@ describe('Spearhead armies (SPH-2)', () => {
       'gloomspite.army.snarlpack-huntaz',
       'ironjawz.army.bigmob',
       'kharadron.army.skyhammer-task-force',
+      'khorne.army.fangs-of-the-blood-god',
       'kruleboyz.army.swampskulka-gang',
       'lumineth.army.hurakan-vanguard',
+      'nighthaunt.army.slasher-host',
+      'nurgle.army.bleak-host',
       'seraphon.army.sunblooded-prowlers',
       'skaven.army.warpspark-clawpack',
       'slaves.army.darkoath-raiders',
       'soulblight.army.bloodcrave-hunt',
       'stormcast.army.vigilant-brotherhood',
+      'sylvaneth.army.spitewing-flight',
     ])
     for (const a of armies) expect(a.units.some((u) => u.ref === a.warlord)).toBe(true)
   })

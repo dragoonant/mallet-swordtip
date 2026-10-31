@@ -1,0 +1,28 @@
+[
+  {
+    "id": "khorne.unit.flesh-hounds",
+    "faction": "khorne",
+    "name": "Flesh Hounds",
+    "keywords": ["BEAST", "REINFORCEMENTS"],
+    "factionKeywords": ["CHAOS", "KHORNE"],
+    "stats": { "M": 8, "W": 2, "Sv": 6, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "flesh-hound",
+        "name": "Flesh Hound",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "oval", "mm": 60, "mm2": 35 },
+        "weapons": {
+          "default": ["khorne.weapon.blood-dark-claws"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["khorne.ability.unflagging-hunters"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

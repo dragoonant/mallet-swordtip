@@ -1,0 +1,28 @@
+[
+  {
+    "id": "nurgle.unit.putrid-blightkings",
+    "faction": "nurgle",
+    "name": "Putrid Blightkings",
+    "keywords": ["INFANTRY"],
+    "factionKeywords": ["CHAOS", "MAGGOTKIN OF NURGLE"],
+    "stats": { "M": 4, "W": 3, "Sv": 3, "OC": 1, "ward": 5 },
+    "composition": [
+      {
+        "modelId": "putrid-blightking",
+        "name": "Putrid Blightking",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["nurgle.weapon.blighted-weapon"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["nurgle.ability.relentless-attackers"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

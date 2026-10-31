@@ -1,0 +1,17 @@
+{
+  "id": "sylvaneth",
+  "name": "Sylvaneth",
+  "factionKeyword": "SYLVANETH",
+  "armyRule": "sylvaneth.ability.spitewing-flight",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#7a5a3a",
+    "secondary": "#6fbf4a",
+    "trim": "#e9e2cf",
+    "metal": "#3fb6b0",
+    "decal": "#f2b73c"
+  },
+  "combatPatrols": [
+    "sylvaneth.army.spitewing-flight"
+  ]
+}

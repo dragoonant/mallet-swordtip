@@ -554,7 +554,8 @@
           "enum": [
             "hit",
             "wound",
-            "all"
+            "all",
+            "save"
           ]
         },
         "autoResult": {

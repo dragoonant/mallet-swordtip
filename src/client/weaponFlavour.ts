@@ -48,7 +48,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
     // Tyranid claws, talons and teeth rend and slash, so they voice as the cutting sound; only a klaw/fist
     // (or a plain crushing profile) is the heavy crunch.
     if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks|hoove?s|clubbing|celestite.club|war-relic/.test(text)) return 'crush'
-    if (/choppa|chain|sword|blade|axe|eviscerator|knife|knives|reaper|claw|talon|teeth|jaws|snappa|stikka|maw|hyperphase|mandible|flail|whip|glaive|spear|lance|khopesh|fang/.test(text)) return 'chain'
+    if (/choppa|chain|sword|blade|axe|eviscerator|knife|knives|reaper|claw|talon|teeth|jaws|snappa|stikka|maw|hyperphase|mandible|flail|whip|glaive|spear|lance|khopesh|fang|sickle|scythe|maw/.test(text)) return 'chain'
     return strength >= 8 ? 'crush' : 'chain'
   }
 
@@ -63,7 +63,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
   if (/javelin/.test(text)) return 'psychic'
   if (/ratling/.test(text)) return 'shoota'
   if (/windlauncher/.test(text)) return 'heavy'
-  if (/dartpipe|blowpipe/.test(text)) return 'shoota'
+  if (/dartpipe|blowpipe|sneeze/.test(text)) return 'shoota' // F14: Nurgle's sneezes are a wet spray
   // A macro plasma *incinerator* is a plasma gun, not a flame template.
   if (/plasma.*incinerat/.test(text)) return 'heavy'
   // TORRENT is the rules-level marker for a flame template (no hit roll, auto-hits).
@@ -105,7 +105,7 @@ export interface VfxClassification {
 
 /** Engine faction ids by the prefix of a weapon id ('ork.w.shoota'), for weapons classified with no faction given. */
 const ID_PREFIX_FACTION: [string, string][] = [
-  ['ork.', 'ork'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['stormcast.', 'stormcast'], ['skaven.', 'skaven'], ['seraphon.', 'seraphon'], ['soulblight.', 'soulblight'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
+  ['ork.', 'ork'], ['khorne.', 'khorne'], ['nurgle.', 'nurgle'], ['nighthaunt.', 'nighthaunt'], ['sylvaneth.', 'sylvaneth'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['stormcast.', 'stormcast'], ['skaven.', 'skaven'], ['seraphon.', 'seraphon'], ['soulblight.', 'soulblight'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
   ['am.', 'astra-militarum'], ['lov.', 'leagues-of-votann'], ['gk.', 'grey-knights'], ['csm', 'chaos-space-marines'], ['we.', 'world-eaters'], ['ade', 'adepta-sororitas'], ['cus.', 'adeptus-custodes'], ['drk.', 'drukhari'], ['ael.', 'aeldari'], ['adm.', 'adeptus-mechanicus'], ['dg.', 'death-guard'], ['ths.', 'thousand-sons'], ['sw.', 'space-wolves'], ['da.', 'dark-angels'], ['ba.', 'blood-angels'], ['dw.', 'deathwatch'], ['bt.', 'black-templars'],
 ]
 
@@ -132,6 +132,9 @@ export function classifyVfxFamily(weaponId: string, weapon: WeaponData | undefin
   if (/windlauncher/.test(text)) return kw('grenade')
   if (/stormcall|javelin/.test(text)) return kw('pulse')
   if (/dartpipe|blowpipe/.test(text)) return kw('bio')
+  // F14: Nurgle's sneezes spray a cloud of spat plague, a Gossamid bow looses a thorn arrow as a hard kinetic streak.
+  if (/sneeze/.test(text)) return kw('bio')
+  if (/gossamid.bow/.test(text)) return kw('bolt')
   if (/volley.pistol|privateer|vulcaniser|aethershot|carbine/.test(text)) return kw('flintlock')
   if (/crossbow|beast.skewer|grot.bow|windcharger.bow/.test(text)) return kw('bolt')
   // Spat, flung or sprayed biomass: Tyranid guns, and the cult's webber.

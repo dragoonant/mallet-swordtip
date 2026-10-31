@@ -8,7 +8,7 @@ import type { CoreAbility, Scope, TimingWindowId } from '../data/types'
 import type { Action } from './actions'
 import { withinObjectiveRange, OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE } from './geometry'
 import type { CodeHook, HookName, HookResult } from './hooks'
-import { hookService, type HookSourceEntry } from './hooks-impl'
+import { hookService, type HookSourceEntry, type StatQuery } from './hooks-impl'
 import { leaderService } from './leaders'
 import type { EngineContext, Services, WindowTrigger } from './modules'
 import { keywordsOf, unitModels } from './state'
@@ -22,8 +22,12 @@ import { gloomspiteHooks } from './factions/gloomspite'
 import { kruleboyzHooks } from './factions/kruleboyz'
 import { stormcastHooks } from './factions/stormcast'
 import { skavenHooks } from './factions/skaven'
+import { nurgleHooks } from './factions/nurgle'
+import { khorneHooks } from './factions/khorne'
 import { seraphonHooks } from './factions/seraphon'
 import { soulblightHooks } from './factions/soulblight'
+import { nighthauntHooks } from './factions/nighthaunt'
+import { sylvanethHooks } from './factions/sylvaneth'
 import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
   ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, Model, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
@@ -172,7 +176,33 @@ export interface EngineCodeHook extends CodeHook {
   // for the codes of the fighting unit's datasheet abilities, its player's battle traits and regiment ability (as onOwnModelSlain).
   // damageAllocated = damage points its melee attacks allocated this activation (after wards; attack.ts fightDamageAllocated).
   onOwnFightResolved?(ctx: EngineContext, info: { ability: RuntimeAbility; unitId: UnitId; damageAllocated: number }): void
+  // ---- F14 engine items (Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth; 13-engine-port-plan §3.12) ----
+  // BOK C3 Killing Pounce: units the charge of `unitId` must end in combat with (3" combat range, on top of the ½" charge end).
+  // Folded by hookService.chargeMustEndInCombatWithFor (union over every source entry after its gate, ActiveEffects included;
+  // only units on the board count). null / [] = no opinion.
+  chargeMustEndInCombatWith?(state: GameState, entry: HookSourceEntry, unitId: UnitId): UnitId[] | null
+  // MON-BT-2 Diseased: called by attack.ts once per weapon group of an attack sequence that scored critical hits (count > 0), for
+  // the codes of the attacking unit's datasheet abilities and its player's battle traits / regiment ability (as onOwnModelSlain).
+  // Weapons with no hit roll (HIT_MORTAL, auto-hit) make no call.
+  onOwnCriticalHits?(ctx: EngineContext, info: { ability: RuntimeAbility; unitId: UnitId; weaponId: WeaponId; count: number }): void
+  // MON C2: a per-player counter the client shows beside the command points (Disease 3/7). Asked by factionResources(state,
+  // player) for the codes of `player`'s battle traits, regiment ability, units' datasheet abilities and enhancements. null = none.
+  resourceReadout?(state: GameState, ability: RuntimeAbility, player: PlayerId): FactionResource | null
+  // NH C2 Soulfire Ring: called by attack.ts once per enemy model slain, for every source entry HELD by the slaying unit
+  // (entry.holderUnitId === by.unitId), after the model is removed; never when by.unitId is null or for a friendly model.
+  onEnemyModelSlain?(ctx: EngineContext, entry: HookSourceEntry, info: { slainUnitId: UnitId; model: Model; by: DestroyedBy }): void
+  // NH C4 Cloaked in Shadow: true when `fightingUnitId` may not pick `targetUnitId` as a combat-attack target right now (the melee
+  // twin of forbidsShootingTarget; phases/fight.ts legalTargetsFor, hookService.fightTargetForbidden). attack.ts
+  // firstAttackerThisPhase(state, targetUnitId) names the unit that first declared attacks on a target this phase.
+  forbidsFightTarget?(state: GameState, entry: HookSourceEntry, fightingUnitId: UnitId, targetUnitId: UnitId): boolean
+  // SYL C1 Head of the Hunt: an additive delta for one stat query, summed by hookService.statFor after halving (with the effect
+  // deltas). State-only, so it is safe inside effectiveWeapon. Skipped for companionOnly queries unless affectsCompanion is true.
+  statDelta?(state: GameState, entry: HookSourceEntry, q: StatQuery): number
+  affectsCompanion?: boolean
 }
+
+// MON C2: one counter for the HUD (resourceReadout / factionResources)
+export interface FactionResource { id: string; label: string; value: number; max?: number; help?: string }
 
 // a battlefield edge: axis 'z' sign -1 = the edge at z = -h/2, axis 'x' sign 1 = the edge at x = +w/2 (types.ts EdgeRef)
 export type { EdgeRef }
@@ -285,7 +315,11 @@ export const codeHooks: Record<string, EngineCodeHook> = {
   ...soulblightHooks,
   ...stormcastHooks,
   ...skavenHooks,
+  ...nurgleHooks,
+  ...khorneHooks,
   ...seraphonHooks,
+  ...nighthauntHooks,
+  ...sylvanethHooks,
   // core Spearhead abilities no data file names (Call for Reinforcements, SPH-12); abilities.ts adds their descriptor itself
   [spearheadCallForReinforcements.name]: spearheadCallForReinforcements,
 }

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "sylvaneth.weapon.arch-revenants-glaive",
+    "name": "Arch-Revenant's Glaive",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "sylvaneth.weapon.gossamid-bow",
+    "name": "Gossamid Bow",
+    "type": "ranged",
+    "range": 12,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      { "ability": "SHOOT_IN_COMBAT" }
+    ]
+  },
+  {
+    "id": "sylvaneth.weapon.cruel-talons",
+    "name": "Cruel Talons",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 3,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "sylvaneth.weapon.spiterider-lance",
+    "name": "Spiterider Lance",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      { "ability": "CHARGE_DAMAGE", "value": 1 }
+    ]
+  },
+  {
+    "id": "sylvaneth.weapon.dragonspite-mandibles",
+    "name": "Dragonspite's Mandibles",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "sylvaneth.weapon.seekers-sickle",
+    "name": "Seeker's Sickle",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      { "ability": "CRIT_MORTAL" }
+    ]
+  }
+]

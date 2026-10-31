@@ -1,0 +1,53 @@
+[
+  {
+    "id": "nighthaunt.unit.grimghast-reapers",
+    "faction": "nighthaunt",
+    "name": "Grimghast Reapers",
+    "keywords": [
+      "INFANTRY",
+      "FLY"
+    ],
+    "factionKeywords": [
+      "DEATH",
+      "NIGHTHAUNT"
+    ],
+    "stats": {
+      "M": 8,
+      "W": 1,
+      "Sv": 4,
+      "OC": 1,
+      "ward": 6
+    },
+    "composition": [
+      {
+        "modelId": "grimghast-reaper",
+        "name": "Grimghast Reaper",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "nighthaunt.weapon.slasher-scythe"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "nighthaunt.ability.reaped-like-corn"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

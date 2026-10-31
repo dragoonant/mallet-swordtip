@@ -1,0 +1,80 @@
+[
+  {
+    "id": "nurgle.weapon.disgusting-sneezes",
+    "name": "Disgusting Sneezes",
+    "type": "ranged",
+    "range": 7,
+    "A": "D6",
+    "skill": 2,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "SHOOT_IN_COMBAT" }
+    ]
+  },
+  {
+    "id": "nurgle.weapon.distended-maw",
+    "name": "Distended Maw",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "nurgle.weapon.blighted-scythe",
+    "name": "Blighted Scythe",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 2,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "nurgle.weapon.rot-fly-mouthparts",
+    "name": "Rot Fly's Mouthparts and Sting",
+    "type": "melee",
+    "range": 0,
+    "A": 6,
+    "skill": 4,
+    "wound": 2,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "nurgle.weapon.blighted-weapon",
+    "name": "Blighted Weapon",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "nurgle.weapon.plaguesword",
+    "name": "Plaguesword",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "CRIT_MORTAL" }
+    ]
+  }
+]

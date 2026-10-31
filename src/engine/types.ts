@@ -546,6 +546,9 @@ export type ChooseOptionTopic =
   | 'twistPick' | 'tacticCommand'
   // STD-ENH-4 (cards.ts): draw an extra battle tactic card (yes / pass), then put one hand card on the bottom of the deck
   | 'extraTactic' | 'bottomTactic'
+  // F14 (core 20.0, attack.ts): the attacking player picks one of a weapon's several critical-hit abilities before the attack
+  // sequence; options = the abilities (id = WeaponAbilityName), hint.value = expected damage per critical hit
+  | 'critChoice'
 export interface ChooseOptionDecision extends DecisionBase {
   kind: 'chooseOption'
   // rerollOffer: data = { rollId, dieIndexes: number[], needed?, purpose?, key? } (R-6.24); options = reroll / keep; the

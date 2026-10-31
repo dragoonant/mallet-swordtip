@@ -340,9 +340,45 @@ Non-frozen: `EngineCodeHook + afterWardRoll, ignoresFirstDamagePerPhase, afterAt
 | `Effect.passAcrossKeyword` → `hookService.passAcrossKeywords`; `pathBlockingEnemies` drops those enemy models from the move / charge path tests (end overlap and combat range unchanged) | `factions/aos-moves.ts`, `phases/movement.ts`, `phases/charge.ts` | SBG-AB-2 |
 | Charges record the enemy units their paths passed across (`passedAcrossThisPhase`) | `phases/charge.ts` | SBG-RA-2 |
 | `PlaceRequest.edgeBand: false` / `minEnemyDistance` (`placeShapeOf`, `reinforcementFormation/Options(..., shape)`, `replacementOptions/placeReplacement(..., shape)`) | `factions/aos-moves.ts`, `factions/spearhead-core.ts`, `abilities.ts` | SBG-RA-1 |
-| `Effect.ignoreNegativeModifiers: RollName` → `{ kind: 'roll', ignoreNegative }`; `runStage` drops negative modifiers (card ones too), rend untouched | `hooks-impl.ts`, `attack.ts` | SBG-ENH Aura of Night |
+| `Effect.ignoreNegativeModifiers: RollName` → `{ kind: 'roll', ignoreNegative }`; `runStage` drops negative modifiers (card ones too); F14: on a save roll Rend too (§3.12) | `hooks-impl.ts`, `attack.ts` | SBG-ENH Aura of Night |
 
 Tests: `tests/engine/engine-f12.test.ts` (F12-<spec id>).
+
+### 3.12 F14 engine-core: generic mechanisms for Blades of Khorne, Maggotkin of Nurgle, Nighthaunt and Sylvaneth (additive)
+
+Two core-rule rulings (owner: tabletop-exact, `docs/sources/aos4-core-rules.pdf`):
+- **Rend is a negative save modifier.** Core 17.0 step 3 has the defender subtract the weapon's Rend from the save roll, and the
+  glossary entry for Rend says the same. So an ignore-negative-modifiers save (SBG Aura of Night) drops Rend
+  as well, and an ignore-all save (NH Ethereal) is the bare die against the Save characteristic. Unmodified 1s still fail. This
+  replaces the F12 reading "Rend is not a modifier". (The dice tray still lists the Rend line for such a roll; the result is right.)
+- **Several critical-hit abilities on one weapon (core 20.0):** before the attack sequence starts, the attacking model's commander
+  picks one of them. The engine asks (chooseOption topic `critChoice`); "first listed" (F12) and the specs' "engine picks by
+  priority / expected damage" drafts are retired.
+
+Frozen contracts, additive only: `types.ts` `ChooseOptionTopic + 'critChoice'`; `index.ts` `DEFAULT_MODULES.topics.critChoice =
+attackService.handler`; `hooks.ts` `EFFECT_HOOKS.ignoreModifiers + 'onSaveRoll'`. `src/data/types.ts` + `common.schema.json`:
+`Effect.ignoreModifiers + 'save'` (defender side). No `actions.ts` / `events.ts` / `rng.ts` / `decider.ts` change.
+Non-frozen: `EngineCodeHook + chargeMustEndInCombatWith, onOwnCriticalHits, resourceReadout, onEnemyModelSlain, forbidsFightTarget,
+statDelta, affectsCompanion`; `HookQueries + chargeMustEndInCombatWithFor, fightTargetForbidden(By)`; `AbilityWindow + 'fightAfter'`;
+`MoveQueue + atWindow`; `SlideOpts + closerToUnit, endFree, noCombatPath`; `AttackService.handler` answers `critChoice`.
+
+| Mechanism | Where | For |
+|---|---|---|
+| Turn ledger `mission.custom.turnLedger { key 'round:activePlayer', damaged, slewInFight }`, empty when the key is stale. `flushDamage` notes every unit allocated ≥ 1 point (any source, after wards); `finishDestroy` notes `by.unitId` when `by.kind === 'melee'` and the victim is an enemy (Crit (Mortal) pools of combat attacks keep kind melee). `damagedThisTurn(state, unitId)`, `slewInFightThisTurn(state, unitId)` | `attack.ts` | BOK-RA-1, BOK-BT-2 |
+| `SlideOpts.closerToUnit`: the closest-model gap (`unitGapAfter`) must strictly shrink; ignored while that unit is off the board; "Toward <name>" heading first. `SlideOpts.endFree`: an in-combat unit may end in or out of combat. approximation: rigid slide | `factions/aos-moves.ts` | BOK-AB-1 |
+| `EngineCodeHook.chargeMustEndInCombatWith(state, entry, unitId)` → `hookService.chargeMustEndInCombatWithFor` (union, board units only) → `chargeMustEndInCombatWith(state, unitId)` (exported): `MoveConstraints.mustEndInEngagementWith` in `chargeMoveRejection` and the chargeMove decision; `neededChargeDistance` = max(½" to any enemy, 3" to each named unit), so the reach pre-check and the roll-too-short test honour it; candidate moves aim at the named units | `code-hooks.ts`, `hooks-impl.ts`, `phases/charge.ts` | BOK-ENH Killing Pounce |
+| Crit pick (core 20.0): `attackService.advance` raises `chooseOption { topic 'critChoice', data { key, weaponId, targetUnitId } }` for each (weapon, target unit) whose effective weapon has ≥ 2 distinct crit abilities (`critAbilitiesOf`; none under HIT_MORTAL), before any dice; option ids = `WeaponAbilityName`, `hint.value` = `critExpectedDamage` (Crit (Mortal) = Damage; Crit (2 Hits) = hits × P(wound) × P(unsaved after Rend) × Damage; Crit (Auto-wound) = P(unsaved) × Damage), which the utility AI maximises. The answer is a phase mark `critPick:<attacker>|<weapon>|<target>=<ability>` cleared when the sequence ends | `attack.ts`, `index.ts`, `types.ts` | BOK-WEAP-3, NH-ENH-4 |
+| `EngineCodeHook.onOwnCriticalHits(ctx, { ability, unitId, weaponId, count })` once per weapon group with ≥ 1 critical hit, for the attacking unit's own codes (datasheet + battle traits + regiment ability) | `attack.ts` | MON-BT-2 |
+| `EngineCodeHook.resourceReadout(state, ability, player)` → `factionResources(state, player): FactionResource[]` `{ id, label, value, max?, help? }` over the player's battle traits, regiment ability, datasheet abilities and enhancements; the HUD shows them beside the command points (client wiring is the HUD owner's) | `code-hooks.ts`, `hooks-impl.ts` | MON C2 |
+| `Effect.ignoreModifiers: 'save'` → `{ kind: 'roll', ignoreModifiers }` at `onSaveRoll` (defender); `runStage` save: ignore-all = bare die, ignore-negative drops Rend too | `hooks-impl.ts`, `hooks.ts`, `attack.ts` | NH-BT-1, SBG-ENH Aura of Night |
+| `EngineCodeHook.onEnemyModelSlain(ctx, entry, { slainUnitId, model, by })` for every source entry HELD by `by.unitId` (once per source / active effect), enemy models only | `attack.ts` | NH-ENH Soulfire Ring |
+| `EngineCodeHook.forbidsFightTarget(state, entry, fightingUnitId, targetUnitId)` → `hookService.fightTargetForbidden(By)`; `legalTargetsFor` drops forbidden units (the auto-declare and the declareTargets decision both use it). `firstAttackerThisPhase(state, targetUnitId)`: `attackService.begin` marks `atk:tg:<target>=<attacker>` for the first unit to declare on each target this phase | `code-hooks.ts`, `hooks-impl.ts`, `phases/fight.ts`, `attack.ts` | NH-ENH Cloaked in Shadow |
+| `EngineCodeHook.statDelta(state, entry, q: StatQuery)` summed by `statFor` after halving (with the effect deltas), skipped for `companionOnly` queries unless the hook has `affectsCompanion: true`; the source walk only runs in games whose abilities name such a code. Rend +1 = `q.stat 'AP'` delta −1 | `code-hooks.ts`, `hooks-impl.ts` | SYL-ENH Head of the Hunt |
+| `MoveQueue.atWindow`: `nextStep` leaves the queue alone until a window of that name runs; a queue still waiting when the phase ends is dropped with the marks | `factions/aos-moves.ts`, `abilities.ts` | SYL-ENH Zephyrkin, SYL-AB-2 |
+| `AbilityWindow 'fightAfter'`: `fight.ts fightResolvedOnce` (both call sites) runs deferred mortals + `ownFightResolved` once (mark `fi:resolved:<act>`), then `runWindow(ctx, 'fightAfter', player, 'fight:after:<act>')`. Offers only descriptors with `params.window 'afterFight'`; those are offered nowhere else | `phases/fight.ts`, `abilities.ts` | SYL-ENH Zephyrkin |
+| `SlideOpts.noCombatPath`: the normalMove path test even with FLY, implies `mayNotEndInCombat`; `slideOptions` returns [] for a unit in combat (so the queue skips it) | `factions/aos-moves.ts` | SYL-AB-2 Zephyrspites |
+
+Tests: `tests/engine/engine-f14.test.ts` (F14-<spec id>); `soulblight.test.ts` SBG-ENH-3 now expects Rend ignored.
 
 ## 4. Client impact
 

@@ -470,7 +470,7 @@ describe('F12 Soulblight engine pieces', () => {
     expect(placeShapeOf({ abilityId: 'x', player: 'A', unitId: 'A:guard', replacementOf: 'A:guard', edgeBand: false, minEnemyDistance: 6 })).toEqual({ edgeBand: false, minEnemyDistance: 6 })
   })
 
-  it('F12-SBG-ENH Effect.ignoreNegativeModifiers (save): a -1 to the save is ignored, rend still applies', () => {
+  it('F12-SBG-ENH Effect.ignoreNegativeModifiers (save): a -1 to the save is ignored (Rend too, F14 ruling: see engine-f14)', () => {
     const run = (aura: boolean): number[] => {
       const s = game((b) => {
         b.abilities['fx.a.f12-aura'] = ab('fx.a.f12-aura', { effect: aura ? { ignoreNegativeModifiers: 'save' } : {}, scope: { who: 'self' } })

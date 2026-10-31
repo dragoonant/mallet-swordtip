@@ -1,0 +1,54 @@
+[
+  {
+    "id": "nighthaunt.unit.knight-of-shrouds",
+    "faction": "nighthaunt",
+    "name": "Knight of Shrouds",
+    "keywords": [
+      "HERO",
+      "INFANTRY",
+      "FLY"
+    ],
+    "factionKeywords": [
+      "DEATH",
+      "NIGHTHAUNT"
+    ],
+    "stats": {
+      "M": 8,
+      "W": 5,
+      "Sv": 4,
+      "OC": 2,
+      "ward": 6
+    },
+    "composition": [
+      {
+        "modelId": "knight-of-shrouds",
+        "name": "Knight of Shrouds",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": {
+          "shape": "round",
+          "mm": 32
+        },
+        "weapons": {
+          "default": [
+            "nighthaunt.weapon.sword-of-stolen-hours"
+          ]
+        },
+        "figure": {
+          "archetype": "infantry",
+          "kit": "generic-infantry"
+        }
+      }
+    ],
+    "abilities": [
+      "nighthaunt.ability.discorporate"
+    ],
+    "coreAbilities": [],
+    "figure": {
+      "archetype": "infantry",
+      "kit": "generic-infantry"
+    },
+    "spearhead": true
+  }
+]

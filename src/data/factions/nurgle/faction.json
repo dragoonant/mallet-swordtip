@@ -1,0 +1,17 @@
+{
+  "id": "nurgle",
+  "name": "Maggotkin of Nurgle",
+  "factionKeyword": "MAGGOTKIN OF NURGLE",
+  "armyRule": "nurgle.ability.bleak-host",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#7f8a3e",
+    "secondary": "#c2ad5c",
+    "trim": "#a8486f",
+    "metal": "#8a5a38",
+    "decal": "#d4e060"
+  },
+  "combatPatrols": [
+    "nurgle.army.bleak-host"
+  ]
+}

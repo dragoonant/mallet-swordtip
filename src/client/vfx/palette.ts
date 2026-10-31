@@ -57,6 +57,11 @@ const FACTION_COLOR: Record<string, string> = {
   skaven: '#66e03a',
   seraphon: '#58b6ff',
   soulblight: '#d01f4a',
+  // Khorne blood-red hound bites, Nurgle sickly plague-green, Nighthaunt pale spectral teal, Sylvaneth spring-leaf green.
+  khorne: '#e0322a',
+  nurgle: '#b4c93c',
+  nighthaunt: '#a6f0e0',
+  sylvaneth: '#8fe05a',
   sm: '#5aa7ff',
   ork: '#8dff5a',
   necrons: '#39ff6a',
@@ -93,7 +98,7 @@ export function factionColor(faction: string): THREE.Color {
  *  'rend' = quick crossing scratch-slashes (Darkoath), 'ember' = a molten overhead axe-fall that throws embers (Fyreslayers),
  *  'spark' = the original spark-and-streak clash every other faction keeps. */
 export type MeleeStyle = 'blade' | 'chop' | 'rend' | 'ember' | 'spark'
-const MELEE_STYLE: Record<string, MeleeStyle> = { cities: 'blade', ironjawz: 'chop', slaves: 'rend', fyreslayers: 'ember', kruleboyz: 'rend', gloomspite: 'rend', lumineth: 'blade', kharadron: 'spark', stormcast: 'spark', skaven: 'rend', seraphon: 'chop', soulblight: 'blade' }
+const MELEE_STYLE: Record<string, MeleeStyle> = { cities: 'blade', ironjawz: 'chop', slaves: 'rend', fyreslayers: 'ember', kruleboyz: 'rend', gloomspite: 'rend', lumineth: 'blade', kharadron: 'spark', stormcast: 'spark', skaven: 'rend', seraphon: 'chop', soulblight: 'blade', khorne: 'rend', nurgle: 'chop', nighthaunt: 'blade', sylvaneth: 'blade' }
 export function meleeStyle(faction: string): MeleeStyle {
   return MELEE_STYLE[faction] ?? 'spark'
 }

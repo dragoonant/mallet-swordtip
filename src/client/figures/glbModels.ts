@@ -83,6 +83,28 @@ export const DECLARED_GLB_SLUGS: readonly string[] = [
   'sbg-skeleton',
   'sbg-blood-knight',
   'sbg-vargheist',
+  // F14 armies. Blades of Khorne: Fangs of the Blood God.
+  'bok-karanak',
+  'bok-flesh-hound',
+  'bok-claws-packlord',
+  'bok-claws-hound-of-wrath',
+  'bok-claws-brutaliser',
+  'bok-claws-blood-whelp',
+  // Maggotkin of Nurgle: Bleak Host.
+  'mon-spoilpox-scrivener',
+  'mon-pusgoyle-blightlord',
+  'mon-putrid-blightking',
+  'mon-plaguebearer',
+  // Nighthaunt: Slasher Host.
+  'nh-knight-of-shrouds',
+  'nh-spirit-host',
+  'nh-grimghast-reaper',
+  'nh-chainrasp',
+  // Sylvaneth: Spitewing Flight.
+  'syl-arch-revenant',
+  'syl-gossamid-archer',
+  'syl-spiterider-lancer',
+  'syl-revenant-seeker',
 ]
 
 /** The declared slugs whose file exists: the only ones the game ever requests. */
@@ -161,6 +183,28 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'soulblight.unit.deathrattle-skeletons/deathrattle-skeleton': 'sbg-skeleton',
   'soulblight.unit.blood-knights/blood-knight': 'sbg-blood-knight',
   'soulblight.unit.vargheists/vargheist': 'sbg-vargheist',
+  // Blades of Khorne. The four Claws of Karanak are four sculpts for looks only (the rules treat all eight alike).
+  'khorne.unit.karanak/karanak': 'bok-karanak',
+  'khorne.unit.flesh-hounds/flesh-hound': 'bok-flesh-hound',
+  'khorne.unit.claws-of-karanak/packlord': 'bok-claws-packlord',
+  'khorne.unit.claws-of-karanak/hound-of-wrath': 'bok-claws-hound-of-wrath',
+  'khorne.unit.claws-of-karanak/brutaliser': 'bok-claws-brutaliser',
+  'khorne.unit.claws-of-karanak/blood-whelp': 'bok-claws-blood-whelp',
+  // Maggotkin of Nurgle. The two Blightlords are one figure; Blightkings and Plaguebearers one each.
+  'nurgle.unit.spoilpox-scrivener/spoilpox-scrivener': 'mon-spoilpox-scrivener',
+  'nurgle.unit.pusgoyle-blightlord/pusgoyle-blightlord': 'mon-pusgoyle-blightlord',
+  'nurgle.unit.putrid-blightkings/putrid-blightking': 'mon-putrid-blightking',
+  'nurgle.unit.plaguebearers/plaguebearer': 'mon-plaguebearer',
+  // Nighthaunt. Chainrasps and Grimghast Reapers float on solid ghost tails that double as the stand.
+  'nighthaunt.unit.knight-of-shrouds/knight-of-shrouds': 'nh-knight-of-shrouds',
+  'nighthaunt.unit.spirit-hosts/spirit-host': 'nh-spirit-host',
+  'nighthaunt.unit.grimghast-reapers/grimghast-reaper': 'nh-grimghast-reaper',
+  'nighthaunt.unit.chainrasps/chainrasp': 'nh-chainrasp',
+  // Sylvaneth. Lancers (teal dragonspites) and Seekers (russet ones) are told apart by mount colour.
+  'sylvaneth.unit.arch-revenant/arch-revenant': 'syl-arch-revenant',
+  'sylvaneth.unit.gossamid-archers/gossamid-archer': 'syl-gossamid-archer',
+  'sylvaneth.unit.spiterider-lancers/spiterider-lancer': 'syl-spiterider-lancer',
+  'sylvaneth.unit.revenant-seekers/revenant-seeker': 'syl-revenant-seeker',
 }
 
 /** Render-time corrections for GLBs whose baked `figure` node came out of the pipeline at the wrong size or facing.

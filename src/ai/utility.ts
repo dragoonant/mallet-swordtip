@@ -22,7 +22,11 @@ import { stormcastAbilityTiming, stormcastModeBonus, stormcastTargetBonus } from
 import { slavesFreeRetreatAvailable } from '../engine/factions/slaves'
 import { soulblightAbilityTiming, soulblightChargeBonus, soulblightModeBonus, soulblightTargetBonus } from '../engine/factions/soulblight'
 import { skavenAbilityTiming, skavenTargetBonus } from '../engine/factions/skaven'
+import { nurgleAbilityTiming, nurgleModeBonus, nurgleTargetBonus } from '../engine/factions/nurgle'
 import { seraphonAbilityTiming, seraphonTargetBonus } from '../engine/factions/seraphon'
+import { khorneAbilityTiming, khorneTargetBonus } from '../engine/factions/khorne'
+import { nighthauntAbilityTiming, nighthauntTargetBonus } from '../engine/factions/nighthaunt'
+import { sylvanethAbilityTiming, sylvanethTargetBonus } from '../engine/factions/sylvaneth'
 import { citiesHoldWeight } from '../engine/factions/cities'
 import { extraMoveCandidates } from './moves'
 import { underdogCardChase, underdogExposure, underdogObjectiveScale } from './underdogs'
@@ -1060,10 +1064,18 @@ function abilityTiming(state: GameState, player: PlayerId, abilityId: string, un
   if (sbgTiming !== null) return sbgTiming
   const sceTiming = code?.startsWith('stormcast') ? stormcastAbilityTiming(state, player, code, unitId) : null
   if (sceTiming !== null) return sceTiming
+  const nurTiming = code?.startsWith('nurgle') ? nurgleAbilityTiming(state, player, code, unitId) : null
+  if (nurTiming !== null) return nurTiming
   const skvTiming = code?.startsWith('skaven') ? skavenAbilityTiming(state, player, code, unitId) : null
   if (skvTiming !== null) return skvTiming
+  const bokTiming = code?.startsWith('khorne') ? khorneAbilityTiming(state, player, code, unitId) : null
+  if (bokTiming !== null) return bokTiming
   const serTiming = code?.startsWith('seraphon') ? seraphonAbilityTiming(state, player, code, unitId) : null
   if (serTiming !== null) return serTiming
+  const sylTiming = code?.startsWith('sylvaneth') ? sylvanethAbilityTiming(state, player, code, unitId) : null
+  if (sylTiming !== null) return sylTiming
+  const nhTiming = code?.startsWith('nighthaunt') ? nighthauntAbilityTiming(state, player, code, unitId) : null
+  if (nhTiming !== null) return nhTiming
   if (code === 'fyreslayersPlantTheIcon') {
     // once per battle, Ward for one turn: wait for the turn the units around the Battlesmith are actually fighting
     const src = unitId ? centerOfUnit(state, unitId) : null
@@ -1118,10 +1130,18 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
   if (sbgBonus !== null) return sbgBonus
   const sceBonus = code?.startsWith('stormcast') ? stormcastTargetBonus(state, player, code, unitId) : null
   if (sceBonus !== null) return sceBonus
+  const nurBonus = code?.startsWith('nurgle') ? nurgleTargetBonus(state, player, code, unitId) : null
+  if (nurBonus !== null) return nurBonus
   const skvBonus = code?.startsWith('skaven') ? skavenTargetBonus(state, player, code, unitId) : null
   if (skvBonus !== null) return skvBonus
+  const bokBonus = code?.startsWith('khorne') ? khorneTargetBonus(state, player, code, unitId) : null
+  if (bokBonus !== null) return bokBonus
   const serBonus = code?.startsWith('seraphon') ? seraphonTargetBonus(state, player, code, unitId) : null
   if (serBonus !== null) return serBonus
+  const sylBonus = code?.startsWith('sylvaneth') ? sylvanethTargetBonus(state, player, code, unitId) : null
+  if (sylBonus !== null) return sylBonus
+  const nhBonus = code?.startsWith('nighthaunt') ? nighthauntTargetBonus(state, player, code, unitId) : null
+  if (nhBonus !== null) return nhBonus
   if (code === 'citiesIronweldDiscipline') {
     // the Cannon fires at it: expected damage, not size
     let best = 0
@@ -1189,6 +1209,8 @@ function abilityModeBonus(state: GameState, pending: PendingDecision, optionId: 
   if (sbgMode !== null) return sbgMode
   const sceMode = koCode?.startsWith('stormcast') ? stormcastModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId) : null
   if (sceMode !== null) return sceMode
+  const nurMode = koCode?.startsWith('nurgle') ? nurgleModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId, selectedAbilityTarget(state, pending)) : null
+  if (nurMode !== null) return nurMode
   const placed = abilityPlacementScore(state, pending, optionId)
   if (placed !== null) return placed
   const target = selectedAbilityTarget(state, pending)

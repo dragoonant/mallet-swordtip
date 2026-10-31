@@ -1,0 +1,50 @@
+[
+  {
+    "id": "nighthaunt.weapon.sword-of-stolen-hours",
+    "name": "Sword of Stolen Hours",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [{ "ability": "CRIT_AUTO_WOUND" }]
+  },
+  {
+    "id": "nighthaunt.weapon.spectral-claws-and-daggers",
+    "name": "Spectral Claws and Daggers",
+    "type": "melee",
+    "range": 0,
+    "A": 6,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [{ "ability": "CRIT_AUTO_WOUND" }]
+  },
+  {
+    "id": "nighthaunt.weapon.slasher-scythe",
+    "name": "Slasher Scythe",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": [{ "ability": "CRIT_AUTO_WOUND" }]
+  },
+  {
+    "id": "nighthaunt.weapon.malignant-weapon",
+    "name": "Malignant Weapon",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 5,
+    "rend": 0,
+    "D": 1,
+    "abilities": [{ "ability": "CRIT_AUTO_WOUND" }]
+  }
+]

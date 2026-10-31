@@ -1,0 +1,29 @@
+[
+  {
+    "id": "sylvaneth.unit.revenant-seekers",
+    "faction": "sylvaneth",
+    "name": "Revenant Seekers",
+    "keywords": ["CAVALRY", "FLY"],
+    "factionKeywords": ["ORDER", "SYLVANETH"],
+    "stats": { "M": 12, "W": 5, "Sv": 4, "OC": 2 },
+    "coherencyRange": 2,
+    "composition": [
+      {
+        "modelId": "revenant-seeker",
+        "name": "Revenant Seeker",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 60 },
+        "weapons": {
+          "default": ["sylvaneth.weapon.seekers-sickle", "sylvaneth.weapon.dragonspite-mandibles"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["sylvaneth.ability.deafening-drone"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

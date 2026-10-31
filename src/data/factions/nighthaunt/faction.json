@@ -1,0 +1,17 @@
+{
+  "id": "nighthaunt",
+  "name": "Nighthaunt",
+  "factionKeyword": "NIGHTHAUNT",
+  "armyRule": "nighthaunt.ability.slasher-host",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#7fc9bd",
+    "secondary": "#2b3338",
+    "trim": "#a8a99a",
+    "metal": "#8a5a3c",
+    "decal": "#7dff8f"
+  },
+  "combatPatrols": [
+    "nighthaunt.army.slasher-host"
+  ]
+}

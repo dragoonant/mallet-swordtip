@@ -1,0 +1,73 @@
+{
+  "id": "nighthaunt.army.slasher-host",
+  "faction": "nighthaunt",
+  "name": "Slasher Host",
+  "mode": "spearhead",
+  "units": [
+    {
+      "ref": "knight-of-shrouds",
+      "datasheet": "nighthaunt.unit.knight-of-shrouds",
+      "size": 1
+    },
+    {
+      "ref": "spirit-hosts",
+      "datasheet": "nighthaunt.unit.spirit-hosts",
+      "size": 3
+    },
+    {
+      "ref": "grimghast-reapers-1",
+      "datasheet": "nighthaunt.unit.grimghast-reapers",
+      "size": 5
+    },
+    {
+      "ref": "grimghast-reapers-2",
+      "datasheet": "nighthaunt.unit.grimghast-reapers",
+      "size": 5
+    },
+    {
+      "ref": "chainrasps-1",
+      "datasheet": "nighthaunt.unit.chainrasps",
+      "size": 10
+    },
+    {
+      "ref": "chainrasps-2",
+      "datasheet": "nighthaunt.unit.chainrasps",
+      "size": 10
+    }
+  ],
+  "warlord": "knight-of-shrouds",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "nighthaunt.ability.ethereal",
+    "nighthaunt.ability.wave-of-terror"
+  ],
+  "regimentAbilities": [
+    {
+      "id": "nighthaunt.ability.chorus-of-terror",
+      "default": true
+    },
+    {
+      "id": "nighthaunt.ability.death-stalkers",
+      "default": false
+    }
+  ],
+  "enhancements": [
+    {
+      "id": "nighthaunt.enh.shadows-edge",
+      "default": true
+    },
+    {
+      "id": "nighthaunt.enh.soulfire-ring",
+      "default": false
+    },
+    {
+      "id": "nighthaunt.enh.cloaked-in-shadow",
+      "default": false
+    },
+    {
+      "id": "nighthaunt.enh.beacon-of-nagashizzar",
+      "default": false
+    }
+  ]
+}

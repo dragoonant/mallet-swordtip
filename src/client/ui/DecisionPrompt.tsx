@@ -107,6 +107,7 @@ const CHOOSE_OPTION_INFO: Partial<Record<ChooseOptionTopic, { title: string; hin
   hazardousCasualty: { title: 'Hazardous casualty', hint: 'A model must be removed for failing its Hazardous test.' },
   rerollOffer: { title: 'Re-roll a die?', hint: 'Choose a die to re-roll, or keep the result.' },
   abilityChoice: { title: 'Ability choice', hint: 'Choose how this ability applies.' },
+  critChoice: { title: 'Pick a critical-hit effect', hint: 'This weapon has more than one critical-hit ability. Pick the one it uses for this attack; the others are ignored.' },
   chooseSide: { title: 'Choose your side', hint: 'Pick which deployment zone your army sets up in.' },
   // Spearhead (13-port-plan §2.1)
   chooseAttacker: { title: 'Attacker or defender?', hint: 'You won the roll-off. The attacker sets up first and picks their army options first; the defender picks the map side and territory, and sets up terrain first.' },
@@ -191,6 +192,23 @@ export function chooseOptionInfoFor(
   if (context.topic === 'abilityMode' && context.data?.place === true) {
     const uname = context.unitId && state ? groupLabel(state, context.unitId) : undefined
     return { title: `Set up ${uname ?? 'the replacement'}`, hint: 'Choose where the unit appears. Every spot offered is legal.' }
+  }
+  // F14: a weapon with two critical-hit abilities (core rules 20.0): the attacker picks one before any dice are rolled.
+  if (context.topic === 'critChoice') {
+    const weapon = typeof context.data?.weaponName === 'string' ? context.data.weaponName : undefined
+    const target = typeof context.data?.targetUnitId === 'string' && state ? state.units[context.data.targetUnitId]?.name : undefined
+    return {
+      title: `${weapon ?? 'This weapon'}: pick a critical-hit effect`,
+      hint: `Only one of its critical-hit abilities counts for this attack${target ? ` on ${target}` : ''}. Each option shows the average extra damage that effect is worth per critical hit; the unit being attacked lights up on the board.`,
+    }
+  }
+  // F14: Nurgle's Embrace spends the army's disease points one at a time on an enemy unit in combat with it.
+  if (context.topic === 'abilityChoice' && typeof context.data?.points === 'number' && context.abilityId && state?.abilities[context.abilityId]) {
+    const left = context.data.points
+    return {
+      title: `${state.abilities[context.abilityId].name}: spend a disease point`,
+      hint: `${left} disease point${left === 1 ? '' : 's'} left. Pick an enemy unit in combat with your army: each point spent there is a dice roll, and a 5+ is 1 mortal damage. Pass to stop spending.`,
+    }
   }
   // Any other ability prompt carries the ability's own name, so "Choose an effect" says which ability is asking
   // (Storm Brewing's edge, Wind Whisperer, Careening Destruction, Guide the Gusts ...).
@@ -352,6 +370,11 @@ function labelForOption(pending: PendingDecision, state: GameState, events: read
       const uid = pending.context.unitId
       const uname = uid ? state.units[uid]?.name : undefined
       if (uname && pending.context.topic === 'abilityMode' && o.label.startsWith(`${uname}: `)) return o.label.slice(uname.length + 2)
+      // A critical-hit pick shows what each effect is worth (the engine's expected damage per critical hit).
+      if (pending.context.topic === 'critChoice') {
+        const v = pending.options.find((x) => x.id === o.id)?.hint?.value
+        if (typeof v === 'number') return `${o.label} (about ${v.toFixed(2)} damage per critical hit)`
+      }
       return o.label
     }
     default:
@@ -426,6 +449,8 @@ function hoverTargetFor(state: GameState, pending: PendingDecision, action: Acti
       // model; objective prompts name an objective. A pick between
       // weapons or ability modes has no board object of its own, so it lights the unit it is about.
       if (pending.kind !== 'chooseOption' || pending.context.topic === 'rerollOffer') return null
+      // A critical-hit pick is about the unit being attacked, not the attacker.
+      if (pending.context.topic === 'critChoice' && typeof pending.context.data?.targetUnitId === 'string') return unitsOf([pending.context.data.targetUnitId])
       // A redeploy spot: the position itself lights up on the board, and so does the unit that is being set up
       if (isRedeploy(pending) && spotOfOption(optionId)) return { kind: 'spot', id: optionId, unitId: pending.context.unitId ?? null }
       if (state.units[optionId]) return { kind: 'unit', ids: [optionId] }

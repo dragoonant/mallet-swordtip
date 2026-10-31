@@ -1,0 +1,29 @@
+[
+  {
+    "id": "sylvaneth.unit.arch-revenant",
+    "faction": "sylvaneth",
+    "name": "Arch-Revenant",
+    "keywords": ["HERO", "INFANTRY", "FLY"],
+    "factionKeywords": ["ORDER", "SYLVANETH"],
+    "stats": { "M": 12, "W": 6, "Sv": 4, "OC": 2 },
+    "coherencyRange": 2,
+    "composition": [
+      {
+        "modelId": "arch-revenant",
+        "name": "Arch-Revenant",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["sylvaneth.weapon.arch-revenants-glaive"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["sylvaneth.ability.heartwood-hunting-horn"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

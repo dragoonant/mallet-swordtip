@@ -12,7 +12,7 @@
 import { rollSum } from '../dice'
 import { applyAbilityRerolls } from '../rerolls'
 import {
-  CHARGE_END, EPS, baseEdgePoints, basesOverlap, checkPlacements, distance, emptyMoveConstraints, horizontalGap, pathCrossesModels,
+  CHARGE_END, ENGAGEMENT_H, EPS, baseEdgePoints, basesOverlap, checkPlacements, distance, emptyMoveConstraints, horizontalGap, pathCrossesModels,
   pointInPolygon, pointToPolygonEdge, whollyOnBoard, whollyWithinPolygon, withinEngagementRange, samplePath,
   type Footprint, type ResolvedPlacement,
 } from '../geometry'
@@ -61,12 +61,15 @@ export function chargeDiceCount(state: GameState, unitId: UnitId): number {
 }
 
 // can the unit's nearest model reach ½" of some enemy model with the best roll its charge dice can make (6 per die)?
+// F14 (BOK C3): with a chargeMustEndInCombatWith constraint, the reach is measured as neededChargeDistance does
 function enemyWithinReach(state: GameState, unitId: UnitId): boolean {
-  const mine = unitModelsForCoherency(state, unitId)
-  const enemies = enemyModelsOnBoard(state, state.units[unitId].player)
-  const best = 6 * chargeDiceCount(state, unitId)
-  for (const m of mine) for (const e of enemies) if (horizontalGap(m, e) - CHARGE_END <= best + EPS) return true
-  return false
+  const needed = neededChargeDistance(state, unitId)
+  return needed !== null && needed <= 6 * chargeDiceCount(state, unitId) + EPS
+}
+
+// F14 (BOK C3 Killing Pounce): the units this charge must end in combat with (hookService.chargeMustEndInCombatWithFor; [] = none)
+export function chargeMustEndInCombatWith(state: GameState, unitId: UnitId): UnitId[] {
+  return hookService.chargeMustEndInCombatWithFor(state, unitId)
 }
 
 export function canDeclareCharge(state: GameState, unitId: UnitId): boolean {
@@ -117,6 +120,17 @@ export function neededChargeDistance(state: GameState, unitId: UnitId, targetUni
   if (mine.length === 0 || enemies.length === 0) return null
   let best = Infinity
   for (const m of mine) for (const e of enemies) best = Math.min(best, horizontalGap(m, e) - CHARGE_END)
+  // F14 (BOK C3): the charge must also end in combat (3") with each named unit: the roll has to cover that too (a lower bound:
+  // the ½" end may be to another enemy model). A named unit with no models left makes the charge impossible.
+  if (targetUnitIds.length === 0) {
+    for (const uid of chargeMustEndInCombatWith(state, unitId)) {
+      const ms = unitModels(state, uid)
+      if (ms.length === 0) return null
+      let gap = Infinity
+      for (const m of mine) for (const e of ms) gap = Math.min(gap, horizontalGap(m, e) - ENGAGEMENT_H)
+      best = Math.max(best, gap)
+    }
+  }
   return Math.max(0, best)
 }
 
@@ -158,10 +172,13 @@ function chargeEndsLegally(state: GameState, geo: ChargeGeometry, finals: Model[
 export function chargeMoveRejection(state: GameState, unitId: UnitId, roll: number, placements: ModelPlacement[]): Rejection | null {
   const geo = chargeGeometry(state, unitId)
   // F8 (LRL-RA-2 Roaring Headwind): a code hook may make every charging model end closer to one battlefield edge
-  const constraints = emptyMoveConstraints(roll, { mustEndOutsideEngagement: false, coherency: true, mustEndCloserToEdge: hookService.moveEdgeConstraintFor(state, unitId) })
+  // F14 (BOK C3 Killing Pounce): the charge may have to end in combat with named units (MoveConstraints.mustEndInEngagementWith)
+  const must = chargeMustEndInCombatWith(state, unitId)
+  const constraints = emptyMoveConstraints(roll, { mustEndOutsideEngagement: false, coherency: true, mustEndCloserToEdge: hookService.moveEdgeConstraintFor(state, unitId), mustEndInEngagementWith: must })
   const result = checkPlacements({
     unitModels: geo.models, placements, constraints, otherFriendly: geo.otherFriendly, enemies: geo.enemies, board: state.board,
     fly: geo.fly, coherencyRange: datasheetOf(state, unitId).coherencyRange,
+    ...(must.length > 0 ? { engagementTargets: Object.fromEntries(must.map((id) => [id, unitModels(state, id)])) } : {}),
   })
   if (result.rejection) return result.rejection
   const finals: Model[] = []
@@ -238,7 +255,10 @@ export function legalChargeMoves(state: GameState, unitId: UnitId, roll: number,
     out.push(placements)
     return out.length >= limit
   }
+  // F14 (BOK C3): with a must-end-in-combat-with constraint the candidates aim at those units' models
+  const must = new Set(chargeMustEndInCombatWith(state, unitId))
   const nearestEnemies = [...geo.enemies]
+    .filter((e) => must.size === 0 || must.has(e.unitId))
     .map((e) => ({ e, gap: Math.min(...geo.models.map((m) => horizontalGap(m, e))) }))
     .filter((x) => x.gap - CHARGE_END <= roll + EPS)
     .sort((a, b) => a.gap - b.gap)
@@ -594,7 +614,7 @@ function driveCharge(ctx: EngineContext): 'pending' | 'progress' {
   ctx.decide({
     kind: 'chargeMove', player: unit.player, window: 'charge.moveEnded', canPass: true,
     context: { unitId, targetUnitIds: [], roll: charge.distance ?? 0 },
-    constraints: emptyMoveConstraints(charge.distance ?? 0, { mustEndOutsideEngagement: false, coherency: true, mustEndCloserToEdge: hookService.moveEdgeConstraintFor(s, unitId) }),
+    constraints: emptyMoveConstraints(charge.distance ?? 0, { mustEndOutsideEngagement: false, coherency: true, mustEndCloserToEdge: hookService.moveEdgeConstraintFor(s, unitId), mustEndInEngagementWith: chargeMustEndInCombatWith(s, unitId) }),
   })
   return 'pending'
 }

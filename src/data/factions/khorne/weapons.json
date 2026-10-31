@@ -1,0 +1,42 @@
+[
+  {
+    "id": "khorne.weapon.savage-maws-and-goreslick-claws",
+    "name": "Savage Maws and Goreslick Claws",
+    "type": "melee",
+    "range": 0,
+    "A": 6,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [
+      { "ability": "ANTI", "keyword": "HERO", "value": 1 }
+    ]
+  },
+  {
+    "id": "khorne.weapon.blood-dark-claws",
+    "name": "Blood-dark Claws",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "khorne.weapon.weapons-of-the-hunt",
+    "name": "Weapons of the Hunt",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "CRIT_2_HITS" }
+    ]
+  }
+]

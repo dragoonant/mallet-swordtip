@@ -1,0 +1,28 @@
+[
+  {
+    "id": "khorne.unit.karanak",
+    "faction": "khorne",
+    "name": "Karanak",
+    "keywords": ["HERO", "BEAST"],
+    "factionKeywords": ["CHAOS", "KHORNE"],
+    "stats": { "M": 8, "W": 7, "Sv": 5, "OC": 2, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "karanak",
+        "name": "Karanak",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "oval", "mm": 75, "mm2": 42 },
+        "weapons": {
+          "default": ["khorne.weapon.savage-maws-and-goreslick-claws"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["khorne.ability.stalk-the-prey"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

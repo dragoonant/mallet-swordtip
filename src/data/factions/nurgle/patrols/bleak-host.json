@@ -1,0 +1,42 @@
+{
+  "id": "nurgle.army.bleak-host",
+  "faction": "nurgle",
+  "name": "Bleak Host",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "spoilpox-scrivener", "datasheet": "nurgle.unit.spoilpox-scrivener", "size": 1 },
+    { "ref": "pusgoyle-blightlord-1", "datasheet": "nurgle.unit.pusgoyle-blightlord", "size": 1 },
+    {
+      "ref": "pusgoyle-blightlord-2",
+      "datasheet": "nurgle.unit.pusgoyle-blightlord",
+      "size": 1,
+      "reserve": { "ability": "nurgle.ability.daemonic-summoning" }
+    },
+    { "ref": "putrid-blightkings", "datasheet": "nurgle.unit.putrid-blightkings", "size": 5 },
+    { "ref": "plaguebearers-1", "datasheet": "nurgle.unit.plaguebearers", "size": 5 },
+    {
+      "ref": "plaguebearers-2",
+      "datasheet": "nurgle.unit.plaguebearers",
+      "size": 5,
+      "reserve": { "ability": "nurgle.ability.daemonic-summoning" }
+    }
+  ],
+  "warlord": "spoilpox-scrivener",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "nurgle.ability.the-infectious-hosts",
+    "nurgle.ability.diseased",
+    "nurgle.ability.nurgles-embrace"
+  ],
+  "regimentAbilities": [
+    { "id": "nurgle.ability.infested-with-wonders", "default": true },
+    { "id": "nurgle.ability.locus-of-fecundity", "default": false }
+  ],
+  "enhancements": [
+    { "id": "nurgle.enh.pestilent-breath", "default": true },
+    { "id": "nurgle.enh.summoner-of-plaguebearers", "default": false },
+    { "id": "nurgle.enh.gardener-of-nurgle", "default": false },
+    { "id": "nurgle.enh.gift-of-febrile-frenzy", "default": false }
+  ]
+}

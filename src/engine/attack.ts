@@ -13,7 +13,7 @@
 // The "damage counter" of CORE-13.4 is the single damaged model's `woundsRemaining` (a unit is *damaged* while some
 // model has fewer wounds than its Health), so Heal effects only have to raise `woundsRemaining`.
 // RNG consumption order (CORE-11.9): per target, per profile: hits -> wounds -> saves -> damage dice; then wards.
-import type { WeaponAbility, WeaponAbilityName } from '../data/types'
+import type { DiceExpr, WeaponAbility, WeaponAbilityName } from '../data/types'
 import { clampHitWoundModifier, clampStat, netSaveModifier, parseDiceExpr } from './dice'
 import type { AttackRollContext } from './events'
 import { coherencyGroups, distance, ENGAGEMENT_H, EPS, horizontalGap, isCoherent } from './geometry'
@@ -253,12 +253,15 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
   const evalDie = (u: number, idx: number, roll: DiceRoll): DieOut & { rr: Ent['rr'] } => {
     const ent = entFor(u, idx, roll)
     let final: number
-    // F12 (SBG-ENH Aura of Night, Effect.ignoreNegativeModifiers): negative modifiers (card ones included) are dropped; rend is not
-    // a modifier and still applies
+    // F12 (SBG-ENH Aura of Night, Effect.ignoreNegativeModifiers): negative modifiers (card ones included) are dropped.
+    // F14 RULING (core 17.0 step 3 + the glossary: the weapon's Rend is subtracted from the save roll): Rend is a
+    // negative modifier to the save roll, so an ignore-negative save drops Rend too, and an ignore-all save (NH-BT-1 Ethereal,
+    // Effect.ignoreModifiers 'save') is the bare die against the Save characteristic. Unmodified 1s still fail.
     const raw = [...p.statics.map((m) => m.value), ...ent.mods]
     const mods = ent.ignoreNeg ? raw.filter((m) => m > 0) : raw
     if (isSave) {
-      final = u - p.rend + (ent.ignore ? 0 : netSaveModifier(mods))
+      const rend = ent.ignore || ent.ignoreNeg ? 0 : p.rend
+      final = u - rend + (ent.ignore ? 0 : netSaveModifier(mods))
     } else {
       const sum = mods.reduce((a, b) => a + b, 0)
       final = u + (ent.ignore ? 0 : clampHitWoundModifier(sum))
@@ -320,6 +323,119 @@ function mortalPerHit(ctx: EngineContext, value: WeaponAbility['value'], player:
   return Math.max(0, ctx.rollExpr(value, { purpose: 'ability', player, unitId, modelId, weaponId }).total)
 }
 
+// ---------- F14: several critical-hit abilities on one weapon (core 20.0) ----------
+// When more than one of a weapon's abilities would apply on a critical hit, the attacking model's player picks one of them before
+// the attack sequence starts. advance() raises one chooseOption (topic 'critChoice') per
+// (weapon, target unit) of the declared attacks whose effective weapon has two or more distinct crit abilities; the pick is a
+// phase mark read by resolveBatch. Each option carries hint.value = its expected damage per critical hit (the AI's pick).
+export const CRIT_ABILITIES: readonly WeaponAbilityName[] = ['CRIT_MORTAL', 'CRIT_2_HITS', 'CRIT_AUTO_WOUND']
+const CRIT_PICK = 'critPick:'
+const critKey = (attackerUnitId: UnitId, weaponId: WeaponId, targetUnitId: UnitId): string => `${CRIT_PICK}${attackerUnitId}|${weaponId}|${targetUnitId}=`
+
+// the distinct crit abilities a weapon has, first listed first; none when HIT_MORTAL replaces the whole hit roll
+export function critAbilitiesOf(w: RuntimeWeapon): WeaponAbility[] {
+  if (w.abilities.some((a) => a.ability === 'HIT_MORTAL')) return []
+  const out: WeaponAbility[] = []
+  for (const a of w.abilities) if (CRIT_ABILITIES.includes(a.ability) && !out.some((o) => o.ability === a.ability)) out.push(a)
+  return out
+}
+
+const avgExpr = (e: DiceExpr | undefined | null, dflt: number): number => {
+  if (e === undefined || e === null) return dflt
+  if (typeof e === 'number') return e
+  try {
+    const p = parseDiceExpr(e)
+    return p.sides === null ? p.flat : p.count * (p.sides + 1) / 2 + p.flat
+  } catch { return dflt }
+}
+const pRoll = (needed: number): number => Math.min(5 / 6, Math.max(0, (7 - needed) / 6)) // unmodified 1 always fails
+
+// expected damage one critical hit of `w` deals against `rep` with each crit ability (CORE-12.1 forms; modifiers ignored)
+export function critExpectedDamage(state: GameState, w: RuntimeWeapon, rep: Model, rend: number, a: WeaponAbility): number {
+  const st = modelStats(state, rep)
+  const dmg = avgExpr(w.D, 1)
+  const pWound = pRoll(w.wound)
+  const pUnsaved = st.noSave ? 1 : 1 - pRoll(st.Sv + rend)
+  if (a.ability === 'CRIT_MORTAL') return dmg
+  if (a.ability === 'CRIT_AUTO_WOUND') return pUnsaved * dmg
+  return avgExpr(a.value, 2) * pWound * pUnsaved * dmg
+}
+
+// the crit ability resolveBatch uses: the recorded pick, else the best expected damage (ties: first listed), else the only one
+function chosenCrit(state: GameState, attackerUnitId: UnitId, weaponId: WeaponId, targetUnitId: UnitId, w: RuntimeWeapon, rep: Model, rend: number): WeaponAbility | undefined {
+  const list = critAbilitiesOf(w)
+  if (list.length <= 1) return list[0]
+  const mark = state.phaseState.marks.find((m) => m.startsWith(critKey(attackerUnitId, weaponId, targetUnitId)))
+  const picked = mark ? list.find((a) => a.ability === mark.slice(mark.indexOf('=') + 1)) : undefined
+  if (picked) return picked
+  let best = list[0]
+  let bestV = critExpectedDamage(state, w, rep, rend, best)
+  for (const a of list.slice(1)) { const v = critExpectedDamage(state, w, rep, rend, a); if (v > bestV + 1e-9) { best = a; bestV = v } }
+  return best
+}
+
+const CRIT_LABEL: Record<string, string> = { CRIT_MORTAL: 'Crit (Mortal)', CRIT_2_HITS: 'Crit (2 Hits)', CRIT_AUTO_WOUND: 'Crit (Auto-wound)' }
+
+// raises the attacker's pick for the first (weapon, target) still undecided; true = a decision is now pending
+function askCritChoice(ctx: EngineContext, kind: AttackKind, attackerUnitId: UnitId, targets: DeclaredTarget[]): boolean {
+  const s = ctx.state
+  const seen = new Set<string>()
+  for (const t of targets) {
+    const key = critKey(attackerUnitId, t.weaponId, t.targetUnitId)
+    if (seen.has(key)) continue
+    seen.add(key)
+    if (s.phaseState.marks.some((m) => m.startsWith(key))) continue
+    const rep = unitModels(s, t.targetUnitId)[0]
+    if (!rep || !s.models[t.modelId]) continue
+    const draft = weaponService.effectiveWeapon(s, t.modelId, t.weaponId)
+    const actx0 = buildActx(ctx, kind, attackerUnitId, t.modelId, draft, t.targetUnitId, rep.id, coverFor(s, attackerUnitId, t.targetUnitId))
+    const ew = weaponService.effectiveWeapon(s, t.modelId, t.weaponId, actx0)
+    const list = critAbilitiesOf(ew)
+    if (list.length <= 1) continue
+    const rend = cardIgnoresRend(s, t.targetUnitId) ? 0 : Math.max(0, ew.rend + antiBonus(s, ew, t.targetUnitId))
+    const player = s.units[attackerUnitId].player
+    ctx.decide({
+      kind: 'chooseOption', player, window: kind === 'melee' ? 'fight.targetsDeclared' : 'shooting.targetsDeclared', canPass: false,
+      context: { topic: 'critChoice', unitId: attackerUnitId, abilityId: null, data: { key, weaponId: t.weaponId, targetUnitId: t.targetUnitId, weaponName: ew.name } },
+      options: list.map((a) => ({
+        id: a.ability, label: `${ew.name}: ${CRIT_LABEL[a.ability] ?? a.ability}${a.ability === 'CRIT_2_HITS' && a.value !== undefined && a.value !== 2 ? ` (${a.value} hits)` : ''}`,
+        action: { type: 'chooseOption', player, decisionId: '', optionId: a.ability },
+        hint: { value: Math.round(critExpectedDamage(s, ew, rep, rend, a) * 1000) / 1000, unitId: t.targetUnitId },
+      })),
+    })
+    return true
+  }
+  return false
+}
+
+// ---------- F14 (BOK C1): turn ledger, who took damage / who slew with combat attacks this turn ----------
+// mission.custom.turnLedger (types.ts is a frozen contract), treated as empty whenever its key is not the current turn
+interface TurnLedger { key: string; damaged: UnitId[]; slewInFight: UnitId[] }
+const turnKey = (s: GameState): string => `${s.round}:${s.activePlayer}`
+function ledgerOf(s: GameState): TurnLedger {
+  const l = s.mission.custom.turnLedger as TurnLedger | undefined
+  return l && l.key === turnKey(s) ? l : { key: turnKey(s), damaged: [], slewInFight: [] }
+}
+function noteLedger(s: GameState, field: 'damaged' | 'slewInFight', unitId: UnitId): void {
+  const l = ledgerOf(s)
+  if (l[field].includes(unitId)) return
+  s.mission.custom = { ...s.mission.custom, turnLedger: { ...l, [field]: [...l[field], unitId] } }
+}
+// true when at least one damage point (normal or mortal, any source, after wards / redirects / ignored points) was allocated
+// to the unit this turn; a unit wiped out counts
+export function damagedThisTurn(state: GameState, unitId: UnitId): boolean { return ledgerOf(state).damaged.includes(unitId) }
+// true when the unit's combat attacks (Crit (Mortal) pools of combat attacks included) slew an enemy model this turn
+export function slewInFightThisTurn(state: GameState, unitId: UnitId): boolean { return ledgerOf(state).slewInFight.includes(unitId) }
+
+// ---------- F14 (NH C4 fallback): the first unit that declared attacks on each target this phase ----------
+const FIRST_ATK = 'atk:tg:'
+// the unit whose Shoot / Fight declaration first named `targetUnitId` this phase (attackService.begin), or null
+export function firstAttackerThisPhase(state: GameState, targetUnitId: UnitId): UnitId | null {
+  const key = `${FIRST_ATK}${targetUnitId}=`
+  const m = state.phaseState.marks.find((x) => x.startsWith(key))
+  return m ? m.slice(key.length) : null
+}
+
 // F12 (SER C4): unmodified save 1s of the running attack sequence, per target unit (null outside attackService.advance)
 let saveOnesTally: Record<UnitId, number> | null = null
 
@@ -371,9 +487,11 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   if (kind === 'ranged' && guardedHero(s, batch.targetUnitId)) hitMods.push({ source: 'guardedHero', value: -1 })
   const cardHit = cardHitRule(s, attackerUnitId, batch.targetUnitId, kind)
   if (cardHit.modifier) hitMods.push({ source: 'card', value: cardHit.modifier })
-  // criticals: one crit ability per weapon (CORE-12.1, first listed). F12: HIT_MORTAL (SKV-AB-5) turns every hit into mortal
-  // damage and makes no wound roll, so no crit ability applies to it; CRIT_2_HITS may carry a value = hits per critical hit
-  const critEntry = ew.abilities.find((a) => a.ability === 'CRIT_MORTAL' || a.ability === 'CRIT_2_HITS' || a.ability === 'CRIT_AUTO_WOUND')
+  // criticals: one crit ability per weapon. F14 (core 20.0): with more than one, the attacking player picked one before the
+  // sequence (critChoice decision, see advance); no pick on record = the one with the best expected damage. F12: HIT_MORTAL
+  // (SKV-AB-5) turns every hit into mortal damage and makes no wound roll, so no crit ability applies to it; CRIT_2_HITS may carry
+  // a value = hits per critical hit
+  const critEntry = chosenCrit(s, attackerUnitId, batch.weaponId, batch.targetUnitId, ew, rep, rend)
   const hitMortal = ew.abilities.find((a) => a.ability === 'HIT_MORTAL')
   const critAb = hitMortal ? undefined : critEntry?.ability
   let hitOuts: DieOut[]
@@ -386,6 +504,9 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
     // F12 (SKV-AB-3): hits scored by each critical hit, one roll per critical hit (attacker's roll) when the value is dice
     copiesOf = st.outs.map((o) => (o.success && o.critical && critAb === 'CRIT_2_HITS' ? critHitCount(ctx, critEntry?.value, attackerPlayer, attackerUnitId, lead, ew.id) : 1))
     st.outs.forEach((o, i) => ctx.emit({ type: 'HitRolled', attack: rctx, die: o.u, final: o.final, hit: o.success, critical: o.critical, extraHits: Math.max(0, copiesOf[i] - 1), auto: false, rollId: st.roll.id, dieIndex: i, player: attackerPlayer }))
+    // F14 (MON-BT-2 Diseased): the attacking unit's own codes hear how many critical hits this weapon group scored
+    const crits = st.outs.filter((o) => o.success && o.critical).length
+    if (crits > 0) for (const ab of ownAbilityCodes(s, attacker)) codeHookFor(ab.code)?.onOwnCriticalHits?.(ctx, { ability: ab, unitId: attackerUnitId, weaponId: ew.id, count: crits })
   }
   let needWound = 0
   let autoWounds = 0
@@ -696,6 +817,7 @@ export function damagedByShootingThisPhase(state: GameState, attackerUnitId: Uni
 
 function flushDamage(ctx: EngineContext, unit: Unit, dealt: Map<ModelId, number>, pool: Pool): void {
   for (const [modelId, amount] of dealt) {
+    if (amount > 0) noteLedger(ctx.state, 'damaged', unit.id)
     const m = ctx.state.models[modelId]
     ctx.emit({ type: 'DamageApplied', unitId: unit.id, modelId, amount, mortal: pool.mortal, woundsRemaining: Math.max(0, m ? m.woundsRemaining : 0), source: pool.source, player: unit.player })
   }
@@ -772,6 +894,8 @@ export const attackService: AttackService = {
     }
     if (targets.length === 0) return
     if (spec.kind === 'ranged') recordShot(s, spec.attackerUnitId)
+    // F14 (NH-ENH Cloaked in Shadow): the first unit to declare attacks on each target this phase (firstAttackerThisPhase)
+    for (const tu of targetUnitIds) if (firstAttackerThisPhase(s, tu) === null) s.phaseState.marks.push(`${FIRST_ATK}${tu}=${spec.attackerUnitId}`)
     ctx.emit({ type: 'AttackSequenceStarted', unitId: spec.attackerUnitId, kind: spec.kind, overwatch: false })
     ctx.emit({ type: 'TargetsDeclared', unitId: spec.attackerUnitId, targets: targets.map((t) => ({ modelId: t.modelId, weaponId: t.weaponId, targetUnitId: t.targetUnitId })) })
     ctx.services.hooks.run(ctx, 'onTargetsDeclared', { attackerUnitId: spec.attackerUnitId, targetUnitIds, kind: spec.kind })
@@ -784,6 +908,8 @@ export const attackService: AttackService = {
     const pools: Pools = new Map()
     const live = a.targets.filter((t) => s.units[t.targetUnitId]?.location === 'board')
     const tally: Record<UnitId, number> = {}
+    // F14 (core 20.0): the attacker picks one crit ability per weapon that has several, before any dice
+    if (live.length > 0 && askCritChoice(ctx, a.kind, a.attackerUnitId, live)) return 'pending'
     if (live.length > 0) {
       const batches = buildBatches(ctx, a.kind, a.attackerUnitId, live)
       saveOnesTally = tally
@@ -801,11 +927,28 @@ export const attackService: AttackService = {
     const ran = live.length > 0 || a.targets.length > 0
     if (ran) ctx.emit({ type: 'AttackSequenceEnded', unitId: a.attackerUnitId, kind: a.kind })
     s.phaseState.attack = null
+    s.phaseState.marks = s.phaseState.marks.filter((m) => !m.startsWith(`${CRIT_PICK}${a.attackerUnitId}|`))
     if (ran) afterAttackSequence(ctx, a.attackerUnitId, tally)
     return 'done'
   },
 
-  handler: { handle: () => ({ code: 'E_NOT_AN_OPTION', reason: 'attack: the attack sequence asks no decisions' }) },
+  // F14: answers the 'critChoice' pick (DEFAULT_MODULES.topics); the attack resumes when the phase module calls advance again
+  handler: {
+    validate(_state, action, pending) {
+      if (pending.kind !== 'chooseOption' || pending.context.topic !== 'critChoice') return { code: 'E_NOT_AN_OPTION', reason: 'attack: only the crit pick is asked here' }
+      if (action.type !== 'chooseOption' || !pending.options.some((o) => o.id === action.optionId)) return { code: 'E_NOT_AN_OPTION', reason: 'pick one of the offered critical-hit abilities' }
+      return null
+    },
+    handle(ctx, action, pending) {
+      const rej = attackService.handler.validate?.(ctx.state, action, pending)
+      if (rej) return rej
+      if (pending.kind !== 'chooseOption' || action.type !== 'chooseOption') return
+      const key = pending.context.data.key as string
+      ctx.state.phaseState.marks = ctx.state.phaseState.marks.filter((m) => !m.startsWith(key))
+      ctx.state.phaseState.marks.push(key + action.optionId)
+      ctx.emit({ type: 'AbilityTriggered', abilityId: 'core.crit-choice', sourceUnitId: pending.context.unitId, targetUnitId: (pending.context.data.targetUnitId as UnitId) ?? null, summary: `${pending.options.find((o) => o.id === action.optionId)?.label ?? action.optionId} for this attack`, player: pending.player })
+    },
+  },
 
   queueMortalWounds(ctx, targetUnitId, count, source, lostOnDeath, by) {
     if (count <= 0) return
@@ -829,6 +972,11 @@ export const attackService: AttackService = {
     ctx.emit({ type: 'ModelDestroyed', unitId: unit.id, modelId, byPlayer: by.player, byUnitId: by.unitId, byModelId: by.modelId, kind: by.kind })
     ctx.services.hooks.run(ctx, 'onModelDestroyed', { destroyedUnitId: unit.id, destroyedModelId: modelId, byUnitId: by.unitId, byModelId: by.modelId, kind: by.kind })
     ownModelSlain(ctx, unit, by)
+    // F14 (BOK C1 / NH C2): the slaying unit's ledger and its own sources' onEnemyModelSlain
+    if (by.unitId && by.player !== null && by.player !== unit.player) {
+      if (by.kind === 'melee') noteLedger(s, 'slewInFight', by.unitId)
+      enemyModelSlain(ctx, unit, by)
+    }
     const ms = ctx.services.missions as unknown as { modelDestroyed?: (c: EngineContext, i: object) => void }
     ms.modelDestroyed?.(ctx, { unitId: unit.id, modelId, byPlayer: by.player, byUnitId: by.unitId, byModelId: by.modelId })
     if (nowDestroyed) destroyUnitTail(ctx, unit, by)
@@ -866,6 +1014,23 @@ function ownModelSlain(ctx: EngineContext, unit: Unit, by: DestroyedBy): void {
   const model = unit.destroyedModels?.[unit.destroyedModels.length - 1]
   if (!model) return
   for (const ab of ownAbilityCodes(ctx.state, unit)) codeHookFor(ab.code)?.onOwnModelSlain?.(ctx, { ability: ab, unitId: unit.id, model, by })
+}
+
+// F14 (NH C2, Soulfire Ring): EngineCodeHook.onEnemyModelSlain for every source entry HELD by the slaying unit (by.unitId), once
+// per (source, active effect), after the enemy model is removed. `model` = the snapshot at removal.
+function enemyModelSlain(ctx: EngineContext, unit: Unit, by: DestroyedBy): void {
+  const model = unit.destroyedModels?.[unit.destroyedModels.length - 1]
+  if (!model || !by.unitId) return
+  const seen = new Set<string>()
+  for (const entry of sourcesFor(ctx.state)) {
+    if (entry.holderUnitId !== by.unitId) continue
+    const spec = codeHookFor(entry.code)
+    if (!spec?.onEnemyModelSlain) continue
+    const k = `${entry.source.id}|${entry.active?.id ?? ''}`
+    if (seen.has(k)) continue
+    seen.add(k)
+    spec.onEnemyModelSlain(ctx, entry, { slainUnitId: unit.id, model, by })
+  }
 }
 
 // the unit's datasheet abilities plus its player's battle traits and regiment ability, de-duplicated, in that order

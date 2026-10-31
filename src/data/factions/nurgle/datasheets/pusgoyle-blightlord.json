@@ -1,0 +1,28 @@
+[
+  {
+    "id": "nurgle.unit.pusgoyle-blightlord",
+    "faction": "nurgle",
+    "name": "Pusgoyle Blightlord",
+    "keywords": ["CAVALRY", "FLY"],
+    "factionKeywords": ["CHAOS", "MAGGOTKIN OF NURGLE"],
+    "stats": { "M": 8, "W": 8, "Sv": 4, "OC": 2, "ward": 5 },
+    "composition": [
+      {
+        "modelId": "pusgoyle-blightlord",
+        "name": "Pusgoyle Blightlord",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 60 },
+        "weapons": {
+          "default": ["nurgle.weapon.blighted-scythe", "nurgle.weapon.rot-fly-mouthparts"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["nurgle.ability.wrack-and-ruin"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]
