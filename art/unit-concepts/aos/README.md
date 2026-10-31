@@ -78,6 +78,24 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 | `sbg-skeleton` | Deathrattle Skeletons | 25 | 1.15 | GLB done, checked |
 | `sbg-blood-knight` | Blood Knights | 75×42 oval | 2.0 | GLB done, checked (yaw 90) |
 | `sbg-vargheist` | Vargheists | 50 | 1.9 | GLB done, checked (wings overhang the base) |
+| `bok-karanak` | Karanak | 75×42 oval | 1.55 | GLB done, checked (side heads overhang the base) |
+| `bok-flesh-hound` | Flesh Hounds | 60×35 oval | 1.25 | GLB done, checked |
+| `bok-claws-packlord` | Claws of Karanak (Packlord) | 40 | 1.55 | GLB done, checked |
+| `bok-claws-hound-of-wrath` | Claws of Karanak (Hound of Wrath) | 60×35 oval | 1.2 | GLB done, checked |
+| `bok-claws-brutaliser` | Claws of Karanak (Brutalisers) | 32 | 1.45 | GLB done, checked (cleaver overhangs the base) |
+| `bok-claws-blood-whelp` | Claws of Karanak (Blood Whelps) | 28.5 | 1.25 | GLB done, checked |
+| `mon-spoilpox-scrivener` | Spoilpox Scrivener | 40 | 1.6 | GLB done, checked (scroll end overhangs the base) |
+| `mon-pusgoyle-blightlord` | Pusgoyle Blightlords | 60 | 2.3 | GLB done, checked (yaw 90) |
+| `mon-putrid-blightking` | Putrid Blightkings | 40 | 1.65 | GLB done, checked |
+| `mon-plaguebearer` | Plaguebearers | 32 | 1.35 | GLB done, checked (sword overhangs the base) |
+| `nh-knight-of-shrouds` | Knight of Shrouds | 32 | 1.6 | GLB done, checked |
+| `nh-spirit-host` | Spirit Hosts | 50 | 1.6 | GLB done, checked (blades and chain overhang the base) |
+| `nh-grimghast-reaper` | Grimghast Reapers | 32 | 1.55 | GLB done, checked (scythe overhangs the base) |
+| `nh-chainrasp` | Chainrasps | 25 | 1.15 | GLB done, checked |
+| `syl-arch-revenant` | Arch-Revenant | 40 | 1.95 | GLB done, checked (glaive overhangs the base) |
+| `syl-gossamid-archer` | Gossamid Archers | 32, flying stem | 1.75 | GLB done, checked |
+| `syl-spiterider-lancer` | Spiterider Lancers | 60 | 2.0 | GLB done, checked (lance overhangs the base) |
+| `syl-revenant-seeker` | Revenant Seekers | 60 | 2.0 | GLB done, checked (yaw 90) |
 
 The GLBs are not wired into the game yet. The client's figure slug list needs these slugs before they show up.
 
@@ -195,6 +213,54 @@ colours or quartering only.
 - Rejects for these two armies: `sbg-skeleton-c1` (true MGSD, but it stood on a tall pedestal cut off by the bottom
   edge; an edit gave it a thin base with room below).
 
+- Blades of Khorne (Fangs of the Blood God): crimson cloth and hides, blackened iron, dark brass, black fur and
+  bone-white teeth, with our three-fang notch mark (three small downward triangles) on shoulder guards, belt plates,
+  pendants and collars. `bok-claws-packlord` (the base figure) wears a dark-brass hound-skull mask, a shaggy black
+  mane and fur mantle, and carries a hooked axe and a spiked chain flail. `bok-claws-brutaliser` is a shaved-head
+  bruiser with a black topknot, three short crimson stripes on each cheek, a brass jaw guard, wrapped forearms and a
+  chained spiked cleaver. `bok-claws-blood-whelp` is a barefoot kid with a huge mop of spiky red hair, a fanged grin,
+  a notched blade and a grappling-hook chain. `bok-claws-hound-of-wrath` is a shaggy red-brown mortal hound with a
+  spiked iron muzzle cage, an iron collar with a broken chain and a leather harness. `bok-flesh-hound` is a hairless
+  crimson daemon hound with a toothy grin, a flared brass collar frill and black back spines. `bok-karanak` is the
+  same daemon hound with three heads fanned left, front and right, a brass frill on each neck and solid red drool
+  blobs. No Khorne skull rune or other GW iconography.
+- Maggotkin of Nurgle (Bleak Host): pallid olive and yellow-green skin, rusty iron, verdigris bronze, cracked bone
+  horns, mustard and dirty-cream rags, plum-purple blisters and fat solid cartoon flies. `mon-putrid-blightking` (the
+  base figure) wears a rusty great-helm with one bone horn and a glowing yellow eye slit, verdigris plates over a
+  round belly, a little cracked iron bell at the belt and a notched rusty cleaver-axe. `mon-plaguebearer` is a
+  round-headed cyclops with a toothy grin, bent bone horns, a pot belly, a jagged rusty sword and a fly perched on
+  one horn. `mon-spoilpox-scrivener` is a grumpy three-eyed daemon with a drooping trunk snout, a stitched belly and
+  scribe's apron, a long tally-marked scroll, a big quill and a fly on a stalk behind it. `mon-pusgoyle-blightlord`
+  is a horned rusty knight with a scythe, riding a chunky striped giant fly with huge red eyes and folded brown wings,
+  with a bell under the saddle. No three-circle sigil or other GW iconography.
+- Rejects for these two armies: `bok-claws-brutaliser-c1` (the red stripe over the eye and across the scalp read as a
+  copy of a famous video-game character's tattoo; an edit moved the paint to the cheeks and added a topknot),
+  `bok-claws-hound-of-wrath-c1` and `-c2` (a near-realistic bulldog with normal legs and a modest head; an edit
+  changed nothing, so a fresh SD prompt was used) and `bok-karanak-c1` (only two heads showed in the side view).
+
+- Nighthaunt (Slasher Host): solid, opaque pale frost-teal ghost bodies that fade to sea-green at the tail, charcoal and
+  dusty-grey tattered hoods and robes, rust-brown iron, bone-white cartoon skulls and small sickly-green eye-points. Every
+  ghost stands on a thick solid tail planted on the base instead of legs, with nothing see-through. `nh-chainrasp` (the
+  base figure) has a sad-grinning skull under a torn grey hood, rusty manacles, a ball and chain on one wrist and a
+  chipped short blade. `nh-grimghast-reaper` wears a blood-red blindfold under a black hood and holds a big rusty
+  scythe. `nh-knight-of-shrouds` wears a tall crown of rusty spikes, a rusty breastplate and a black cloak, and holds a
+  rust-red longsword point-down with a tiny cracked hourglass on the crossguard. `nh-spirit-host` is a wide teal blob
+  with three skulls fused side by side, four stubby arms (dagger, chain, two grasping hands) and a solid mist swirl
+  for a stand. No Nighthaunt or Nagash icons.
+- Sylvaneth (Spitewing Flight): bark-brown carved wood, pale birch-white masks with glowing amber eyes, spring-green
+  leaf hair and cloaks, and solid opaque leaf-shaped insect wings; the shield carries a plain three-curl spiral.
+  `syl-arch-revenant` (the base figure) has a curling antler crown, a round leaf-shield and a green-bladed glaive, with
+  a little spite on its shoulder spreading teal wings. `syl-gossamid-archer` has long trailing leaf hair, dangling
+  stubby legs, teal wings from a spite on its shoulder and a living-wood bow with a bulb-tipped arrow, and hovers on a
+  clear stem. `syl-spiterider-lancer` is an antlered rider with a leaf-shield and a long thorny branch lance on a
+  chunky teal-green insect-dragon with huge amber eyes, mandibles, six stubby legs and teal wings.
+  `syl-revenant-seeker` is a rider in a hood of green and russet leaves with a raised pale-green crescent sickle on
+  the same insect-dragon recoloured russet-orange with amber wings. No Sylvaneth glyphs, Wargrove runes or GW icons.
+- Rejects for these two armies: `nh-chainrasp-c1` (the curled tail did not touch the base, so the ghost floated; an
+  edit planted it), `nh-grimghast-reaper-c1` (the scythe had a back spike and read as a pickaxe),
+  `nh-knight-of-shrouds-c1` and `-c2` (the fist gripped the blade instead of the handle) and `nh-spirit-host-c1`
+  (five hands instead of four). All four Sylvaneth concepts were first tries.
+
 ## Pipeline notes
 
 - Ovals use `base` (length) plus `base2` (width) in `units.json`. The mounts and the cannon needed `yaw` (90, 90
@@ -243,3 +309,10 @@ deep and 2.6" tall. If the footprint must be exactly 3 × 2, squash the depth or
   yaw, but it got `fit` 90 because at full height it ran about an inch past its oval. The auto base cut took the
   Venomites' bottom coils (cut at 26%), so it was reshaped with `--nocut` and keeps its concept base as a thin black
   disc on top of the game base. Sheets: `sheets/contact-seraphon.png` and `sheets/contact-soulblight.png`.
+- Khorne and Nurgle used `swordtip_b10_picks.json`. The hounds and Karanak were drawn in three-quarter or front
+  views and Hunyuan already put their heads along +Z, so they needed no yaw. The Blightlord's fly faced sideways and
+  needed `yaw` 90. Sheets: `sheets/contact-khorne.png` and `sheets/contact-nurgle.png`.
+- Nighthaunt and Sylvaneth used `swordtip_b11_picks.json`. The ghost tails came through as solid stands and the
+  auto base cut (6-7%) kept them attached. The Lancer concept was a side three-quarter view that Hunyuan already put
+  along +Z, so it needed no yaw; the Seeker, edited from it, came out side-on and needed `yaw` 90. The Gossamid's
+  clear stem came through as a thin post. Sheets: `sheets/contact-nighthaunt.png` and `sheets/contact-sylvaneth.png`.

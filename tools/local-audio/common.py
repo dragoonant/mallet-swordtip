@@ -229,3 +229,38 @@ ALT.update({
     "aos-soulblight-vargheist": dict(ag="a bat screeching loudly"),
     "aos-stormcast-death": dict(ag="a man grunting, then a loud thunder clap"),
 })
+
+# ---- F14 armies: Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth (aos-<army>-<thing>).
+# Cartoony rather than gory: bites, chops and squelches, no gore. Vocal cues stay wordless (Whisper-small checks them).
+SFX.update({
+    "aos-khorne-roar": dict(dur=3.0, p="a crowd of savage men roaring a furious wild battle roar"),
+    "aos-khorne-hound-bay": dict(dur=3.5, p="a pack of large hounds baying and howling"),
+    "aos-khorne-hound-bite": dict(dur=2.0, p="a large dog snarling and snapping its jaws in a quick vicious bite"),
+    "aos-khorne-karanak": dict(dur=3.0, p="a huge monstrous dog growling with several deep overlapping snarls and barks"),
+    "aos-khorne-axe": dict(dur=2.0, p="a heavy axe swung with a whoosh, chopping into wood with a solid thunk"),
+    "aos-khorne-hound-run": dict(dur=4.0, p="large dogs running fast, heavy paws pounding on dirt and panting"),
+    "aos-khorne-death": dict(dur=2.0, p="a big dog yelping and whimpering"),
+    "aos-nurgle-hum": dict(dur=3.5, p="a group of men humming a low droning monotone hum together"),
+    "aos-nurgle-fly-buzz": dict(dur=4.0, p="a giant fly buzzing loudly as it flies past"),
+    "aos-nurgle-plague-blade": dict(dur=2.0, p="a rusty sword slashing with a whoosh and a wet squelchy slap"),
+    "aos-nurgle-sneeze": dict(dur=2.0, p="a man sneezing loudly, one big wet sneeze"),
+    "aos-nurgle-gurgle": dict(dur=2.5, p="a thick squelchy bubbling gurgle of mud and slime"),
+    "aos-nurgle-bell": dict(dur=4.0, p="a cracked old bell tolling slowly with a dull clanking ring"),
+    "aos-nurgle-death": dict(dur=2.5, p="a fat monster groaning and collapsing with a wet splat"),
+    "aos-nighthaunt-wail": dict(dur=3.0, p="a ghost wailing with an eerie echoing moan"),
+    "aos-nighthaunt-shriek": dict(dur=2.5, p="an eerie ghostly shriek with a long echo"),
+    "aos-nighthaunt-chains": dict(dur=3.0, p="heavy iron chains rattling and clinking"),
+    "aos-nighthaunt-scythe": dict(dur=1.5, p="a scythe swung fast through the air, a long sharp swish"),
+    "aos-nighthaunt-blade": dict(dur=2.0, p="a sword slashing with a whoosh and a sharp ringing metallic shimmer"),
+    "aos-nighthaunt-hooves": dict(dur=3.5, p="horse hooves galloping with a hollow echo and a ghostly whooshing wind"),
+    "aos-nighthaunt-death": dict(dur=2.5, p="a ghost moaning and fading away into a soft whooshing wind"),
+    "aos-sylvaneth-call": dict(dur=3.0, p="an eerie haunting wordless call echoing through a forest"),
+    "aos-sylvaneth-wings": dict(dur=3.0, p="large insect wings buzzing and whirring like a giant dragonfly"),
+    "aos-sylvaneth-leaves": dict(dur=3.0, p="leaves rustling in a swirling gust of wind and wooden branches creaking"),
+    "aos-sylvaneth-arrow": dict(dur=1.5, p="a bow firing, a string twang and an arrow whizzing past"),
+    "aos-sylvaneth-lance": dict(dur=2.5, p="a wooden lance smashing into a shield with a heavy crack and splintering wood"),
+    "aos-sylvaneth-glaive": dict(dur=2.0, p="a wooden staff swung with a whoosh, striking with a hard woody crack"),
+    "aos-sylvaneth-horn": dict(dur=3.5, engines=[AG, MG], p="a hunting horn blowing a long low call in a forest",
+                               mp="A single wooden hunting horn blowing one long low mellow call with a soft forest echo. Solo horn only"),
+    "aos-sylvaneth-death": dict(dur=2.5, p="a tree branch creaking and cracking, then snapping with a woody splinter"),
+})

@@ -150,3 +150,96 @@ REDO.update({
         layers=[("screech", "wings")],
     ),
 })
+
+# F14 armies: the weakest first-pass ids (low CLAP, or Whisper heard real words in a vocal cue), rebuilt from concrete parts.
+REDO.update({
+    "aos-nurgle-hum": dict(
+        clap="a low droning hum of many deep voices humming one note",
+        groups=dict(
+            choir=dict(p="Low male choir humming one sustained droning note with closed mouths, murky and dark, no lyrics, no instruments", dur=3.5, takes=6, eng=MG),
+            monks=dict(p="monks humming one long low droning note", dur=3.5, takes=6),
+            drone=dict(p="a deep buzzing drone hum", dur=3.5, takes=6),
+        ),
+        layers=[("choir", "drone"), ("monks", "drone"), ("qwen-1", "drone"), ("qwen-2", "drone")],
+        voice=True,
+        tts=dict(
+            who="A bloated, slow, very deep-voiced plague daemon humming a low droning monotone note with closed lips, murky and bored.",
+            lines=["Hmmmmmmmmmmmmmmm.", "Mmmmmmmmmmmmmmmmm.", "Hmmmmm... mmmmmmmm."],
+        ),
+    ),
+    "aos-sylvaneth-call": dict(
+        clap="an eerie haunting wordless call echoing through a forest",
+        groups=dict(
+            voice=dict(p="A single haunting wordless female vocal note, ethereal and airy with a forest echo, no lyrics", dur=3.0, takes=6, eng=MG),
+            flute=dict(p="A wooden flute playing a short eerie rising call with a forest echo, solo flute", dur=3.0, takes=6, eng=MG),
+            owl=dict(p="a strange eerie bird call echoing in a forest", dur=3.0, takes=6),
+        ),
+        voice=True,
+        tts=dict(
+            who="An ethereal female forest spirit with an airy, haunting, echoing voice, singing one long high wordless note.",
+            lines=["Aaaaaaaaaah...", "Ooooooooooh...", "Ah-oooooooo..."],
+        ),
+    ),
+    "aos-nighthaunt-scythe": dict(
+        clap="a scythe swung fast through the air, a long sharp swish",
+        groups=dict(
+            swoosh=dict(p="a long fast whoosh of a blade through the air", dur=1.2, takes=8),
+            shing=dict(p="a sharp metallic blade shing", dur=1.0, takes=8),
+        ),
+        layers=[("swoosh", "shing", 0.15)],
+    ),
+    "aos-nighthaunt-death": dict(
+        clap="a ghost moaning and fading away into a soft whoosh of wind",
+        groups=dict(
+            moan=dict(p="a long eerie ghostly moan with reverb", dur=2.0, takes=8),
+            wind=dict(p="a soft gust of wind whooshing away", dur=2.0, takes=8),
+        ),
+        layers=[("moan", "wind", 0.4)],
+    ),
+    "aos-sylvaneth-arrow": dict(
+        clap="a bowstring twang and an arrow whizzing through the air",
+        groups=dict(
+            twang=dict(p="a bowstring twang", dur=1.2, takes=8),
+            arrow=dict(p="an arrow whistling through the air, whoosh", dur=1.2, takes=8),
+        ),
+        synth=["twang"],
+        layers=[("twang", "arrow", 0.05), ("synth-twang", "arrow", 0.05)],
+    ),
+    "aos-sylvaneth-horn": dict(
+        clap="a hunting horn blowing a long low call",
+        groups=dict(
+            horn=dict(p="A deep wooden hunting horn blows one long low note, solo horn, slight echo", dur=3.0, takes=6, eng=MG),
+            ram=dict(p="a ram's horn blowing a long low note", dur=3.0, takes=6),
+        ),
+    ),
+    "aos-sylvaneth-leaves": dict(
+        clap="leaves rustling in a swirling gust of wind and wooden branches creaking",
+        groups=dict(
+            leaves=dict(p="dry leaves rustling and swirling in a gust of wind", dur=3.0, takes=6),
+            creak=dict(p="a wooden tree trunk creaking slowly", dur=3.0, takes=6),
+        ),
+        layers=[("leaves", "creak")],
+    ),
+    "aos-khorne-roar": dict(
+        clap="a crowd of savage men roaring a furious wild battle roar",
+        groups=dict(
+            crowd=dict(p="an angry crowd of men roaring aaargh", dur=2.5, takes=8),
+            beast=dict(p="a huge beast roaring furiously", dur=2.5, takes=6),
+        ),
+        layers=[("crowd", "beast")],
+    ),
+    "aos-nurgle-sneeze": dict(
+        clap="one big loud wet sneeze",
+        groups=dict(
+            achoo=dict(p="a loud cartoon sneeze, achoo", dur=1.5, takes=8),
+            wet=dict(p="a big wet sneeze and a sniffle", dur=1.5, takes=8),
+        ),
+    ),
+    "aos-nurgle-bell": dict(
+        clap="a cracked old bell tolling slowly with a dull clanking ring",
+        groups=dict(
+            toll=dict(p="A single cracked old bronze bell tolling slowly twice, dull and out of tune, no other instruments", dur=4.0, takes=6, eng=MG),
+            clank=dict(p="an old iron bell clanking dully", dur=3.0, takes=6),
+        ),
+    ),
+})

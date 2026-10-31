@@ -1661,6 +1661,209 @@
       "prompt": "A skeleton collapses into a clattering pile of bones, no voices, no music",
       "durationSeconds": 1.2,
       "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-khorne-roar",
+      "kind": "sfx",
+      "prompt": "A pack of savage cultists gives a furious wordless blood-frenzy roar, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-khorne-hound-bay",
+      "kind": "sfx",
+      "prompt": "A pack of daemon hounds bays and howls on the hunt, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-khorne-hound-bite",
+      "kind": "sfx",
+      "prompt": "A big hound snarls and snaps its jaws shut in a quick bite, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-khorne-karanak",
+      "kind": "sfx",
+      "prompt": "A huge three-headed hound growls with three overlapping deep snarls, no voices, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-khorne-axe",
+      "kind": "sfx",
+      "prompt": "A heavy hunting axe swings with a whoosh and lands with a solid chop, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-khorne-hound-run",
+      "kind": "sfx",
+      "prompt": "Big hounds run fast, heavy paws pounding and panting, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-khorne-death",
+      "kind": "sfx",
+      "prompt": "A daemon hound yelps and whimpers as it falls, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nurgle-hum",
+      "kind": "sfx",
+      "prompt": "A crowd of plague daemons drones a low wordless monotone hum, no words, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nurgle-fly-buzz",
+      "kind": "sfx",
+      "prompt": "A giant rot fly buzzes loudly past, a deep droning wing hum, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nurgle-plague-blade",
+      "kind": "sfx",
+      "prompt": "A rusty plague blade slashes with a whoosh and a wet squelchy slap, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nurgle-sneeze",
+      "kind": "sfx",
+      "prompt": "One huge wet cartoonish sneeze, no words, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nurgle-gurgle",
+      "kind": "sfx",
+      "prompt": "A thick squelchy bubbling gurgle of slime, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nurgle-bell",
+      "kind": "sfx",
+      "prompt": "A cracked old bell tolls slowly with a dull clanking ring, no voices, no music",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nurgle-death",
+      "kind": "sfx",
+      "prompt": "A bloated monster groans and collapses with a wet splat, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nighthaunt-wail",
+      "kind": "sfx",
+      "prompt": "A host of ghosts wails with an eerie echoing moan, no words, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nighthaunt-shriek",
+      "kind": "sfx",
+      "prompt": "A spectral knight lets out an eerie echoing shriek, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nighthaunt-chains",
+      "kind": "sfx",
+      "prompt": "Heavy iron chains rattle and clink, no voices, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nighthaunt-scythe",
+      "kind": "sfx",
+      "prompt": "A spectral scythe swishes fast through the air, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nighthaunt-blade",
+      "kind": "sfx",
+      "prompt": "A ghostly sword slashes with a whoosh and a ringing metallic shimmer, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nighthaunt-hooves",
+      "kind": "sfx",
+      "prompt": "Spirit horses gallop with hollow echoing hooves and a ghostly wind, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-nighthaunt-death",
+      "kind": "sfx",
+      "prompt": "A ghost moans and fades away into a soft whoosh of wind, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-call",
+      "kind": "sfx",
+      "prompt": "A forest spirit gives an eerie haunting wordless call, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-wings",
+      "kind": "sfx",
+      "prompt": "Large insect wings buzz and whirr like a giant dragonfly, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-leaves",
+      "kind": "sfx",
+      "prompt": "Leaves rustle in a swirling gust and wooden branches creak, no voices, no music",
+      "durationSeconds": 2.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-arrow",
+      "kind": "sfx",
+      "prompt": "A bow looses a thorn arrow with a string twang and a whizz, no voices, no music",
+      "durationSeconds": 1.0,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-lance",
+      "kind": "sfx",
+      "prompt": "A wooden lance strikes a shield with a heavy crack and splintering wood, no voices, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-glaive",
+      "kind": "sfx",
+      "prompt": "A wooden glaive swings with a whoosh and strikes with a hard woody crack, no voices, no music",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-horn",
+      "kind": "sfx",
+      "prompt": "A wooden hunting horn blows one long low mellow call in a forest, no voices",
+      "durationSeconds": 2.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "aos-sylvaneth-death",
+      "kind": "sfx",
+      "prompt": "A tree spirit creaks, cracks and splinters apart, no words, no music",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.55
     }
   ]
 }
