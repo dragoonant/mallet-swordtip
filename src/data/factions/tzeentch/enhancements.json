@@ -21,7 +21,7 @@
     "id": "tzeentch.enh.fold-reality",
     "faction": "tzeentch",
     "name": "Fold Reality",
-    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 12\" of the general. If it is cast, take that unit off the battlefield and set it up again wholly within 12\" of the general and more than 6\" from every enemy unit.",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 12\" of the general (not the general itself). If it is cast, take that unit off the battlefield and set it up again wholly within 12\" of the general and more than 6\" from every enemy unit.",
     "cost": 0,
     "restriction": {},
     "effect": "tzeentch.ability.fold-reality"

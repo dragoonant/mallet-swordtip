@@ -418,6 +418,19 @@ export function khorneChargeFocus(state: GameState, player: PlayerId, unitId: Un
   return { targetId: quarry, extraDice: num(paramOf(state, pounce.id, 'extraDice', 1), 1) }
 }
 
+// F17 balance: the edge The Scent of Blood gives the army's combat attacks on `targetId` as the bot sees it before the fight: +1 to hit
+// and +1 to wound once the target has had damage allocated this turn, or (`ganging`) when another friendly unit is already in combat
+// with it and can strike first. Lets the bot charge and fight as a pack instead of one unit at a time. null = no edge.
+export function khorneMeleeEdge(state: GameState, player: PlayerId, attackerId: UnitId, targetId: UnitId, ganging = true): { hitMod: number; woundMod: number } | null {
+  if (state.players[player]?.faction !== 'khorne') return null
+  const reg = state.players[player].regimentAbilityId
+  if (!reg || (state.abilities[reg]?.code !== CODE_SCENT && !reg.endsWith('the-scent-of-blood'))) return null
+  if (damagedThisTurn(state, targetId)) return { hitMod: 1, woundMod: 1 }
+  if (!ganging) return null
+  const friends = enemiesInCombat(state, targetId).filter((id) => id !== attackerId && state.units[id]?.player === player && !state.units[id].turn.foughtThisPhase)
+  return friends.length > 0 ? { hitMod: 1, woundMod: 1 } : null
+}
+
 export function khorneTargetBonus(state: GameState, player: PlayerId, code: string, unitId: UnitId): number | null {
   const unit = state.units[unitId]
   if (!unit) return null

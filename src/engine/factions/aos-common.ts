@@ -154,8 +154,10 @@ const ANGLES = 24
 
 // CORE-6.14: return up to `count` slain models, one at a time, each set up within coherency range of a model that was not returned
 // this call (of at least two such models when the unit will have 7+ models), wholly on the board, not overlapping any model and not
-// within combat range of an enemy. Placement is automatic (first legal spot around the anchors in model order). Returns the number
-// actually returned. Returned models come back at full Health.
+// within combat range of an enemy. Placement is automatic: the first legal spot found around the unit's placed models in model order,
+// the models returned earlier in this call included (ENG-F17-1: a unit hemmed in by other models gets back every model that fits;
+// the spot must still be in coherency with the models that were there before the call). Returns the number actually returned.
+// Returned models come back at full Health.
 export function returnSlainModels(ctx: EngineContext, unitId: UnitId, count: number, source: string): number {
   const s = ctx.state
   const unit = onBoard(s, unitId)
@@ -168,10 +170,11 @@ export function returnSlainModels(ctx: EngineContext, unitId: UnitId, count: num
   const others = Object.values(s.models).filter((m) => s.units[m.unitId]?.location === 'board')
   const enemies = others.filter((m) => s.units[m.unitId].player !== unit.player)
   let returned = 0
+  const placed: Model[] = []
   for (let i = 0; i < n; i++) {
     const snap = [...unit.destroyedModels].reverse()[0]
     if (!snap) break
-    const spot = findSpot(s, snap, anchors, others, enemies, need)
+    const spot = findSpot(s, snap, [...anchors, ...placed], anchors, others, enemies, need)
     if (!spot) break
     const model: Model = structuredClone(snap)
     model.pos = { x: Math.round(spot.x * 1000) / 1000, y: spot.y, z: Math.round(spot.z * 1000) / 1000 }
@@ -183,16 +186,19 @@ export function returnSlainModels(ctx: EngineContext, unitId: UnitId, count: num
     unit.models.push(model.id)
     unit.destroyedModels = unit.destroyedModels.filter((m) => m.id !== snap.id)
     others.push(model)
+    placed.push(model)
     returned++
     ctx.emit({ type: 'ModelReturned', unitId, modelId: model.id, pos: model.pos, source })
   }
   return returned
 }
 
-function findSpot(s: GameState, snap: Model, anchors: Model[], others: Model[], enemies: Model[], need: number): { x: number; y: number; z: number; facing: number } | null {
+// `around`: the models candidate spots are laid out around (every placed model of the unit); `anchors`: the models the spot must be
+// in coherency with (the ones that were not returned this call)
+function findSpot(s: GameState, snap: Model, around: Model[], anchors: Model[], others: Model[], enemies: Model[], need: number): { x: number; y: number; z: number; facing: number } | null {
   const reach = (b: Model['base']) => Math.max(b.radius, b.radius2 ?? b.radius)
   for (const gap of GAPS) {
-    for (const a of anchors) {
+    for (const a of around) {
       const d = reach(a.base) + reach(snap.base) + gap
       for (let k = 0; k < ANGLES; k++) {
         const ang = (k / ANGLES) * Math.PI * 2

@@ -50,6 +50,7 @@ async function main() {
         const id = (p.context as { unitId: string }).unitId, after = nearestEnemyUnit(nx.state, p.player, id)
         console.log(`   ${tag}   ${short(r.state, id)} gap ${before?.gap.toFixed(1) ?? '-'} -> ${after?.gap.toFixed(1) ?? '-'} (${after ? short(nx.state, after.unitId) : '-'})`)
       }
+      if (p.kind === 'chargeMove') console.log(`   ${tag} charge-move options ${short(r.state, (p.context as { unitId: string }).unitId)} ${legal.length - 1} -> ${a.type}`)
       if (p.kind === 'chooseUnitToActivate' && (p.context as { phase?: string }).phase === 'charge') {
         const elig = ((p.context as { eligible?: string[] }).eligible ?? []).map((id) => short(r.state, id)).join(' ')
         console.log(`   ${tag} charge pick [${elig}] -> ${(a as { unitId?: string }).unitId ? short(r.state, (a as { unitId: string }).unitId) : a.type}`)

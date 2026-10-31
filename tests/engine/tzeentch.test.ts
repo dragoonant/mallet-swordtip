@@ -503,6 +503,15 @@ describe('DOT-RA regiment abilities', () => {
     expect(whollyWithinUnit(s, SHAMAN, SKY, 6)).toBe(true)
     expect(hookService.castingRollBonusFor!(s, SHAMAN)).toBe(1)
     expect(hookService.castingRollBonusFor!(s, SKY)).toBe(0) // only the general
+    // the general is the one that must be wholly within 6" (F16 reversal): beside the end of a long Tzaangors block it qualifies,
+    // although the far Tzaangors are well over 6" from it
+    centreRow(s, SKY, 20, -8)
+    centreRow(s, TZ, 7, -6)
+    expect(whollyWithinUnit(s, SHAMAN, TZ, 6)).toBe(true)
+    expect(whollyWithinUnit(s, TZ, SHAMAN, 6)).toBe(false)
+    expect(hookService.castingRollBonusFor!(s, SHAMAN)).toBe(1)
+    centreRow(s, TZ, 12, -9)
+    centreRow(s, SKY, 0, -8.6)
     // 3 + 3 = 6, +1 = 7 against the casting value 7: cast; the enemy Boss rolls 7 to unbind, which does not beat the modified 7
     const ctx = ctxFor(s, [3, 3, 3, 4])
     const r = castingRoll(ctx, { abilityId: AURA, unitId: SHAMAN, player: 'A' }, SHAMAN, 7)

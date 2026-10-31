@@ -6,6 +6,7 @@
 // choices for either army, measured flat or worse, so they are not here.
 // F15: Blades of Khorne join (fragile Beasts that ran to 3-4" of an enemy, where they could not charge, and were charged off):
 // 3/90 -> 7/90 wins in a 6-game-a-pairing check against the other 15 armies.
+// F17: chargeLaneClear (Khorne only, read by utility.ts chargeOutlook) keeps Karanak from ending a move behind its own pack.
 import { boardUnitsOf, modelStats, unitModels, type GameState, type ModelPlacement, type PlayerId, type UnitId } from '../engine'
 import { losService } from '../engine/los'
 import { objectiveByName } from '../engine/cardFlags'
@@ -131,4 +132,29 @@ export function underdogCardChase(state: GameState, player: PlayerId, unitId: Un
 // STD-AI-4 how much the end-of-turn objective picture weighs in this army's position scores (null = the default)
 export function underdogObjectiveScale(state: GameState, player: PlayerId): number | null {
   return isUnderdog(state, player) ? 2 : null
+}
+
+// F17 (Khorne): a charge needs a way in. Karanak's 75 mm oval often ended its move behind its own Flesh Hounds or Claws, rolled the
+// distance and then had no legal charge move (6 of 9 good rolls in one 12-game Nurgle check). True when some model of the unit
+// (standing at `placements`) has a straight lane to its nearest model of `targetId` that no other friendly model sits across.
+export function chargeLaneClear(state: GameState, player: PlayerId, unitId: UnitId, placements: ModelPlacement[], targetId: UnitId): boolean {
+  const reach = (b: { radius: number; radius2?: number }): number => Math.max(b.radius, b.radius2 ?? 0)
+  const theirs = unitModels(state, targetId)
+  if (theirs.length === 0) return true
+  const friends = Object.values(state.models).filter((m) => m.unitId !== unitId && m.woundsRemaining > 0 && state.units[m.unitId]?.player === player && state.units[m.unitId]?.location === 'board')
+  for (const p of placements) {
+    const me = state.models[p.modelId]
+    if (!me) continue
+    let t = theirs[0], best = Infinity
+    for (const x of theirs) { const d = Math.hypot(x.pos.x - p.pos.x, x.pos.z - p.pos.z); if (d < best) { best = d; t = x } }
+    const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, len2 = dx * dx + dz * dz
+    if (len2 < 1e-6) return true
+    const r = reach(me.base) * 0.85
+    const blocked = friends.some((f) => {
+      const u = Math.max(0, Math.min(1, ((f.pos.x - p.pos.x) * dx + (f.pos.z - p.pos.z) * dz) / len2))
+      return Math.hypot(p.pos.x + dx * u - f.pos.x, p.pos.z + dz * u - f.pos.z) < r + f.base.radius * 0.85
+    })
+    if (!blocked) return true
+  }
+  return false
 }

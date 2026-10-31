@@ -3,12 +3,12 @@
 //
 // [interp] True LoS (CORE-7.1): a straight line from any sample point of the observer to any sample point of the observed
 // model (base centre at heights {0.2, h/2, h} plus 4 base-edge points at h/2) that passes through no terrain wall, no solid
-// block and no model outside the observer's own unit. Any visible sliver suffices. Objective markers and tokens never block.
+// block and no model outside the observer's own unit (a model overlapping either end's base excepted, ENG-F17-2). Any visible sliver suffices. Objective markers and tokens never block.
 // Ruin footprints do NOT block sight by themselves any more (that was a 40k rule): only walls and solid blocks do.
 // [interp] "Behind" (CORE-16.4): every straight line from any point of an attacking model's base to any point of a target
 // model's base crosses the feature's footprint, ignoring the parts of the footprint within 3" of the attacker's base.
 // [interp] Cover / Obscuring: a feature has them via the trait list on the piece ('cover', 'obscuring').
-import { baseEdgePoints, dist2D, distance, ENGAGEMENT_H, EPS, pointInPolygon, signedDistanceToBase, whollyWithinPolygon, withinEngagementRange } from './geometry'
+import { baseEdgePoints, basesOverlap, dist2D, distance, ENGAGEMENT_H, EPS, pointInPolygon, signedDistanceToBase, whollyWithinPolygon, withinEngagementRange } from './geometry'
 import { crateBlocks, wallCrosses3D } from './terrain'
 import { leaderService } from './leaders'
 import { boardModelsOf, hasKeyword, unitModels } from './state'
@@ -49,18 +49,23 @@ function modelBlocks(blocker: Model, p1: Vec3, p2: Vec3): boolean {
 
 function allBoardModels(state: GameState): Model[] { return [...boardModelsOf(state, 'A'), ...boardModelsOf(state, 'B')] }
 
-// is the 3D segment p1(observer)->p2(observed) blocked by terrain, or by a model whose unit is not in `excludeUnitIds`
-// (and is not `toModelId` itself)?
-function segmentBlocked(state: GameState, p1: Vec3, p2: Vec3, toModelId: ModelId, excludeUnitIds: ReadonlySet<UnitId>): boolean {
+// is the 3D segment p1(observer)->p2(observed) blocked by terrain, or by one of the `blockers` (the models that may block this
+// observer/observed pair, see pairBlockers)?
+function segmentBlocked(state: GameState, p1: Vec3, p2: Vec3, blockers: readonly Model[]): boolean {
   for (const p of Object.values(state.board.pieces)) {
     for (const w of p.walls) if (wallCrosses3D(w, p1, p2)) return true
     if (p.kind === 'crate' && crateBlocks(p, p1, p2)) return true
   }
-  for (const blocker of allBoardModels(state)) {
-    if (excludeUnitIds.has(blocker.unitId) || blocker.id === toModelId) continue
-    if (modelBlocks(blocker, p1, p2)) return true
-  }
+  for (const blocker of blockers) if (modelBlocks(blocker, p1, p2)) return true
   return false
+}
+
+// CORE-7.1 (core rules 6.0): every model outside the observer's own unit can block a line, except the observed model itself.
+// ENG-F17-2 [interp]: a model whose base overlaps the observer's or the observed model's base never blocks that pair. Bases
+// cannot overlap on the tabletop, so an overlap is a stacking artefact (a friendly unit stood on top of the caster); treated
+// as solid it would hide everything from a model buried under it, since every line would start inside the blocker.
+function pairBlockers(state: GameState, from: Model, to: Model, excludeUnitIds: ReadonlySet<UnitId>): Model[] {
+  return allBoardModels(state).filter((b) => !excludeUnitIds.has(b.unitId) && b.id !== to.id && b.id !== from.id && !basesOverlap(b, from) && !basesOverlap(b, to))
 }
 
 // terrain only (walls, crates; no models): is the segment p1 -> p2 clear? For planners judging fire lanes before anyone is
@@ -74,16 +79,18 @@ export function terrainLineClear(state: GameState, p1: Vec3, p2: Vec3): boolean 
 }
 
 function anyClearPair(state: GameState, from: Model, to: Model): boolean {
-  const exclude = new Set<UnitId>(leaderService.halves(state, from.unitId))
+  if (from.id === to.id) return true // a model is always visible to itself
+  const blockers = pairBlockers(state, from, to, new Set<UnitId>(leaderService.halves(state, from.unitId)))
   const fromPts = losService.samplePoints(from), toPts = losService.samplePoints(to)
-  return fromPts.some((fp) => toPts.some((tp) => !segmentBlocked(state, fp, tp, to.id, exclude)))
+  return fromPts.some((fp) => toPts.some((tp) => !segmentBlocked(state, fp, tp, blockers)))
 }
 
 // every one of `to`'s sample points is visible from at least one of `from`'s; the observed unit's own models never block
 function everyPointFullyVisible(state: GameState, from: Model, to: Model): boolean {
-  const exclude = new Set<UnitId>([...leaderService.halves(state, from.unitId), ...leaderService.halves(state, to.unitId)])
+  if (from.id === to.id) return true
+  const blockers = pairBlockers(state, from, to, new Set<UnitId>([...leaderService.halves(state, from.unitId), ...leaderService.halves(state, to.unitId)]))
   const fromPts = losService.samplePoints(from), toPts = losService.samplePoints(to)
-  return toPts.every((tp) => fromPts.some((fp) => !segmentBlocked(state, fp, tp, to.id, exclude)))
+  return toPts.every((tp) => fromPts.some((fp) => !segmentBlocked(state, fp, tp, blockers)))
 }
 
 // every on-board model of a unit (both halves when attached; no attachments in Spearhead)

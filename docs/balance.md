@@ -1,6 +1,125 @@
 # Balance matrix: AI vs AI
 
-Four dated sections follow: F15 (the latest, all sixteen armies), F13 (twelve armies), F10 and F9 (the eight-army runs).
+Five dated sections follow: F17 (the latest, all twenty armies), F15 (sixteen armies), F13 (twelve armies), F10 and F9 (the
+eight-army runs).
+
+## 2026-10-31, F17
+
+All twenty Spearhead armies: the sixteen from F15 plus Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch and Ossiarch
+Bonereapers (added in F16), and the first matrix since Call for Reinforcements was fixed (F16). 190 pairings, 20 games each, 3,800
+games, seed 23, Fire and Jade Aqshy, utility AI on both seats, seats and loadouts alternating as before. Every run reported 0
+invariant violations; 300 games were drawn. The F17 AI changes below were in; no file under `src/engine`, `src/data` or `src/ai`
+changed while the matrix ran (checked by hash before and after), so every pairing played the same code: the working tree
+as it stood when the run started, including the other F17 agents' uncommitted edits at that time (`aos-common.ts`, `los.ts`, the
+Tzeentch enhancements).
+
+Commands: `npm run sim -- --games 20 --seed 23 --ai --armies a,b --verbose` once per pair of the twenty armies taken in the order
+cities, ironjawz, slaves, fyreslayers, kruleboyz, gloomspite, lumineth, kharadron, stormcast, skaven, seraphon, soulblight, khorne,
+nurgle, nighthaunt, sylvaneth, daughters, idoneth, tzeentch, ossiarch, 22 processes at a time (41 minutes wall time).
+
+### Army overall win rate
+
+Each army played 19 pairings x 20 games = 380 games. "Score" counts a draw as half a win. The last column is the F15 win %
+(sixteen armies, 24 games a pairing, before the Call for Reinforcements fix).
+
+| army | wins | draws | losses | win % | score % | win % F15 |
+|---|---|---|---|---|---|---|
+| nurgle | 265 | 36 | 79 | 69.7% | 74.5% | 69.7% |
+| sylvaneth | 252 | 30 | 98 | 66.3% | 70.3% | 70.3% |
+| kharadron | 247 | 30 | 103 | 65.0% | 68.9% | 61.4% |
+| nighthaunt | 236 | 38 | 106 | 62.1% | 67.1% | 62.8% |
+| stormcast | 212 | 26 | 142 | 55.8% | 59.2% | 59.7% |
+| ironjawz | 208 | 24 | 148 | 54.7% | 57.9% | 57.8% |
+| kruleboyz | 198 | 31 | 151 | 52.1% | 56.2% | 50.8% |
+| soulblight | 195 | 36 | 149 | 51.3% | 56.1% | 52.8% |
+| idoneth | 186 | 30 | 164 | 48.9% | 52.9% | new |
+| ossiarch | 185 | 36 | 159 | 48.7% | 53.4% | new |
+| seraphon | 184 | 26 | 170 | 48.4% | 51.8% | 51.4% |
+| cities | 163 | 29 | 188 | 42.9% | 46.7% | 34.7% |
+| daughters | 161 | 33 | 186 | 42.4% | 46.7% | new |
+| fyreslayers | 149 | 32 | 199 | 39.2% | 43.4% | 41.9% |
+| lumineth | 142 | 34 | 204 | 37.4% | 41.8% | 41.1% |
+| skaven | 122 | 35 | 223 | 32.1% | 36.7% | 35.6% |
+| slaves | 121 | 27 | 232 | 31.8% | 35.4% | 25.0% |
+| tzeentch | 113 | 28 | 239 | 29.7% | 33.4% | new |
+| gloomspite | 94 | 20 | 266 | 24.7% | 27.4% | 30.8% |
+| khorne | 67 | 19 | 294 | 17.6% | 20.1% | 6.1% |
+
+Outliers: nothing is above 70% (Maggotkin of Nurgle 69.7% is the closest); below 25% are **Blades of Khorne 17.6%** and
+**Gloomspite Gitz 24.7%**.
+
+### Head-to-head wins (out of 20 games each)
+
+Read across: the number is how many of the 20 games the row army won against the column army.
+
+| row beat column | cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight | khorne | nurgle | nighthaunt | sylvaneth | daughters | idoneth | tzeentch | ossiarch |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **cities** | - | 4 | 12 | 7 | 5 | 12 | 11 | 6 | 9 | 14 | 7 | 5 | 17 | 2 | 4 | 6 | 12 | 13 | 10 | 7 |
+| **ironjawz** | 15 | - | 12 | 15 | 9 | 18 | 14 | 4 | 9 | 15 | 9 | 9 | 18 | 8 | 7 | 9 | 14 | 4 | 13 | 6 |
+| **slaves** | 7 | 5 | - | 6 | 7 | 12 | 8 | 2 | 7 | 12 | 5 | 7 | 10 | 5 | 6 | 2 | 4 | 6 | 6 | 4 |
+| **fyreslayers** | 10 | 4 | 13 | - | 10 | 11 | 11 | 6 | 4 | 8 | 9 | 7 | 17 | 4 | 3 | 5 | 5 | 5 | 8 | 9 |
+| **kruleboyz** | 15 | 10 | 12 | 8 | - | 16 | 9 | 5 | 9 | 10 | 17 | 8 | 17 | 6 | 7 | 7 | 7 | 9 | 13 | 13 |
+| **gloomspite** | 7 | 2 | 8 | 8 | 4 | - | 8 | 1 | 0 | 8 | 2 | 1 | 13 | 2 | 3 | 2 | 4 | 8 | 7 | 6 |
+| **lumineth** | 7 | 5 | 9 | 8 | 8 | 10 | - | 7 | 9 | 10 | 7 | 8 | 13 | 1 | 3 | 3 | 7 | 10 | 12 | 5 |
+| **kharadron** | 12 | 14 | 16 | 13 | 14 | 19 | 10 | - | 8 | 12 | 14 | 14 | 17 | 3 | 12 | 13 | 16 | 12 | 16 | 12 |
+| **stormcast** | 11 | 11 | 13 | 15 | 8 | 19 | 10 | 8 | - | 16 | 8 | 10 | 18 | 4 | 5 | 5 | 15 | 11 | 14 | 11 |
+| **skaven** | 4 | 4 | 6 | 9 | 9 | 11 | 7 | 7 | 2 | - | 10 | 7 | 14 | 3 | 5 | 1 | 3 | 3 | 11 | 6 |
+| **seraphon** | 11 | 11 | 15 | 8 | 2 | 18 | 13 | 6 | 11 | 8 | - | 8 | 15 | 7 | 6 | 4 | 11 | 11 | 12 | 7 |
+| **soulblight** | 11 | 9 | 13 | 11 | 10 | 16 | 11 | 4 | 8 | 10 | 12 | - | 14 | 3 | 12 | 8 | 12 | 8 | 13 | 10 |
+| **khorne** | 3 | 1 | 9 | 3 | 2 | 5 | 6 | 1 | 2 | 5 | 4 | 4 | - | 2 | 0 | 1 | 3 | 5 | 8 | 3 |
+| **nurgle** | 17 | 8 | 13 | 15 | 12 | 17 | 16 | 16 | 16 | 14 | 12 | 14 | 18 | - | 15 | 6 | 13 | 12 | 17 | 14 |
+| **nighthaunt** | 14 | 10 | 14 | 16 | 11 | 15 | 14 | 7 | 11 | 12 | 10 | 7 | 20 | 1 | - | 9 | 16 | 18 | 18 | 13 |
+| **sylvaneth** | 12 | 9 | 16 | 11 | 12 | 17 | 16 | 4 | 14 | 19 | 12 | 11 | 18 | 11 | 9 | - | 17 | 12 | 19 | 13 |
+| **daughters** | 7 | 6 | 14 | 13 | 11 | 14 | 10 | 2 | 3 | 16 | 7 | 6 | 16 | 6 | 3 | 2 | - | 9 | 13 | 3 |
+| **idoneth** | 6 | 16 | 13 | 13 | 8 | 11 | 10 | 6 | 6 | 15 | 9 | 11 | 13 | 5 | 2 | 7 | 7 | - | 15 | 13 |
+| **tzeentch** | 8 | 7 | 11 | 10 | 3 | 12 | 7 | 3 | 5 | 8 | 6 | 5 | 10 | 3 | 1 | 1 | 5 | 4 | - | 4 |
+| **ossiarch** | 11 | 12 | 13 | 10 | 6 | 13 | 13 | 8 | 9 | 11 | 10 | 7 | 16 | 3 | 3 | 7 | 15 | 4 | 14 | - |
+
+### Most lopsided pairings
+
+| pairing | first army wins | second army wins | draws |
+|---|---|---|---|
+| khorne v nighthaunt | 0 | 20 | 0 |
+| gloomspite v stormcast | 0 | 19 | 1 |
+| sylvaneth v tzeentch | 19 | 1 | 0 |
+| skaven v sylvaneth | 1 | 19 | 0 |
+| gloomspite v kharadron | 1 | 19 | 0 |
+| nighthaunt v tzeentch | 18 | 1 | 1 |
+| khorne v sylvaneth | 1 | 18 | 1 |
+| ironjawz v khorne | 18 | 1 | 1 |
+| stormcast v khorne | 18 | 2 | 0 |
+| nighthaunt v idoneth | 18 | 2 | 0 |
+| khorne v nurgle | 2 | 18 | 0 |
+| kharadron v khorne | 17 | 1 | 2 |
+
+### Notes
+
+- **Blades of Khorne (6.1% in F15, 17.6% now).** Most of the gain is the Call for Reinforcements fix (F16): the two Flesh Hounds units
+  and the Claws now come back about 2.3 times a game. Rules first: the PDF stat blocks and abilities (pages 2 to 4: Karanak 8"/7/5+/2
+  ward 6+, Flesh Hounds 8"/2/6+/1 ward 6+, Claws 6"/1/5+/1, The Quarry, Blood-Drenched, Scent of Blood, Savagery, the four
+  enhancements) match the data; no port error was found. Traces (`tools/ai-trace.ts --moves`, which now also prints how many legal
+  charge moves a successful roll left) showed the bot does pick the Quarry, uses Blood-Drenched almost every turn it can and Savagery
+  once a game, so those were not the cause. What the traces did show: (1) Karanak rolled the distance and then had no legal charge
+  move in 2 of every 3 good rolls against Nurgle, because his 75 mm oval ended its move behind his own Flesh Hounds or Claws, or the
+  Hounds charged first and filled the space round the target; (2) the units charged one at a time into different targets, so The Scent
+  of Blood (+1 hit, +1 wound against a target already damaged this turn) rarely applied; (3) the Hounds lose almost every fight they
+  start alone (6+ save, 2 Health) and the army deals about half the damage it takes. F17 AI changes, Khorne only: `khorneMeleeEdge`
+  (khorne.ts) counts the Scent of Blood edge in charge and fight choices when a friend is already fighting the target;
+  `chargeLaneClear` (src/ai/underdogs.ts) discounts a move that leaves Karanak with friendly models across his charge lane; Karanak
+  charges before the rest of the pack. Measured against all 19 armies, 8 games a pairing on seeds 31 and 37: 49/304 wins before,
+  51/304 after, inside the noise. Tried and dropped (flat or worse): no underdog terms for Khorne (23/152), a bolder threat weight
+  (17/152), going second in round 1 (18/152). What is left is the army itself: four units, 35 Health on 6+/5+ saves, no shooting and
+  no rend outside Karanak, so it loses the damage race and the "hold more" VP against almost everyone. It is the weakest army in this
+  port, not a broken one.
+- **Maggotkin of Nurgle (69.7%) and Sylvaneth (66.3%).** Two traces each (Nurgle v Stormcast and v Ironjawz, Sylvaneth v Kharadron
+  and v Nighthaunt) plus 8-game stat runs found no engine exploit. Nurgle's edge is Ward 5+ on every unit and Nurgle's Embrace
+  (about 5 to 6 mortal damage a game from disease points; Diseased caps the pool at 7 as printed). Sylvaneth's is Lifebringers, which
+  the PDF really does make once per turn, end of any turn, Heal (D3) on every friendly unit. Both play as written; no rule was changed.
+- **Daughters of Khaine (42.4%).** New AI hint `daughtersStayBonus` (daughters.ts): Blood Stalkers with an enemy already in bow range
+  remain stationary so Heartseekers (crits on 5+ while the unit uses no Move ability) applies; against Cities, Nurgle and Stormcast
+  their Normal moves dropped from 0.25 / 0.38 / 0.13 a game to 0.13 / 0 / 0 and Remain Stationary rose accordingly (8 games each, seed 31).
+- Disciples of Tzeentch (29.7%) is the weakest of the four F16 armies; Idoneth (48.9%) and Ossiarch (48.7%) sit in the middle.
+- Gloomspite Gitz (24.7%) fell under 25% for the first time (30.8% in F15); with four new armies above it the field is harder.
 
 ## 2026-10-31, F15
 

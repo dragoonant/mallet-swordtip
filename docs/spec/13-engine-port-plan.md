@@ -404,6 +404,15 @@ wardForbidden` (`WardDenialInfo`); `hooks-impl sourceGateOpen`; `PlaceShape + ed
 
 Tests: `tests/engine/engine-f16.test.ts` (F16-<spec id>); `engine-f12.test.ts` SER-AB-6 now matches the info with `objectContaining`.
 
+### 3.14 F17 engine fixes (no frozen contract file changed)
+
+| Mechanism | Where | For |
+|---|---|---|
+| ENG-F17-1 `returnSlainModels` (CORE-6.14): candidate spots are laid out around every placed model of the unit, the models returned earlier in the same call included, so a unit hemmed in by other models gets back every model that fits. Each spot still needs coherency with the models that were there before the call (core rules 22.0: "not returned or added this turn"), wholly on the board, no overlap, nothing within 3" of an enemy | `factions/aos-common.ts` | F16 QA |
+| ENG-F17-2 visibility (CORE-7.1, core rules 6.0): every model outside the observer's unit still blocks lines, except that a model whose base overlaps the observer's or the observed model's base never blocks that pair (overlap cannot happen on the table; it is a stacking artefact, and as a solid it hid everything from a caster buried under a friendly unit). A model is always visible to itself. Blockers are filtered once per model pair (`pairBlockers`) instead of per line. Affects every caller of `visible` / `unitVisible` / `fullyVisible` / `inCombat` | `los.ts` | IDK-AB-1 Ritual of the Creeping Mist |
+
+Tests: `tests/engine/engine-f17.test.ts` (ENG-F17-<n>).
+
 ## 4. Client impact
 
 ### 4.1 Counts

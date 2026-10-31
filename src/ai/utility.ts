@@ -24,18 +24,18 @@ import { soulblightAbilityTiming, soulblightChargeBonus, soulblightModeBonus, so
 import { skavenAbilityTiming, skavenTargetBonus } from '../engine/factions/skaven'
 import { nurgleAbilityTiming, nurgleModeBonus, nurgleTargetBonus } from '../engine/factions/nurgle'
 import { seraphonAbilityTiming, seraphonTargetBonus } from '../engine/factions/seraphon'
-import { khorneAbilityTiming, khorneChargeFocus, khorneTargetBonus } from '../engine/factions/khorne'
+import { khorneAbilityTiming, khorneChargeFocus, khorneMeleeEdge, khorneTargetBonus } from '../engine/factions/khorne'
 import { nighthauntAbilityTiming, nighthauntTargetBonus } from '../engine/factions/nighthaunt'
 import { sylvanethAbilityTiming, sylvanethTargetBonus } from '../engine/factions/sylvaneth'
 import { idonethAbilityTiming, idonethMoveThenCharge, idonethTargetBonus } from '../engine/factions/idoneth'
 import { tzeentchAbilityTiming, tzeentchTargetBonus } from '../engine/factions/tzeentch'
 import { ossiarchAbilityTiming, ossiarchModeBonus, ossiarchTargetBonus } from '../engine/factions/ossiarch'
-import { daughtersAbilityTiming, daughtersTargetBonus } from '../engine/factions/daughters'
+import { daughtersAbilityTiming, daughtersStayBonus, daughtersTargetBonus } from '../engine/factions/daughters'
 import { citiesHoldWeight } from '../engine/factions/cities'
 import { reinforcementOptions } from '../engine/factions/aos-moves'
 import { datasheetOf } from '../engine/state'
 import { extraMoveCandidates } from './moves'
-import { underdogCardChase, underdogExposure, underdogObjectiveScale } from './underdogs'
+import { chargeLaneClear, underdogCardChase, underdogExposure, underdogObjectiveScale } from './underdogs'
 import { objectiveVp } from './objectives'
 import {
   bestRangedRangeOfUnit, expectedAttack, hasAnyMeleeWeapon, hasAnyRangedWeapon, isGunline,
@@ -324,6 +324,8 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
 function chargeOutlook(state: GameState, player: PlayerId, unitId: UnitId, placements: ModelPlacement[], nearestId: UnitId, gap: number, extraMove: number): number {
   const dice = chargeDiceCount(state, unitId)
   let best = chargeProb(Math.ceil(Math.max(0, gap - 0.5 - extraMove)), dice) * chargeTrade(state, player, unitId, nearestId)
+  // army hint (src/ai/underdogs.ts, Khorne only): a charge from here this turn needs a lane that friendly models do not block
+  if (extraMove === 0 && state.players[player]?.faction === 'khorne' && !chargeLaneClear(state, player, unitId, placements, nearestId)) best *= 0.25
   const focus = khorneChargeFocus(state, player, unitId)
   if (focus) {
     // the roll has to reach ½" of an enemy model and 3" of the quarry: the larger of the two distances
@@ -420,7 +422,7 @@ function chargeTrade(state: GameState, player: PlayerId, unitId: UnitId, targetI
   const key = `${unitId}>${targetId}`
   const hit = m.get(key)
   if (hit !== undefined) return hit
-  const dmg = unitMeleeDamage(state, unitId, targetId, { charged: true })
+  const dmg = unitMeleeDamage(state, unitId, targetId, { charged: true, ...khorneMeleeEdge(state, player, unitId, targetId) })
   const wounds = unitModels(state, targetId).reduce((a, x) => a + x.woundsRemaining, 0)
   let ret = unitMeleeDamage(state, targetId, unitId, {})
   // a unit that strikes first after charging (For Sigmar, Charge! and the like) takes back only what survives its blows, the
@@ -558,6 +560,9 @@ function scoreDeclareMove(state: GameState, player: PlayerId, action: DeclareMov
       const here = models.map((m) => ({ modelId: m.id, pos: m.pos, facing: m.facing }))
       let s = scorePosition(state, player, unitId, here, false, 'stationary')
       if (gunTarget) s += losesProfile ? 6 : 4
+      // faction hint (Daughters Heartseekers): the Blood Stalkers' bows crit on 5+ only while the unit uses no Move ability
+      const stay = state.players[player]?.faction === 'daughters' ? daughtersStayBonus(state, player, unitId) : null
+      if (stay !== null) s += 3 + stay * 2
       if (ranged && !melee && canShootFromHere) s += 1.5
       return s
     }
@@ -668,7 +673,10 @@ function scoreChooseUnitToActivate(state: GameState, player: PlayerId, pending: 
   const unitId = action.unitId
   if (charging) {
     const targets = boardUnitsOf(state, other(player)).map((u) => u.id).filter((id) => minGapBetweenUnits(state, unitId, id) <= 12.5)
-    return scoreDeclareCharge(state, player, pending, { type: 'declareCharge', player, decisionId: pending.id, unitId, targetUnitIds: targets } as DeclareChargeAction)
+    const sc = scoreDeclareCharge(state, player, pending, { type: 'declareCharge', player, decisionId: pending.id, unitId, targetUnitIds: targets } as DeclareChargeAction)
+    // faction hint (Khorne): Karanak's wide base charges before the Flesh Hounds and Claws crowd round the target and leave it no room
+    if (sc > CHARGE_PASS && state.players[player]?.faction === 'khorne' && hasKeyword(state, unitId, 'HERO')) return sc + 1.5
+    return sc
   }
   if (pending.context.phase === 'shooting') {
     let best = 0
@@ -692,7 +700,7 @@ function scoreChooseFightUnit(state: GameState, player: PlayerId, action: Action
     let engaged = false
     for (const a of myModels) { for (const b of theirModels) if (withinEngagementRange(a, b)) { engaged = true; break } ; if (engaged) break }
     if (!engaged) continue
-    best = Math.max(best, unitMeleeDamage(state, unitId, enemy.id, { charged }) * unitValue(state, enemy.id) * 0.02)
+    best = Math.max(best, unitMeleeDamage(state, unitId, enemy.id, { charged, ...khorneMeleeEdge(state, player, unitId, enemy.id, false) }) * unitValue(state, enemy.id) * 0.02)
     // what the enemy units that have yet to fight could do to it first: a unit likely to be cut down before it strikes goes now
     if (!enemy.turn.foughtThisPhase) incoming += unitMeleeDamage(state, enemy.id, unitId, {})
   }
@@ -971,7 +979,7 @@ function scoreDeclareCharge(state: GameState, player: PlayerId, pending: Pending
   for (const targetId of must.length > 0 ? must : targets) {
     const gap = minGapBetweenUnits(state, unitId, targetId)
     const needed = mustNeed ?? Math.max(0, gap - 0.5)
-    const dmg = unitMeleeDamage(state, unitId, targetId, { charged: true })
+    const dmg = unitMeleeDamage(state, unitId, targetId, { charged: true, ...khorneMeleeEdge(state, player, unitId, targetId) })
     const wounds = unitModels(state, targetId).reduce((a, m) => a + m.woundsRemaining, 0)
     let ret = unitMeleeDamage(state, targetId, unitId, {})
     if (strikeFirst && wounds > 0) ret *= Math.max(0, 1 - dmg / wounds)

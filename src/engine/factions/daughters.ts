@@ -33,7 +33,7 @@ import { EPS } from '../geometry'
 import { diceExprMean } from '../dice'
 import { effectService } from '../effects'
 import { losService } from '../los'
-import { boardUnitsOf, modelStats } from '../state'
+import { boardUnitsOf, datasheetOf, modelStats } from '../state'
 import { weaponService } from '../weapons'
 import {
   announce, enemiesInCombat, hasKeyword as unitHasKeyword, healUnit, inCombat, inflictMortal, liveModels, onBoard, paramOf, paramsByCode, returnSlainModels, returnableModels, unitGap, whollyWithinUnit,
@@ -356,6 +356,43 @@ export function daughtersAbilityTiming(state: GameState, player: PlayerId, code:
     default:
       return null
   }
+}
+
+// F17 balance: Heartseekers only works for Blood Stalkers that use no Move ability this turn. The extra bow damage (Crit (Auto-wound)
+// on 5+ instead of 6) they keep by standing still this movement phase against the best enemy already in bow range; null when the unit
+// has no Heartseekers or nothing is in range (src/ai/utility.ts scoreDeclareMove adds it to Remain Stationary).
+export function daughtersStayBonus(state: GameState, player: PlayerId, unitId: UnitId): number | null {
+  const unit = onBoard(state, unitId)
+  if (!unit || unit.player !== player || inCombat(state, unitId)) return null
+  const seekers = datasheetOf(state, unitId).abilities.some((id) => state.abilities[id]?.code === CODE_SEEKERS)
+  if (!seekers) return null
+  let best = 0
+  for (const e of unitsOf(state, other(player))) {
+    const defenders = liveModels(state, e)
+    if (defenders.length === 0) continue
+    const dst = modelStats(state, defenders[0])
+    const gap = unitGap(state, unitId, e)
+    let extra = 0
+    for (const m of liveModels(state, unitId)) {
+      for (const wid of m.weapons) {
+        const w = weaponService.effectiveWeapon(state, m.id, wid)
+        if (!w || w.kind !== 'ranged' || w.range < gap || w.skill === null) continue
+        const autoWound = w.abilities.some((a) => a.ability === 'CRIT_AUTO_WOUND')
+        // wounds per attack with crits on `c`+: non-crit hits roll to wound, crits auto-wound (or just wound like any hit)
+        const per = (c: number): number => {
+          const crit = (7 - c) / 6, hit = Math.max(crit, rollP(w.skill as number))
+          return (hit - crit) * rollP(w.wound) + crit * (autoWound ? 1 : rollP(w.wound))
+        }
+        const need = dst.Sv + w.rend
+        const unsaved = dst.noSave || need > 6 ? 1 : 1 - rollP(need)
+        let dmg = diceExprMean(w.A) * (per(5) - per(6)) * unsaved * diceExprMean(w.D)
+        if (dst.ward !== null) dmg *= 1 - rollP(dst.ward)
+        extra += dmg
+      }
+    }
+    best = Math.max(best, extra)
+  }
+  return best > 0 ? best : null
 }
 
 export function daughtersTargetBonus(state: GameState, player: PlayerId, code: string, unitId: UnitId): number | null {
