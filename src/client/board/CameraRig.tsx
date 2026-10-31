@@ -31,7 +31,7 @@ const PAN_KEYS: Record<string, [number, number]> = { w: [0, -1], s: [0, 1], a: [
  *  to place the opening camera before the canvas has a size. */
 export function currentViewHint(): ViewHint {
   if (typeof window === 'undefined') return { aspect: 1.6, phone: false }
-  return { aspect: window.innerWidth / Math.max(1, window.innerHeight), phone: getFormFactor().phone }
+  return { aspect: window.innerWidth / Math.max(1, window.innerHeight), phone: getFormFactor().phone, height: window.innerHeight }
 }
 
 /** window event that asks the rig to tween back to the default overview framing (the viewer's home-edge preset). */
@@ -103,8 +103,8 @@ export function CameraRig({ focusTarget = null, viewFromFar = false, preset = nu
   const canvasW = useThree((s) => s.size.width)
   const canvasH = useThree((s) => s.size.height)
   const phone = getFormFactor().phone
-  const viewRef = useRef<ViewHint>({ aspect: canvasW / Math.max(1, canvasH), phone })
-  viewRef.current = { aspect: canvasW / Math.max(1, canvasH), phone }
+  const viewRef = useRef<ViewHint>({ aspect: canvasW / Math.max(1, canvasH), phone, height: canvasH })
+  viewRef.current = { aspect: canvasW / Math.max(1, canvasH), phone, height: canvasH }
   const focusRef = useRef(focusTarget)
   focusRef.current = focusTarget
   // The Canvas starts the camera on the edge the viewer sits at; track which edge we last put it on.

@@ -1,6 +1,107 @@
 # Balance matrix: AI vs AI
 
-Two dated sections follow: F10 (the latest) and F9 (the earlier baseline).
+Three dated sections follow: F13 (the latest, all twelve armies), F10 and F9 (the eight-army runs).
+
+## 2026-10-31, F13
+
+The first full matrix with all twelve Spearhead armies: the eight from F10 plus Stormcast Eternals, Skaven, Seraphon and
+Soulblight Gravelords (added in F12). 66 pairings, 24 games each, 1,584 games, seed 21, Fire and Jade Aqshy, utility AI on
+both seats, seats and loadouts alternating as before. All 66 runs reported 0 invariant violations and every game played
+the full 4 rounds. 103 games were drawn.
+
+Commands: the F9 command below, once per pair of the twelve armies taken in the order cities, ironjawz, slaves,
+fyreslayers, kruleboyz, gloomspite, lumineth, kharadron, stormcast, skaven, seraphon, soulblight
+(`npm run sim -- --games 24 --seed 21 --ai --armies a,b`). The runs are deterministic, so one pairing can be rerun alone.
+
+### Army overall win rate
+
+Each army played 11 pairings x 24 games = 264 games. "Score" counts a draw as half a win. The last column is the F10
+win % (8-army matrix, 7 pairings each), so the old armies' change mixes the new opponents with the F11/F12 rules work.
+
+| army | wins | draws | losses | win % | score % | win % F10 |
+|---|---|---|---|---|---|---|
+| stormcast | 171 | 13 | 80 | 64.8% | 67.2% | new |
+| kharadron | 168 | 22 | 74 | 63.6% | 67.8% | 73.2% |
+| ironjawz | 157 | 18 | 89 | 59.5% | 62.9% | 54.2% |
+| soulblight | 156 | 18 | 90 | 59.1% | 62.5% | new |
+| kruleboyz | 140 | 17 | 107 | 53.0% | 56.2% | 58.9% |
+| seraphon | 133 | 25 | 106 | 50.4% | 55.1% | new |
+| fyreslayers | 113 | 15 | 136 | 42.8% | 45.6% | 50.6% |
+| lumineth | 110 | 16 | 138 | 41.7% | 44.7% | 43.5% |
+| skaven | 99 | 13 | 152 | 37.5% | 40.0% | new |
+| cities | 97 | 21 | 146 | 36.7% | 40.7% | 40.5% |
+| gloomspite | 74 | 14 | 176 | 28.0% | 30.7% | 32.1% |
+| slaves | 63 | 14 | 187 | 23.9% | 26.5% | 23.2% |
+
+### Head-to-head wins (out of 24 games each)
+
+Read across: the number is how many of the 24 games the row army won against the column army.
+
+| row beat column | cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **cities** | - | 6 | 14 | 6 | 6 | 13 | 10 | 10 | 5 | 15 | 4 | 8 |
+| **ironjawz** | 16 | - | 21 | 17 | 8 | 20 | 11 | 11 | 10 | 15 | 11 | 17 |
+| **slaves** | 9 | 3 | - | 10 | 3 | 8 | 9 | 1 | 7 | 5 | 4 | 4 |
+| **fyreslayers** | 13 | 7 | 13 | - | 13 | 16 | 11 | 6 | 4 | 15 | 9 | 6 |
+| **kruleboyz** | 15 | 15 | 17 | 9 | - | 18 | 13 | 2 | 5 | 17 | 17 | 12 |
+| **gloomspite** | 8 | 3 | 15 | 8 | 6 | - | 11 | 3 | 4 | 8 | 6 | 2 |
+| **lumineth** | 12 | 10 | 15 | 11 | 9 | 11 | - | 7 | 4 | 17 | 6 | 8 |
+| **kharadron** | 14 | 9 | 22 | 16 | 22 | 20 | 14 | - | 9 | 16 | 16 | 10 |
+| **stormcast** | 19 | 12 | 16 | 20 | 19 | 18 | 18 | 11 | - | 18 | 12 | 8 |
+| **skaven** | 9 | 7 | 18 | 9 | 6 | 15 | 7 | 5 | 6 | - | 11 | 6 |
+| **seraphon** | 16 | 12 | 18 | 13 | 5 | 16 | 18 | 5 | 11 | 10 | - | 9 |
+| **soulblight** | 15 | 5 | 18 | 17 | 10 | 21 | 16 | 13 | 15 | 16 | 10 | - |
+
+### Most lopsided pairings
+
+| pairing | first army wins | second army wins | draws |
+|---|---|---|---|
+| slaves v kharadron | 1 | 22 | 1 |
+| kruleboyz v kharadron | 2 | 22 | 0 |
+| gloomspite v soulblight | 2 | 21 | 1 |
+| ironjawz v slaves | 21 | 3 | 0 |
+| ironjawz v gloomspite | 20 | 3 | 1 |
+| gloomspite v kharadron | 3 | 20 | 1 |
+| fyreslayers v stormcast | 4 | 20 | 0 |
+| cities v stormcast | 5 | 19 | 0 |
+| slaves v kruleboyz | 3 | 17 | 4 |
+| slaves v seraphon | 4 | 18 | 2 |
+| slaves v soulblight | 4 | 18 | 2 |
+| kruleboyz v stormcast | 5 | 19 | 0 |
+| gloomspite v stormcast | 4 | 18 | 2 |
+| lumineth v stormcast | 4 | 18 | 2 |
+| slaves v skaven | 5 | 18 | 1 |
+| cities v seraphon | 4 | 16 | 4 |
+
+### Notes
+
+- No army is above 70%. Stormcast Eternals lead at 64.8% and Kharadron Overlords are next at 63.6%. Slaves to Darkness are
+  the one outlier, below 25% (23.9%), as in every matrix since F9. Gloomspite Gitz are next lowest at 28.0%.
+- The new armies all sit within the field: Stormcast 64.8%, Soulblight 59.1%, Seraphon 50.4%, Skaven 37.5%. Stormcast
+  beat everyone except Soulblight (8-15) and come out level with Kharadron (11-9) and Seraphon (12-11). Their weak
+  spot is Soulblight. Skaven beat only Slaves, Gloomspite and Seraphon (11-10).
+- Kharadron dropped from 73.2% to 63.6%: they still beat every old army except Ironjawz (9-11), but Stormcast and
+  Soulblight both hold them level or better. Slaves-Kharadron (1-22) and Kruleboyz-Kharadron (2-22) are the most
+  one-sided cells.
+- AI change in F13 (src/ai/utility.ts `arrivalStrike`): a unit arriving from reserve (Seraphon Hunters of Huanchi and
+  Spawn of Chotec through Chameleon Ambush, the Soulblight Vargheists through Swoop Down, the Ironjawz Brutes) is now set
+  up where it can hit something that turn. A shooter wants an enemy within its range and a melee unit wants an enemy in
+  charge reach, weighted by the dice odds. Spots inside the 6" set-up exclusion are dropped before validation. Before
+  this, ambushers were set down near their own objectives, out of range (a traced Seraphon game put both Hunters units
+  12"+ from every enemy). Tests: tests/ai/arrivals.test.ts (AI-ARRIVE-001/002).
+- The change only touches armies with reserve arrivals. The matrix is deterministic, and pairings without one came out
+  identical to a run before the change: Kharadron-Cities 14-10, Fyreslayers-Cities 13-6, Kruleboyz-Cities 15-6,
+  Stormcast-Cities 19-5. Ironjawz-Cities moved from 13-8 to 16-6 (the Brutes now drop in to charge).
+- Ability use by the new armies (traces and `tools/balance-stats.ts`, 8 games each): Stormcast spend Shield of Azyr,
+  Storm Charge (on a unit that ran within charge reach), Deliver Judgement and Blaze of Glory in combat. Strike Where
+  Needed uses the shared free-Retreat AI hint, and Heralds of Righteousness is data. The Skaven Warp Lightning Cannon
+  deals about 8 mortal damage a game from the back line, and Wither is only cast when an enemy is within 13" of the Grey
+  Seer, who mostly holds the home objective. Seraphon use Screeches, Savage Bellow, Scaled Aegis and Star Venom every
+  turn they can, and the Spawn uses its breath. Soulblight use Endless Legions after a Skeletons unit is destroyed,
+  Skeleton Legion each combat phase, and Spirit Gale or Vile Transference, whichever is worth more. The Hunger heals
+  after fights. No faction hint section needed changing.
+- With 24 games a pairing, a single cell can move by 4 or 5 wins from sampling alone, and an army's overall rate by about
+  3 points.
 
 ## 2026-10-30, F10
 

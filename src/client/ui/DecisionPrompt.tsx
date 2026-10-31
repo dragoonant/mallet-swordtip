@@ -488,6 +488,10 @@ const touchBtn = (b: CSSProperties, extra: CSSProperties = {}): CSSProperties =>
 const rowCompact: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'stretch' }
 const deployRowCompact: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8 }
 const optionListCompact: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
+// phone landscape strip (BottomSheet `strip`): one horizontally scrolling row per list, options first, the rest of the prompt below it
+const optionListStrip: CSSProperties = { display: 'flex', gap: 8, order: -1 }
+const deployRowStrip: CSSProperties = { display: 'flex', gap: 8, flex: '1 1 0', minWidth: 0, order: -1 }
+const autoRowStrip: CSSProperties = { display: 'flex', flexWrap: 'nowrap', gap: 6, alignItems: 'center', flex: '0 0 auto', order: -1 }
 const optionBtnCompact: CSSProperties = { whiteSpace: 'normal', textAlign: 'left', flex: '1 1 200px', lineHeight: 1.25, padding: '8px 12px', minHeight: TOUCH_MIN, fontSize: 14 }
 /** Pick-to-confirm bar on touch: the tapped choice's name on a wide button, plus a way to back out. */
 const armedChooseBtn: CSSProperties = { flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }
@@ -666,7 +670,7 @@ function DecisionPromptBody() {
       if (target.unitId) hoverUnit(target.unitId)
     }
   }
-  const { compact } = useFormFactor()
+  const { compact, portrait } = useFormFactor()
   const formationKind = useUiStore((s) => s.formationKind)
   const formationFacing = useUiStore((s) => s.formationFacing)
   const primeFormation = useUiStore((s) => s.primeFormation)
@@ -907,6 +911,17 @@ function DecisionPromptBody() {
   const soleDisembark = isDeploy && state.phase === 'movement' ? soleDeployUnit(state, pending.context.unitIds) : null
   const disembarkId = soleDisembark && transportService.transportOf(state, soleDisembark) ? soleDisembark : null
   const kindTitleShown = disembarkId ? `Disembark ${groupLabel(state, disembarkId)}` : kindTitle
+  // Phone landscape: a pick-from-a-list prompt is one slim strip (BottomSheet `strip`) so the board, and the player's own
+  // deployment zone with it, stays in view. Placement-by-tap prompts other than deployment keep their own docked layout.
+  const strip = compact && !portrait && !weaponPanelOpen && (isDeploy || !bespoke)
+  const sheetTitle = strip && isDeploy && !disembarkId
+    ? (
+      <>
+        {kindTitle}
+        <span style={{ fontWeight: 400, opacity: 0.7 }}> · {deployTargetUnitId ? 'tap your zone to place it' : 'pick a unit, then tap your zone'}</span>
+      </>
+    )
+    : kindTitleShown
 
   // --- touch (compact) plumbing: arm / disarm a choice ---
   const disarm = () => {
@@ -1021,7 +1036,7 @@ function DecisionPromptBody() {
       })()}
 
       {pending.kind === 'deployUnit' && (
-        <div style={compact ? deployRowCompact : deployRowWide}>
+        <div className={strip ? 'm42-hscroll' : undefined} style={strip ? deployRowStrip : compact ? deployRowCompact : deployRowWide}>
           {(soleDisembark ? [soleDisembark] : pending.context.unitIds).map((uid) => (
             <button
               key={uid}
@@ -1057,10 +1072,10 @@ function DecisionPromptBody() {
         const sug = suggestDeployment(state, deployTargetUnitId && pending.context.unitIds.includes(deployTargetUnitId) ? deployTargetUnitId : undefined)
         const running = autoDeployFor === pending.player
         return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 6 }} data-testid="deploy-auto-row">
+          <div style={strip ? autoRowStrip : { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 6 }} data-testid="deploy-auto-row">
             <Tooltip title="Auto-place" disabled={compact} body="Sets the chosen unit (or the biggest one waiting) down in the first spot that still leaves room for the rest of your army.">
               <button
-                style={buttonBase}
+                style={strip ? { ...buttonBase, whiteSpace: 'nowrap' } : buttonBase}
                 disabled={!sug}
                 data-testid="btn-deploy-auto-place"
                 onClick={() => sug && dispatch({ type: 'deployUnit', player: pending.player, decisionId: pending.id, unitId: sug.unitId, placements: sug.placements })}
@@ -1070,7 +1085,7 @@ function DecisionPromptBody() {
             </Tooltip>
             <Tooltip title="Auto-deploy rest" disabled={compact} body="Places every unit you still have to deploy, biggest first, each in the first legal spot left.">
               <button
-                style={buttonBase}
+                style={strip ? { ...buttonBase, whiteSpace: 'nowrap' } : buttonBase}
                 disabled={!sug}
                 data-testid="btn-deploy-auto-rest"
                 onClick={() => setAutoDeployFor(running ? null : pending.player)}
@@ -1079,8 +1094,8 @@ function DecisionPromptBody() {
               </button>
             </Tooltip>
             {sug && !sug.fitsAll && (
-              <span style={{ fontSize: 12, color: colors.accent }} data-testid="deploy-auto-warning">
-                Heads up: not every waiting unit fits after this one. Place the big ones by hand first.
+              <span style={strip ? { fontSize: 12, color: colors.accent, whiteSpace: 'nowrap' } : { fontSize: 12, color: colors.accent }} data-testid="deploy-auto-warning">
+                {strip ? 'Big units first!' : 'Heads up: not every waiting unit fits after this one. Place the big ones by hand first.'}
               </span>
             )}
           </div>
@@ -1119,7 +1134,7 @@ function DecisionPromptBody() {
         )
       })()}
 
-      {bespoke && (
+      {bespoke && !(strip && isDeploy) && (
         <div style={hint}>
           {disembarkId
             ? `${compact ? 'Tap' : 'Click'} within 3" of ${state.units[transportService.transportOf(state, disembarkId) ?? '']?.name ?? 'the transport'} to set the unit down${groupUnitIds(state, disembarkId).length > 1 ? ' (its attached Leader lands with it)' : ''}, or pass to keep it aboard.`
@@ -1146,7 +1161,7 @@ function DecisionPromptBody() {
       )}
 
       {showFallbackList && !weaponPanelOpen && (
-        <div style={compact ? optionListCompact : optionList}>
+        <div className={strip ? 'm42-hscroll' : undefined} style={strip ? optionListStrip : compact ? optionListCompact : optionList}>
           {info && listItems.length > 0 && <div style={compact ? { ...hint, flexBasis: '100%' } : hint}>Or use a suggested placement — {compact ? 'tap one to preview it, tap again to use it' : 'hover one to preview it'}:</div>}
           {listItems.map((it) => {
             // moveUnit/chargeMove/pileIn/consolidate options carry their own placements — hovering
@@ -1261,7 +1276,8 @@ function DecisionPromptBody() {
         <FormationPicker />
         <BottomSheet
           testId="prompt"
-          title={kindTitleShown}
+          title={sheetTitle}
+          strip={strip}
           // a decision answered by tapping the board opens tucked away; a staged move collapses itself
           auto={isDeploy ? !!deployTargetUnitId || !!activeDraft : bespoke || !!activeDraft}
           autoKey={pending.id}

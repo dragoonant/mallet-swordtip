@@ -12,6 +12,11 @@
 // away and a staged move collapses itself. While a move is `staged` the sheet becomes a one-line pill on the
 // left of the bottom row and the touch Confirm/Cancel bar takes the right of that same row (see STAGED_BAR_PX),
 // so sheet + bar + formation strip stack to about 116px. The sheet never runs under the right-edge camera column.
+//
+// `strip` (phone landscape, prompts that are a pick-from-a-list): the sheet is at most 30dvh, the footer actions (Pass, the
+// armed Back / Choose pair) move up into the header row, and the body is a wrapping row whose option rows scroll sideways, so
+// the prompt is one slim band and the board above it (the player's own deployment zone) stays in view. The camera fit
+// (cameraPresets.ts, PHONE_BOTTOM_HUD_PX) reserves that band.
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { colors, fontStack, panel } from './theme'
 
@@ -33,6 +38,13 @@ const SHEET_CSS = `
 .m42-sheet[data-staged="true"][data-collapsed="false"] { z-index: 46; justify-content: flex-start; }
 .m42-sheet button { min-height: ${TOUCH_MIN}px; min-width: ${TOUCH_MIN}px; touch-action: manipulation; }
 .m42-sheet-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.m42-sheet[data-strip="true"] { max-height: 30vh; max-height: 30dvh; }
+.m42-sheet[data-strip="true"] .m42-sheet-body { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 0 12px 8px; }
+.m42-sheet[data-strip="true"] .m42-sheet-body > * { flex: 1 1 100%; min-width: 0; }
+.m42-hscroll { overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap !important; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.m42-hscroll::-webkit-scrollbar { display: none; }
+.m42-hscroll > * { flex: 0 0 auto !important; white-space: nowrap !important; }
+.m42-sheet-headact > div { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap !important; }
 `
 
 const sheet: CSSProperties = {
@@ -78,6 +90,8 @@ const chevron: CSSProperties = {
   flex: '0 0 auto',
 }
 
+const headAction: CSSProperties = { flex: '0 1 auto', minWidth: 0, maxWidth: '62%', display: 'flex', alignItems: 'center', overflow: 'hidden' }
+
 const bodyStyle: CSSProperties = { flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '2px 12px 8px', display: 'flex', flexDirection: 'column', gap: 6 }
 const footerStyle: CSSProperties = {
   flex: '0 0 auto',
@@ -92,6 +106,7 @@ export function BottomSheet({
   auto = false,
   autoKey = '',
   staged = false,
+  strip = false,
   summary,
   footer,
   children,
@@ -103,6 +118,8 @@ export function BottomSheet({
   autoKey?: string
   /** A move is staged: dock as a narrow pill beside the touch Confirm/Cancel bar instead of stacking above it. */
   staged?: boolean
+  /** Phone landscape pick-from-a-list layout: capped at 30dvh, footer actions in the header row (see the top comment). */
+  strip?: boolean
   /** Shown beside the title while collapsed: the primary action. */
   summary?: ReactNode
   /** Pinned under the scrolling body while expanded. */
@@ -134,7 +151,7 @@ export function BottomSheet({
   }
 
   return (
-    <div className="m42-sheet" style={sheet} data-testid={testId} data-collapsed={collapsed ? 'true' : 'false'} data-staged={staged ? 'true' : 'false'}>
+    <div className="m42-sheet" style={sheet} data-testid={testId} data-collapsed={collapsed ? 'true' : 'false'} data-staged={staged ? 'true' : 'false'} data-strip={strip ? 'true' : 'false'}>
       <style>{SHEET_CSS}</style>
       <div style={headerRow}>
         <div
@@ -153,6 +170,7 @@ export function BottomSheet({
           <div style={titleStyle}>{title}</div>
         </div>
         {collapsed && summary}
+        {strip && !collapsed && footer && <div className="m42-sheet-headact" style={headAction} data-testid="prompt-sheet-headact">{footer}</div>}
         <button
           type="button"
           style={chevron}
@@ -165,7 +183,7 @@ export function BottomSheet({
       </div>
       {/* the body stays mounted while collapsed so panels with their own state (weapon picks, dice picks) survive */}
       <div className="m42-sheet-body" style={collapsed ? { ...bodyStyle, display: 'none' } : bodyStyle} data-testid="prompt-sheet-body">{children}</div>
-      {!collapsed && footer && <div style={footerStyle} data-testid="prompt-sheet-footer">{footer}</div>}
+      {!collapsed && !strip && footer && <div style={footerStyle} data-testid="prompt-sheet-footer">{footer}</div>}
     </div>
   )
 }

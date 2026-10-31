@@ -12,6 +12,8 @@ export interface CameraPose {
 export interface ViewHint {
   aspect: number
   phone: boolean
+  /** Canvas height in px (phone only): the bottom prompt strip has a fixed pixel height, so its share of the screen depends on it. */
+  height?: number
 }
 const DEFAULT_VIEW: ViewHint = { aspect: 1.6, phone: false }
 
@@ -33,6 +35,15 @@ interface SafeRect {
 }
 const DESKTOP_SAFE: SafeRect = { x: 0.95, yMin: -0.68, yMax: 0.8 }
 const PHONE_SAFE: SafeRect = { x: 0.86, yMin: -0.5, yMax: 0.74 }
+/** Phone landscape: the bottom prompt (BottomSheet's strip layout: at most 30dvh, 6px off the edge) is a HUD zone of its own, and
+ *  so is the formation strip + folded sheet stack of a placement (about 116px). The board's near edge, which is where the
+ *  player's own deployment zone is, has to stay above whichever is taller. */
+const PHONE_BOTTOM_HUD_PX = 128
+function safeFor(view: ViewHint): SafeRect {
+  if (!view.phone) return DESKTOP_SAFE
+  if (!view.height || view.height < 200) return PHONE_SAFE
+  return { ...PHONE_SAFE, yMin: Math.max(PHONE_SAFE.yMin, -1 + (2 * PHONE_BOTTOM_HUD_PX) / view.height) }
+}
 
 /**
  * Camera for the whole board in frame: for a view from `side` (+1 = from the +z edge, -1 = from -z) tilted `polar` off the
@@ -41,10 +52,10 @@ const PHONE_SAFE: SafeRect = { x: 0.86, yMin: -0.5, yMax: 0.74 }
  */
 const fitCache = new Map<string, CameraPose>()
 function fitBoard(board: { w: number; h: number }, side: 1 | -1, polar: number, view: ViewHint): CameraPose {
-  const key = `${board.w}x${board.h}|${side}|${polar.toFixed(3)}|${view.aspect.toFixed(3)}|${view.phone ? 'p' : 'd'}`
+  const key = `${board.w}x${board.h}|${side}|${polar.toFixed(3)}|${view.aspect.toFixed(3)}|${view.phone ? 'p' : 'd'}|${view.phone ? Math.round(view.height ?? 0) : 0}`
   const hit = fitCache.get(key)
   if (hit) return hit
-  const safe = view.phone ? PHONE_SAFE : DESKTOP_SAFE
+  const safe = safeFor(view)
   const aspect = Math.max(0.5, view.aspect)
   const hw = board.w / 2 + EDGE_MARGIN
   const hh = board.h / 2 + EDGE_MARGIN
@@ -105,7 +116,8 @@ export function cameraPose(
       return fitBoard(board, side === 1 ? -1 : 1, EDGE_POLAR, view)
     default: {
       const f = focus ?? { x: 0, z: 0 }
-      return { position: [f.x, span * 0.5, f.z + span * 0.45], target: [f.x, 0, f.z] }
+      // from the viewer's own edge, like the edge views: a viewer on the -z side must not be swung round to the far side
+      return { position: [f.x, span * 0.5, f.z + side * span * 0.45], target: [f.x, 0, f.z] }
     }
   }
 }

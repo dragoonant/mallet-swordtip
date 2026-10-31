@@ -688,6 +688,42 @@ function packingBonus(feet: Footprint[], axis: 'x' | 'z', lo: number, hi: number
   return 2.5 * (1 - Math.min(Math.max(0, Math.min(gapL, gapR)), 2) / 2)
 }
 
+// F13: a unit arriving from reserve ("set up anywhere, more than 6" from every enemy": Chameleon Ambush, Swoop Down, the Brutes)
+// is worth what it can hit from the spot this turn: a shooter's best target within its range, a melee unit's best charge weighted
+// by the odds of the dice. Without it the bot set its ambushers down at home, out of range of everything. A spot inside the
+// set-up exclusion (minGap) is refused here (null) so the short list the caller validates is not all illegal spots.
+function arrivalStrike(state: GameState, player: PlayerId, unitId: UnitId, feet: Footprint[], minGap: number): number | null {
+  const gaps = new Map<UnitId, number>()
+  for (const m of boardModelsOf(state, other(player))) {
+    const mr = Math.max(m.base.radius, m.base.radius2 ?? 0)
+    for (const f of feet) {
+      const gap = Math.hypot(f.pos.x - m.pos.x, f.pos.z - m.pos.z) - Math.max(f.base.radius, f.base.radius2 ?? 0) - mr
+      if (minGap > 0 && gap <= minGap + 0.05) return null
+      if (gap < (gaps.get(m.unitId) ?? Infinity)) gaps.set(m.unitId, gap)
+    }
+  }
+  const range = hasAnyRangedWeapon(state, unitId) ? (bestRangedRangeOfUnit(state, unitId) ?? 0) : 0
+  const melee = hasAnyMeleeWeapon(state, unitId) && !isGunline(state, unitId)
+  let dice = 2
+  try { dice = chargeDiceCount(state, unitId) } catch { /* not on the table yet: plain 2D6 */ }
+  let best = 0
+  for (const [e, gap] of gaps) {
+    const wounds = unitModels(state, e).reduce((a, x) => a + x.woundsRemaining, 0)
+    if (wounds <= 0) continue
+    const value = unitValue(state, e)
+    if (range > 0 && gap <= range) {
+      const dmg = Math.min(wounds, unitRangedDamage(state, unitId, e))
+      best = Math.max(best, 3 + dmg * value * 0.01)
+    }
+    if (melee && gap <= 12) {
+      const p = chargeProb(Math.max(2, Math.ceil(gap - 0.5)), dice)
+      const dmg = Math.min(wounds, unitMeleeDamage(state, unitId, e, { charged: true }))
+      best = Math.max(best, p * (2 + dmg * value * 0.01))
+    }
+  }
+  return Math.min(best, 10)
+}
+
 function chooseFormationDeployment(state: GameState, player: PlayerId, pending: Extract<PendingDecision, { kind: 'deployUnit' }>, rng: Rng): DeployUnitAction | null {
   const arrival = state.phase !== 'setup' && state.phase !== 'deployment'
   const zone = pending.constraints.region ?? pending.context.zone
@@ -747,6 +783,7 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
     let unitBest = -Infinity
     let bestBoxed = false // the best spot so far leaves a fast unit no slide out (deployLaneBlock: 5+ of 6 slides blocked)
     // a faction hint that wants a precise spot (a Kharadron Company beside the Frigate) also gets the fine second pass
+    const fromReserves = arrival && state.units[g.unitId]?.location === 'reserves'
     const hinted = !arrival && kharadronDeployBonus(state, player, g.unitId, g.models.map((m) => ({ pos: { x: 0, y: 0, z: 0 }, facing: 0, base: m.base }))) !== null
     // pass 0: the preferred shapes on a coarse grid; pass 1 (only when nothing fit, e.g. a crowded 5" zone, or a fast unit would be
     // boxed in): every shape, a fine grid, side-on facings
@@ -783,6 +820,11 @@ function chooseFormationDeployment(state: GameState, player: PlayerId, pending: 
             else if (role === 'ranged') { score += Math.min(dEnemy, 36) * 0.03; if (inTerrain) score += 0.8 }
             else if (role === 'melee' && !meleeOnly) score += Math.max(0, 36 - dEnemy) * 0.02
             if (arrival && role !== 'ranged') score += Math.max(0, 24 - dEnemy) * 0.05
+            if (fromReserves) {
+              const strike = arrivalStrike(state, player, g.unitId, feet, pending.constraints.minDistanceFromEnemies ?? 0)
+              if (strike === null) continue
+              score += strike
+            }
             if (oval && !arrival && Math.min(maxX - minX, maxZ - minZ) < 8) {
               const lateral = maxX - minX >= maxZ - minZ ? 'x' as const : 'z' as const
               score += packingBonus(feet, lateral, lateral === 'x' ? minX : minZ, lateral === 'x' ? maxX : maxZ, friendsOnTable)
