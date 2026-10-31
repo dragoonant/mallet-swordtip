@@ -207,10 +207,38 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
 - Seen, not fixed: close-up camera labels overlap (unit name over the objective label); with the GLBs missing the Doomfire Warlocks stand-in
   is a tall red pillar; the ability buttons show only the name.
 
+## F17 (2026-10-31): last five army specs, F16 rules audit, 20-army balance
+- Specs written from the official PDFs: `docs/spec/factions/{hedonites-of-slaanesh,helsmiths-of-hashut,flesh-eater-courts,ogor-mawtribes,sons-of-behemat}.md`
+  (Epicurean Revellers, Helforge Host, Carrion Retainers, Warglutt Marauders, Stone Lobbas), each with a mechanics mapping table, RULINGs and test
+  ids (HOS-, HOH-, FEC-, OGM-, SOB-). F18 built them.
+- F16 rules audit came back clean apart from small fixes in `aos-common`, Daughters, Khorne and Tzeentch (with tests, `engine-f17.test.ts`).
+- Return-model and line-of-sight fixes: `returnSlainModels` now follows the 3" rule (core 22.0) and `los.ts` was corrected; AI tweaks in
+  `src/ai/utility.ts` and `underdogs.ts`.
+- 20-army balance matrix in `docs/balance.md` (3,800 games, 20 per pairing, seed 23, 0 invariant violations): Nurgle, Sylvaneth, Kharadron and
+  Nighthaunt lead; Slaves, Gloomspite and Fyreslayers trail. The Khorne row is fixed by the F16 Call for Reinforcements repair.
+
+## F18 (2026-10-31): Slaanesh, Hashut, Flesh-eater Courts, Ogors, Sons of Behemat; QA pass
+- Twenty-five armies now play (commit `37949db`): faction ids `slaanesh`, `helsmiths`, `fec`, `ogors`, `behemat`. Data in
+  `src/data/factions/<id>/`, hooks in `src/engine/factions/<id>.ts`, engine additions (multi-target declare, rollFloor / noAbilities /
+  passAcrossTerrain effects, reserve rule fix) noted in `docs/spec/13-engine-port-plan.md`. `npm test` is green except FIG-AOS-006 while the
+  `fec-abhorrant-archregent` GLB is still being made (a warning only under CI).
+- QA (`vite preview --port 4489`): `tests/e2e/f18-playthrough.spec.ts` plays, through the real UI, Slaanesh vs Helsmiths (Aqshy), Ogors vs
+  Flesh-eater Courts (Ghyran), Sons of Behemat vs Stormcast, Slaanesh with Daemonic Onslaught vs Helsmiths, Helsmiths with Grinding Advance vs
+  Sons of Behemat, and Slaanesh vs Helsmiths with every GLB and mp3 answering 404 (stand-ins, silence, through round 2). All reach the end screen
+  in 4 rounds, no console errors, no failed requests, no stalled decisions. Shots and per-game event logs in `e2e-out/f18/` (gitignored).
+- Confirmed: the deployment-phase prompt "Both armies are set up: use an ability?" offers Daemonic Onslaught (Fiends move 10") and Grinding
+  Advance (up to two Infernal Cohort units move 3", no round-1 charge) and both resolve before round 1. The 90mm gargants (Boulder Basher and
+  two Rock-hurlers) deploy, move, advance, charge (successes and failures), pile in, shoot and fight across all four rounds as bot and as human, and
+  are never stuck. Ability prompts seen: Dispensers of Favour, Soporific Musk, Roaring Warlord, Scoff Down Fresh Flesh, Close One Eye!, Drop Toss
+  or Roll, Bowled Over, Ruinous Bombardment, Strike the Gongs, Call for Reinforcements. Missing-GLB figures fall back cleanly.
+- No player-blocking bug found, so no code fix this stage. Seen, not fixed: ability buttons show only the name (no effect text); the human QA
+  bot never uses most optional abilities in later rounds.
+
 ## Next
-- Balance: rerun `npm run sim` / `tools/balance-stats.ts` with all twenty armies and put the matrix in `docs/balance.md`. The F15 16-army
-  matrix predates the Call for Reinforcements fix (Khorne 6.1% is stale); Slaves (25.0%) and Gloomspite (30.8%) still trail. Use
-  `tools/ai-trace.ts` on the worst pairings.
+- Balance: the F17 matrix covers twenty armies; rerun with all twenty-five (the F18 five are untested in AI-vs-AI) and put it in
+  `docs/balance.md`. Use `tools/ai-trace.ts` on the worst pairings.
+- Art and audio for the F18 armies are separate commits (figure and audio agents); finish the `fec-abhorrant-archregent` GLB so FIG-AOS-006 passes.
+- Charnel Watch and Mawseeker Mob appendices in the FEC and Ogor specs are the next army candidates.
 - The QA bot as a human only takes the default regiment ability and enhancement and the first option in each prompt; `f13-pickers.spec.ts`
   covers the pickers, but no scripted game plays the chosen abilities (Fearless Invaders, Fyresteel Throwing Axes, Cloud of Bats, Skitterleap,
   Beacon of Nagashizzar, Gift of Febrile Frenzy).
