@@ -974,7 +974,9 @@ function DecisionPromptBody() {
   // A mid-game disembark names exactly one unit: a lone unit, or both halves of an attached Leader + bodyguard pair (E3).
   const soleDisembark = isDeploy && state.phase === 'movement' ? soleDeployUnit(state, pending.context.unitIds) : null
   const disembarkId = soleDisembark && transportService.transportOf(state, soleDisembark) ? soleDisembark : null
-  const kindTitleShown = disembarkId ? `Disembark ${groupLabel(state, disembarkId)}` : kindTitle
+  // A deployUnit decision in the movement phase that is not a disembark is a reserve arrival (Dread Descent, Fated Arrival, Ere We Go)
+  const arriving = isDeploy && state.phase === 'movement' && !disembarkId
+  const kindTitleShown = disembarkId ? `Disembark ${groupLabel(state, disembarkId)}` : arriving ? 'Bring on reinforcements' : kindTitle
   // Phone landscape: a pick-from-a-list prompt is one slim strip (BottomSheet `strip`) so the board, and the player's own
   // deployment zone with it, stays in view. Placement-by-tap prompts other than deployment keep their own docked layout.
   const strip = compact && !portrait && !weaponPanelOpen && (isDeploy || !bespoke)
@@ -1204,8 +1206,10 @@ function DecisionPromptBody() {
             ? `${compact ? 'Tap' : 'Click'} within 3" of ${state.units[transportService.transportOf(state, disembarkId) ?? '']?.name ?? 'the transport'} to set the unit down${groupUnitIds(state, disembarkId).length > 1 ? ' (its attached Leader lands with it)' : ''}, or pass to keep it aboard.`
             : pending.kind === 'deployUnit'
             ? deployTargetUnitId
-              ? `${compact ? 'Tap' : 'Click'} inside your deployment zone to place the unit.`
-              : `Pick a unit above, then ${compact ? 'tap' : 'click'} inside your zone.`
+              ? arriving
+                ? `${compact ? 'Tap' : 'Click'} where the unit arrives (its rule says how far from enemies and from which edge), or pass to keep it in reserve.`
+                : `${compact ? 'Tap' : 'Click'} inside your deployment zone to place the unit.`
+              : `Pick a unit above, then ${compact ? 'tap' : 'click'} ${arriving ? 'where it arrives' : 'inside your zone'}.`
             : approach
               ? (compact ? 'Drag a model to move just it; switch on Whole unit to move them all. A red ring says why it is not allowed.' : 'Drag a model to move just it (Shift-drag moves them all). A red ring says why it is not allowed.')
               : `${compact ? 'Tap' : 'Click'} the board to set a destination — a range ring shows how far the unit can go.`}

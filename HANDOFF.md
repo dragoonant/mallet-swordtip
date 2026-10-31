@@ -180,9 +180,37 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
   missing); the ability buttons show only the name, with the rule text in the unit card.
 - Balance for the four F14 armies has not been run (the matrix above is 12 armies).
 
+## F15 (2026-10-31): four more army specs, F14 rules audit, 16-army balance
+- Specs written from the official PDFs: `docs/spec/factions/{daughters-of-khaine,idoneth-deepkin,disciples-of-tzeentch,ossiarch-bonereapers}.md`
+  (Heartflayer Troupe, Soulraid Hunt, Tzaangor Warflock, Mortisan Elite), each with a mechanics mapping table, RULINGs and test ids
+  (DOK-, IDK-, DOT-, OBR-). F16 built them.
+- F14 rules audit, three fixes: Khorne Killing Pounce and Stalk the Prey, Sylvaneth Zephyrkin keywords (with tests).
+- 16-army balance matrix in `docs/balance.md` (2,880 games, 24 per pairing, seed 21): Sylvaneth 70.3%, Nurgle 69.7%, Nighthaunt 62.8%,
+  Kharadron 61.4% at the top; Slaves 25.0% and Khorne 6.1% at the bottom. The Khorne number is at least partly the Call for Reinforcements
+  placement bug that F16 fixed (Flesh Hounds and the Claws were never offered back), so that row is stale.
+
+## F16 (2026-10-31): Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch, Ossiarch Bonereapers
+- Twenty armies now play. Faction ids on the start screen: `daughters`, `idoneth`, `tzeentch`, `ossiarch`. Data in
+  `src/data/factions/{daughters,idoneth,tzeentch,ossiarch}/`, hooks in `src/engine/factions/`, generic engine additions in
+  `docs/spec/13-engine-port-plan.md` (additive), including the Call for Reinforcements fix (`reinforcementFormation` packs oval or mixed
+  bases by their real footprints). Commit `749d860`; GLBs, concepts and sounds for the four armies are separate commits.
+- QA (`vite preview --port 4485`): `tests/e2e/f16-playthrough.spec.ts` plays Daughters (human) vs the Tzeentch bot on Aqshy and Ossiarch
+  (human) vs the Idoneth bot on Ghyran to the end screen in 4 rounds, Khorne (human) vs the Stormcast bot (Call for Reinforcements), and
+  Daughters vs Tzeentch with every GLB and mp3 answering 404 (stand-in figures draw, nothing fatal). No console errors, no failed requests,
+  no stalled decisions. `f16-armies.spec.ts` still passes (start screen, phone strip, Predict the Future, Relentless Discipline).
+- Confirmed in the Khorne game: with Flesh Hounds destroyed the human is offered "Call for Reinforcements (army)" in the movement phase
+  (it was offered 5 times, 3 replacements happened). Ability prompts seen and working: All-Out Slaughter, Blessing of Khaine, Turned to
+  Crystal, Refined Creations, Relentless Discipline, Switch Aspects, Call for Reinforcements; the Morghast Dread Descent arrival prompt too.
+- One fix: a reserve arrival (`deployUnit` in the movement phase, e.g. Dread Descent) said "Deploy your forces ... inside your deployment
+  zone"; it now reads "Bring on reinforcements" and "click where the unit arrives" (`DecisionPrompt.tsx`). Shots in `e2e-out/f16/`
+  (gitignored).
+- Seen, not fixed: close-up camera labels overlap (unit name over the objective label); with the GLBs missing the Doomfire Warlocks stand-in
+  is a tall red pillar; the ability buttons show only the name.
+
 ## Next
-- Balance: rerun `npm run sim` / `tools/balance-stats.ts` with all sixteen armies and put the matrix in `docs/balance.md`; Slaves (23.9%) and
-  Gloomspite (28.0%) trailed in the 12-army run, the four F14 armies have no numbers. Use `tools/ai-trace.ts` on the worst pairings.
+- Balance: rerun `npm run sim` / `tools/balance-stats.ts` with all twenty armies and put the matrix in `docs/balance.md`. The F15 16-army
+  matrix predates the Call for Reinforcements fix (Khorne 6.1% is stale); Slaves (25.0%) and Gloomspite (30.8%) still trail. Use
+  `tools/ai-trace.ts` on the worst pairings.
 - The QA bot as a human only takes the default regiment ability and enhancement and the first option in each prompt; `f13-pickers.spec.ts`
   covers the pickers, but no scripted game plays the chosen abilities (Fearless Invaders, Fyresteel Throwing Axes, Cloud of Bats, Skitterleap,
   Beacon of Nagashizzar, Gift of Febrile Frenzy).
