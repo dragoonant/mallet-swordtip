@@ -1,0 +1,28 @@
+[
+  {
+    "id": "tzeentch.unit.tzaangor-enlightened",
+    "faction": "tzeentch",
+    "name": "Tzaangor Enlightened",
+    "keywords": ["CAVALRY", "FLY"],
+    "factionKeywords": ["CHAOS", "DISCIPLES OF TZEENTCH"],
+    "stats": { "M": 14, "W": 4, "Sv": 4, "OC": 1 },
+    "composition": [
+      {
+        "modelId": "tzaangor-enlightened",
+        "name": "Tzaangor Enlightened",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["tzeentch.weapon.tzeentchian-spear", "tzeentch.weapon.discs-teeth-and-horns"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["tzeentch.ability.deliver-on-fate"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

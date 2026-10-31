@@ -136,7 +136,15 @@ export interface HookQueries {
   // NH C4: the name of the ability that forbids `fightingUnitId` to pick `targetUnitId` for combat attacks, or null
   fightTargetForbiddenBy(state: GameState, fightingUnitId: UnitId, targetUnitId: UnitId): string | null
   fightTargetForbidden(state: GameState, fightingUnitId: UnitId, targetUnitId: UnitId): boolean
+  // ---- F16 (Daughters, Idoneth, Tzeentch, Ossiarch; every source entry is asked after its gate) ----
+  // TZE C1: summed castingRollBonus answers for a casting roll of `casterUnitId` (one answer per source: the largest of its entries)
+  castingRollBonusFor(state: GameState, casterUnitId: UnitId): number
+  // OBR C1: true when some source's forbidsWard denies the ward roll of `wardedUnitId` against this attacker / attack kind
+  wardForbidden(state: GameState, info: WardDenialInfo): boolean
 }
+
+// F16 (OBR C1): what forbidsWard is asked about (kind = DestroyedBy['kind'] of the damage pool)
+export interface WardDenialInfo { wardedUnitId: UnitId; attackerUnitId: UnitId; kind: 'ranged' | 'melee' | 'mortal' | 'other' }
 
 // AoS contest filter a code hook may carry (read structurally so code-hooks.ts can add it to EngineCodeHook later)
 interface ContestFilter { denyContest?(state: GameState, entry: HookSourceEntry, unitId: UnitId): boolean }
@@ -436,7 +444,7 @@ function keyApplies(entry: HookSourceEntry, key: keyof Effect, effect: Effect, h
     case 'ignoreNegativeModifiers': return ROLL_HOOK[effect.ignoreNegativeModifiers!] === hook
     case 'invuln': case 'ignoreCover': return hook === 'onSaveRoll'
     case 'feelNoPain': return hook === 'onFeelNoPainRoll'
-    case 'lethalOn': case 'stealth': return hook === 'onHitRoll'
+    case 'lethalOn': case 'stealth': case 'onlySixes': return hook === 'onHitRoll'
     case 'critWoundAp': return hook === 'onWoundRoll'
     case 'mortalWounds': return triggerHook(entry) === hook && (hook === 'onHitRoll' || hook === 'onWoundRoll' || hook === 'onDamage')
     case 'damageReduction': case 'halveDamage': return hook === 'onDamage'
@@ -534,6 +542,9 @@ function keyIdentity(key: keyof Effect, e: Effect): string {
 
 export interface EffectMatch { entry: HookSourceEntry; effect: Effect; key: keyof Effect; index: number }
 
+// F16: exported so cards.ts can gate the onTacticCommandUsed source it calls
+export function sourceGateOpen(state: GameState, entry: HookSourceEntry, data?: Record<string, unknown>): boolean { return gateOpen(state, entry, data) }
+
 function gateOpen(state: GameState, entry: HookSourceEntry, data?: Record<string, unknown>): boolean {
   const spec = codeHookFor(entry.code)
   if (spec?.gateEffect && !spec.gateEffect(state, state.units[entry.holderUnitId], entry, data)) return false
@@ -591,6 +602,7 @@ function resultFor(ctx: EngineContext | null, state: GameState, hook: HookName, 
     case 'ignoreCover': return { kind: 'roll', ignoreCover: true }
     case 'feelNoPain': return { kind: 'roll', feelNoPain: e.feelNoPain }
     case 'lethalOn': return { kind: 'roll', critThreshold: e.lethalOn }
+    case 'onlySixes': return { kind: 'roll', onlySix: true }
     case 'critWoundAp': return { kind: 'roll', critWoundAp: e.critWoundAp }
     case 'stealth': return data.attack?.kind === 'ranged' ? { kind: 'roll', modifier: -1 } : null
     case 'mortalWounds': {
@@ -1212,6 +1224,31 @@ export const hookService: HookService & HookQueries = {
 
   fightTargetForbidden(state, fightingUnitId, targetUnitId) {
     return hookService.fightTargetForbiddenBy(state, fightingUnitId, targetUnitId) !== null
+  },
+
+  castingRollBonusFor(state, casterUnitId) {
+    const bySource = new Map<string, number>()
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.castingRollBonus || !gateOpen(state, entry)) continue
+      const v = spec.castingRollBonus(state, entry, casterUnitId)
+      if (!v) continue
+      const key = entry.active ? `active:${entry.active.id}` : entry.source.id
+      const prev = bySource.get(key)
+      if (prev === undefined || Math.abs(v) > Math.abs(prev)) bySource.set(key, v)
+    }
+    let sum = 0
+    for (const v of bySource.values()) sum += v
+    return sum
+  },
+
+  wardForbidden(state, info) {
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.forbidsWard || !gateOpen(state, entry)) continue
+      if (spec.forbidsWard(state, entry, info)) return true
+    }
+    return false
   },
 
   contestAllowed(state, unitId) {

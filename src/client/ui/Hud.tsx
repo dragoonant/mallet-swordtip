@@ -5,6 +5,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { unitModels, type Action, type GameState, type Phase, type PlayerId } from '@/engine'
 import { factionResources } from '@/engine/hooks-impl'
+import type { FactionResource } from '@/engine/code-hooks'
 import { useGameStore } from '../store/game'
 import { useCaughtUp, useDisplayState } from '../presentation/presentedStore'
 import { useUiStore } from './uiStore'
@@ -554,15 +555,29 @@ function ResourceLines({ id, state }: { id: PlayerId; state: GameState }) {
   if (list.length === 0) return null
   return (
     <>
-      {list.map((r) => (
-        <Tooltip key={r.id} title={`${r.label}${r.max !== undefined ? ` ${r.value}/${r.max}` : ` ${r.value}`}`} body={r.help} placement="bottom">
-          <div style={{ fontSize: 11.5, color: colors.muted, cursor: 'help' }} data-testid={`hud-resource-${id}-${r.id}`} tabIndex={0}>
-            {r.label} <strong style={{ color: colors.text }}>{r.value}{r.max !== undefined ? `/${r.max}` : ''}</strong>
-          </div>
-        </Tooltip>
-      ))}
+      {list.map((r) => {
+        const t = readoutText(r)
+        return (
+          <Tooltip key={r.id} title={t.title} body={r.help} placement="bottom">
+            <div style={{ fontSize: 11.5, color: colors.muted, cursor: 'help' }} data-testid={`hud-resource-${id}-${r.id}`} tabIndex={0}>
+              {t.label} <strong style={{ color: colors.text }}>{t.value}</strong>
+            </div>
+          </Tooltip>
+        )
+      })}
     </>
   )
+}
+
+/** How an army counter reads: "Label n/max" for most; the Idoneth tide of the round carries the tide's name in its label and the round
+ *  number in its value, so it reads "Tide Low Tide" with the round in the tooltip title. `short` is the phone badge's one-word form. */
+function readoutText(r: FactionResource): { label: string; value: string; title: string; short: string } {
+  if (r.id === 'idoneth.tide') {
+    const name = r.label.replace(/^Tide:\s*/, '')
+    return { label: 'Tide', value: name, title: `${name}${r.max !== undefined ? `, round ${r.value} of ${r.max}` : ''}`, short: `Tide ${name.replace(/ Tide$/, '')}` }
+  }
+  const value = `${r.value}${r.max !== undefined ? `/${r.max}` : ''}`
+  return { label: r.label, value, title: `${r.label} ${value}`, short: `${r.label.includes(' ') ? r.label.split(' ').pop() : r.label.slice(0, 3)} ${value}` }
 }
 
 function PlayerBadge({ id, state }: { id: PlayerId; state: GameState }) {
@@ -774,7 +789,7 @@ function CompactBadge({ id, state, open, onToggle }: { id: PlayerId; state: Game
         <span style={{ ...cBadgeName, color }}>{p.name}</span>
         <span style={cBadgeNums}>
           <span data-testid={`hud-vp-${id}`}>VP {p.vp}</span>{state.underdog === id ? ' · underdog' : ''}
-          {resources.map((r) => <span key={r.id} data-testid={`hud-badge-resource-${id}-${r.id}`}>{` · ${r.label.slice(0, 3)} ${r.value}${r.max !== undefined ? `/${r.max}` : ''}`}</span>)}
+          {resources.map((r) => <span key={r.id} data-testid={`hud-badge-resource-${id}-${r.id}`}>{` · ${readoutText(r).short}`}</span>)}
         </span>
       </button>
       {open && (

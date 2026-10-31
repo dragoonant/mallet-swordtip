@@ -1,0 +1,28 @@
+[
+  {
+    "id": "ossiarch.unit.immortis-guard",
+    "faction": "ossiarch",
+    "name": "Immortis Guard",
+    "keywords": ["INFANTRY"],
+    "factionKeywords": ["DEATH", "OSSIARCH BONEREAPERS"],
+    "stats": { "M": 5, "W": 4, "Sv": 3, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "immortis-guard",
+        "name": "Immortis Guard",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 50 },
+        "weapons": {
+          "default": ["ossiarch.weapon.dread-halberd"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["ossiarch.ability.soulbound-protectors"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

@@ -147,6 +147,22 @@ function targetSide(options: readonly { id: string }[] | undefined, state: GameS
   return null
 }
 
+/** F16: what an army ability's own effect pick means, for the armies whose picks are not a plain heading or target. */
+const ABILITY_MODE_HINT: Readonly<Record<string, string>> = {
+  'ossiarch.ability.relentless-discipline-combat': 'The discipline roll is made after you pick (a D6, with +1 near your general and any other bonus); on a 4+ the unit gets the effect you choose here: +1 to the wound rolls of its combat attacks, or a Ward (5+), until the phase ends.',
+  'ossiarch.ability.relentless-discipline': 'The discipline roll is made after you pick (a D6, with +1 near your general and any other bonus); on a 4+ the unit gets the effect you choose here until the phase ends.',
+  'ossiarch.ability.switch-aspects': 'Blade-parry Aspect: enemy melee attacks against this unit are at -1 to hit this turn. Destroyer Aspect: this unit\'s combat attacks cannot be warded this turn.',
+}
+const ABILITY_TARGET_HINT: Readonly<Record<string, string>> = {
+  'ossiarch.ability.relentless-discipline': 'Pick the friendly unit that makes the discipline roll. It scores +1 on the roll while wholly within 12" of your general.',
+  'ossiarch.ability.relentless-discipline-charge': 'Pick the friendly unit that makes the discipline roll. On a 4+ it adds 1 to its charge rolls for the rest of the phase.',
+  'ossiarch.ability.relentless-discipline-combat': 'Pick the friendly unit that makes the discipline roll. On a 4+ you then choose how it fights harder.',
+  'daughters.ability.blessing-of-khaine': 'Pick a friendly unit close to your general (not the general): it adds 1 to its ward rolls for the rest of the phase.',
+  'daughters.ability.zealous-orator': 'Pick a friendly unit close to your general that is not in combat: each slain model it has comes back on a 5+.',
+  'idoneth.ability.ethersea-predators': 'Pick a friendly Cavalry unit that fought this turn: it heals D3 damage.',
+  'idoneth.ability.mind-flare': 'Pick the enemy unit fighting your general: until the phase ends it only hits on an unmodified 6.',
+}
+
 export function chooseOptionInfoFor(
   context: { topic: ChooseOptionTopic; abilityId: string | null; unitId?: string | null; data?: Record<string, unknown> },
   options?: readonly { id: string; label?: string }[],
@@ -202,6 +218,29 @@ export function chooseOptionInfoFor(
       hint: `Only one of its critical-hit abilities counts for this attack${target ? ` on ${target}` : ''}. Each option shows the average extra damage that effect is worth per critical hit; the unit being attacked lights up on the board.`,
     }
   }
+  // F16: Disciples of Tzeentch. Predict the Future looks at the top battle tactic cards one at a time (keep on top, or to the bottom), then, if
+  // two or more stay on top, asks which goes first; Cheat Destiny offers to tuck a used tactic card under the deck instead of discarding it.
+  if (context.topic === 'abilityChoice' && (context.data?.stage === 'sort' || context.data?.stage === 'order') && Array.isArray(context.data?.cards)) {
+    const n = context.data.cards.length
+    if (context.data.stage === 'sort') {
+      const i = typeof context.data.i === 'number' ? context.data.i : 0
+      return {
+        title: `Predict the Future: card ${i + 1} of ${n}`,
+        hint: `You are looking at the top ${n} battle tactic cards, one at a time. Keep this one on top of your deck or send it to the bottom. The cards you keep stay in the order you looked at them, unless two or more stay and you are asked which goes first.`,
+      }
+    }
+    const kept = Array.isArray(context.data.tops) ? context.data.tops.length : 0
+    return {
+      title: 'Predict the Future: choose the top card',
+      hint: `${kept} cards stay on top of your deck. Pick the one you want to draw first; the others follow it in the order you looked at them.`,
+    }
+  }
+  if (context.topic === 'abilityChoice' && context.abilityId === 'tzeentch.ability.cheat-destiny') {
+    return {
+      title: 'Cheat Destiny: keep that card?',
+      hint: 'You just spent a battle tactic card on its command. Put it on the bottom of your deck instead of the discard pile, so it can come round again much later. Pass to discard it as usual.',
+    }
+  }
   // F14: Nurgle's Embrace spends the army's disease points one at a time on an enemy unit in combat with it.
   if (context.topic === 'abilityChoice' && typeof context.data?.points === 'number' && context.abilityId && state?.abilities[context.abilityId]) {
     const left = context.data.points
@@ -225,7 +264,7 @@ export function chooseOptionInfoFor(
     const side = context.topic === 'abilityTarget' ? targetSide(options, state, player) : null
     return {
       title: `${ab.name}: ${context.topic === 'abilityTarget' ? 'choose a target' : 'choose an effect'}`,
-      hint: side === 'enemy' ? 'Pick the enemy unit this ability hits.' : side === 'friendly' ? 'Pick the friendly unit this ability affects.' : base?.hint ?? '',
+      hint: (context.topic === 'abilityMode' ? ABILITY_MODE_HINT[ab.id] : ABILITY_TARGET_HINT[ab.id]) ?? (side === 'enemy' ? 'Pick the enemy unit this ability hits.' : side === 'friendly' ? 'Pick the friendly unit this ability affects.' : base?.hint ?? ''),
     }
   }
   return CHOOSE_OPTION_INFO[context.topic]

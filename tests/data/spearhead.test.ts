@@ -14,8 +14,10 @@ describe('Spearhead armies (SPH-2)', () => {
   it('SPH-2.1 all armies ship, each with a general that is one of its units', () => {
     expect(armies.map((a) => a.id).sort()).toEqual([
       'cities.army.castelite-company',
+      'daughters.army.heartflayer-troupe',
       'fyreslayers.army.saga-axeband',
       'gloomspite.army.snarlpack-huntaz',
+      'idoneth.army.soulraid-hunt',
       'ironjawz.army.bigmob',
       'kharadron.army.skyhammer-task-force',
       'khorne.army.fangs-of-the-blood-god',
@@ -23,12 +25,14 @@ describe('Spearhead armies (SPH-2)', () => {
       'lumineth.army.hurakan-vanguard',
       'nighthaunt.army.slasher-host',
       'nurgle.army.bleak-host',
+      'ossiarch.army.mortisan-elite',
       'seraphon.army.sunblooded-prowlers',
       'skaven.army.warpspark-clawpack',
       'slaves.army.darkoath-raiders',
       'soulblight.army.bloodcrave-hunt',
       'stormcast.army.vigilant-brotherhood',
       'sylvaneth.army.spitewing-flight',
+      'tzeentch.army.tzaangor-warflock',
     ])
     for (const a of armies) expect(a.units.some((u) => u.ref === a.warlord)).toBe(true)
   })

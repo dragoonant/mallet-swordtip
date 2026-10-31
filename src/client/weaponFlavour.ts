@@ -48,7 +48,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
     // Tyranid claws, talons and teeth rend and slash, so they voice as the cutting sound; only a klaw/fist
     // (or a plain crushing profile) is the heavy crunch.
     if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks|hoove?s|clubbing|celestite.club|war-relic/.test(text)) return 'crush'
-    if (/choppa|chain|sword|blade|axe|eviscerator|knife|knives|reaper|claw|talon|teeth|jaws|snappa|stikka|maw|hyperphase|mandible|flail|whip|glaive|spear|lance|khopesh|fang|sickle|scythe|maw/.test(text)) return 'chain'
+    if (/choppa|chain|sword|blade|axe|eviscerator|knife|knives|reaper|claw|talon|teeth|jaws|snappa|stikka|maw|hyperphase|mandible|flail|whip|glaive|spear|lance|khopesh|fang|sickle|scythe|maw|bite|halberd|scimitar|sciansa|scianlar|keldrisaith|lanmari|voltspear|hooks|beak/.test(text)) return 'chain'
     return strength >= 8 ? 'crush' : 'chain'
   }
 
@@ -64,6 +64,10 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
   if (/ratling/.test(text)) return 'shoota'
   if (/windlauncher/.test(text)) return 'heavy'
   if (/dartpipe|blowpipe|sneeze/.test(text)) return 'shoota' // F14: Nurgle's sneezes are a wet spray
+  // F16: a Khainite keldrisaith thrown like a javelin and a doomfire crossbow bolt wreathed in violet flame; Idoneth scryfish are a swarm of
+  // darting pale sparks and their razorshell harpoon launcher a heavy bolt; a Tzaangor's arrow of fate is a streak of warpflame.
+  if (/doomfire|scryfish|arrow.of.fate/.test(text)) return 'psychic'
+  if (/harpoon/.test(text)) return 'heavy'
   // A macro plasma *incinerator* is a plasma gun, not a flame template.
   if (/plasma.*incinerat/.test(text)) return 'heavy'
   // TORRENT is the rules-level marker for a flame template (no hit roll, auto-hits).
@@ -105,7 +109,7 @@ export interface VfxClassification {
 
 /** Engine faction ids by the prefix of a weapon id ('ork.w.shoota'), for weapons classified with no faction given. */
 const ID_PREFIX_FACTION: [string, string][] = [
-  ['ork.', 'ork'], ['khorne.', 'khorne'], ['nurgle.', 'nurgle'], ['nighthaunt.', 'nighthaunt'], ['sylvaneth.', 'sylvaneth'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['stormcast.', 'stormcast'], ['skaven.', 'skaven'], ['seraphon.', 'seraphon'], ['soulblight.', 'soulblight'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
+  ['ork.', 'ork'], ['khorne.', 'khorne'], ['nurgle.', 'nurgle'], ['nighthaunt.', 'nighthaunt'], ['sylvaneth.', 'sylvaneth'], ['daughters.', 'daughters'], ['idoneth.', 'idoneth'], ['tzeentch.', 'tzeentch'], ['ossiarch.', 'ossiarch'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['stormcast.', 'stormcast'], ['skaven.', 'skaven'], ['seraphon.', 'seraphon'], ['soulblight.', 'soulblight'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
   ['am.', 'astra-militarum'], ['lov.', 'leagues-of-votann'], ['gk.', 'grey-knights'], ['csm', 'chaos-space-marines'], ['we.', 'world-eaters'], ['ade', 'adepta-sororitas'], ['cus.', 'adeptus-custodes'], ['drk.', 'drukhari'], ['ael.', 'aeldari'], ['adm.', 'adeptus-mechanicus'], ['dg.', 'death-guard'], ['ths.', 'thousand-sons'], ['sw.', 'space-wolves'], ['da.', 'dark-angels'], ['ba.', 'blood-angels'], ['dw.', 'deathwatch'], ['bt.', 'black-templars'],
 ]
 
@@ -135,6 +139,13 @@ export function classifyVfxFamily(weaponId: string, weapon: WeaponData | undefin
   // F14: Nurgle's sneezes spray a cloud of spat plague, a Gossamid bow looses a thorn arrow as a hard kinetic streak.
   if (/sneeze/.test(text)) return kw('bio')
   if (/gossamid.bow/.test(text)) return kw('bolt')
+  // F16: Khainite heartseeker bows and thrown keldrisaiths are hard kinetic streaks (the Doomfire crossbow too: blood-red bolts); Idoneth scryfish
+  // are a swarm of pale soul-energy streaks, their razorshell harpoon launcher a lobbed missile; a Tzaangor's arrow of fate is a bright
+  // crystal-tipped streak.
+  if (/heartseeker|keldrisaith|doomfire/.test(text)) return kw('bolt')
+  if (/scryfish/.test(text)) return kw('pulse')
+  if (/harpoon/.test(text)) return kw('missile')
+  if (/\barrow/.test(text)) return kw('pulse')
   if (/volley.pistol|privateer|vulcaniser|aethershot|carbine/.test(text)) return kw('flintlock')
   if (/crossbow|beast.skewer|grot.bow|windcharger.bow/.test(text)) return kw('bolt')
   // Spat, flung or sprayed biomass: Tyranid guns, and the cult's webber.

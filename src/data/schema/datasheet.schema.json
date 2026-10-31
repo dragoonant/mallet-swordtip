@@ -251,6 +251,11 @@
         "priest": {
           "type": "integer",
           "minimum": 1
+        },
+        "castingLevel": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "F16: spells per phase for a unit that casts without being a Wizard (never unbinds)"
         }
       },
       "required": [

@@ -90,6 +90,23 @@ const NEW_MODELS: Array<[string, string, string]> = [
   ['sylvaneth.unit.gossamid-archers', 'gossamid-archer', 'syl-gossamid-archer'],
   ['sylvaneth.unit.spiterider-lancers', 'spiterider-lancer', 'syl-spiterider-lancer'],
   ['sylvaneth.unit.revenant-seekers', 'revenant-seeker', 'syl-revenant-seeker'],
+  // F16: Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch, Ossiarch Bonereapers (slugs from each spec's Figures table).
+  ['daughters.unit.melusai-ironscale', 'melusai-ironscale', 'dok-melusai-ironscale'],
+  ['daughters.unit.witch-aelves', 'witch-aelf', 'dok-witch-aelf'],
+  ['daughters.unit.doomfire-warlocks', 'doomfire-warlock', 'dok-doomfire-warlock'],
+  ['daughters.unit.blood-stalkers', 'blood-stalker', 'dok-blood-stalker'],
+  ['idoneth.unit.isharann-soulscryer', 'soulscryer', 'idk-isharann-soulscryer'],
+  ['idoneth.unit.akhelian-morrsarr-guard', 'morrsarr-guard', 'idk-morrsarr-guard'],
+  ['idoneth.unit.akhelian-allopex', 'allopex', 'idk-akhelian-allopex'],
+  ['idoneth.unit.namarti-thralls', 'namarti-thrall', 'idk-namarti-thrall'],
+  ['tzeentch.unit.tzaangor-shaman', 'tzaangor-shaman', 'dot-tzaangor-shaman'],
+  ['tzeentch.unit.tzaangors', 'tzaangor', 'dot-tzaangor'],
+  ['tzeentch.unit.tzaangor-enlightened', 'tzaangor-enlightened', 'dot-tzaangor-enlightened'],
+  ['tzeentch.unit.tzaangor-skyfires', 'tzaangor-skyfire', 'dot-tzaangor-skyfire'],
+  ['ossiarch.unit.mortisan-ossifector', 'mortisan-ossifector', 'obr-mortisan-ossifector'],
+  ['ossiarch.unit.immortis-guard', 'immortis-guard', 'obr-immortis-guard'],
+  ['ossiarch.unit.necropolis-stalkers', 'necropolis-stalker', 'obr-necropolis-stalker'],
+  ['ossiarch.unit.morghast-archai', 'morghast-archai', 'obr-morghast-archai'],
 ]
 
 describe('Spearhead figures and board', () => {
@@ -145,8 +162,8 @@ describe('Spearhead figures and board', () => {
     expect(checked).toBeGreaterThanOrEqual(MODELS.length + NEW_MODELS.length)
   })
 
-  it('FIG-AOS-007 the army painter has measured source hues for the fourteen armies with their own bands, and every figure fix names a declared slug', () => {
-    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron', 'stormcast', 'skaven', 'seraphon', 'soulblight', 'khorne', 'nurgle', 'nighthaunt', 'sylvaneth']) {
+  it('FIG-AOS-007 the army painter has source hues for the eighteen armies with their own bands, and every figure fix names a declared slug', () => {
+    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron', 'stormcast', 'skaven', 'seraphon', 'soulblight', 'khorne', 'nurgle', 'nighthaunt', 'sylvaneth', 'daughters', 'idoneth', 'tzeentch', 'ossiarch']) {
       const h = SOURCE_HUES[army]
       expect(h, army).toBeDefined()
       expect(h.major ?? h.minor, army).toBeTruthy()

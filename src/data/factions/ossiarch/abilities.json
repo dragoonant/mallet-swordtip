@@ -1,0 +1,179 @@
+[
+  {
+    "id": "ossiarch.ability.mortisan-elite",
+    "name": "Mortisan Elite",
+    "text": "Army marker for the Ossiarch Bonereapers Mortisan Elite. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "ossiarch.ability.heralds-of-nagash",
+    "name": "Heralds of Nagash",
+    "text": "The Morghast Archai unit is not set up in the deployment phase: it starts in reserve and arrives through Dread Descent.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "ossiarch.ability.dread-descent",
+    "name": "Dread Descent",
+    "text": "Once per turn for the army, in your movement phase from battle round 2, set the Morghast Archai up anywhere on the battlefield, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "limit": "oncePerTurnArmy",
+    "fromRound": 2,
+    "params": { "fromRound": 2, "minEnemyDistance": 6, "anywhere": true }
+  },
+  {
+    "id": "ossiarch.ability.relentless-discipline",
+    "name": "Relentless Discipline",
+    "text": "Once per phase for the army, pick a friendly unit and make a discipline roll (a dice, +1 if the unit is wholly within 12\" of your general). On a 4+, in your movement phase the unit adds 2\" to its Move for the rest of the phase.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["UNLIMITED"],
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilEndOfPhase",
+    "code": "ossiarchRelentlessDiscipline",
+    "params": { "army": true, "window": "moveDeclared", "range": 12, "succeedOn": 4, "move": 2, "priority": "P1" }
+  },
+  {
+    "id": "ossiarch.ability.relentless-discipline-charge",
+    "name": "Relentless Discipline",
+    "text": "Once per phase for the army, pick a friendly unit and make a discipline roll (a dice, +1 if the unit is wholly within 12\" of your general). On a 4+, in your charge phase the unit adds 1 to its charge rolls for the rest of the phase.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "your" },
+    "keywords": ["UNLIMITED"],
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilEndOfPhase",
+    "code": "ossiarchRelentlessDiscipline",
+    "params": { "army": true, "window": "phaseStart", "range": 12, "succeedOn": 4, "charge": 1, "priority": "P1" }
+  },
+  {
+    "id": "ossiarch.ability.relentless-discipline-combat",
+    "name": "Relentless Discipline",
+    "text": "Once per phase for the army, pick a friendly unit and make a discipline roll (a dice, +1 if the unit is wholly within 12\" of your general). On a 4+ choose one for the rest of the combat phase: add 1 to the wound rolls of the unit's combat attacks, or the unit has Ward (5+).",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "keywords": ["UNLIMITED"],
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "modes": [
+      { "id": "wound", "name": "Cruel Edge", "text": "Add 1 to the wound rolls of the unit's combat attacks for the rest of the phase." },
+      { "id": "ward", "name": "Unyielding Bones", "text": "The unit has Ward (5+) for the rest of the phase." }
+    ],
+    "duration": "untilEndOfPhase",
+    "code": "ossiarchRelentlessDiscipline",
+    "params": { "army": true, "range": 12, "succeedOn": 4, "wound": 1, "ward": 5, "priority": "P1" }
+  },
+  {
+    "id": "ossiarch.ability.peerless-cohesion",
+    "name": "Peerless Cohesion",
+    "text": "Once per turn for the army, when you use Relentless Discipline, you can use it a second time in the same phase, on a different unit.",
+    "trigger": "activated",
+    "timing": { "kind": "reaction", "trigger": "youDeclared", "abilityId": "ossiarch.ability.relentless-discipline" },
+    "limit": "oncePerTurnArmy",
+    "code": "ossiarchPeerlessCohesion",
+    "params": { "army": true, "priority": "P1" }
+  },
+  {
+    "id": "ossiarch.ability.immaculate-generalship",
+    "name": "Immaculate Generalship",
+    "text": "Add 1 to every discipline roll you make.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "params": { "priority": "P1" }
+  },
+  {
+    "id": "ossiarch.ability.refined-creations",
+    "name": "Refined Creations",
+    "text": "Spell (casting value 5). In your hero phase, pick a visible friendly unit wholly within 12\" of this unit (this unit counts). If the spell is cast, that unit's melee weapons have Crit (2 Hits) until the start of your next turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 5,
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilNextTurn",
+    "code": "ossiarchRefinedCreations",
+    "params": { "range": 12, "priority": "P1" }
+  },
+  {
+    "id": "ossiarch.ability.soulbound-protectors",
+    "name": "Soulbound Protectors",
+    "text": "Your general has Ward (5+) while it is within this unit's combat range (3\").",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "nighthauntDrawnToWar",
+    "params": { "range": 3, "ward": 5 }
+  },
+  {
+    "id": "ossiarch.ability.switch-aspects",
+    "name": "Switch Aspects",
+    "text": "In any combat phase, pick one for the rest of the turn. Blade-parry Aspect: subtract 1 from hit rolls for combat attacks that target this unit. Destroyer Aspect: no ward rolls can be made against damage inflicted by this unit's combat attacks.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "modes": [
+      { "id": "parry", "name": "Blade-parry Aspect", "text": "Subtract 1 from hit rolls for combat attacks that target this unit for the rest of the turn." },
+      { "id": "destroyer", "name": "Destroyer Aspect", "text": "No ward rolls can be made against damage inflicted by this unit's combat attacks for the rest of the turn." }
+    ],
+    "duration": "untilEndOfTurn",
+    "code": "ossiarchSwitchAspects",
+    "params": { "priority": "P1" }
+  },
+  {
+    "id": "ossiarch.ability.morghast-heralds",
+    "name": "Heralds of Nagash",
+    "text": "Add 1 to discipline rolls for this unit while it is not wholly within 12\" of your general.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "params": { "range": 12 }
+  },
+  {
+    "id": "ossiarch.ability.lode-of-saturation",
+    "name": "Lode of Saturation",
+    "text": "Subtract 1 from the Rend of melee weapons used for combat attacks that target the general (to a minimum of 0).",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "attacker" },
+    "effect": { "when": { "weaponType": "melee" }, "modifyStat": { "stat": "AP", "value": 1 }, "affectsCompanion": true }
+  },
+  {
+    "id": "ossiarch.ability.shard-storm",
+    "name": "Shard Storm",
+    "text": "Spell (casting value 7). In your hero phase, pick a visible enemy unit within 12\" of the general. If the spell is cast, roll a dice for each model in that unit; each 5+ inflicts 1 mortal damage on it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 7,
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "ossiarchShardStorm",
+    "params": { "range": 12, "succeedOn": 5, "priority": "P2" }
+  },
+  {
+    "id": "ossiarch.ability.mend-constructs",
+    "name": "Mend Constructs",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 12\" of the general. If the spell is cast, Heal (D3) that unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "ossiarchMendConstructs",
+    "params": { "range": 12, "heal": "D3", "priority": "P2" }
+  },
+  {
+    "id": "ossiarch.ability.helm-of-tyranny",
+    "name": "Helm of Tyranny",
+    "text": "Once per battle, at the end of your turn, pick an enemy unit within 12\" of the general and roll a dice. On a 3+ subtract 3 from that unit's control score for the rest of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "your" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "roll": { "dice": "D6", "succeedOn": 3 },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "duration": "untilEndOfTurn",
+    "code": "ossiarchHelmOfTyranny",
+    "params": { "range": 12, "control": 3, "priority": "P2" }
+  }
+]

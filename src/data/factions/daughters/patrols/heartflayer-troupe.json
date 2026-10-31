@@ -1,0 +1,29 @@
+{
+  "id": "daughters.army.heartflayer-troupe",
+  "faction": "daughters",
+  "name": "Heartflayer Troupe",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "melusai-ironscale", "datasheet": "daughters.unit.melusai-ironscale", "size": 1 },
+    { "ref": "witch-aelves-1", "datasheet": "daughters.unit.witch-aelves", "size": 5 },
+    { "ref": "witch-aelves-2", "datasheet": "daughters.unit.witch-aelves", "size": 5 },
+    { "ref": "doomfire-warlocks", "datasheet": "daughters.unit.doomfire-warlocks", "size": 5 },
+    { "ref": "blood-stalkers", "datasheet": "daughters.unit.blood-stalkers", "size": 5 }
+  ],
+  "warlord": "melusai-ironscale",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "daughters.ability.blood-rites"
+  ],
+  "regimentAbilities": [
+    { "id": "daughters.ability.blessing-of-khaine", "default": true },
+    { "id": "daughters.ability.murderous-epiphany", "default": false }
+  ],
+  "enhancements": [
+    { "id": "daughters.enh.fuelled-by-revenge", "default": true },
+    { "id": "daughters.enh.bathed-in-blood", "default": false },
+    { "id": "daughters.enh.flask-of-shademist", "default": false },
+    { "id": "daughters.enh.zealous-orator", "default": false }
+  ]
+}

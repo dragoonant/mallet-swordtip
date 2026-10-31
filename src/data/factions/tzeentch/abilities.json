@@ -1,0 +1,157 @@
+[
+  {
+    "id": "tzeentch.ability.tzaangor-warflock",
+    "name": "Tzaangor Warflock",
+    "text": "Army marker for the Disciples of Tzeentch Tzaangor Warflock. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "tzeentch.ability.warflock-ambush",
+    "name": "Fated Arrival (reserve)",
+    "text": "The Tzaangor Enlightened are not set up in the deployment phase. They wait off the table for Fated Arrival, and a unit still waiting at the start of battle round 4 is destroyed.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "tzeentch.ability.fated-arrival",
+    "name": "Fated Arrival",
+    "text": "In your movement phase from battle round 2, set this unit up wholly within friendly territory and within 1\" of a battlefield edge, every model more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["CORE"],
+    "fromRound": 2,
+    "params": { "fromRound": 2, "minEnemyDistance": 6, "anywhere": false, "territory": true, "edgeWithin": 1 }
+  },
+  {
+    "id": "tzeentch.ability.predict-the-future",
+    "name": "Predict the Future",
+    "text": "In your hero phase, look at up to the top 3 cards of your battle tactic deck without taking them into your hand. Put each one back face down on the top or the bottom of the deck, in any order you like.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "limit": "oncePerPhase",
+    "code": "tzeentchPredictTheFuture",
+    "params": { "army": true, "look": 3, "priority": "P1" }
+  },
+  {
+    "id": "tzeentch.ability.cheat-destiny",
+    "name": "Cheat Destiny",
+    "text": "Each time you use the command on a battle tactic card, once per phase you can put that card face down on the bottom of your battle tactic deck instead of discarding it.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "tzeentchCheatDestiny",
+    "params": { "priority": "P1" }
+  },
+  {
+    "id": "tzeentch.ability.constant-flux",
+    "name": "Constant Flux",
+    "text": "While you are the underdog, subtract 1 from the Rend characteristic of weapons used for attacks that target friendly units (it cannot go below 0).",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "tzeentchConstantFlux"
+  },
+  {
+    "id": "tzeentch.ability.arcane-ritualists",
+    "name": "Arcane Ritualists",
+    "text": "Add 1 to casting rolls for your general while it is wholly within 6\" of another friendly unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "tzeentchArcaneRitualists",
+    "params": { "range": 6, "bonus": 1 }
+  },
+  {
+    "id": "tzeentch.ability.mutative-aura",
+    "name": "Mutative Aura",
+    "text": "Spell (casting value 7). In your hero phase, pick a visible enemy unit within 18\" of this unit. If the spell is cast, until the start of your next turn, each time that unit makes a combat attack with an unmodified hit roll of 1, it suffers 1 mortal damage once its Fight ability has been resolved.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 7,
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "duration": "untilNextTurn",
+    "code": "tzeentchMutativeAura",
+    "params": { "range": 18, "mortal": 1, "priority": "P2" }
+  },
+  {
+    "id": "tzeentch.ability.eldritch-raiders",
+    "name": "Eldritch Raiders",
+    "text": "Add 1 to the wound rolls for this unit's attacks while it is wholly within enemy territory.",
+    "trigger": "woundRoll",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "modifyRoll": { "roll": "wound", "value": 1 } },
+    "code": "tzeentchEldritchRaiders"
+  },
+  {
+    "id": "tzeentch.ability.deliver-on-fate",
+    "name": "Deliver on Fate",
+    "text": "Add 1 to charge rolls for this unit while you are the underdog.",
+    "trigger": "chargeRoll",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "modifyRoll": { "roll": "charge", "value": 1 } },
+    "code": "tzeentchUnderdog"
+  },
+  {
+    "id": "tzeentch.ability.destined-quarry",
+    "name": "Destined Quarry",
+    "text": "In your shooting phase, after this unit has shot, pick an enemy unit that had damage allocated to it this phase by this unit's shooting attacks. For the rest of the turn, add 1 to the hit rolls of combat attacks made by friendly units that target it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "duration": "untilEndOfTurn",
+    "code": "tzeentchDestinedQuarry",
+    "params": { "priority": "P1" }
+  },
+  {
+    "id": "tzeentch.ability.predicted-strike",
+    "name": "Predicted Strike",
+    "text": "Once per battle, in the enemy movement phase, pick a visible friendly unit wholly within 12\" of the bearer that is not in combat. It can move up to D6\". It cannot move through the combat range of an enemy unit and cannot end that move in combat.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "enemy" },
+    "limit": "oncePerBattle",
+    "keywords": ["MOVE"],
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "tzeentchPredictedStrike",
+    "params": { "range": 12, "dice": "D6", "priority": "P2" }
+  },
+  {
+    "id": "tzeentch.ability.fold-reality",
+    "name": "Fold Reality",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 12\" of the bearer (not the bearer's own unit). If the spell is cast, take it off the battlefield and set it up again wholly within 12\" of the bearer and more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "tzeentchFoldReality",
+    "params": { "range": 12, "minEnemyDistance": 6, "priority": "P2" }
+  },
+  {
+    "id": "tzeentch.ability.infernal-gateway",
+    "name": "Infernal Gateway",
+    "text": "Spell (casting value 5). In your hero phase, pick a visible enemy unit within 18\" of the bearer. If the spell is cast, roll 3 dice, or one die for each battle tactic card you have discarded this battle if that is more. Each 4+ inflicts 1 mortal damage on the target.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 5,
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "tzeentchInfernalGateway",
+    "params": { "range": 18, "minDice": 3, "succeedOn": 4, "priority": "P2" }
+  },
+  {
+    "id": "tzeentch.ability.mutagenic-sorcery",
+    "name": "Mutagenic Sorcery",
+    "text": "At the end of any turn, pick a visible enemy unit within 12\" of the bearer and a friendly Tzaangors unit in combat with it, then roll a D3. On a 2+, the enemy unit suffers mortal damage equal to the roll and you can return 1 slain model to the Tzaangors unit.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurn",
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "tzeentchMutagenicSorcery",
+    "params": { "range": 12, "dice": "D3", "succeedOn": 2, "returnModels": 1, "priority": "P2" }
+  }
+]

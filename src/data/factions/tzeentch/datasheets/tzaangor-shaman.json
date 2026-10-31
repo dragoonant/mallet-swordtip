@@ -1,0 +1,29 @@
+[
+  {
+    "id": "tzeentch.unit.tzaangor-shaman",
+    "faction": "tzeentch",
+    "name": "Tzaangor Shaman",
+    "keywords": ["HERO", "WIZARD", "CAVALRY", "FLY"],
+    "factionKeywords": ["CHAOS", "DISCIPLES OF TZEENTCH"],
+    "stats": { "M": 14, "W": 6, "Sv": 5, "OC": 2 },
+    "wizard": 1,
+    "composition": [
+      {
+        "modelId": "tzaangor-shaman",
+        "name": "Tzaangor Shaman",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["tzeentch.weapon.staff-of-change", "tzeentch.weapon.discs-teeth-and-horns"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["tzeentch.ability.mutative-aura"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

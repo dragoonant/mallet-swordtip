@@ -1,0 +1,28 @@
+[
+  {
+    "id": "idoneth.unit.akhelian-allopex",
+    "faction": "idoneth",
+    "name": "Akhelian Allopex",
+    "keywords": ["CAVALRY", "FLY", "REINFORCEMENTS"],
+    "factionKeywords": ["ORDER", "IDONETH DEEPKIN"],
+    "stats": { "M": 12, "W": 8, "Sv": 4, "OC": 2 },
+    "composition": [
+      {
+        "modelId": "allopex",
+        "name": "Akhelian Allopex",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "oval", "mm": 90, "mm2": 52 },
+        "weapons": {
+          "default": ["idoneth.weapon.razorshell-harpoon-launcher", "idoneth.weapon.barbed-hooks-and-blades", "idoneth.weapon.allopex-bite"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["idoneth.ability.bloodthirsty-predators"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

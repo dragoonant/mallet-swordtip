@@ -27,6 +27,10 @@ import { seraphonAbilityTiming, seraphonTargetBonus } from '../engine/factions/s
 import { khorneAbilityTiming, khorneChargeFocus, khorneTargetBonus } from '../engine/factions/khorne'
 import { nighthauntAbilityTiming, nighthauntTargetBonus } from '../engine/factions/nighthaunt'
 import { sylvanethAbilityTiming, sylvanethTargetBonus } from '../engine/factions/sylvaneth'
+import { idonethAbilityTiming, idonethMoveThenCharge, idonethTargetBonus } from '../engine/factions/idoneth'
+import { tzeentchAbilityTiming, tzeentchTargetBonus } from '../engine/factions/tzeentch'
+import { ossiarchAbilityTiming, ossiarchModeBonus, ossiarchTargetBonus } from '../engine/factions/ossiarch'
+import { daughtersAbilityTiming, daughtersTargetBonus } from '../engine/factions/daughters'
 import { citiesHoldWeight } from '../engine/factions/cities'
 import { reinforcementOptions } from '../engine/factions/aos-moves'
 import { datasheetOf } from '../engine/state'
@@ -290,7 +294,7 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
       // retreated cannot charge this turn, so for it (and outside the movement phase) only next turn's charge counts
       const mt = moveType ?? state.units[unitId]?.turn.moveType
       // (nor can one that may not charge this turn at all: carried by Ply the Skies, and the like)
-      const chargeNow = state.phase === 'movement' && mt !== 'advance' && (mt !== 'fallBack' || retreatsAndCharges(state, unitId)) && !hookService.chargeForbidden(state, unitId)
+      const chargeNow = state.phase === 'movement' && (mt !== 'advance' || idonethMoveThenCharge(state, unitId, mt)) && (mt !== 'fallBack' || retreatsAndCharges(state, unitId) || idonethMoveThenCharge(state, unitId, mt)) && !hookService.chargeForbidden(state, unitId)
       const gap = placementGapTo(state, placements, enemy.unitId)
       if (chargeNow) chargeNowP = chargeProb(Math.ceil(Math.max(0, gap - 0.5)), chargeDiceCount(state, unitId))
       if (chargeNow) score += chargeOutlook(state, player, unitId, placements, enemy.unitId, gap, 0) * (hammer ? 1 : 0.6)
@@ -1108,8 +1112,16 @@ function abilityTiming(state: GameState, player: PlayerId, abilityId: string, un
   if (bokTiming !== null) return bokTiming
   const serTiming = code?.startsWith('seraphon') ? seraphonAbilityTiming(state, player, code, unitId) : null
   if (serTiming !== null) return serTiming
+  const dokTiming = code?.startsWith('daughters') ? daughtersAbilityTiming(state, player, code, unitId) : null
+  if (dokTiming !== null) return dokTiming
+  const dotTiming = code?.startsWith('tzeentch') ? tzeentchAbilityTiming(state, player, code, unitId) : null
+  if (dotTiming !== null) return dotTiming
   const sylTiming = code?.startsWith('sylvaneth') ? sylvanethAbilityTiming(state, player, code, unitId) : null
   if (sylTiming !== null) return sylTiming
+  const obrTiming = code?.startsWith('ossiarch') ? ossiarchAbilityTiming(state, player, code, unitId) : null
+  if (obrTiming !== null) return obrTiming
+  const idkTiming = code?.startsWith('idoneth') ? idonethAbilityTiming(state, player, code, unitId) : null
+  if (idkTiming !== null) return idkTiming
   const nhTiming = code?.startsWith('nighthaunt') ? nighthauntAbilityTiming(state, player, code, unitId) : null
   if (nhTiming !== null) return nhTiming
   if (code === 'fyreslayersPlantTheIcon') {
@@ -1178,8 +1190,16 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
   if (bokBonus !== null) return bokBonus
   const serBonus = code?.startsWith('seraphon') ? seraphonTargetBonus(state, player, code, unitId) : null
   if (serBonus !== null) return serBonus
+  const dokBonus = code?.startsWith('daughters') ? daughtersTargetBonus(state, player, code, unitId) : null
+  if (dokBonus !== null) return dokBonus
+  const dotBonus = code?.startsWith('tzeentch') ? tzeentchTargetBonus(state, player, code, unitId) : null
+  if (dotBonus !== null) return dotBonus
   const sylBonus = code?.startsWith('sylvaneth') ? sylvanethTargetBonus(state, player, code, unitId) : null
   if (sylBonus !== null) return sylBonus
+  const obrBonus = code?.startsWith('ossiarch') ? ossiarchTargetBonus(state, player, code, unitId) : null
+  if (obrBonus !== null) return obrBonus
+  const idkBonus = code?.startsWith('idoneth') ? idonethTargetBonus(state, player, code, unitId) : null
+  if (idkBonus !== null) return idkBonus
   const nhBonus = code?.startsWith('nighthaunt') ? nighthauntTargetBonus(state, player, code, unitId) : null
   if (nhBonus !== null) return nhBonus
   if (code === 'citiesIronweldDiscipline') {
@@ -1251,6 +1271,8 @@ function abilityModeBonus(state: GameState, pending: PendingDecision, optionId: 
   if (sceMode !== null) return sceMode
   const nurMode = koCode?.startsWith('nurgle') ? nurgleModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId, selectedAbilityTarget(state, pending)) : null
   if (nurMode !== null) return nurMode
+  const obrMode = koCode?.startsWith('ossiarch') ? ossiarchModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId, selectedAbilityTarget(state, pending)) : null
+  if (obrMode !== null) return obrMode
   const placed = abilityPlacementScore(state, pending, optionId)
   if (placed !== null) return placed
   const target = selectedAbilityTarget(state, pending)

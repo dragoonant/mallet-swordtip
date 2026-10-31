@@ -1,0 +1,29 @@
+[
+  {
+    "id": "daughters.unit.doomfire-warlocks",
+    "faction": "daughters",
+    "name": "Doomfire Warlocks",
+    "keywords": ["CAVALRY"],
+    "factionKeywords": ["ORDER", "DAUGHTERS OF KHAINE"],
+    "stats": { "M": 14, "W": 3, "Sv": 5, "OC": 1, "ward": 6 },
+    "castingLevel": 1,
+    "composition": [
+      {
+        "modelId": "doomfire-warlock",
+        "name": "Doomfire Warlock",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "oval", "mm": 60, "mm2": 35 },
+        "weapons": {
+          "default": ["daughters.weapon.doomfire-crossbow", "daughters.weapon.cursed-scimitar", "daughters.weapon.dark-steeds-vicious-bite"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["daughters.ability.doomfire"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "daughters.unit.melusai-ironscale",
+    "faction": "daughters",
+    "name": "Melusai Ironscale",
+    "keywords": ["HERO", "INFANTRY"],
+    "factionKeywords": ["ORDER", "DAUGHTERS OF KHAINE"],
+    "stats": { "M": 8, "W": 6, "Sv": 5, "OC": 2, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "melusai-ironscale",
+        "name": "Melusai Ironscale",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["daughters.weapon.keldrisaith-ranged", "daughters.weapon.keldrisaith"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["daughters.ability.all-out-slaughter", "daughters.ability.turned-to-crystal"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

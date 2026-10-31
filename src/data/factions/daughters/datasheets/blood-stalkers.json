@@ -1,0 +1,28 @@
+[
+  {
+    "id": "daughters.unit.blood-stalkers",
+    "faction": "daughters",
+    "name": "Blood Stalkers",
+    "keywords": ["INFANTRY", "BLOOD STALKERS"],
+    "factionKeywords": ["ORDER", "DAUGHTERS OF KHAINE"],
+    "stats": { "M": 8, "W": 2, "Sv": 5, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "blood-stalker",
+        "name": "Blood Stalker",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["daughters.weapon.heartseeker-bow", "daughters.weapon.scianlar"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["daughters.ability.heartseekers"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

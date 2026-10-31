@@ -1,0 +1,38 @@
+[
+  {
+    "id": "idoneth.enh.steelshell-armour",
+    "faction": "idoneth",
+    "name": "Steelshell Armour",
+    "text": "Ignore all modifiers to the general's save rolls, good and bad (Rend included).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "idoneth.ability.steelshell-armour"
+  },
+  {
+    "id": "idoneth.enh.arch-ritualist",
+    "faction": "idoneth",
+    "name": "Arch-Ritualist",
+    "text": "Add 1 to the general's roll for Ritual of the Creeping Mist.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "idoneth.ability.arch-ritualist"
+  },
+  {
+    "id": "idoneth.enh.mind-flare",
+    "faction": "idoneth",
+    "name": "Mind Flare",
+    "text": "Once per battle, in any combat phase, pick an enemy unit in combat with the general. Until the end of the phase, that unit's attacks only hit on an unmodified 6.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "idoneth.ability.mind-flare"
+  },
+  {
+    "id": "idoneth.enh.delicious-morsels",
+    "faction": "idoneth",
+    "name": "Delicious Morsels",
+    "text": "In your hero phase, Heal (1) each friendly Cavalry unit within the general's combat range.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "idoneth.ability.delicious-morsels"
+  }
+]

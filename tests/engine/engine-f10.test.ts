@@ -28,7 +28,7 @@ describe('F10 deployment never strands a unit', () => {
   // the random-bot sim game that used to stall: sim seed 3, game 5, Gloomspite (A, attacker) vs Cities on Aqshy
   const gloomspiteGame = async (): Promise<StepResult> => {
     bundle = bundle ?? await loadBundle()
-    let r = createGame(makeSimSetup(bundle, 5, DATA_VERSION, [], 'aqshy', '3'), 'f10-deploy', bundle)
+    let r = createGame(makeSimSetup(bundle, 5, DATA_VERSION, ['gloomspite', 'cities'], 'aqshy', '3'), 'f10-deploy', bundle)
     // A attacks and deploys first, into the z 6..11 strip (the defender B keeps territory A)
     for (let i = 0; i < 40 && r.pending && r.pending.kind !== 'deployUnit'; i++) {
       const legal = legalActions(r.state, r.pending) as Action[]

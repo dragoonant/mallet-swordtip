@@ -275,6 +275,23 @@ const KNOWN_KIT: Record<string, KitId> = {
   'sylvaneth.unit.gossamid-archers': 'ael-guardian',
   'sylvaneth.unit.spiterider-lancers': 'cdm-bloodcrusher',
   'sylvaneth.unit.revenant-seekers': 'cdm-bloodcrusher',
+  // F16 armies: the same stand-ins (shown only until a GLB loads or when its file is missing); the faction paintScheme tints them.
+  'daughters.unit.melusai-ironscale': 'ael-farseer',
+  'daughters.unit.witch-aelves': 'ael-guardian',
+  'daughters.unit.doomfire-warlocks': 'cdm-bloodcrusher',
+  'daughters.unit.blood-stalkers': 'ael-guardian',
+  'idoneth.unit.isharann-soulscryer': 'ael-farseer',
+  'idoneth.unit.akhelian-morrsarr-guard': 'cdm-bloodcrusher',
+  'idoneth.unit.akhelian-allopex': 'cdm-flesh-hound',
+  'idoneth.unit.namarti-thralls': 'ael-guardian',
+  'tzeentch.unit.tzaangor-shaman': 'ael-farseer',
+  'tzeentch.unit.tzaangors': 'csm-cultist',
+  'tzeentch.unit.tzaangor-enlightened': 'we-berzerker',
+  'tzeentch.unit.tzaangor-skyfires': 'ael-guardian',
+  'ossiarch.unit.mortisan-ossifector': 'ael-farseer',
+  'ossiarch.unit.immortis-guard': 'we-berzerker',
+  'ossiarch.unit.necropolis-stalkers': 'csm-cultist',
+  'ossiarch.unit.morghast-archai': 'cdm-bloodcrusher',
 }
 
 /** Models of a mixed unit that look different from the rest of it (a flamer sister is not a rifle sister), keyed
@@ -791,6 +808,26 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   'sylvaneth.unit.gossamid-archers': 1.25,
   'sylvaneth.unit.spiterider-lancers': 1.9,
   'sylvaneth.unit.revenant-seekers': 1.9,
+  // Daughters of Khaine: serpent-bodied Melusai a head above the Witch Aelves, Warlocks mounted on 60x35mm ovals.
+  'daughters.unit.melusai-ironscale': 1.5,
+  'daughters.unit.witch-aelves': 1.0,
+  'daughters.unit.doomfire-warlocks': 1.9,
+  'daughters.unit.blood-stalkers': 1.35,
+  // Idoneth: eel riders and the war-shark on ovals, a stooped Soulscryer, eyeless Thralls a little taller than a footsoldier.
+  'idoneth.unit.isharann-soulscryer': 1.2,
+  'idoneth.unit.akhelian-morrsarr-guard': 1.8,
+  'idoneth.unit.akhelian-allopex': 2.0,
+  'idoneth.unit.namarti-thralls': 1.05,
+  // Tzeentch: Tzaangors a touch tall for their base, the discs lift the rest.
+  'tzeentch.unit.tzaangor-shaman': 1.7,
+  'tzeentch.unit.tzaangors': 1.15,
+  'tzeentch.unit.tzaangor-enlightened': 1.6,
+  'tzeentch.unit.tzaangor-skyfires': 1.6,
+  // Ossiarch: broad bone bodyguards on 50mm bases, Morghasts on 60mm.
+  'ossiarch.unit.mortisan-ossifector': 1.5,
+  'ossiarch.unit.immortis-guard': 1.5,
+  'ossiarch.unit.necropolis-stalkers': 1.4,
+  'ossiarch.unit.morghast-archai': 2.1,
   // Space Wolves: the Invictor Tactical Warsuit is a tall bipedal walker on a 90mm base.
   'sw.invictor-tactical-warsuit': 2.4,
   'sw.battle-leader-thoryk': 1.2,

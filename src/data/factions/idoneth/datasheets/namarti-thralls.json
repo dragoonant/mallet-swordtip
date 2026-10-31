@@ -1,0 +1,28 @@
+[
+  {
+    "id": "idoneth.unit.namarti-thralls",
+    "faction": "idoneth",
+    "name": "Namarti Thralls",
+    "keywords": ["INFANTRY", "REINFORCEMENTS"],
+    "factionKeywords": ["ORDER", "IDONETH DEEPKIN"],
+    "stats": { "M": 6, "W": 1, "Sv": 5, "OC": 1 },
+    "composition": [
+      {
+        "modelId": "namarti-thrall",
+        "name": "Namarti Thrall",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "round", "mm": 32 },
+        "weapons": {
+          "default": ["idoneth.weapon.lanmari"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["idoneth.ability.sweeping-blows"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

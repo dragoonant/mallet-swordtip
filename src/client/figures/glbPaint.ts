@@ -66,6 +66,15 @@ export const SOURCE_HUES: Record<string, { major: string | null; minor: string |
   nurgle: { major: '#887651', minor: '#898f79' },
   nighthaunt: { major: '#6a8788', minor: '#584439' },
   sylvaneth: { major: '#8f5b34', minor: '#6e8d4a' },
+  // The four F16 armies, measured from the baked GLB textures the same way. Daughters of Khaine: crimson cloth (hue 2, 40% of the saturated texels) as the
+  // major, bronze blades and trim (hue 32) as the minor; the blue-grey leather and the teal serpent scales (hue 192) are left alone. Idoneth: sea-blue cloth and
+  // plates (hue 202, a third) as the major, tarnished bronze trim (hue 32) as the minor, the cyan bioluminescence (hue 172) is the accent and stays. Tzeentch:
+  // cobalt and sky-blue skin and feathers (hue 202) as the major, gold and bronze trim (hue 27) as the minor, turquoise cloth (hue 172) left alone. Ossiarch:
+  // polished bone (hue 37, nearly half) as the major, the midnight-blue lacquer plates (hue 217, dark) as the minor, the verdigris-teal soul-light (hue 177) stays.
+  daughters: { major: '#8b5b58', minor: '#9e8a6c' },
+  idoneth: { major: '#657f8c', minor: '#827563' },
+  tzeentch: { major: '#77a6bb', minor: '#b1926f' },
+  ossiarch: { major: '#a89e8a', minor: '#202d3c' },
   // Black plate has no hue to remap; the bone-coloured tabards/trim are the only repaintable colour.
   'black-templars': { major: null, minor: '#e6dfc8' },
 }

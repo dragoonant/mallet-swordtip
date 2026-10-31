@@ -105,6 +105,26 @@ export const DECLARED_GLB_SLUGS: readonly string[] = [
   'syl-gossamid-archer',
   'syl-spiterider-lancer',
   'syl-revenant-seeker',
+  // F16 armies. Daughters of Khaine: Heartflayer Troupe.
+  'dok-melusai-ironscale',
+  'dok-witch-aelf',
+  'dok-doomfire-warlock',
+  'dok-blood-stalker',
+  // Idoneth Deepkin: Soulraid Hunt.
+  'idk-isharann-soulscryer',
+  'idk-morrsarr-guard',
+  'idk-akhelian-allopex',
+  'idk-namarti-thrall',
+  // Disciples of Tzeentch: Tzaangor Warflock.
+  'dot-tzaangor-shaman',
+  'dot-tzaangor',
+  'dot-tzaangor-enlightened',
+  'dot-tzaangor-skyfire',
+  // Ossiarch Bonereapers: Mortisan Elite.
+  'obr-mortisan-ossifector',
+  'obr-immortis-guard',
+  'obr-necropolis-stalker',
+  'obr-morghast-archai',
 ]
 
 /** The declared slugs whose file exists: the only ones the game ever requests. */
@@ -205,6 +225,26 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'sylvaneth.unit.gossamid-archers/gossamid-archer': 'syl-gossamid-archer',
   'sylvaneth.unit.spiterider-lancers/spiterider-lancer': 'syl-spiterider-lancer',
   'sylvaneth.unit.revenant-seekers/revenant-seeker': 'syl-revenant-seeker',
+  // Daughters of Khaine. Both Witch Aelves units share one figure (the Spearhead gives no champion, standard or musician rules).
+  'daughters.unit.melusai-ironscale/melusai-ironscale': 'dok-melusai-ironscale',
+  'daughters.unit.witch-aelves/witch-aelf': 'dok-witch-aelf',
+  'daughters.unit.doomfire-warlocks/doomfire-warlock': 'dok-doomfire-warlock',
+  'daughters.unit.blood-stalkers/blood-stalker': 'dok-blood-stalker',
+  // Idoneth Deepkin. One sculpt per unit; the eel, shark and their riders are baked into one figure on a coral stand.
+  'idoneth.unit.isharann-soulscryer/soulscryer': 'idk-isharann-soulscryer',
+  'idoneth.unit.akhelian-morrsarr-guard/morrsarr-guard': 'idk-morrsarr-guard',
+  'idoneth.unit.akhelian-allopex/allopex': 'idk-akhelian-allopex',
+  'idoneth.unit.namarti-thralls/namarti-thrall': 'idk-namarti-thrall',
+  // Disciples of Tzeentch. The flying disc is part of each figure.
+  'tzeentch.unit.tzaangor-shaman/tzaangor-shaman': 'dot-tzaangor-shaman',
+  'tzeentch.unit.tzaangors/tzaangor': 'dot-tzaangor',
+  'tzeentch.unit.tzaangor-enlightened/tzaangor-enlightened': 'dot-tzaangor-enlightened',
+  'tzeentch.unit.tzaangor-skyfires/tzaangor-skyfire': 'dot-tzaangor-skyfire',
+  // Ossiarch Bonereapers.
+  'ossiarch.unit.mortisan-ossifector/mortisan-ossifector': 'obr-mortisan-ossifector',
+  'ossiarch.unit.immortis-guard/immortis-guard': 'obr-immortis-guard',
+  'ossiarch.unit.necropolis-stalkers/necropolis-stalker': 'obr-necropolis-stalker',
+  'ossiarch.unit.morghast-archai/morghast-archai': 'obr-morghast-archai',
 }
 
 /** Render-time corrections for GLBs whose baked `figure` node came out of the pipeline at the wrong size or facing.

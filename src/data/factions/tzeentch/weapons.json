@@ -1,0 +1,76 @@
+[
+  {
+    "id": "tzeentch.weapon.staff-of-change",
+    "name": "Staff of Change and Ritual Dagger",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "tzeentch.weapon.discs-teeth-and-horns",
+    "name": "Disc's Teeth and Horns",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "tzeentch.weapon.savage-blades",
+    "name": "Savage Blades and Vicious Beak",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "tzeentch.weapon.tzeentchian-spear",
+    "name": "Tzeentchian Spear and Vicious Beak",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "tzeentch.weapon.arrow-of-fate",
+    "name": "Arrow of Fate",
+    "type": "ranged",
+    "range": 18,
+    "A": 2,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "tzeentch.weapon.bow-stave",
+    "name": "Bow Stave and Vicious Beak",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 4,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  }
+]

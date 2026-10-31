@@ -1,0 +1,17 @@
+{
+  "id": "daughters",
+  "name": "Daughters of Khaine",
+  "factionKeyword": "DAUGHTERS OF KHAINE",
+  "armyRule": "daughters.ability.heartflayer-troupe",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#8c1c2b",
+    "secondary": "#1d1a1c",
+    "trim": "#c9964a",
+    "metal": "#b98a4c",
+    "decal": "#e8d9c4"
+  },
+  "combatPatrols": [
+    "daughters.army.heartflayer-troupe"
+  ]
+}

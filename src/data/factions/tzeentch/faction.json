@@ -1,0 +1,17 @@
+{
+  "id": "tzeentch",
+  "name": "Disciples of Tzeentch",
+  "factionKeyword": "DISCIPLES OF TZEENTCH",
+  "armyRule": "tzeentch.ability.tzaangor-warflock",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#2f5fc4",
+    "secondary": "#1fa7a0",
+    "trim": "#e0b84a",
+    "metal": "#b9803a",
+    "decal": "#e0399a"
+  },
+  "combatPatrols": [
+    "tzeentch.army.tzaangor-warflock"
+  ]
+}

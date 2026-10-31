@@ -1,0 +1,161 @@
+[
+  {
+    "id": "daughters.ability.heartflayer-troupe",
+    "name": "Heartflayer Troupe",
+    "text": "Army marker for the Daughters of Khaine Heartflayer Troupe. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "daughters.ability.blood-rites",
+    "name": "Blood Rites",
+    "text": "At the start of each battle round, every friendly unit gains the rite for that round number and keeps the earlier ones. Round 1, Quickening Bloodlust: add 1 to run rolls. Round 2, Headlong Fury: add 1 to charge rolls. Round 3, Zealot's Rage: add 1 to hit rolls for combat attacks. Round 4, Slaughterer's Strength: add 1 to wound rolls for combat attacks.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": [
+      { "modifyRoll": { "roll": "advance", "value": 1 } },
+      { "modifyRoll": { "roll": "charge", "value": 1 } },
+      { "when": { "weaponType": "melee" }, "modifyRoll": { "roll": "hit", "value": 1 } },
+      { "when": { "weaponType": "melee" }, "modifyRoll": { "roll": "wound", "value": 1 } }
+    ],
+    "code": "daughtersBloodRites",
+    "params": { "advance": 1, "charge": 2, "hit": 3, "wound": 4 }
+  },
+  {
+    "id": "daughters.ability.murderous-epiphany",
+    "name": "Murderous Epiphany",
+    "text": "Once per battle, in your hero phase, every friendly unit gains at once the rite it would gain at the start of the next battle round. They keep it for the rest of the battle and do not gain it a second time when that round begins.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "limit": "oncePerBattle",
+    "code": "daughtersMurderousEpiphany",
+    "params": { "army": true, "priority": "P1" }
+  },
+  {
+    "id": "daughters.ability.blessing-of-khaine",
+    "name": "Blessing of Khaine",
+    "text": "Once per turn (for the army), in any combat phase, pick a friendly unit wholly within 12\" of your general. It cannot be the general. Add 1 to its ward rolls for the rest of the phase.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerTurnArmy",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilEndOfPhase",
+    "code": "daughtersBlessingOfKhaine",
+    "params": {
+      "army": true,
+      "range": 12,
+      "grant": [{ "modifyRoll": { "roll": "feelNoPain", "value": 1 } }],
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "daughters.ability.all-out-slaughter",
+    "name": "All-Out Slaughter",
+    "text": "In your hero phase, pick another friendly unit wholly within 12\" of this unit. Add 1 to the Attacks characteristic of that unit's melee weapons for the rest of the turn. Companion weapons are not affected.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilEndOfTurn",
+    "code": "daughtersAllOutSlaughter",
+    "params": {
+      "range": 12,
+      "grant": [{ "when": { "weaponType": "melee" }, "modifyStat": { "stat": "A", "value": 1 } }],
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "daughters.ability.turned-to-crystal",
+    "name": "Turned to Crystal",
+    "text": "At the end of any turn, pick an enemy unit within 1\" of this unit and roll a dice. On a 2+, that unit suffers 1 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurn",
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "roll": { "dice": "D6", "succeedOn": 2 },
+    "code": "daughtersTurnedToCrystal",
+    "params": { "range": 1, "priority": "P1" }
+  },
+  {
+    "id": "daughters.ability.frenzied-fervour",
+    "name": "Frenzied Fervour",
+    "text": "If this unit charged this turn, its melee weapons have +1 Rend.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "unitCharged": true, "weaponType": "melee" },
+      "modifyStat": { "stat": "AP", "value": -1 }
+    }
+  },
+  {
+    "id": "daughters.ability.doomfire",
+    "name": "Doomfire",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible enemy unit within 12\" of this unit. If the spell is cast, that unit suffers D3 mortal damage. The unit casts without being a Wizard: it cannot unbind.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "daughtersDoomfire",
+    "params": { "range": 12, "damage": "D3", "priority": "P1" }
+  },
+  {
+    "id": "daughters.ability.heartseekers",
+    "name": "Heartseekers",
+    "text": "While this unit has not used a Move ability this turn, critical hits for its shooting attacks are scored on an unmodified hit roll of 5+ instead of 6.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "weaponType": "ranged" },
+      "lethalOn": 5
+    },
+    "code": "daughtersHeartseekers"
+  },
+  {
+    "id": "daughters.ability.bathed-in-blood",
+    "name": "Bathed in Blood",
+    "text": "Each time the general slays an enemy model, Heal (1) the general.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "daughtersBathedInBlood",
+    "params": { "heal": 1 }
+  },
+  {
+    "id": "daughters.ability.fuelled-by-revenge",
+    "name": "Fuelled by Revenge",
+    "text": "Melee weapons of friendly Blood Stalkers units have +1 Rend while those units are wholly within 12\" of the general.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "friendly", "within": 12, "wholly": true, "keyword": "BLOOD STALKERS" },
+    "effect": {
+      "when": { "weaponType": "melee" },
+      "modifyStat": { "stat": "AP", "value": -1 }
+    }
+  },
+  {
+    "id": "daughters.ability.flask-of-shademist",
+    "name": "Flask of Shademist",
+    "text": "Once per battle, in any combat phase, until the end of the phase subtract 1 from the hit rolls of attacks that target friendly units while they are wholly within 12\" of the general (the general's own unit counts).",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "duration": "untilEndOfPhase",
+    "scope": { "who": "bearer" },
+    "code": "daughtersFlaskOfShademist",
+    "params": { "range": 12, "priority": "P2" }
+  },
+  {
+    "id": "daughters.ability.zealous-orator",
+    "name": "Zealous Orator",
+    "text": "In your hero phase, pick a friendly unit wholly within 9\" of the general that is not in combat. Roll a dice for each slain model of that unit. For each 5+, return 1 slain model to it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "scope": { "who": "bearer" },
+    "code": "daughtersZealousOrator",
+    "params": { "range": 9, "succeedOn": 5, "priority": "P1" }
+  }
+]

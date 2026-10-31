@@ -8,7 +8,7 @@ import type { CoreAbility, Scope, TimingWindowId } from '../data/types'
 import type { Action } from './actions'
 import { withinObjectiveRange, OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE } from './geometry'
 import type { CodeHook, HookName, HookResult } from './hooks'
-import { hookService, type HookSourceEntry, type StatQuery } from './hooks-impl'
+import { hookService, type HookSourceEntry, type StatQuery, type WardDenialInfo } from './hooks-impl'
 import { leaderService } from './leaders'
 import type { EngineContext, Services, WindowTrigger } from './modules'
 import { keywordsOf, unitModels } from './state'
@@ -28,6 +28,10 @@ import { seraphonHooks } from './factions/seraphon'
 import { soulblightHooks } from './factions/soulblight'
 import { nighthauntHooks } from './factions/nighthaunt'
 import { sylvanethHooks } from './factions/sylvaneth'
+import { tzeentchHooks } from './factions/tzeentch'
+import { ossiarchHooks } from './factions/ossiarch'
+import { daughtersHooks } from './factions/daughters'
+import { idonethHooks } from './factions/idoneth'
 import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
   ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, Model, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
@@ -167,7 +171,9 @@ export interface EngineCodeHook extends CodeHook {
   ignoresFirstDamagePerPhase?(state: GameState, entry: HookSourceEntry, unitId: UnitId): boolean
   // SER-AB-6 Sun Acolytes: called by attack.ts once an attack sequence (shooting or fight activation, queued mortals included) has
   // ended, for every source entry on the board. `saveOnes` = unmodified 1s rolled on save dice this sequence, per target unit.
-  afterAttackSequence?(ctx: EngineContext, entry: HookSourceEntry, info: { attackerUnitId: UnitId; saveOnes: Record<UnitId, number> }): void
+  // F16 (TZE C3, DOT-AB-1 Mutative Aura): `hitOnes` = unmodified 1s on the attacking unit's hit dice this sequence (final dice
+  // after re-rolls, every weapon); `combat` = the sequence was a Fight (combat attacks), false for shooting.
+  afterAttackSequence?(ctx: EngineContext, entry: HookSourceEntry, info: AttackSequenceInfo): void
   // SER-ENH Blessed by the Old Ones: abilities.ts also offers this code's activated descriptor while its holder unit is destroyed
   // (location 'destroyed', not replaced). The user unitId is the destroyed unit. With descriptor params.mandatory: true the
   // abilityUse decision has no pass while it is offered.
@@ -199,6 +205,27 @@ export interface EngineCodeHook extends CodeHook {
   // deltas). State-only, so it is safe inside effectiveWeapon. Skipped for companionOnly queries unless affectsCompanion is true.
   statDelta?(state: GameState, entry: HookSourceEntry, q: StatQuery): number
   affectsCompanion?: boolean
+  // ---- F16 engine items (Daughters, Idoneth, Tzeentch, Ossiarch; 13-engine-port-plan §3.13) ----
+  // TZE C1 (DOT-RA-2 Arcane Ritualists): added to the casting roll of `casterUnitId` (magic.ts castingRoll; casting value and
+  // unbind comparison use dice + bonus, the miscast test the bare dice). Asked of every source entry on the board after its gate;
+  // the hook filters the caster itself. Each source counts once (its largest answer). 0 = no opinion.
+  castingRollBonus?(state: GameState, entry: HookSourceEntry, casterUnitId: UnitId): number
+  // OBR C1 (OBR-AB-4 Switch Aspects: Destroyer): true = `info.wardedUnitId` may not make ward rolls against damage from
+  // `info.attackerUnitId`'s pool of this kind (attack.ts wardThreshold; the attacker-side twin of the card flag noWard). Asked of
+  // every source entry on the board after its gate (hookService.wardForbidden). Pools with no attacker never ask.
+  forbidsWard?(state: GameState, entry: HookSourceEntry, info: WardDenialInfo): boolean
+  // TZE C4 (DOT-BT-4 Cheat Destiny): called by cards.ts once a battle tactic card's command, used from the hand, has fully
+  // resolved (follow-up included). Asked once per source code for `info.player`'s battle traits and regiment ability. May raise
+  // a decision (ctx.decide); cards.ts returnTacticToDeckBottom moves the card from the discard pile to the bottom of the deck.
+  onTacticCommandUsed?(ctx: EngineContext, entry: HookSourceEntry, info: { player: PlayerId; cardId: string }): void
+}
+
+// SER-AB-6 / F16 TZE C3: afterAttackSequence info
+export interface AttackSequenceInfo {
+  attackerUnitId: UnitId
+  saveOnes: Record<UnitId, number>
+  hitOnes: number
+  combat: boolean
 }
 
 // MON C2: one counter for the HUD (resourceReadout / factionResources)
@@ -320,6 +347,10 @@ export const codeHooks: Record<string, EngineCodeHook> = {
   ...seraphonHooks,
   ...nighthauntHooks,
   ...sylvanethHooks,
+  ...tzeentchHooks,
+  ...ossiarchHooks,
+  ...daughtersHooks,
+  ...idonethHooks,
   // core Spearhead abilities no data file names (Call for Reinforcements, SPH-12); abilities.ts adds their descriptor itself
   [spearheadCallForReinforcements.name]: spearheadCallForReinforcements,
 }

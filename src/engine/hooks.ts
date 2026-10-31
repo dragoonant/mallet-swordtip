@@ -105,6 +105,8 @@ export interface RollModifierResult {
   // F12 (SBG-ENH Aura of Night, Effect.ignoreNegativeModifiers): negative modifiers to this roll are dropped; F14: on a save roll
   // that includes Rend (core 17.0). ignoreModifiers on a save roll drops every modifier and Rend
   ignoreNegative?: boolean
+  // F16 (Effect.onlySixes): the roll succeeds only on an unmodified 6 (attack.ts runStage)
+  onlySix?: boolean
 }
 export interface StatModifierResult { kind: 'stat'; delta?: number; set?: number; cap?: number; halve?: boolean }
 export interface AttackCountResult { kind: 'attacks'; delta?: number }
@@ -256,6 +258,8 @@ export const EFFECT_HOOKS: Record<keyof Effect, HookName[]> = {
   passAcrossKeyword: [],
   // F12: a roll-hook result ({ kind: 'roll', ignoreNegative }) at the named roll's hook
   ignoreNegativeModifiers: ['onHitRoll', 'onWoundRoll', 'onSaveRoll', 'onChargeRoll', 'onFeelNoPainRoll'],
+  // F16 (IDK-ENH Mind Flare): a roll-hook result ({ kind: 'roll', onlySix }) at the holder's hit roll
+  onlySixes: ['onHitRoll'],
 }
 
 // hooks a descriptor must be registered at: its trigger's hook plus every hook its effect keys need

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "tzeentch.unit.tzaangors",
+    "faction": "tzeentch",
+    "name": "Tzaangors",
+    "keywords": ["INFANTRY"],
+    "factionKeywords": ["CHAOS", "DISCIPLES OF TZEENTCH"],
+    "stats": { "M": 6, "W": 2, "Sv": 5, "OC": 1 },
+    "composition": [
+      {
+        "modelId": "tzaangor",
+        "name": "Tzaangor",
+        "min": 10,
+        "max": 10,
+        "default": 10,
+        "base": { "shape": "round", "mm": 32 },
+        "weapons": {
+          "default": ["tzeentch.weapon.savage-blades"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["tzeentch.ability.eldritch-raiders"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

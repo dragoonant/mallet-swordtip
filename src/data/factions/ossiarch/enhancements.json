@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ossiarch.enh.lode-of-saturation",
+    "faction": "ossiarch",
+    "name": "Lode of Saturation",
+    "text": "Subtract 1 from the Rend of melee weapons used for combat attacks that target the general (to a minimum of 0).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ossiarch.ability.lode-of-saturation"
+  },
+  {
+    "id": "ossiarch.enh.shard-storm",
+    "faction": "ossiarch",
+    "name": "Shard Storm",
+    "text": "Spell (casting value 7). In your hero phase, pick a visible enemy unit within 12\" of the general. If the spell is cast, roll a dice for each model in that unit; each 5+ inflicts 1 mortal damage on it.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ossiarch.ability.shard-storm"
+  },
+  {
+    "id": "ossiarch.enh.mend-constructs",
+    "faction": "ossiarch",
+    "name": "Mend Constructs",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 12\" of the general. If the spell is cast, Heal (D3) that unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ossiarch.ability.mend-constructs"
+  },
+  {
+    "id": "ossiarch.enh.helm-of-tyranny",
+    "faction": "ossiarch",
+    "name": "Helm of Tyranny",
+    "text": "Once per battle, at the end of your turn, pick an enemy unit within 12\" of the general and roll a dice. On a 3+ subtract 3 from that unit's control score for the rest of the turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ossiarch.ability.helm-of-tyranny"
+  }
+]

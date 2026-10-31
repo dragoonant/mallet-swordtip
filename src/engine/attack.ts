@@ -226,12 +226,12 @@ interface StageResult { roll: DiceRoll; outs: DieOut[] }
 function runStage(ctx: EngineContext, p: StageParams): StageResult {
   const s = ctx.state
   const isSave = p.purpose === 'save'
-  type Ent = { mods: number[]; ignore: boolean; ignoreNeg: boolean; autoPass: boolean; autoFail: boolean; crit: number; rr: { kind: string; id: string }[] }
+  type Ent = { mods: number[]; ignore: boolean; ignoreNeg: boolean; autoPass: boolean; autoFail: boolean; onlySix: boolean; crit: number; rr: { kind: string; id: string }[] }
   const cache = new Map<number, Ent>()
   const entFor = (u: number, idx: number, roll: DiceRoll): Ent => {
     const hit = cache.get(u)
     if (hit) return hit
-    const ent: Ent = { mods: [], ignore: false, ignoreNeg: false, autoPass: false, autoFail: false, crit: 7, rr: [] }
+    const ent: Ent = { mods: [], ignore: false, ignoreNeg: false, autoPass: false, autoFail: false, onlySix: false, crit: 7, rr: [] }
     const got = hookService.collect(ctx, p.hook, { attack: p.actx, roll: { purpose: p.purpose, roll, dieIndex: idx, unmodified: u, rerolled: false } })
     for (const g of got) {
       if (g.result.kind !== 'roll') continue
@@ -244,6 +244,8 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
       if (r.ignoreNegative) ent.ignoreNeg = true
       if (r.autoPass) ent.autoPass = true
       if (r.autoFail) ent.autoFail = true
+      // F16 (Effect.onlySixes, IDK-ENH Mind Flare): only an unmodified 6 succeeds, whatever the modifiers or auto-pass
+      if (r.onlySix && !isSave) ent.onlySix = true
       if (r.critThreshold !== undefined) ent.crit = Math.min(ent.crit, r.critThreshold)
       if (r.reroll) ent.rr.push({ kind: r.reroll, id: g.source.id })
     }
@@ -266,7 +268,7 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
       const sum = mods.reduce((a, b) => a + b, 0)
       final = u + (ent.ignore ? 0 : clampHitWoundModifier(sum))
     }
-    const success = !ent.autoFail && u !== 1 && (p.onlySix ? u === 6 : (ent.autoPass || final >= p.needed))
+    const success = !ent.autoFail && u !== 1 && (p.onlySix || ent.onlySix ? u === 6 : (ent.autoPass || final >= p.needed))
     return { u, final, success, critical: !isSave && p.purpose === 'hit' && success && (u === 6 || u >= ent.crit), rr: ent.rr }
   }
   const spec = {
@@ -410,22 +412,27 @@ function askCritChoice(ctx: EngineContext, kind: AttackKind, attackerUnitId: Uni
 
 // ---------- F14 (BOK C1): turn ledger, who took damage / who slew with combat attacks this turn ----------
 // mission.custom.turnLedger (types.ts is a frozen contract), treated as empty whenever its key is not the current turn
-interface TurnLedger { key: string; damaged: UnitId[]; slewInFight: UnitId[] }
+// F16 (IDK C1): lostModels = units that had a model slain this turn (any damage source; not redeploys or reinforcements)
+interface TurnLedger { key: string; damaged: UnitId[]; slewInFight: UnitId[]; lostModels?: UnitId[] }
 const turnKey = (s: GameState): string => `${s.round}:${s.activePlayer}`
 function ledgerOf(s: GameState): TurnLedger {
   const l = s.mission.custom.turnLedger as TurnLedger | undefined
-  return l && l.key === turnKey(s) ? l : { key: turnKey(s), damaged: [], slewInFight: [] }
+  return l && l.key === turnKey(s) ? l : { key: turnKey(s), damaged: [], slewInFight: [], lostModels: [] }
 }
-function noteLedger(s: GameState, field: 'damaged' | 'slewInFight', unitId: UnitId): void {
+function noteLedger(s: GameState, field: 'damaged' | 'slewInFight' | 'lostModels', unitId: UnitId): void {
   const l = ledgerOf(s)
-  if (l[field].includes(unitId)) return
-  s.mission.custom = { ...s.mission.custom, turnLedger: { ...l, [field]: [...l[field], unitId] } }
+  const list = l[field] ?? []
+  if (list.includes(unitId)) return
+  s.mission.custom = { ...s.mission.custom, turnLedger: { ...l, [field]: [...list, unitId] } }
 }
 // true when at least one damage point (normal or mortal, any source, after wards / redirects / ignored points) was allocated
 // to the unit this turn; a unit wiped out counts
 export function damagedThisTurn(state: GameState, unitId: UnitId): boolean { return ledgerOf(state).damaged.includes(unitId) }
 // true when the unit's combat attacks (Crit (Mortal) pools of combat attacks included) slew an enemy model this turn
 export function slewInFightThisTurn(state: GameState, unitId: UnitId): boolean { return ledgerOf(state).slewInFight.includes(unitId) }
+// F16 (IDK C1, IDK-AB-3 Bloodthirsty Predators): true when a model of the unit was slain this turn (attacks, mortal damage from
+// abilities, retreat damage, miscasts; a unit wiped out counts). Models removed by redeploys or Call for Reinforcements do not.
+export function lostModelThisTurn(state: GameState, unitId: UnitId): boolean { return (ledgerOf(state).lostModels ?? []).includes(unitId) }
 
 // ---------- F14 (NH C4 fallback): the first unit that declared attacks on each target this phase ----------
 const FIRST_ATK = 'atk:tg:'
@@ -438,6 +445,8 @@ export function firstAttackerThisPhase(state: GameState, targetUnitId: UnitId): 
 
 // F12 (SER C4): unmodified save 1s of the running attack sequence, per target unit (null outside attackService.advance)
 let saveOnesTally: Record<UnitId, number> | null = null
+// F16 (TZE C3): unmodified 1s on the attacking unit's hit dice in the running attack sequence (null outside attackService.advance)
+let hitOnesTally: { n: number } | null = null
 
 // ---------- pools ----------
 interface Pool { unitId: UnitId; points: number; by: DestroyedBy; source: AttackRollContext | { abilityId: string }; mortal: boolean; attackerUnitId: UnitId | null }
@@ -501,6 +510,7 @@ function resolveBatch(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
   } else {
     const st = runStage(ctx, { hook: 'onHitRoll', purpose: 'hit', count: total, actx, attackerPlayer, roller: attackerPlayer, needed: ew.skill, statics: hitMods, rend: 0, companion, unitId: attackerUnitId, targetUnitId: batch.targetUnitId, weaponId: ew.id, modelId: lead, onlySix: cardHit.onlySix })
     hitOuts = st.outs
+    if (hitOnesTally) hitOnesTally.n += st.outs.filter((o) => o.u === 1).length
     // F12 (SKV-AB-3): hits scored by each critical hit, one roll per critical hit (attacker's roll) when the value is dice
     copiesOf = st.outs.map((o) => (o.success && o.critical && critAb === 'CRIT_2_HITS' ? critHitCount(ctx, critEntry?.value, attackerPlayer, attackerUnitId, lead, ew.id) : 1))
     st.outs.forEach((o, i) => ctx.emit({ type: 'HitRolled', attack: rctx, die: o.u, final: o.final, hit: o.success, critical: o.critical, extraHits: Math.max(0, copiesOf[i] - 1), auto: false, rollId: st.roll.id, dieIndex: i, player: attackerPlayer }))
@@ -593,8 +603,11 @@ function buildBatches(ctx: EngineContext, kind: AttackKind, attackerUnitId: Unit
 }
 
 // ---------- damage pools (CORE-13) ----------
-function wardThreshold(ctx: EngineContext, unitId: UnitId, rep: Model, mortal: boolean, attackerUnitId: UnitId | null): { needed: number; modifier: number } | null {
+// F16 (OBR C1): `kind` = the damage pool's DestroyedBy kind (null = not asked from a pool). With an attacker and a kind, a source
+// whose EngineCodeHook.forbidsWard answers true removes the ward roll altogether (hookService.wardForbidden)
+function wardThreshold(ctx: EngineContext, unitId: UnitId, rep: Model, mortal: boolean, attackerUnitId: UnitId | null, kind: DestroyedBy['kind'] | null = null): { needed: number; modifier: number } | null {
   const s = ctx.state
+  if (attackerUnitId && kind && hookService.wardForbidden(s, { wardedUnitId: unitId, attackerUnitId, kind })) return null
   let best: number | null = modelStats(s, rep).ward
   const core = datasheetOf(s, unitId).coreAbilities.find((c) => c.ability === 'FEEL_NO_PAIN')
   if (core) { const v = typeof core.value === 'number' ? core.value : parseDiceExpr(core.value ?? 6).flat; best = best === null ? v : Math.min(best, v) }
@@ -650,7 +663,7 @@ function resolvePool(ctx: EngineContext, unitId: UnitId, pool: Pool): void {
   const original = pool.points
   let points = original
   let warded = 0
-  const ward = wardThreshold(ctx, unitId, rep, pool.mortal, pool.attackerUnitId)
+  const ward = wardThreshold(ctx, unitId, rep, pool.mortal, pool.attackerUnitId, pool.by.kind)
   if (ward && points > 0) {
     const roll = ctx.roll({ purpose: 'fnp', player: unit.player, sides: 6, count: points, mode: 'perDie', unitId, modelId: rep.id, commandRerollable: false, needed: ward.needed })
     for (const die of roll.dice) {
@@ -791,7 +804,7 @@ export function ownFightResolved(ctx: EngineContext, unitId: UnitId): void {
 }
 
 // SER-AB-6 (EngineCodeHook.afterAttackSequence): every source entry on the board, once per (source, holder, active effect)
-function afterAttackSequence(ctx: EngineContext, attackerUnitId: UnitId, saveOnes: Record<UnitId, number>): void {
+function afterAttackSequence(ctx: EngineContext, attackerUnitId: UnitId, saveOnes: Record<UnitId, number>, hitOnes: number, combat: boolean): void {
   const seen = new Set<string>()
   for (const entry of sourcesFor(ctx.state)) {
     const spec = codeHookFor(entry.code)
@@ -799,7 +812,7 @@ function afterAttackSequence(ctx: EngineContext, attackerUnitId: UnitId, saveOne
     const k = `${entry.source.id}|${entry.holderUnitId}|${entry.active?.id ?? ''}`
     if (seen.has(k)) continue
     seen.add(k)
-    spec.afterAttackSequence(ctx, entry, { attackerUnitId, saveOnes: { ...saveOnes } })
+    spec.afterAttackSequence(ctx, entry, { attackerUnitId, saveOnes: { ...saveOnes }, hitOnes, combat })
   }
 }
 
@@ -908,12 +921,14 @@ export const attackService: AttackService = {
     const pools: Pools = new Map()
     const live = a.targets.filter((t) => s.units[t.targetUnitId]?.location === 'board')
     const tally: Record<UnitId, number> = {}
+    const hitOnes = { n: 0 }
     // F14 (core 20.0): the attacker picks one crit ability per weapon that has several, before any dice
     if (live.length > 0 && askCritChoice(ctx, a.kind, a.attackerUnitId, live)) return 'pending'
     if (live.length > 0) {
       const batches = buildBatches(ctx, a.kind, a.attackerUnitId, live)
       saveOnesTally = tally
-      try { for (const b of batches) resolveBatch(ctx, a.kind, a.attackerUnitId, b, pools) } finally { saveOnesTally = null }
+      hitOnesTally = hitOnes
+      try { for (const b of batches) resolveBatch(ctx, a.kind, a.attackerUnitId, b, pools) } finally { saveOnesTally = null; hitOnesTally = null }
       for (const g of a.groups) g.resolved = g.attacks
     }
     // mortal damage queued during the ability joins the same pools (CORE-13.3)
@@ -928,7 +943,7 @@ export const attackService: AttackService = {
     if (ran) ctx.emit({ type: 'AttackSequenceEnded', unitId: a.attackerUnitId, kind: a.kind })
     s.phaseState.attack = null
     s.phaseState.marks = s.phaseState.marks.filter((m) => !m.startsWith(`${CRIT_PICK}${a.attackerUnitId}|`))
-    if (ran) afterAttackSequence(ctx, a.attackerUnitId, tally)
+    if (ran) afterAttackSequence(ctx, a.attackerUnitId, tally, hitOnes.n, a.kind === 'melee')
     return 'done'
   },
 
@@ -969,6 +984,7 @@ export const attackService: AttackService = {
     if (!model) return
     const unit = s.units[model.unitId]
     const nowDestroyed = removeModel(s, modelId)
+    noteLedger(s, 'lostModels', unit.id)
     ctx.emit({ type: 'ModelDestroyed', unitId: unit.id, modelId, byPlayer: by.player, byUnitId: by.unitId, byModelId: by.modelId, kind: by.kind })
     ctx.services.hooks.run(ctx, 'onModelDestroyed', { destroyedUnitId: unit.id, destroyedModelId: modelId, byUnitId: by.unitId, byModelId: by.modelId, kind: by.kind })
     ownModelSlain(ctx, unit, by)

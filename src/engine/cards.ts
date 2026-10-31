@@ -26,7 +26,7 @@ import { applySlide, checkSlide, parseAt, parseSlide, slideOptions } from './fac
 import { healUnit, inCombat, returnSlainModels, returnableModels } from './factions/aos-common'
 import { losService } from './los'
 import { awardVp } from './missions'
-import { codeHookFor, sourcesFor } from './hooks-impl'
+import { codeHookFor, sourceGateOpen, sourcesFor } from './hooks-impl'
 import { otherPlayer, type DecisionHandler, type EngineContext, type WindowTrigger } from './modules'
 import { canDeclareCharge, neededChargeDistance } from './phases/charge'
 import { boardModelsOf, datasheetOf, enemyModelsOnBoard, keywordsOf, modelStats, setModelPos, spawnUnitCopy, territoryOf, unitModels } from './state'
@@ -996,11 +996,54 @@ function useCommand(ctx: EngineContext, p: PlayerId, cardId: Id, target: string,
     // STD-BT-1: the oath's command used before it was scored: the card is discarded and the oath ends
     if (piles.oath === cardId) piles.oath = null
   }
+  // F16 (TZE C4): the player's onTacticCommandUsed sources hear about the card once its command has fully resolved
+  if (!officers) queueTacticUsed(s, p, cardId)
   const def = COMMANDS[cardId]
   const unitId = target.includes('>') ? target.split('>')[0] : s.units[target] ? target : null
   const tail = officers ? ` (The Officer's Order: ${cardName(cardId)} returns to hand)` : ''
   ctx.emit({ type: 'TacticCommandUsed', cardId, unitId, summary: `${TACTIC_NAMES[cardId]?.command ?? cardId}: ${def.label ? def.label(s, target) : unitName(s, target)}${tail}`, player: p })
   return def.resolve(ctx, p, target, cc, cardId)
+}
+
+// ---------- F16 (TZE C4, DOT-BT-4 Cheat Destiny): reactions to a used battle tactic command ----------
+// useCommand queues one phase mark per (card, battle trait / regiment ability whose code has onTacticCommandUsed); the queue is
+// drained once the command has fully resolved (follow-up included): by the handler right after the command, else by the next
+// commandWindow / reactionWindow call. A hook may raise a decision; the rest of the queue waits until it is answered.
+const TACTIC_USED = 'cards:tacticUsed:'
+function queueTacticUsed(s: GameState, p: PlayerId, cardId: Id): void {
+  const owner = s.players[p]
+  const ids = [...(owner?.battleTraitIds ?? []), ...(owner?.regimentAbilityId ? [owner.regimentAbilityId] : [])]
+  for (const id of [...new Set(ids)]) {
+    if (!codeHookFor(s.abilities[id]?.code)?.onTacticCommandUsed) continue
+    s.phaseState.marks.push(`${TACTIC_USED}${p}|${cardId}|${id}`)
+  }
+}
+// true when a hook raised a decision (the caller yields)
+function tacticUsedStep(ctx: EngineContext): boolean {
+  const s = ctx.state
+  if (s.pending || s.cards?.followUp) return false
+  for (;;) {
+    const i = s.phaseState.marks.findIndex((m) => m.startsWith(TACTIC_USED))
+    if (i < 0) return false
+    const [p, cardId, abilityId] = s.phaseState.marks[i].slice(TACTIC_USED.length).split('|') as [PlayerId, Id, Id]
+    s.phaseState.marks.splice(i, 1)
+    const spec = codeHookFor(s.abilities[abilityId]?.code)
+    const entry = sourcesFor(s).find((e) => e.ability?.id === abilityId && e.active === null && s.units[e.holderUnitId]?.player === p && s.units[e.holderUnitId]?.location === 'board' && sourceGateOpen(s, e))
+    if (!spec?.onTacticCommandUsed || !entry) continue
+    spec.onTacticCommandUsed(ctx, entry, { player: p, cardId })
+    if (s.pending) return true
+  }
+}
+// F16 (TZE C4): puts a used battle tactic card (discard pile or fulfilled oaths) at the bottom of its owner's deck. The deck
+// order is hidden, so no event; false when the card is in neither pile
+export function returnTacticToDeckBottom(s: GameState, p: PlayerId, cardId: Id): boolean {
+  const piles = s.cards?.tactics[p]
+  if (!piles) return false
+  if (piles.discard.includes(cardId)) piles.discard = piles.discard.filter((id) => id !== cardId)
+  else if ((piles.fulfilled ?? []).includes(cardId)) piles.fulfilled = (piles.fulfilled ?? []).filter((id) => id !== cardId)
+  else return false
+  piles.deck = [...piles.deck, cardId]
+  return true
 }
 
 // ---------- follow-ups (one extra answer after Redeploy / Call Reinforcements) ----------
@@ -1148,6 +1191,7 @@ export function commandWindow(ctx: EngineContext, slot: 'hero' | 'movement' | 'c
   if (!c) return false
   const data = { mode: 'command', slot, key, player: p }
   if (followUpStep(ctx, data)) return true
+  if (tacticUsedStep(ctx)) return true
   if (s.phaseState.marks.includes(passMark(key, p))) return false
   if (commandCards(s, p).length === 0) return false
   const offers = offersFor(s, p, [slot], { trigger: undefined, window: slot })
@@ -1166,7 +1210,9 @@ const REACTION_SLOTS: Partial<Record<string, CommandSlot[]>> = {
 export function reactionWindow(ctx: EngineContext, window: string, p: PlayerId, key: string, trigger?: WindowTrigger): boolean {
   const s = ctx.state
   const c = s.cards
-  if (!c || commandCards(s, p).length === 0) return false
+  if (!c) return false
+  if (s.pending || tacticUsedStep(ctx)) return true
+  if (commandCards(s, p).length === 0) return false
   const slots = REACTION_SLOTS[window]
   if (!slots) return false
   const k = `${window}|${key}`
@@ -1272,11 +1318,13 @@ function handle(ctx: EngineContext, action: Action, pending: PendingDecision): R
             if (!sl || !applySlide(ctx, f.unitId, sl.dx, sl.dz, f.max)) return { code: 'E_OUT_OF_RANGE', reason: 'that move is not possible' }
           }
           c.followUp = null
+          tacticUsedStep(ctx)
           return
         }
         const at = choice ? parseAt(choice) : null
         if (!at || !placeReinforcement(ctx, f.unitId, at)) return { code: 'E_TERRITORY', reason: 'the reinforcements cannot be set up there' }
         c.followUp = null
+        tacticUsedStep(ctx)
         return
       }
       const key = String(data.key ?? '')
@@ -1284,6 +1332,7 @@ function handle(ctx: EngineContext, action: Action, pending: PendingDecision): R
       const [cardId, target] = [choice.slice(0, choice.indexOf('|')), choice.slice(choice.indexOf('|') + 1)]
       if (!commandCards(s, p).includes(cardId) || !COMMANDS[cardId]) return { code: 'E_NOT_AN_OPTION', reason: `${cardId} is not in hand` }
       useCommand(ctx, p, cardId, target, { trigger: (data.trigger as WindowTrigger | null) ?? undefined, window: String(data.window ?? data.slot ?? '') })
+      tacticUsedStep(ctx)
       return
     }
     default:

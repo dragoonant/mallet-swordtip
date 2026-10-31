@@ -1,0 +1,28 @@
+[
+  {
+    "id": "daughters.unit.witch-aelves",
+    "faction": "daughters",
+    "name": "Witch Aelves",
+    "keywords": ["INFANTRY", "REINFORCEMENTS"],
+    "factionKeywords": ["ORDER", "DAUGHTERS OF KHAINE"],
+    "stats": { "M": 6, "W": 1, "Sv": 6, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "witch-aelf",
+        "name": "Witch Aelf",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "round", "mm": 25 },
+        "weapons": {
+          "default": ["daughters.weapon.paired-sciansa"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["daughters.ability.frenzied-fervour"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

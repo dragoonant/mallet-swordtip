@@ -360,7 +360,7 @@ describe('F12 Seraphon engine pieces', () => {
     placeUnit(s, 'A:guard', [[0, 0]]); placeUnit(s, 'B:brute', { x: 0, z: 1.6, gap: 0.3 })
     const ctx = ctxFor(s, [4, 4, 4, 4, 1, 1])
     melee(ctx, 'A:guard', 'B:brute')
-    expect(calls).toEqual([{ attackerUnitId: 'A:guard', saveOnes: { 'B:brute': 2 } }])
+    expect(calls).toEqual([expect.objectContaining({ attackerUnitId: 'A:guard', saveOnes: { 'B:brute': 2 } })])
   })
 
   it('F12-SER-ENH whileDestroyed + mandatory: a destroyed holder\'s ability is offered with no pass; copies keep only the listed models', () => {

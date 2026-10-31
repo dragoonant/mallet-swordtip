@@ -1,0 +1,38 @@
+[
+  {
+    "id": "tzeentch.enh.mutagenic-sorcery",
+    "faction": "tzeentch",
+    "name": "Mutagenic Sorcery",
+    "text": "At the end of any turn, pick a visible enemy unit within 12\" of the general and a friendly Tzaangors unit in combat with it, then roll a D3. On a 2+, the enemy unit suffers mortal damage equal to the roll and you can return 1 slain model to the Tzaangors unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "tzeentch.ability.mutagenic-sorcery"
+  },
+  {
+    "id": "tzeentch.enh.predicted-strike",
+    "faction": "tzeentch",
+    "name": "Predicted Strike",
+    "text": "Once per battle, in the enemy movement phase, pick a visible friendly unit wholly within 12\" of the general that is not in combat. It can move up to D6\", but not through or into the combat range of an enemy unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "tzeentch.ability.predicted-strike"
+  },
+  {
+    "id": "tzeentch.enh.fold-reality",
+    "faction": "tzeentch",
+    "name": "Fold Reality",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 12\" of the general. If it is cast, take that unit off the battlefield and set it up again wholly within 12\" of the general and more than 6\" from every enemy unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "tzeentch.ability.fold-reality"
+  },
+  {
+    "id": "tzeentch.enh.infernal-gateway",
+    "faction": "tzeentch",
+    "name": "Infernal Gateway",
+    "text": "Spell (casting value 5). In your hero phase, pick a visible enemy unit within 18\" of the general. If it is cast, roll 3 dice, or one die per battle tactic card you have discarded this battle if that is more. Each 4+ inflicts 1 mortal damage.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "tzeentch.ability.infernal-gateway"
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "id": "idoneth.army.soulraid-hunt",
+  "faction": "idoneth",
+  "name": "Soulraid Hunt",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "isharann-soulscryer", "datasheet": "idoneth.unit.isharann-soulscryer", "size": 1 },
+    { "ref": "akhelian-morrsarr-guard", "datasheet": "idoneth.unit.akhelian-morrsarr-guard", "size": 3 },
+    { "ref": "akhelian-allopex", "datasheet": "idoneth.unit.akhelian-allopex", "size": 1 },
+    { "ref": "thralls-1", "datasheet": "idoneth.unit.namarti-thralls", "size": 5 },
+    { "ref": "thralls-2", "datasheet": "idoneth.unit.namarti-thralls", "size": 5 }
+  ],
+  "warlord": "isharann-soulscryer",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "idoneth.ability.tides-of-death",
+    "idoneth.ability.tides-of-death-low"
+  ],
+  "regimentAbilities": [
+    { "id": "idoneth.ability.way-of-the-cresting-wave", "default": true },
+    { "id": "idoneth.ability.ethersea-predators", "default": false }
+  ],
+  "enhancements": [
+    { "id": "idoneth.enh.steelshell-armour", "default": true },
+    { "id": "idoneth.enh.arch-ritualist", "default": false },
+    { "id": "idoneth.enh.mind-flare", "default": false },
+    { "id": "idoneth.enh.delicious-morsels", "default": false }
+  ]
+}

@@ -62,7 +62,7 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
 /** Spearhead weapons (all eight armies) by what their id or name says. Blades and polearms swing, the
  *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
  *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
-const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron|stormcast|skaven|seraphon|soulblight|khorne|nurgle|nighthaunt|sylvaneth)\./
+const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron|stormcast|skaven|seraphon|soulblight|khorne|nurgle|nighthaunt|sylvaneth|daughters|idoneth|tzeentch|ossiarch)\./
 /** The F8 armies' own weapon sounds, matched on the full weapon id before the shared rules below: Kruleboyz crossbows,
  *  Killbow and jagged blades, the Gitz' bows and wolf jaws, Lumineth wind magic, bows and pikes, Kharadron aether guns
  *  and skyhooks (the Frigate's heavy skyhook is the broadside). */
@@ -118,6 +118,30 @@ const AOS_ARMY_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = 
   [/^sylvaneth\..*bow/, 'aos-sylvaneth-arrow'],
   [/^sylvaneth\..*lance/, 'aos-sylvaneth-lance'],
   [/^sylvaneth\..*sickle/, 'aos-sylvaneth-glaive', 0.9],
+  // F15 armies: Witch Aelves' knives whirl, scimitars and scianlar slash, the Melusai's keldrisaíth is thrown like a javelin or
+  // swept like the knives, heartseeker bows and doomfire crossbows twang, dark steeds bite; Idoneth voltspears crackle, the
+  // Fangmora eel buzzes, the Allopex snaps, lanmari and barbed blades whirl, scryfish swarm through the water and the harpoon
+  // launcher fires like a skyhook; Tzaangor savage blades clang, spears and staffs ring like crystal, Skyfire arrows streak and
+  // discs bite in passing; Ossiarch halberds and spirit weapons cleave, stalker blades and talons clack.
+  [/^daughters\..*keldrisaith-ranged/, 'aos-stormcast-javelin', 0.85],
+  [/^daughters\..*(sciansa|keldrisaith)/, 'aos-daughters-knives'],
+  [/^daughters\..*(scimitar|scianlar)/, 'aos-daughters-knives', 0.9],
+  [/^daughters\..*(bow|crossbow)/, 'aos-daughters-bow'],
+  [/^daughters\..*bite/, 'wpn-claws-and-teeth', 0.8],
+  [/^idoneth\..*voltspear/, 'aos-idoneth-lance'],
+  [/^idoneth\..*fangmora/, 'aos-idoneth-eel-crackle'],
+  [/^idoneth\..*allopex/, 'aos-idoneth-allopex'],
+  [/^idoneth\..*(lanmari|hooks-and-blades)/, 'aos-idoneth-glaive'],
+  [/^idoneth\..*scryfish/, 'aos-idoneth-swim', 0.8],
+  [/^idoneth\..*abyssal/, 'aos-idoneth-chime', 0.7],
+  [/^idoneth\..*harpoon/, 'aos-kharadron-harpoon'],
+  [/^tzeentch\..*savage-blades/, 'aos-tzeentch-sword'],
+  [/^tzeentch\..*(spear|staff)/, 'aos-tzeentch-crystal-blade'],
+  [/^tzeentch\..*arrow/, 'aos-tzeentch-arrow'],
+  [/^tzeentch\..*bow-stave/, 'aos-tzeentch-sword', 0.8],
+  [/^tzeentch\..*disc/, 'aos-tzeentch-disc', 0.8],
+  [/^ossiarch\..*(halberd|spirit-weapons)/, 'aos-ossiarch-blade'],
+  [/^ossiarch\..*(stalker-blades|talons)/, 'aos-ossiarch-clack'],
 ]
 const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
   [/grapeshot/, 'aos-cannon-fire', 0.85],
@@ -560,6 +584,11 @@ const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
   nurgle: ['aos-nurgle-death', 'aos-kruleboyz-death'],
   nighthaunt: ['aos-nighthaunt-death'],
   sylvaneth: ['aos-sylvaneth-death'],
+  // F15 armies: an aelf gasps and falls, a deepkin sinks away in bubbles, a Tzaangor bleats and vanishes, a bone construct collapses.
+  daughters: ['aos-daughters-death', 'aos-human-death-2'],
+  idoneth: ['aos-idoneth-death'],
+  tzeentch: ['aos-tzeentch-death'],
+  ossiarch: ['aos-ossiarch-death', 'aos-soulblight-death'],
 }
 
 function takeFor(modelId: string): number {
@@ -603,6 +632,14 @@ const ARMY_MOVE: Record<string, (kw: readonly string[]) => EventSound | undefine
     kw.includes('FLY') ? at('aos-nurgle-fly-buzz', 0.45) : kw.includes('PLAGUEBEARERS') ? at('aos-nurgle-hum', 0.4) : at('aos-kruleboyz-swamp-march', 0.4),
   nighthaunt: (kw) => (kw.includes('REINFORCEMENTS') ? at('aos-nighthaunt-chains', 0.4) : at('aos-lumineth-wind-rush', 0.35)),
   sylvaneth: () => at('aos-sylvaneth-wings', 0.45),
+  // F15: Doomfire Warlocks' dark steeds gallop and the serpent-bodied Melusai (Ironscale, Blood Stalkers) hiss; Akhelian riders
+  // swim through the ethersea; Tzaangor discs whir; Morghasts beat their wings and the rest march on bone-plated feet.
+  daughters: (kw) =>
+    kw.includes('CAVALRY') ? at('aos-daughters-gallop', 0.55)
+      : kw.includes('HERO') || kw.includes('BLOOD STALKERS') ? at('aos-daughters-hiss', 0.4) : undefined,
+  idoneth: (kw) => (kw.includes('FLY') ? at('aos-idoneth-swim', 0.5) : undefined),
+  tzeentch: (kw) => (kw.includes('FLY') ? at('aos-tzeentch-disc', 0.5) : undefined),
+  ossiarch: (kw) => (kw.includes('FLY') ? at('aos-ossiarch-wings', 0.5) : at('aos-ossiarch-march', 0.5)),
 }
 
 /** F8 army charges: the movement sound of the unit plus the army's own war cry (a Gnashtoof snarls, a Wheela rattles in). */
@@ -642,6 +679,14 @@ const ARMY_CHARGE: Record<string, (kw: readonly string[]) => EventSound[]> = {
     at(kw.includes('HERO') ? 'aos-nighthaunt-shriek' : 'aos-nighthaunt-wail', 0.8),
   ],
   sylvaneth: () => [at('aos-sylvaneth-wings', 0.8), at('aos-sylvaneth-call', 0.7)],
+  // F15: the Witch Aelves' trilling war cry (the Melusai hiss, the Warlocks gallop in); Akhelians surge in under whale song;
+  // Tzaangors bleat (Skyfires and the Enlightened swoop in on discs); the Ossiarch march or beat their wings to a bone horn.
+  daughters: (kw) =>
+    kw.includes('CAVALRY') ? [at('aos-daughters-gallop', 0.8), at('aos-daughters-war-cry', 0.6)]
+      : kw.includes('HERO') || kw.includes('BLOOD STALKERS') ? [at('aos-daughters-hiss', 0.9)] : [at('aos-daughters-war-cry', 0.85)],
+  idoneth: (kw) => [kw.includes('FLY') ? at('aos-idoneth-swim', 0.8) : at('aos-armoured-march', 0.6), at('aos-idoneth-whale-song', 0.6)],
+  tzeentch: (kw) => (kw.includes('FLY') ? [at('aos-tzeentch-disc', 0.8), at('aos-tzeentch-bleat', 0.6)] : [at('aos-tzeentch-bleat', 0.85)]),
+  ossiarch: (kw) => [kw.includes('FLY') ? at('aos-ossiarch-wings', 0.8) : at('aos-ossiarch-march', 0.8), at('aos-ossiarch-horn', 0.6)],
 }
 
 /** F12 army spells, prayers and roars, by ability id: the Lord-Veritant's holy flame, Grey Seer warp lightning,
@@ -693,6 +738,60 @@ const AOS_ABILITY_SOUND: Record<string, EventSound> = {
   'sylvaneth.ability.spiterider-charge': at('aos-sylvaneth-lance', 0.8),
   'sylvaneth.ability.zephyrspites': at('aos-sylvaneth-wings', 0.6),
   'sylvaneth.ability.zephyrkin': at('aos-sylvaneth-wings', 0.6),
+  // F15: the Witch Aelves' war cry rises with each blood rite, Doomfire burns and heartseekers twang, the Melusai's blood turns to
+  // crystal with a chime; Idoneth tides swell under whale song, the Soulscryer's ritual chimes, eels crackle and Allopexes snap;
+  // Tzeentch's spells shimmer, warpflame warbles, discs swoop and Tzaangors bleat; the Ossiarch horn sounds their discipline,
+  // bones clack, Morghasts descend on great wings and the shard-storm scythes.
+  'daughters.ability.blood-rites': at('aos-daughters-war-cry', 0.6),
+  'daughters.ability.murderous-epiphany': at('aos-daughters-war-cry', 0.8),
+  'daughters.ability.blessing-of-khaine': at('aos-daughters-war-cry', 0.6),
+  'daughters.ability.frenzied-fervour': at('aos-daughters-war-cry', 0.8),
+  'daughters.ability.all-out-slaughter': at('aos-daughters-knives'),
+  'daughters.ability.turned-to-crystal': at('aos-tzeentch-crystal-blade', 0.6),
+  'daughters.ability.doomfire': at('aos-daughters-doomfire'),
+  'daughters.ability.heartseekers': at('aos-daughters-bow', 0.8),
+  'daughters.ability.bathed-in-blood': at('aos-daughters-hiss', 0.7),
+  'daughters.ability.fuelled-by-revenge': at('aos-daughters-hiss', 0.7),
+  'daughters.ability.flask-of-shademist': at('aos-idoneth-swim', 0.5),
+  'daughters.ability.zealous-orator': at('aos-daughters-war-cry', 0.7),
+  'idoneth.ability.tides-of-death': at('aos-idoneth-whale-song', 0.7),
+  'idoneth.ability.tides-of-death-low': at('aos-idoneth-whale-song', 0.5),
+  'idoneth.ability.way-of-the-cresting-wave': at('aos-idoneth-swim', 0.8),
+  'idoneth.ability.ethersea-predators': at('aos-idoneth-allopex', 0.7),
+  'idoneth.ability.ritual-of-the-creeping-mist': at('aos-idoneth-chime'),
+  'idoneth.ability.biovoltaic-blast': at('aos-idoneth-eel-crackle'),
+  'idoneth.ability.bloodthirsty-predators': at('aos-idoneth-allopex', 0.8),
+  'idoneth.ability.sweeping-blows': at('aos-idoneth-glaive', 0.8),
+  'idoneth.ability.arch-ritualist': at('aos-idoneth-chime', 0.8),
+  'idoneth.ability.mind-flare': at('aos-idoneth-chime', 0.8),
+  'idoneth.ability.delicious-morsels': at('aos-idoneth-allopex', 0.7),
+  'tzeentch.ability.fated-arrival': at('aos-tzeentch-spell', 0.8),
+  'tzeentch.ability.warflock-ambush': at('aos-tzeentch-bleat', 0.6),
+  'tzeentch.ability.predict-the-future': at('aos-tzeentch-spell', 0.7),
+  'tzeentch.ability.cheat-destiny': at('aos-tzeentch-spell', 0.7),
+  'tzeentch.ability.constant-flux': at('aos-tzeentch-warpflame', 0.6),
+  'tzeentch.ability.arcane-ritualists': at('aos-tzeentch-spell', 0.6),
+  'tzeentch.ability.mutative-aura': at('aos-tzeentch-warpflame'),
+  'tzeentch.ability.eldritch-raiders': at('aos-tzeentch-bleat', 0.8),
+  'tzeentch.ability.deliver-on-fate': at('aos-tzeentch-disc', 0.8),
+  'tzeentch.ability.destined-quarry': at('aos-tzeentch-arrow', 0.8),
+  'tzeentch.ability.predicted-strike': at('aos-tzeentch-spell', 0.6),
+  'tzeentch.ability.fold-reality': at('aos-tzeentch-spell'),
+  'tzeentch.ability.infernal-gateway': at('aos-tzeentch-warpflame'),
+  'tzeentch.ability.mutagenic-sorcery': at('aos-tzeentch-warpflame', 0.7),
+  'ossiarch.ability.heralds-of-nagash': at('aos-ossiarch-wings', 0.7),
+  'ossiarch.ability.dread-descent': at('aos-ossiarch-wings', 0.8),
+  'ossiarch.ability.morghast-heralds': at('aos-ossiarch-wings', 0.8),
+  'ossiarch.ability.relentless-discipline': at('aos-ossiarch-horn', 0.6),
+  'ossiarch.ability.relentless-discipline-charge': at('aos-ossiarch-horn', 0.6),
+  'ossiarch.ability.relentless-discipline-combat': at('aos-ossiarch-horn', 0.6),
+  'ossiarch.ability.peerless-cohesion': at('aos-ossiarch-march', 0.6),
+  'ossiarch.ability.immaculate-generalship': at('aos-ossiarch-horn', 0.5),
+  'ossiarch.ability.refined-creations': at('aos-ossiarch-clack', 0.8),
+  'ossiarch.ability.soulbound-protectors': at('aos-ossiarch-clack', 0.7),
+  'ossiarch.ability.switch-aspects': at('aos-ossiarch-clack', 0.8),
+  'ossiarch.ability.shard-storm': at('aos-ossiarch-shard-storm'),
+  'ossiarch.ability.mend-constructs': at('aos-ossiarch-clack', 0.7),
 }
 
 /** Sounds to play for one engine event. `perspective` (the human seat) is optional — omit it to get

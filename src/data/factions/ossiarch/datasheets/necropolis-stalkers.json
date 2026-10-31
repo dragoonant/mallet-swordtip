@@ -1,0 +1,28 @@
+[
+  {
+    "id": "ossiarch.unit.necropolis-stalkers",
+    "faction": "ossiarch",
+    "name": "Necropolis Stalkers",
+    "keywords": ["INFANTRY"],
+    "factionKeywords": ["DEATH", "OSSIARCH BONEREAPERS"],
+    "stats": { "M": 6, "W": 4, "Sv": 4, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "necropolis-stalker",
+        "name": "Necropolis Stalkers",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 50 },
+        "weapons": {
+          "default": ["ossiarch.weapon.stalker-blades"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["ossiarch.ability.switch-aspects"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

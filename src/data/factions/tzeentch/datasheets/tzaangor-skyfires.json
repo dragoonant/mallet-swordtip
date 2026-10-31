@@ -1,0 +1,28 @@
+[
+  {
+    "id": "tzeentch.unit.tzaangor-skyfires",
+    "faction": "tzeentch",
+    "name": "Tzaangor Skyfires",
+    "keywords": ["CAVALRY", "FLY"],
+    "factionKeywords": ["CHAOS", "DISCIPLES OF TZEENTCH"],
+    "stats": { "M": 14, "W": 4, "Sv": 4, "OC": 1 },
+    "composition": [
+      {
+        "modelId": "tzaangor-skyfire",
+        "name": "Tzaangor Skyfire",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": {
+          "default": ["tzeentch.weapon.arrow-of-fate", "tzeentch.weapon.bow-stave", "tzeentch.weapon.discs-teeth-and-horns"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["tzeentch.ability.destined-quarry"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

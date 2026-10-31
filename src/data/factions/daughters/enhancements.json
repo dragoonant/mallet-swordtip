@@ -1,0 +1,38 @@
+[
+  {
+    "id": "daughters.enh.fuelled-by-revenge",
+    "faction": "daughters",
+    "name": "Fuelled by Revenge",
+    "text": "Melee weapons of friendly Blood Stalkers units have +1 Rend while those units are wholly within 12\" of the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "daughters.ability.fuelled-by-revenge"
+  },
+  {
+    "id": "daughters.enh.bathed-in-blood",
+    "faction": "daughters",
+    "name": "Bathed in Blood",
+    "text": "Each time the general slays an enemy model, Heal (1) the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "daughters.ability.bathed-in-blood"
+  },
+  {
+    "id": "daughters.enh.flask-of-shademist",
+    "faction": "daughters",
+    "name": "Flask of Shademist",
+    "text": "Once per battle, in any combat phase, until the end of the phase subtract 1 from the hit rolls of attacks that target friendly units while they are wholly within 12\" of the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "daughters.ability.flask-of-shademist"
+  },
+  {
+    "id": "daughters.enh.zealous-orator",
+    "faction": "daughters",
+    "name": "Zealous Orator",
+    "text": "In your hero phase, pick a friendly unit wholly within 9\" of the general that is not in combat. Roll a dice for each slain model of that unit; for each 5+, return 1 slain model to it.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "daughters.ability.zealous-orator"
+  }
+]

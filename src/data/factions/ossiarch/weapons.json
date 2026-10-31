@@ -1,0 +1,50 @@
+[
+  {
+    "id": "ossiarch.weapon.ossified-talons",
+    "name": "Ossified Talons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "ossiarch.weapon.dread-halberd",
+    "name": "Dread Halberd",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "ossiarch.weapon.stalker-blades",
+    "name": "Stalker Blades",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 3,
+    "wound": 3,
+    "rend": 2,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "ossiarch.weapon.spirit-weapons",
+    "name": "Spirit Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 2,
+    "rend": 2,
+    "D": 3,
+    "abilities": []
+  }
+]

@@ -1,6 +1,6 @@
-// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (any of the sixteen:
+// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (any of the twenty:
 // Cities of Sigmar, Fyreslayers, Lumineth Realm-lords, Kharadron Overlords, Stormcast Eternals, Seraphon, Slaves to Darkness, Skaven,
-// Soulblight Gravelords, Ironjawz, Kruleboyz, Gloomspite Gitz, Blades of Khorne, Maggotkin of Nurgle, Nighthaunt and Sylvaneth; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
+// Soulblight Gravelords, Ironjawz, Kruleboyz, Gloomspite Gitz, Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth, Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch and Ossiarch Bonereapers; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
 // device, and Start. The battleplan is fixed (Fire and Jade, standard terrain); only its realm side (Aqshy, Ghyran or random) is picked.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
 import { FactionCrest } from './FactionCrest'
@@ -32,21 +32,25 @@ export const FACTION_BLURBS: Record<string, string> = {
   nurgle: 'A shambling plague-host that refuses to stay dead: a bookkeeping daemon, a rot-fly rider, bloated Blightkings and a rabble of one-eyed Plaguebearers, every one of them ward-hardened and spreading disease with each lucky blow.',
   nighthaunt: 'A wailing grave-host of chained and scythe-swinging spirits led by a ghost knight: hard to hurt, gliding over walls and bodies, and sweeping across the field in a cold wave of terror.',
   sylvaneth: 'A swift hunting flight of tree-spirits: a glaive-wielding Arch-Revenant, hovering Gossamid archers and dragonspite riders who swoop in, all chasing one marked quarry and singing louder with each kill.',
+  daughters: 'Blood-drunk temple warriors: a serpent-bodied champion, a whirling pack of Witch Aelves, dark-steed sorcerers who hurl black fire and coiled archers whose arrows hunt hearts, each round of fighting winding the whole troupe tighter.',
+  idoneth: 'Raiders from the deep who fight with the tides: a stooped soul-seer, eel-riding knights, a snapping war-shark and eyeless thralls, hitting harder or faster as the tide turns from round to round.',
+  tzeentch: 'A scheming flock of bird-headed beast-men: a sorcerer on a flying disc, sword-wielding Tzaangors and spear-armed Enlightened, plus Skyfire archers, who can wait in reserve and peek at the cards before they are dealt.',
+  ossiarch: 'Cold, drilled constructs of bone: a sculptor-mage who barks the ranks into order, shield-and-halberd bodyguards, four-armed duelists and winged Morghasts that swoop in from the second round.',
 }
 
 // The Grand Alliance of each army: the coloured edge on its tile and the line under its blurb.
 export const FACTION_ALLIANCE: Record<string, 'Order' | 'Chaos' | 'Death' | 'Destruction'> = {
   cities: 'Order', fyreslayers: 'Order', lumineth: 'Order', kharadron: 'Order', stormcast: 'Order', seraphon: 'Order',
-  sylvaneth: 'Order',
-  slaves: 'Chaos', skaven: 'Chaos', khorne: 'Chaos', nurgle: 'Chaos',
-  soulblight: 'Death', nighthaunt: 'Death',
+  sylvaneth: 'Order', daughters: 'Order', idoneth: 'Order',
+  slaves: 'Chaos', skaven: 'Chaos', khorne: 'Chaos', nurgle: 'Chaos', tzeentch: 'Chaos',
+  soulblight: 'Death', nighthaunt: 'Death', ossiarch: 'Death',
   ironjawz: 'Destruction', kruleboyz: 'Destruction', gloomspite: 'Destruction',
 }
 const ALLIANCE_COLOR: Record<string, string> = { Order: '#6fa8ff', Chaos: '#c966e0', Death: '#5fd8b0', Destruction: '#ec8a3c' }
 
 // Preferred card order on the start screen (anything else follows, in data order).
 // Grouped by Grand Alliance (Order, Chaos, Death, Destruction), so each alliance sits together in the grid and shares an edge colour.
-const FACTION_ORDER = ['cities', 'fyreslayers', 'lumineth', 'kharadron', 'stormcast', 'seraphon', 'sylvaneth', 'slaves', 'skaven', 'khorne', 'nurgle', 'soulblight', 'nighthaunt', 'ironjawz', 'kruleboyz', 'gloomspite']
+const FACTION_ORDER = ['cities', 'fyreslayers', 'lumineth', 'kharadron', 'stormcast', 'seraphon', 'sylvaneth', 'daughters', 'idoneth', 'slaves', 'skaven', 'khorne', 'nurgle', 'tzeentch', 'soulblight', 'nighthaunt', 'ossiarch', 'ironjawz', 'kruleboyz', 'gloomspite']
 
 // Own-words one-liners for the regiment abilities and enhancements shown on the cards; the full rules text from the data is the
 // tooltip. An id without an entry here falls back to its data text.
@@ -147,6 +151,30 @@ export const OPTION_BLURBS: Record<string, string> = {
   'sylvaneth.enh.bold-spirit': 'Once per battle, in a hero phase, friendly units close to your general add 1 to the wound rolls of their combat attacks for the turn.',
   'sylvaneth.enh.cunning-pursuer': 'While your general is in combat, friendly units within 12" add 1 to their charge rolls (2 if it fights your quarry).',
   'sylvaneth.enh.zephyrkin': 'After your general charges and fights, it may move up to 2D6" but cannot end that move in combat.',
+  'daughters.ability.blessing-of-khaine': 'Once a turn, in any combat phase, a friendly unit close to your general (not the general) adds 1 to its ward rolls for the phase.',
+  'daughters.ability.murderous-epiphany': "Once per battle, in your hero phase, every friendly unit gets next round's blood rite right away and keeps it.",
+  'daughters.enh.fuelled-by-revenge': 'Your Blood Stalkers within 12" of your general have +1 Rend on their melee weapons.',
+  'daughters.enh.bathed-in-blood': 'Each time your general slays an enemy model, it heals 1 damage.',
+  'daughters.enh.flask-of-shademist': 'Once per battle, in a combat phase, enemy attacks against your units close to your general are at -1 to hit for the phase.',
+  'daughters.enh.zealous-orator': 'In your hero phase, a friendly unit near your general that is not in combat rolls for each slain model: a 5+ brings it back.',
+  'idoneth.ability.way-of-the-cresting-wave': 'Your Namarti Thralls that charged this turn have +1 Rend on their melee weapons.',
+  'idoneth.ability.ethersea-predators': 'Once a turn, at the end of any turn, a friendly Cavalry unit that fought heals D3 damage.',
+  'idoneth.enh.steelshell-armour': "Every modifier to your general's save rolls is ignored, good and bad, Rend included.",
+  'idoneth.enh.arch-ritualist': 'Your general adds 1 to the roll for Ritual of the Creeping Mist.',
+  'idoneth.enh.mind-flare': 'Once per battle, in a combat phase, an enemy unit fighting your general only hits on an unmodified 6 until the phase ends.',
+  'idoneth.enh.delicious-morsels': 'In your hero phase, every friendly Cavalry unit near your general heals 1 damage.',
+  'tzeentch.ability.constant-flux': 'While you are the underdog, enemy weapons aimed at your units have 1 less Rend (never below 0).',
+  'tzeentch.ability.arcane-ritualists': 'Your general adds 1 to its casting rolls while it stands close to another friendly unit.',
+  'tzeentch.enh.mutagenic-sorcery': 'At the end of any turn, a D3 aimed at a visible enemy near your general: on a 2+ it takes that much mortal damage and a Tzaangor fighting it comes back.',
+  'tzeentch.enh.predicted-strike': "Once per battle, in the enemy's movement phase, a friendly unit near your general that is not in combat may move up to D6\".",
+  'tzeentch.enh.fold-reality': 'A spell (6): in your hero phase, a friendly unit near your general is lifted off and set down again near it, away from the enemy.',
+  'tzeentch.enh.infernal-gateway': 'A spell (5): in your hero phase, 3 dice of mortal-damage chances (4+) against an enemy within 18"; more dice if you have discarded many tactics.',
+  'ossiarch.ability.immaculate-generalship': 'Every discipline roll you make is at +1.',
+  'ossiarch.ability.peerless-cohesion': 'Once a turn you may use Relentless Discipline a second time in the same phase, on a different unit.',
+  'ossiarch.enh.lode-of-saturation': 'Melee weapons attacking your general have 1 less Rend (never below 0).',
+  'ossiarch.enh.shard-storm': 'A spell (7): in your hero phase, a dice per model of a visible enemy unit within 12"; each 5+ is 1 mortal damage.',
+  'ossiarch.enh.mend-constructs': 'A spell (6): in your hero phase, a friendly unit near your general heals D3 damage.',
+  'ossiarch.enh.helm-of-tyranny': 'Once per battle, at the end of your turn, a 3+ cuts 3 from the control score of an enemy unit within 12" of your general for the rest of the turn.',
 }
 
 interface FactionChoice {
@@ -209,16 +237,16 @@ html[data-ff="compact"] .ss-check { display: flex; align-items: center; gap: 10p
 html[data-ff="compact"] .ss-field { display: flex; flex-direction: column; gap: 6px; }
 html[data-ff="compact"] .ss-card button[aria-pressed] { font-size: 12px !important; }
 html[data-ff="compact"] .ss-secondary { font-size: 13px; }
-/* Sixteen army tiles, grouped by Grand Alliance: 4 x 4 in a desktop column and on a phone held upright; a phone held sideways has the
-   width for 8 x 2 (iPhone 15 Pro landscape, 852x393: each tile ~95px wide with a two-line name and a 30px crest). */
+/* Twenty army tiles, grouped by Grand Alliance: 5 x 4 in a desktop column and on a phone held upright; a phone held sideways has the
+   width for 10 x 2 (iPhone 15 Pro landscape, 852x393: each tile ~78px wide with a two-line name and a 25px crest). */
 html[data-ff="compact"] .ss-armies { gap: 4px !important; }
-html[data-ff="compact"] .ss-armies button { padding: 4px 2px !important; font-size: 10.5px !important; gap: 2px !important; }
-html[data-ff="compact"] .ss-armies .ss-badge { width: 36px !important; height: 36px !important; }
-html[data-ff="compact"] .ss-armies .ss-badge svg { width: 32px; height: 32px; }
-@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; }
-  html[data-ff="compact"] .ss-armies button { font-size: 9.5px !important; min-height: 64px; padding: 3px 1px !important; }
-  html[data-ff="compact"] .ss-armies .ss-badge { width: 30px !important; height: 30px !important; }
-  html[data-ff="compact"] .ss-armies .ss-badge svg { width: 27px; height: 27px; } }
+html[data-ff="compact"] .ss-card .ss-armies button[aria-pressed] { padding: 4px 1px !important; font-size: 9.5px !important; gap: 2px !important; }
+html[data-ff="compact"] .ss-armies .ss-badge { width: 32px !important; height: 32px !important; }
+html[data-ff="compact"] .ss-armies .ss-badge svg { width: 28px; height: 28px; }
+@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(10, minmax(0, 1fr)) !important; }
+  html[data-ff="compact"] .ss-card .ss-armies button[aria-pressed] { font-size: 8px !important; min-height: 64px; padding: 3px 0 !important; }
+  html[data-ff="compact"] .ss-armies .ss-badge { width: 28px !important; height: 28px !important; }
+  html[data-ff="compact"] .ss-armies .ss-badge svg { width: 25px; height: 25px; } }
 .ss-armies button { border-top-width: 3px !important; }
 ${Object.entries(ALLIANCE_COLOR).map(([name, c]) => `.ss-armies button[data-alliance="${name}"] { border-top-color: ${c} !important; }`).join(' ')}
 .ss-alliance { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: ${colors.muted}; margin-top: -4px; }
@@ -234,10 +262,10 @@ const label: CSSProperties = { fontSize: 12, textTransform: 'uppercase', letterS
 const row: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
 const input: CSSProperties = { ...buttonBase, flex: 1, cursor: 'text' }
 const blurb: CSSProperties = { ...mutedText, marginTop: -8 }
-// Sixteen armies sit four by four (the CSS class makes it eight by two on a phone held sideways); never an orphan card.
-const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }
-const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 4px', fontSize: 11.5, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
-const factionBadge: CSSProperties = { width: 52, height: 52, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }
+// Twenty armies sit five by four (the CSS class makes it ten by two on a phone held sideways); never an orphan card.
+const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 5 }
+const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '5px 2px', fontSize: 10.5, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
+const factionBadge: CSSProperties = { width: 46, height: 46, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }
 const saveCard: CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '10px 14px', borderRadius: 6, border: `1px solid ${colors.accent}`, background: 'rgba(255,255,255,0.05)' }
 const noticeText: CSSProperties = { flex: 'none', margin: 0, padding: '8px 12px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'rgba(255,255,255,0.05)', fontSize: 13, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between' }
 const confirmBackdrop: CSSProperties = { position: 'fixed', inset: 0, zIndex: 20, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }
@@ -253,7 +281,7 @@ const pickText: CSSProperties = { fontSize: 11.5, color: 'inherit', opacity: 0.7
 function FactionCard({ id, name, alliance, active, onPick, testId }: { id: string; name: string; alliance: string; active: boolean; onPick: () => void; testId?: string }) {
   return (
     <button type="button" data-testid={testId} data-alliance={alliance || undefined} style={{ ...(active ? buttonActive : buttonBase), ...factionCard }} aria-pressed={active} onClick={onPick}>
-      <span className="ss-badge" style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={44} /></span>
+      <span className="ss-badge" style={factionBadge} aria-hidden="true"><FactionCrest faction={id} name={name} size={40} /></span>
       <span>{name}</span>
     </button>
   )

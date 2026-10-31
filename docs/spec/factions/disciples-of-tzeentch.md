@@ -82,7 +82,9 @@ The Enlightened start off the table (DOT-BT-1).
 ### DOT-RA-2 `tzeentch.ability.arcane-ritualists` — Arcane Ritualists
 - **Timing:** Passive.
 - **Effect:** Add **1** to **casting rolls** for your general while the general is **wholly within 6" of another friendly
-  unit** (i.e. every model of some other friendly unit is wholly within 6" of the general).
+  unit** (every model of the general has some model of that other unit within 6"; the PDF reads "while they are wholly
+  within 6" of another friendly unit"). Fixed 2026-10-30: this file first had the two units the wrong way round (every model
+  of the other unit wholly within 6" of the general), which is far harder to meet for a 10-model unit.
 - Casting rolls only, not unbinding rolls. A miscast is still an unmodified double 1. The modified total is what an enemy
   unbind roll must beat.
 
@@ -226,12 +228,12 @@ faction code hook in `src/engine/factions/tzeentch.ts`, exported as `tzeentchHoo
 | DOT-BT-3 Predict the Future | (b) `tzeentchPredictTheFuture` | Army ability, `timing phase command / your`, no declare. `canUse` = `cardsOf(s).tactics[p].deck.length > 0`. Resolve takes `n = min(3, deck.length)` top cards (`deck[0]` is the top, cards.ts draws from the front) and raises one `chooseOption { topic: 'abilityChoice', data: { code, cards } }` per card, answered by the hook's `answer`: options `top:<id>` / `bottom:<id>`; then, if 2+ went on top, one more pick "which goes on the very top" (approximation: with 3 on top the other two keep their looked-at order). Bottom cards are appended in the order chosen. Writes `cards.tactics[p].deck`. The decision context lists card ids; it is the owner's decision, so `redactCards` / the opponent view must not show it (same rule as the hand). |
 | DOT-BT-4 Cheat Destiny | (b) `tzeentchCheatDestiny` + (c) C4 | Battle trait carrying `code`; `onTacticCommandUsed` (C4) raises `chooseOption { topic: 'abilityChoice', canPass: true, data: { code, cardId } }` unless used this phase (mark `tz:cheat`); `answer` → `returnTacticToDeckBottom(s, p, cardId)` and announce. |
 | DOT-RA-1 Constant Flux | (b) `tzeentchConstantFlux` | Passive regiment descriptor with `code`; the regiment ability sits on every friendly unit (hooks-impl `sourcesFor`). `statDelta(state, entry, q)`: when `q.stat === 'AP'`, `q.attack?.targetUnitId === entry.holderUnitId`, `state.underdog === holder.player` and `q.weapon.rend > 0` (base) → `+1` (AP is −Rend; `effectiveWeapon` floors Rend at 0 anyway). `affectsCompanion: true` so enemy Companion weapons are reduced too (an enemy ability, not a friendly characteristic change). |
-| DOT-RA-2 Arcane Ritualists | (b) `tzeentchArcaneRitualists` + (c) C1 | Passive regiment descriptor with `code`; `castingRollBonus(state, entry, casterUnitId)` = 1 when `casterUnitId === entry.holderUnitId`, the holder is the general and some other friendly unit on the board is `whollyWithinUnit(other, general, 6)`. |
+| DOT-RA-2 Arcane Ritualists | (b) `tzeentchArcaneRitualists` + (c) C1 | Passive regiment descriptor with `code`; `castingRollBonus(state, entry, casterUnitId)` = 1 when `casterUnitId === entry.holderUnitId`, the holder is the general and some other friendly unit on the board has the general `whollyWithinUnit(general, other, 6)`. |
 | DOT-ENH-1 Predicted Strike | (b) `tzeentchPredictedStrike` | Enhancement, `timing phase movement / enemy`, `limit oncePerBattle`, `keywords ['MOVE']`, `declare [{ role: 'unit', owner: 'friendly' }]`, `params.range 12`. Targets = friendly units on board, `whollyWithinUnit(t, general, 12)`, not `inCombat`, visible to the general (self allowed). Resolve: `d = rollExpr('D6')`; `writeMoveQueue(s, { abilityId, player, maxDistance: d, queue: [target], opts: { noCombatPath: true } })` (F14 `noCombatPath`: the normal-move path test even for FLY units, implies `mayNotEndInCombat`). Offered in the end-of-movement window of the enemy phase (the SKV-BT-1 window). |
 | DOT-ENH-2 Fold Reality | (b) `tzeentchFoldReality` | Enhancement, `timing phase command / your`, `keywords ['SPELL']`, `castingValue 6`, `declare [{ role: 'unit', owner: 'friendly' }]`. Targets = friendly units on board other than the general, `whollyWithinUnit(t, general, 12)`, visible. Resolve (only on a cast): `liftForRedeploy` then `requestRedeploy(s, { abilityId, player, unitIds: [target], minEnemyDistance: 6, anchor: { unitId: general, whollyWithin: 12 }, origin, markSetUp: true })` (LRL-AB-4 / KO-BT-1 pattern). |
 | DOT-ENH-3 Infernal Gateway | (b) `tzeentchInfernalGateway` | Enhancement, `timing phase command / your`, `keywords ['SPELL']`, `castingValue 5`, `declare [{ role: 'unit', owner: 'enemy' }]`, `params.range 18`. Targets = enemy units on board within 18" of the general (`unitGap`) and visible. Resolve: `n = max(3, cardsOf(s).tactics[p].discard.length)`; roll `n` D6; `inflictMortal(ctx, use, target, count of 4+)`. |
 | DOT-ENH-4 Mutagenic Sorcery | (b) `tzeentchMutagenicSorcery` | Enhancement, `timing endOfTurn / any`, `limit oncePerTurn`, `declare [{ role: 'unit', owner: 'enemy' }]`, `params.range 12`. Targets = enemy units on board within 12" of the general, visible to it, and in combat with a friendly unit for which `isDatasheet(…, 'tzaangors')`. Resolve: `r = rollExpr('D3')`; on `r >= 2`: `inflictMortal(ctx, use, enemy, r)`, then `returnSlainModels(ctx, tzaangors, 1, abilityId)` when `returnableModels > 0` (always taken: no downside). |
-| DOT-AB-1 Mutative Aura | (b) `tzeentchMutativeAura` + (c) C3 | Activated, `timing phase command / your`, `keywords ['SPELL']`, `castingValue 7`, `declare [{ role: 'unit', owner: 'enemy' }]`, `params.range 18`. Resolve: `effectService.grant(ctx, target, {}, { scope: { who: 'self' }, duration: 'untilNextTurn', code: 'tzeentchMutativeAura' })` (marker effect carrying the code). The same hook's `afterAttackSequence(ctx, entry, info)` (C3): when `entry.active` is set, `info.attackerUnitId === entry.holderUnitId`, `info.combat` and `info.hitOnes > 0` → `deferMortalAfterFight(s, { targetUnitId: holder, count: info.hitOnes, source: abilityId, player: caster player })` (STD-AB-4 plumbing: drained when the Fight activation ends, ward applies). |
+| DOT-AB-1 Mutative Aura | (b) `tzeentchMutativeAura` + (c) C3 | Activated, `timing phase command / your`, `keywords ['SPELL']`, `castingValue 7`, `declare [{ role: 'unit', owner: 'enemy' }]`, `params.range 18`. Resolve: `effectService.grant(ctx, target, {}, { sourceAbilityId, sourceUnitId: caster, scope: { who: 'self' }, duration: 'untilNextTurn' })` (marker effect on the enemy target) and then `active.expires = { kind: 'nextOwnTurn', round, player: caster player }`: `grant` ties `untilNextTurn` to the player that holds the effect, which would end the aura at the start of the ENEMY's turn, one turn too early. The same hook's `afterAttackSequence(ctx, entry, info)` (C3): when `entry.active` is set, `info.attackerUnitId === entry.holderUnitId`, `info.combat` and `info.hitOnes > 0` → `deferMortalAfterFight(s, { targetUnitId: holder, count: info.hitOnes, source: abilityId, player: caster player })` (STD-AB-4 plumbing: drained when the Fight activation ends, ward applies). |
 | DOT-AB-2 Deliver on Fate | (a) + (b) gate `tzeentchUnderdog` | Passive descriptor `trigger chargeRoll`, `effect { modifyRoll: { roll: 'charge', value: 1 } }`, `code: 'tzeentchUnderdog'`; the hook is a bare `gate: (state, holder) => state.underdog === holder.player` (Ironjawz Mega-bossy pattern). |
 | DOT-AB-3 Destined Quarry | (b) `tzeentchDestinedQuarry` | Activated, `timing phase shooting / your`, `declare [{ role: 'unit', owner: 'enemy' }]`. Targets = `damagedByShootingThisPhase(state, self)` (LRL-AB-3, after wards). Offered in the existing `shooting:after:<unitId>` window. Resolve: `effectService.grant(ctx, target, [{ when: { weaponType: 'melee' }, modifyRoll: { roll: 'hit', value: 1 } }], { scope: { who: 'attacker' }, duration: 'untilEndOfTurn' })` (Khorne Evasive Hunter / Kruleboyz grant pattern: `who: 'attacker'` applies to attacks that target the holder). |
 | DOT-AB-4 Eldritch Raiders | (a) + (b) gate `tzeentchEldritchRaiders` | Passive descriptor `trigger woundRoll`, `effect { modifyRoll: { roll: 'wound', value: 1 } }`, `code` gate: every live model of the holder `whollyWithinPolygon(fp(m), territoryOf(state, opponent(holder.player)))` (`stormcast.ts` `objectiveWhollyInTerritory` pattern; a model on the dividing line is not wholly within, SPH-1.4). |
@@ -302,6 +304,9 @@ note in `docs/spec/13-engine-port-plan.md` when built.
 | ID | Mechanic |
 |---|---|
 | DOT-ARMY-1 | Tzaangor Warflock builds: Tzaangor Shaman general + 10 Tzaangors + 3 Enlightened + 3 Skyfires, 17 models, stats as §5, bases 40/32 round. |
+| DOT-DATA-1 / DOT-DATA-2 | The shipped data (patrol, stats, bases, reserve flag, Fated Arrival params) matches this file; every Tzeentch file validates. |
+| DOT-REG | Every `code` in the Tzeentch abilities resolves to a hook; activated ones have an `activate` block. |
+| DOT-AI-1 | AI hints: Infernal Gateway beats Mutative Aura only when it can kill; Fold Reality only to rescue; Predict the Future needs a deck. |
 | DOT-ARMY-2 | No unit has Reinforcements; Call for Reinforcements is never offered. |
 | DOT-BT-1 | Fated Arrival: the Enlightened start in reserve; arrival offered only in your movement phase from round 2; every model wholly within friendly territory, some model within 1" of an edge, all more than 6" from enemies; rejected otherwise. |
 | DOT-BT-2 | The Enlightened still in reserve at the start of round 4 are destroyed; an arrived unit cannot Move that phase. |
@@ -349,16 +354,28 @@ standard or musician rules. The disc is part of each figure (one GLB, not a sepa
 
 ## 11. Implementation notes
 
-Not built yet. Planned layout: `src/data/factions/tzeentch/` (faction.json, datasheets/{tzaangor-shaman, tzaangors,
-tzaangor-enlightened, tzaangor-skyfires}.json, weapons.json, abilities.json, enhancements.json,
-patrols/tzaangor-warflock.json); hooks `src/engine/factions/tzeentch.ts` (`...tzeentchHooks` in `code-hooks.ts`, AI hints
-`tzeentchAbilityTiming` / `tzeentchTargetBonus` wired in `src/ai/utility.ts`); tests `tests/engine/tzeentch.test.ts`,
-`tests/data/tzeentch.test.ts` (one test per DOT- id), engine C1–C4 in `tests/engine/engine-f16.test.ts` (or the next F number).
-Patrol `battleTraits: ['tzeentch.ability.warflock-ambush', 'tzeentch.ability.predict-the-future',
-'tzeentch.ability.cheat-destiny']`, regiment list Constant Flux (default) then Arcane Ritualists, enhancement list Mutagenic
-Sorcery (default), Predicted Strike, Fold Reality, Infernal Gateway. Figure mapping keys `<datasheet id>/<modelId>`.
+Built 2026-10-30. Data: `src/data/factions/tzeentch/` (faction.json, datasheets/{tzaangor-shaman, tzaangors, tzaangor-enlightened,
+tzaangor-skyfires}.json, weapons.json, abilities.json, enhancements.json, patrols/tzaangor-warflock.json). Hooks:
+`src/engine/factions/tzeentch.ts` (`tzeentchHooks`, spread into `code-hooks.ts`; AI hints `tzeentchAbilityTiming` /
+`tzeentchTargetBonus` called from `src/ai/utility.ts` abilityTiming / abilityTargetBonus). Tests: `tests/engine/tzeentch.test.ts`,
+`tests/data/tzeentch.test.ts` (one test per DOT- id; the shipped-data checks are DOT-DATA-1/2, the registry check DOT-REG, the AI
+hints DOT-AI-1), engine C1–C4 in `tests/engine/engine-f16.test.ts`.
+Patrol `battleTraits: ['tzeentch.ability.warflock-ambush', 'tzeentch.ability.predict-the-future', 'tzeentch.ability.cheat-destiny']`,
+regiment list Constant Flux (default) then Arcane Ritualists, enhancement list Mutagenic Sorcery (default), Predicted Strike, Fold
+Reality, Infernal Gateway. Figure mapping keys `<datasheet id>/<modelId>` with model ids `tzaangor-shaman`, `tzaangor`,
+`tzaangor-enlightened`, `tzaangor-skyfire`.
 
----
+Built as specified, with these decisions the spec left open:
+- Predict the Future keeps its progress in the decision data (`stage`, `i`, `tops`, `bottoms`); the deck is rewritten once, after the
+  last answer. No event names a card.
+- Cheat Destiny is a passive descriptor (`trigger: always`), because `cards.ts` finds the source through the passive source list; its
+  once-per-phase mark is the phase mark `tz:cheat:<player>`, set only when the card is actually returned (declining costs nothing).
+- Predicted Strike is only offered when the target has some legal slide (a 1" probe on 12 bearings), so the once-per-battle use is not
+  wasted on a unit that cannot move.
+- Mutagenic Sorcery picks the friendly Tzaangors unit itself: the one in combat with the enemy target that has the most slain models.
+  `returnSlainModels` refuses a spot within combat range of an enemy, so a model cannot return into a unit completely surrounded.
+- Mutative Aura's 1s are tallied by the engine per attack sequence (C3) and held with `deferMortalAfterFight` until the Fight ability
+  is over.
 
 ## Appendix A — Fluxblade Coven (second PDF, 14 pages; out of scope)
 

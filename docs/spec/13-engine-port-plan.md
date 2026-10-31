@@ -380,6 +380,30 @@ statDelta, affectsCompanion`; `HookQueries + chargeMustEndInCombatWithFor, fight
 
 Tests: `tests/engine/engine-f14.test.ts` (F14-<spec id>); `soulblight.test.ts` SBG-ENH-3 now expects Rend ignored.
 
+### 3.13 F16 engine-core: generic mechanisms for Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch and Ossiarch Bonereapers (additive)
+
+Frozen contracts, additive only: `types.ts` `RuntimeDatasheet + wizard?, priest?, castingLevel?` (copied from the data by
+`state.ts toRuntimeDatasheet`; before this, a datasheet's `wizard` never reached the engine and only the WIZARD keyword counted;
+every shipped datasheet says `wizard: 1`, so nothing changes in play); `hooks.ts` `EFFECT_HOOKS.onlySixes = ['onHitRoll']`,
+`RollModifierResult + onlySix`. `src/data/types.ts` + schemas: `DatasheetData.castingLevel`, `Effect.onlySixes: 'hit'`. No
+`actions.ts` / `events.ts` / `rng.ts` / `decider.ts` / `index.ts` change. Non-frozen: `EngineCodeHook + castingRollBonus, forbidsWard,
+onTacticCommandUsed`; `afterAttackSequence` info `+ hitOnes, combat` (`AttackSequenceInfo`); `HookQueries + castingRollBonusFor,
+wardForbidden` (`WardDenialInfo`); `hooks-impl sourceGateOpen`; `PlaceShape + edgeWithin`; `SetUpParams + territory, edgeWithin`.
+
+| Mechanism | Where | For |
+|---|---|---|
+| `DatasheetData.castingLevel` → `castingLevel(state, unitId)` = max(`wizardLevel`, castingLevel). `canCast` counts casts against it; unbinding and every Wizard test keep `wizardLevel`, so such a unit casts but never unbinds | `magic.ts`, `state.ts`, data types/schema | DOK-AB-4 Doomfire |
+| `EngineCodeHook.castingRollBonus(state, entry, casterUnitId)` → `hookService.castingRollBonusFor` (every source entry after its gate, one answer per source: its largest). `castingRoll` uses dice + bonus for the casting value and the unbind comparison, the bare dice for the miscast; an `AbilityTriggered` "Casting roll: rolled 6+1 = 7" line when a bonus applies | `magic.ts`, `code-hooks.ts`, `hooks-impl.ts` | DOT-RA-2 Arcane Ritualists |
+| Turn ledger `lostModels`: `finishDestroy` notes the slain model's unit (every slay path: attacks, mortal damage, retreat damage, miscasts; not redeploys or reinforcements). `lostModelThisTurn(state, unitId)`; stale when the key `round:activePlayer` changes | `attack.ts` | IDK-AB-3 Bloodthirsty Predators |
+| `Effect.onlySixes: 'hit'` → `{ kind: 'roll', onlySix }` at `onHitRoll` (attacker side: the holder's own hit rolls). `runStage` ORs it with the card flag: success iff the unmodified die is 6, whatever modifiers or auto-pass say (exact Mind Flare, no autoResult approximation) | `hooks.ts`, `hooks-impl.ts`, `attack.ts` | IDK-ENH Mind Flare |
+| `afterAttackSequence` info `+ hitOnes` (unmodified 1s on the attacking unit's final hit dice, every weapon of the sequence) `+ combat` (`a.kind === 'melee'`) | `attack.ts`, `code-hooks.ts` | DOT-AB-1 Mutative Aura |
+| `EngineCodeHook.onTacticCommandUsed(ctx, entry, { player, cardId })`: `useCommand` (hand / fulfilled-oath path, not The Officer's Order) queues a phase mark `cards:tacticUsed:<p>|<card>|<abilityId>` per battle trait / regiment ability of the player whose code has the hook; the queue drains once the command has fully resolved (right after it in the handler, after a follow-up answer, else at the next `commandWindow` / `reactionWindow`), one entry per call, yielding when the hook raises a decision. `returnTacticToDeckBottom(s, p, cardId)` moves the card from the discard pile (or fulfilled oaths) to the bottom of the deck; no event (deck order is hidden) | `cards.ts`, `code-hooks.ts` | DOT-BT-4 Cheat Destiny |
+| `ArrivalParams` / `SetUpParams + territory, edgeWithin`: `setUpRegion` = friendly territory when `territory` (wins over `anywhere`), the arrival decision's zone too; `resolveSetUp` rejects `E_OUT_OF_RANGE` unless some model's base edge is within `edgeWithin` of a battlefield edge (`nearBoardEdge`). `PlaceShape.edgeWithin` replaces the 6" band in `reinforcementFormation` with the same test; `reinforcementOptions` only scans centres that can reach an edge. The arrival candidates (`arrivalCandidates`) of a territory + edge arrival are those formations, spread along the territory's edges | `phases/movement.ts`, `factions/aos-moves.ts` | DOT-BT-1 Fated Arrival |
+| `EngineCodeHook.forbidsWard(state, entry, { wardedUnitId, attackerUnitId, kind })` → `hookService.wardForbidden`. `wardThreshold(..., kind)` (the pool's `by.kind`; `feelNoPainFor` passes none) returns no ward at all when it answers true. The attacker-side twin of the card flag `noWard` | `attack.ts`, `code-hooks.ts`, `hooks-impl.ts` | OBR-AB-4 Switch Aspects: Destroyer |
+| Call for Reinforcements fix: `reinforcementFormation` keeps the hex lattice only for units on identical round bases; oval or mixed bases are packed by their real footprints (`packedFormation`: biggest base first on the legal point nearest the centre, each other model on the legal spot nearest the centre 0.15" from a placed base, `contactDistance` memoised per base pair and direction, two coherency links preferred for 7+ models). The old lattice spaced every model by the longest radius, so Flesh Hounds, Claws of Karanak, Freeguild Cavaliers and Fellriders failed coherency and were never offered. `reinforcementOptions(..., max 1)` stops at the first spot | `factions/aos-moves.ts` | SPH-12, all armies |
+
+Tests: `tests/engine/engine-f16.test.ts` (F16-<spec id>); `engine-f12.test.ts` SER-AB-6 now matches the info with `objectContaining`.
+
 ## 4. Client impact
 
 ### 4.1 Counts

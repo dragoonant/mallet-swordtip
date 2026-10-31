@@ -1,0 +1,17 @@
+{
+  "id": "ossiarch",
+  "name": "Ossiarch Bonereapers",
+  "factionKeyword": "OSSIARCH BONEREAPERS",
+  "armyRule": "ossiarch.ability.mortisan-elite",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#e3d8bb",
+    "secondary": "#1d2a52",
+    "trim": "#9a6b3a",
+    "metal": "#2fb5a2",
+    "decal": "#5ff0d4"
+  },
+  "combatPatrols": [
+    "ossiarch.army.mortisan-elite"
+  ]
+}

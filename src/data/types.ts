@@ -166,6 +166,9 @@ export interface Effect {
   // SBG-ENH Aura of Night: negative modifiers to this roll of the holder are ignored. F14 RULING (core 17.0 / glossary): Rend is
   // subtracted from the save roll, so it is a negative modifier and an ignore on 'save' drops Rend too
   ignoreNegativeModifiers?: RollName
+  // ---- F16 engine-core (Daughters, Idoneth, Tzeentch, Ossiarch) ----
+  // IDK-ENH Mind Flare: the holder's hit rolls succeed only on an unmodified 6 (attack.ts runStage, the Wreathed in Smoke path)
+  onlySixes?: 'hit'
 }
 export type EffectList = Effect | Effect[]
 
@@ -329,6 +332,9 @@ export interface DatasheetData {
   // P2: Wizard / Priest power level
   wizard?: number
   priest?: number
+  // F16 (DOK-AB-4 Doomfire): spells this non-Wizard unit may attempt per phase (magic.ts castingLevel). It never unbinds and is
+  // never a Wizard; a Wizard's own power level wins when it is higher
+  castingLevel?: number
 }
 
 // stratagem.schema.json

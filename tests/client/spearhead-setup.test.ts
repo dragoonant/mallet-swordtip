@@ -1,15 +1,15 @@
 // WP6 smoke: the client store builds a real Spearhead game from the data bundle (Castelite Company vs Bigmob, Fire and
-// Jade; the sixteen armies are Cities of Sigmar, Ironjawz, Slaves to Darkness, Fyreslayers, Kruleboyz, Gloomspite Gitz, Lumineth Realm-lords, Kharadron Overlords, Stormcast Eternals, Skaven, Seraphon, Soulblight Gravelords, Blades of Khorne, Maggotkin of Nurgle, Nighthaunt and Sylvaneth) and the bot can drive both seats for a while through the real engine.
+// Jade; the twenty armies are Cities of Sigmar, Ironjawz, Slaves to Darkness, Fyreslayers, Kruleboyz, Gloomspite Gitz, Lumineth Realm-lords, Kharadron Overlords, Stormcast Eternals, Skaven, Seraphon, Soulblight Gravelords, Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth, Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch and Ossiarch Bonereapers) and the bot can drive both seats for a while through the real engine.
 import { describe, expect, it } from 'vitest'
 import { loadBundle } from '../../src/data'
 import { buildPlayerSetup, regimentChoices, spearheadArmies, useGameStore, DEFAULT_SPEARHEAD_FACTIONS } from '../../src/client/store/game'
 import { UtilityDecider } from '../../src/ai/utility'
 
 describe('spearhead client setup', () => {
-  it('offers exactly the sixteen Spearhead armies with two regiment abilities and four enhancements each', async () => {
+  it('offers exactly the twenty Spearhead armies with two regiment abilities and four enhancements each', async () => {
     const bundle = await loadBundle()
     const armies = spearheadArmies(bundle)
-    expect(armies.map((a) => a.faction).sort()).toEqual(['cities', 'fyreslayers', 'gloomspite', 'ironjawz', 'kharadron', 'khorne', 'kruleboyz', 'lumineth', 'nighthaunt', 'nurgle', 'seraphon', 'skaven', 'slaves', 'soulblight', 'stormcast', 'sylvaneth'])
+    expect(armies.map((a) => a.faction).sort()).toEqual(['cities', 'daughters', 'fyreslayers', 'gloomspite', 'idoneth', 'ironjawz', 'kharadron', 'khorne', 'kruleboyz', 'lumineth', 'nighthaunt', 'nurgle', 'ossiarch', 'seraphon', 'skaven', 'slaves', 'soulblight', 'stormcast', 'sylvaneth', 'tzeentch'])
     for (const a of armies) {
       expect(regimentChoices(bundle, a)).toHaveLength(2)
       expect(a.enhancements).toHaveLength(4)

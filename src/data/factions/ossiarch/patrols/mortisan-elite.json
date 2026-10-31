@@ -1,0 +1,36 @@
+{
+  "id": "ossiarch.army.mortisan-elite",
+  "faction": "ossiarch",
+  "name": "Mortisan Elite",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "mortisan-ossifector", "datasheet": "ossiarch.unit.mortisan-ossifector", "size": 1 },
+    { "ref": "immortis-guard", "datasheet": "ossiarch.unit.immortis-guard", "size": 3 },
+    { "ref": "necropolis-stalkers", "datasheet": "ossiarch.unit.necropolis-stalkers", "size": 3 },
+    {
+      "ref": "morghast-archai",
+      "datasheet": "ossiarch.unit.morghast-archai",
+      "size": 2,
+      "reserve": { "ability": "ossiarch.ability.dread-descent" }
+    }
+  ],
+  "warlord": "mortisan-ossifector",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "ossiarch.ability.heralds-of-nagash",
+    "ossiarch.ability.relentless-discipline",
+    "ossiarch.ability.relentless-discipline-charge",
+    "ossiarch.ability.relentless-discipline-combat"
+  ],
+  "regimentAbilities": [
+    { "id": "ossiarch.ability.immaculate-generalship", "default": true },
+    { "id": "ossiarch.ability.peerless-cohesion", "default": false }
+  ],
+  "enhancements": [
+    { "id": "ossiarch.enh.lode-of-saturation", "default": true },
+    { "id": "ossiarch.enh.shard-storm", "default": false },
+    { "id": "ossiarch.enh.mend-constructs", "default": false },
+    { "id": "ossiarch.enh.helm-of-tyranny", "default": false }
+  ]
+}

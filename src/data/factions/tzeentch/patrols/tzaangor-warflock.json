@@ -1,0 +1,35 @@
+{
+  "id": "tzeentch.army.tzaangor-warflock",
+  "faction": "tzeentch",
+  "name": "Tzaangor Warflock",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "tzaangor-shaman", "datasheet": "tzeentch.unit.tzaangor-shaman", "size": 1 },
+    { "ref": "tzaangors", "datasheet": "tzeentch.unit.tzaangors", "size": 10 },
+    {
+      "ref": "tzaangor-enlightened",
+      "datasheet": "tzeentch.unit.tzaangor-enlightened",
+      "size": 3,
+      "reserve": { "ability": "tzeentch.ability.fated-arrival" }
+    },
+    { "ref": "tzaangor-skyfires", "datasheet": "tzeentch.unit.tzaangor-skyfires", "size": 3 }
+  ],
+  "warlord": "tzaangor-shaman",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "tzeentch.ability.warflock-ambush",
+    "tzeentch.ability.predict-the-future",
+    "tzeentch.ability.cheat-destiny"
+  ],
+  "regimentAbilities": [
+    { "id": "tzeentch.ability.constant-flux", "default": true },
+    { "id": "tzeentch.ability.arcane-ritualists", "default": false }
+  ],
+  "enhancements": [
+    { "id": "tzeentch.enh.mutagenic-sorcery", "default": true },
+    { "id": "tzeentch.enh.predicted-strike", "default": false },
+    { "id": "tzeentch.enh.fold-reality", "default": false },
+    { "id": "tzeentch.enh.infernal-gateway", "default": false }
+  ]
+}

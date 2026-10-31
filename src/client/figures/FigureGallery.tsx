@@ -260,7 +260,7 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'soulreaper', faction: 'thousand-sons', label: 'Scarab Terminator (soulreaper cannon)' },
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'hellfyre', faction: 'thousand-sons', label: 'Scarab Terminator (hellfyre rack)' },
   { datasheetId: 'ths.tzaangors', modelId: 'tzaangor', faction: 'thousand-sons', label: 'Tzaangor' },
-  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight | khorne | nurgle | nighthaunt | sylvaneth)
+  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight | khorne | nurgle | nighthaunt | sylvaneth | daughters | idoneth | tzeentch | ossiarch)
   { datasheetId: 'cities.unit.freeguild-cavalier-marshal', modelId: 'cavalier-marshal', faction: 'cities', label: 'Cavalier-Marshal' },
   { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm', faction: 'cities', label: 'Steelhelm' },
   { datasheetId: 'cities.unit.freeguild-cavaliers', modelId: 'cavalier', faction: 'cities', label: 'Freeguild Cavalier' },
@@ -338,6 +338,22 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'sylvaneth.unit.gossamid-archers', modelId: 'gossamid-archer', faction: 'sylvaneth', label: 'Gossamid Archer' },
   { datasheetId: 'sylvaneth.unit.spiterider-lancers', modelId: 'spiterider-lancer', faction: 'sylvaneth', label: 'Spiterider Lancer' },
   { datasheetId: 'sylvaneth.unit.revenant-seekers', modelId: 'revenant-seeker', faction: 'sylvaneth', label: 'Revenant Seeker' },
+  { datasheetId: 'daughters.unit.melusai-ironscale', modelId: 'melusai-ironscale', faction: 'daughters', label: 'Melusai Ironscale' },
+  { datasheetId: 'daughters.unit.witch-aelves', modelId: 'witch-aelf', faction: 'daughters', label: 'Witch Aelf' },
+  { datasheetId: 'daughters.unit.doomfire-warlocks', modelId: 'doomfire-warlock', faction: 'daughters', label: 'Doomfire Warlock' },
+  { datasheetId: 'daughters.unit.blood-stalkers', modelId: 'blood-stalker', faction: 'daughters', label: 'Blood Stalker' },
+  { datasheetId: 'idoneth.unit.isharann-soulscryer', modelId: 'soulscryer', faction: 'idoneth', label: 'Isharann Soulscryer' },
+  { datasheetId: 'idoneth.unit.akhelian-morrsarr-guard', modelId: 'morrsarr-guard', faction: 'idoneth', label: 'Akhelian Morrsarr Guard' },
+  { datasheetId: 'idoneth.unit.akhelian-allopex', modelId: 'allopex', faction: 'idoneth', label: 'Akhelian Allopex' },
+  { datasheetId: 'idoneth.unit.namarti-thralls', modelId: 'namarti-thrall', faction: 'idoneth', label: 'Namarti Thrall' },
+  { datasheetId: 'tzeentch.unit.tzaangor-shaman', modelId: 'tzaangor-shaman', faction: 'tzeentch', label: 'Tzaangor Shaman' },
+  { datasheetId: 'tzeentch.unit.tzaangors', modelId: 'tzaangor', faction: 'tzeentch', label: 'Tzaangor' },
+  { datasheetId: 'tzeentch.unit.tzaangor-enlightened', modelId: 'tzaangor-enlightened', faction: 'tzeentch', label: 'Tzaangor Enlightened' },
+  { datasheetId: 'tzeentch.unit.tzaangor-skyfires', modelId: 'tzaangor-skyfire', faction: 'tzeentch', label: 'Tzaangor Skyfire' },
+  { datasheetId: 'ossiarch.unit.mortisan-ossifector', modelId: 'mortisan-ossifector', faction: 'ossiarch', label: 'Mortisan Ossifector' },
+  { datasheetId: 'ossiarch.unit.immortis-guard', modelId: 'immortis-guard', faction: 'ossiarch', label: 'Immortis Guard' },
+  { datasheetId: 'ossiarch.unit.necropolis-stalkers', modelId: 'necropolis-stalker', faction: 'ossiarch', label: 'Necropolis Stalker' },
+  { datasheetId: 'ossiarch.unit.morghast-archai', modelId: 'morghast-archai', faction: 'ossiarch', label: 'Morghast Archai' },
 ]
 
 // Figures are true tabletop-miniature scale (~1-2 world-inches tall — see resolveBase), so packing

@@ -18,7 +18,7 @@ describe('full seeded games (SIM-001/002/003/009/015)', () => {
       expect(run.final.result).not.toBeNull()
       expect(run.rounds).toBe(4)
       expect(new Set(Object.values(run.factions)).size).toBe(2)
-      for (const f of Object.values(run.factions)) expect(['cities', 'ironjawz', 'slaves', 'fyreslayers', 'gloomspite', 'kharadron']).toContain(f)
+      for (const f of Object.values(run.factions)) expect(Object.keys(bundle.factions)).toContain(f)
       const replayed = replay(run.setup, run.seed, run.actions, bundle)
       expect(replayed.state.hash).toBe(run.finalHash)
     }, 180_000)

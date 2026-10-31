@@ -313,11 +313,25 @@ The Shadow Coven figures (Appendix A) are listed there.
 
 ## 11. Implementation notes
 
-Not built yet. Planned data: `src/data/factions/daughters/` (faction.json, datasheets/{melusai-ironscale, witch-aelves,
-doomfire-warlocks, blood-stalkers}.json, weapons.json, abilities.json, enhancements.json, patrols/heartflayer-troupe.json with
+Built (F16). Data: `src/data/factions/daughters/` (faction.json, datasheets/{melusai-ironscale, witch-aelves, doomfire-warlocks,
+blood-stalkers}.json, weapons.json, abilities.json, enhancements.json, patrols/heartflayer-troupe.json with
 `battleTraits: ['daughters.ability.blood-rites']`, `warlord: 'melusai-ironscale'`). Hooks: `src/engine/factions/daughters.ts`
-(`...daughtersHooks` in `code-hooks.ts`). Tests: `tests/engine/daughters.test.ts`, `tests/data/daughters.test.ts`, one per DOK- id.
-Figure mapping keys `<datasheet id>/<modelId>`.
+(`...daughtersHooks` in `code-hooks.ts`; AI hints `daughtersAbilityTiming` / `daughtersTargetBonus` wired into `src/ai/utility.ts` by the
+`daughters` code prefix). Tests: `tests/engine/daughters.test.ts`, `tests/data/daughters.test.ts`, one per DOK- id. Figure mapping keys
+`<datasheet id>/<modelId>`.
+
+Notes from the build:
+- The Doomfire Warlocks datasheet carries `castingLevel: 1` at the top level (next to `stats`), not inside `stats`.
+- Murderous Epiphany stores the battle round it was used in (`mission.custom.dokEpiphany[player]`); `bloodRiteLevel` is
+  `min(4, max(round, usedRound + 1))`, and 0 before round 1 whatever the ledger says.
+- Flask of Shademist grants its -1 to every friendly unit on the board when it is used; `gateActive` switches it off per attack for a
+  unit outside 12" of the general, so a unit that moves in or out of range gains or loses it within the phase.
+- A mortal-damage kill by Turned to Crystal heals Bathed in Blood because `onEnemyModelSlain` hears every slain model credited to the
+  general's unit.
+- approximation: the AI's movement planner does not hold the Blood Stalkers still for Heartseekers (§8 item 5); it only uses the ability
+  hints. Blood Stalkers that did not move still crit on 5+ whenever they happen to stand still.
+- Client wiring (crest, start screen, figures, audio, `weaponFlavour.ts` vfx keywords for Keldrisaith / Heartseeker Bow) is not part of
+  this file's stage.
 
 ---
 

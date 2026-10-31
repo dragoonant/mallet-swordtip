@@ -1,0 +1,104 @@
+[
+  {
+    "id": "daughters.weapon.keldrisaith-ranged",
+    "name": "Keldrisaíth",
+    "type": "ranged",
+    "range": 12,
+    "A": 2,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "daughters.weapon.keldrisaith",
+    "name": "Keldrisaíth",
+    "type": "melee",
+    "range": 0,
+    "A": 6,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "daughters.weapon.paired-sciansa",
+    "name": "Paired Sciansá",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "CRIT_AUTO_WOUND" }
+    ]
+  },
+  {
+    "id": "daughters.weapon.doomfire-crossbow",
+    "name": "Doomfire Crossbow",
+    "type": "ranged",
+    "range": 10,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "daughters.weapon.cursed-scimitar",
+    "name": "Cursed Scimitar",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "daughters.weapon.dark-steeds-vicious-bite",
+    "name": "Dark Steed's Vicious Bite",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 5,
+    "wound": 3,
+    "rend": 0,
+    "D": 1,
+    "abilities": [
+      { "ability": "COMPANION" }
+    ]
+  },
+  {
+    "id": "daughters.weapon.heartseeker-bow",
+    "name": "Heartseeker Bow",
+    "type": "ranged",
+    "range": 18,
+    "A": 3,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": [
+      { "ability": "CRIT_AUTO_WOUND" }
+    ]
+  },
+  {
+    "id": "daughters.weapon.scianlar",
+    "name": "Scianlar",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  }
+]

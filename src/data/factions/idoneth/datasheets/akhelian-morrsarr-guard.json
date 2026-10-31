@@ -1,0 +1,28 @@
+[
+  {
+    "id": "idoneth.unit.akhelian-morrsarr-guard",
+    "faction": "idoneth",
+    "name": "Akhelian Morrsarr Guard",
+    "keywords": ["CAVALRY", "FLY"],
+    "factionKeywords": ["ORDER", "IDONETH DEEPKIN"],
+    "stats": { "M": 14, "W": 4, "Sv": 4, "OC": 1 },
+    "composition": [
+      {
+        "modelId": "morrsarr-guard",
+        "name": "Akhelian Morrsarr Guard",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "oval", "mm": 60, "mm2": 35 },
+        "weapons": {
+          "default": ["idoneth.weapon.voltspear", "idoneth.weapon.fangmora-fangs"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["idoneth.ability.biovoltaic-blast"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

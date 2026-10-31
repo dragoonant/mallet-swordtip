@@ -1,0 +1,28 @@
+[
+  {
+    "id": "ossiarch.unit.morghast-archai",
+    "faction": "ossiarch",
+    "name": "Morghast Archai",
+    "keywords": ["INFANTRY", "FLY"],
+    "factionKeywords": ["DEATH", "OSSIARCH BONEREAPERS"],
+    "stats": { "M": 10, "W": 6, "Sv": 3, "OC": 2, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "morghast-archai",
+        "name": "Morghast Archai",
+        "min": 2,
+        "max": 2,
+        "default": 2,
+        "base": { "shape": "round", "mm": 60 },
+        "weapons": {
+          "default": ["ossiarch.weapon.spirit-weapons"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["ossiarch.ability.morghast-heralds"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

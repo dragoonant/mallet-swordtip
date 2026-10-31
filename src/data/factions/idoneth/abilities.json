@@ -1,0 +1,145 @@
+[
+  {
+    "id": "idoneth.ability.soulraid-hunt",
+    "name": "Soulraid Hunt",
+    "text": "Army marker for the Idoneth Deepkin Soulraid Hunt. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "idoneth.ability.tides-of-death",
+    "name": "Tides of Death",
+    "text": "Friendly units get the tide of the battle round, in both players' turns. Round 1, Low Tide: shooting attacks against them get -1 to hit (see below). Round 2, Flood Tide: they can still shoot and charge after they Run. Round 3, High Tide: they have Strike-first. Round 4, Ebb Tide: they can still shoot and charge after they Retreat.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": [
+      { "when": { "round": { "gte": 2, "lte": 2 } }, "shootAfterAdvance": true },
+      { "when": { "round": { "gte": 2, "lte": 2 } }, "chargeAfterAdvance": true },
+      { "when": { "round": { "gte": 3, "lte": 3 } }, "fightsFirst": true },
+      { "when": { "round": { "gte": 4, "lte": 4 } }, "shootAfterFallBack": true },
+      { "when": { "round": { "gte": 4, "lte": 4 } }, "chargeAfterFallBack": true }
+    ],
+    "code": "idonethTides"
+  },
+  {
+    "id": "idoneth.ability.tides-of-death-low",
+    "name": "Tides of Death (Low Tide)",
+    "text": "In battle round 1, subtract 1 from the hit rolls of shooting attacks that target a friendly unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "attacker" },
+    "effect": {
+      "when": { "round": { "lte": 1 }, "weaponType": "ranged" },
+      "modifyRoll": { "roll": "hit", "value": -1 }
+    },
+    "params": { "hidden": true }
+  },
+  {
+    "id": "idoneth.ability.way-of-the-cresting-wave",
+    "name": "Way of the Cresting Wave",
+    "text": "Friendly Namarti Thralls units that charged this turn have +1 Rend on their melee weapons.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "unitCharged": true, "weaponType": "melee", "unitHasModel": "namarti-thrall" },
+      "modifyStat": { "stat": "AP", "value": -1 }
+    }
+  },
+  {
+    "id": "idoneth.ability.ethersea-predators",
+    "name": "Ethersea Predators",
+    "text": "Once per turn, at the end of any turn, pick a friendly Cavalry unit that used a Fight ability this turn. Heal (D3) that unit.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurnArmy",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "idonethEtherseaPredators",
+    "params": { "army": true, "heal": "D3", "priority": "P2" }
+  },
+  {
+    "id": "idoneth.ability.arch-ritualist",
+    "name": "Arch-Ritualist",
+    "text": "Add 1 to the bearer's roll for Ritual of the Creeping Mist.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" }
+  },
+  {
+    "id": "idoneth.ability.steelshell-armour",
+    "name": "Steelshell Armour",
+    "text": "Ignore all modifiers to the bearer's save rolls, good and bad. Rend is one of them, so the save is the bare die against the Save characteristic.",
+    "trigger": "saveRoll",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": { "ignoreModifiers": "save" }
+  },
+  {
+    "id": "idoneth.ability.mind-flare",
+    "name": "Mind Flare",
+    "text": "Once per battle, in any combat phase, pick an enemy unit in combat with the bearer. Until the end of the phase, that unit's attacks only hit on an unmodified 6.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "duration": "untilEndOfPhase",
+    "code": "idonethMindFlare",
+    "params": { "priority": "P1" }
+  },
+  {
+    "id": "idoneth.ability.delicious-morsels",
+    "name": "Delicious Morsels",
+    "text": "In your hero phase, Heal (1) each friendly Cavalry unit within the bearer's combat range.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "scope": { "who": "bearer" },
+    "code": "idonethDeliciousMorsels",
+    "params": { "range": 3, "heal": 1, "priority": "P2" }
+  },
+  {
+    "id": "idoneth.ability.ritual-of-the-creeping-mist",
+    "name": "Ritual of the Creeping Mist",
+    "text": "In your hero phase, pick a visible friendly unit wholly within 12\" of this unit (this unit can pick itself) and roll a dice. On a 3+, until the start of your next turn subtract 1 from the wound rolls of attacks that target that unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilNextTurn",
+    "code": "idonethCreepingMist",
+    "params": { "range": 12, "succeedOn": 3, "priority": "P1" }
+  },
+  {
+    "id": "idoneth.ability.biovoltaic-blast",
+    "name": "Biovoltaic Blast",
+    "text": "Once per battle, in any charge phase, if this unit charged this phase, pick an enemy unit within 1\" of it and roll one dice for each model in this unit, adding 1 to every roll if the target has more models than this unit. Each 4-5 inflicts 1 mortal damage on the target, and each 6+ inflicts D3 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "any" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "idonethBiovoltaicBlast",
+    "params": { "requires": "charged", "within": 1, "priority": "P1" }
+  },
+  {
+    "id": "idoneth.ability.bloodthirsty-predators",
+    "name": "Bloodthirsty Predators",
+    "text": "While this unit is within 6\" of an enemy unit that is damaged or that had a model slain this turn, the Allopex's Ferocious Bite has +1 Attacks.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "idonethBloodthirstyPredators",
+    "params": { "range": 6, "attacks": 1 }
+  },
+  {
+    "id": "idoneth.ability.sweeping-blows",
+    "name": "Sweeping Blows",
+    "text": "The Lanmari has +1 Damage when it targets a Monster.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "weaponId": "idoneth.weapon.lanmari", "targetKeyword": "MONSTER" },
+      "modifyStat": { "stat": "D", "value": 1 }
+    }
+  }
+]

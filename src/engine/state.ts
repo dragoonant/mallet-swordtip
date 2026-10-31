@@ -431,6 +431,10 @@ function toRuntimeDatasheet(ds: DatasheetData, abilityIds: string[], leaderEffec
     ...(ds.transport ? { transport: { ...ds.transport } } : {}),
     spearhead: ds.spearhead ?? false,
     ...(ds.coherencyRange !== undefined ? { coherencyRange: ds.coherencyRange } : {}),
+    // F16: power levels reach the runtime datasheet (before, `wizard` stayed in the data and only the WIZARD keyword counted)
+    ...(ds.wizard !== undefined ? { wizard: ds.wizard } : {}),
+    ...(ds.priest !== undefined ? { priest: ds.priest } : {}),
+    ...(ds.castingLevel !== undefined ? { castingLevel: ds.castingLevel } : {}),
   }
 }
 

@@ -104,6 +104,10 @@ export interface RuntimeDatasheet {
   spearhead: boolean
   // CORE-1.6: horizontal coherency range (DatasheetData.coherencyRange ?? 0.5); optional so hand-built test datasheets stay valid
   coherencyRange?: number
+  // F16 (additive): Wizard / Priest power level and the non-Wizard casting level (DatasheetData; magic.ts wizardLevel, castingLevel)
+  wizard?: number
+  priest?: number
+  castingLevel?: number
 }
 
 export type RuntimeStratagem = StratagemData

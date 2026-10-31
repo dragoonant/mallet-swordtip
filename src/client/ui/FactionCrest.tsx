@@ -4,12 +4,14 @@
 // three-claw scratch, Gloomspite Gitz a sun disc with a jagged bite out of it, Lumineth a three-curl wind swirl, Kharadron a cog
 // inside a cloud, Stormcast a winged hammer-head over a lightning bolt, Skaven a three-scratch rune inside a cracked green stone,
 // Seraphon a stepped-pyramid sun under a star, Soulblight a bat-winged drop of blood, Blades of Khorne a hound skull over crossed blades,
-// Maggotkin of Nurgle three flies circling a cracked bell, Nighthaunt a hooded wisp holding a lantern, Sylvaneth a spiral of thorned leaves. One 64x64 viewBox each, drawn with
+// Maggotkin of Nurgle three flies circling a cracked bell, Nighthaunt a hooded wisp holding a lantern, Sylvaneth a spiral of thorned leaves,
+// Daughters of Khaine a curved dagger inside a heart outline, Idoneth Deepkin an eel coiled round a pale moon, Disciples of Tzeentch an eye set in a
+// spiralling flame, Ossiarch Bonereapers a bone crown over two crossed femurs. One 64x64 viewBox each, drawn with
 // currentColor plus a handful of fixed accents so a crest reads on dark panels and on a bright active tile.
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactElement } from 'react'
 
 /** Faction ids the game ships a crest for; anything else gets a plain shield with the initial. */
-export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron' | 'stormcast' | 'skaven' | 'seraphon' | 'soulblight' | 'khorne' | 'nurgle' | 'nighthaunt' | 'sylvaneth'
+export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron' | 'stormcast' | 'skaven' | 'seraphon' | 'soulblight' | 'khorne' | 'nurgle' | 'nighthaunt' | 'sylvaneth' | 'daughters' | 'idoneth' | 'tzeentch' | 'ossiarch'
 
 function CitiesCrest() {
   return (
@@ -347,6 +349,89 @@ function SylvanethCrest() {
   )
 }
 
+function DaughtersCrest() {
+  // Daughters of Khaine (Heartflayer Troupe): a heart outline, blood-tinted, with a curved sacrificial dagger plunged point-down through its middle.
+  return (
+    <g>
+      <path d="M32 59 C8 41 4 24 13 14 C21 7 30 11 32 18 C34 11 43 7 51 14 C60 24 56 41 32 59 Z" fill="#b3263c" fillOpacity="0.38" stroke="currentColor" strokeWidth="3.4" strokeLinejoin="round" />
+      {/* the dagger: pommel, grip, cross-guard and a broad blade that bows to one side before its point */}
+      <circle cx="32" cy="20.5" r="3" fill="currentColor" />
+      <rect x="29.8" y="23" width="4.4" height="9" rx="1.4" fill="currentColor" />
+      <rect x="21" y="31" width="22" height="4" rx="2" fill="currentColor" />
+      <path d="M26.6 35 Q24.6 47 35.6 57 Q32.6 45 37.6 35 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.1" strokeLinejoin="round" />
+      <path d="M31.2 36 Q30 44 33.4 51" fill="none" stroke="#0f1119" strokeWidth="1.2" strokeLinecap="round" opacity="0.55" />
+      {/* a drop of blood off the point */}
+      <path d="M45 43 Q42 47.6 45 50.6 Q48 47.6 45 43 Z" fill="#e0323f" stroke="#0f1119" strokeWidth="0.8" />
+    </g>
+  )
+}
+
+function IdonethCrest() {
+  // Idoneth Deepkin (Soulraid Hunt): a pale-blue moon ringed by a thick eel that loops once round it, tail tucked under its own neck, a glowing eye.
+  return (
+    <g>
+      <circle cx="32" cy="32" r="15" fill="#a9dcea" />
+      <circle cx="27.5" cy="27" r="3.2" fill="#7fc2d4" /><circle cx="37" cy="37" r="2.4" fill="#7fc2d4" /><circle cx="36" cy="25.5" r="1.6" fill="#7fc2d4" />
+      {/* the tail tapers off the upper right and runs under the body */}
+      <path d="M52 20 Q57 14 61 9 Q58 18 57.5 25 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.2" strokeLinejoin="round" />
+      {/* the body: nearly a full ring, dark outline under a pale stroke so it reads over the moon */}
+      <path d="M54 22 A23 23 0 1 0 45 49" fill="none" stroke="#0f1119" strokeWidth="9.4" strokeLinecap="round" />
+      <path d="M54 22 A23 23 0 1 0 45 49" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      {/* scale ticks along the spine and the head turned back over the neck */}
+      <path d="M32 5.5 V9.5 M19 11 L21.5 14 M10 24 L14 25.5 M12 43 L15.5 41.5" stroke="#0f1119" strokeWidth="1.6" strokeLinecap="round" opacity="0.55" />
+      <path d="M41 44 Q50 42 58 49 Q55 58 44 57 Q37 54 41 44 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="50" cy="50" r="2" fill="#12c8d8" stroke="#0f1119" strokeWidth="0.8" />
+    </g>
+  )
+}
+
+function TzeentchCrest() {
+  // Disciples of Tzeentch (Tzaangor Warflock): a flame that twists up into a curl at its tip, a spiral drawn inside it, and an open eye at its heart.
+  return (
+    <g>
+      <path d="M33 3 C 34 12 46 17 49 29 C 52 42 45 57 32 58 C 19 59 11 48 14 36 C 16 28 22 25 24 18 C 27 21 29 24 29 28 C 33 21 28 11 33 3 Z" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+      {/* the spiral winding round the eye, inside the flame */}
+      <path d="M32 12 C 40 14 45 21 43 29 C 41 36 33 38 29 34 C 26 31 28 27 31 27" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.7" />
+      {/* the eye: an almond, an iris and a slit pupil */}
+      <path d="M17 42 Q32 29 47 42 Q32 55 17 42 Z" fill="#0f1119" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+      <circle cx="32" cy="42" r="6" fill="#e0399a" stroke="currentColor" strokeWidth="1.4" />
+      <ellipse cx="32" cy="42" rx="1.9" ry="4.4" fill="#0f1119" />
+      <circle cx="34" cy="40" r="1.2" fill="#fff" />
+    </g>
+  )
+}
+
+function OssiarchCrest() {
+  // Ossiarch Bonereapers (Mortisan Elite): a spiked bone crown with a teal soul-gem over two femurs crossed in an X, a knob at each end.
+  const femur = (x1: number, y1: number, x2: number, y2: number, key: string) => {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy, ny = ux
+    const knob = (x: number, y: number, k: string) => (
+      <g key={k}>
+        <circle cx={x + nx * 2.6 - ux * 1.2} cy={y + ny * 2.6 - uy * 1.2} r="3.1" fill="currentColor" />
+        <circle cx={x - nx * 2.6 - ux * 1.2} cy={y - ny * 2.6 - uy * 1.2} r="3.1" fill="currentColor" />
+      </g>
+    )
+    return (
+      <g key={key}>
+        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#0f1119" strokeWidth="7.4" strokeLinecap="round" />
+        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="4.6" strokeLinecap="round" />
+        {knob(x1, y1, 'a')}
+        {knob(x2, y2, 'b')}
+      </g>
+    )
+  }
+  return (
+    <g>
+      {femur(14, 32, 50, 58, 'f1')}
+      {femur(50, 32, 14, 58, 'f2')}
+      {/* the crown: a band with five tall tines, the middle one set with a soul-gem */}
+      <path d="M13 29 L11 11 L21 20 L27 5 L32 17 L37 5 L43 20 L53 11 L51 29 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      <rect x="13" y="25" width="38" height="5.4" rx="1" fill="#0f1119" fillOpacity="0.55" />
+      <path d="M32 18 L35.2 23.4 L32 28.4 L28.8 23.4 Z" fill="#2fd8be" stroke="#0f1119" strokeWidth="1.2" strokeLinejoin="round" />
+    </g>
+  )
+}
+
 function FallbackCrest({ initial }: { initial: string }) {
   return (
     <g>
@@ -354,6 +439,14 @@ function FallbackCrest({ initial }: { initial: string }) {
       <text x="32" y="42" textAnchor="middle" fontSize="26" fontWeight="700" fill="currentColor" fontFamily="system-ui, sans-serif">{initial}</text>
     </g>
   )
+}
+
+const CRESTS: Record<string, () => ReactElement> = {
+  cities: () => <CitiesCrest />, ironjawz: () => <IronjawzCrest />, slaves: () => <SlavesCrest />, fyreslayers: () => <FyreslayersCrest />,
+  kruleboyz: () => <KruleboyzCrest />, gloomspite: () => <GloomspiteCrest />, lumineth: () => <LuminethCrest />, kharadron: () => <KharadronCrest />,
+  stormcast: () => <StormcastCrest />, skaven: () => <SkavenCrest />, seraphon: () => <SeraphonCrest />, soulblight: () => <SoulblightCrest />,
+  khorne: () => <KhorneCrest />, nurgle: () => <NurgleCrest />, nighthaunt: () => <NighthauntCrest />, sylvaneth: () => <SylvanethCrest />,
+  daughters: () => <DaughtersCrest />, idoneth: () => <IdonethCrest />, tzeentch: () => <TzeentchCrest />, ossiarch: () => <OssiarchCrest />,
 }
 
 export function FactionCrest({ faction, name, size = 48, style }: { faction: string; name?: string; size?: number; style?: CSSProperties }) {
@@ -367,7 +460,7 @@ export function FactionCrest({ faction, name, size = 48, style }: { faction: str
       data-testid={`faction-crest-${faction}`}
       style={{ display: 'block', flex: 'none', ...style }}
     >
-      {faction === 'cities' ? <CitiesCrest /> : faction === 'ironjawz' ? <IronjawzCrest /> : faction === 'slaves' ? <SlavesCrest /> : faction === 'fyreslayers' ? <FyreslayersCrest /> : faction === 'kruleboyz' ? <KruleboyzCrest /> : faction === 'gloomspite' ? <GloomspiteCrest /> : faction === 'lumineth' ? <LuminethCrest /> : faction === 'kharadron' ? <KharadronCrest /> : faction === 'stormcast' ? <StormcastCrest /> : faction === 'skaven' ? <SkavenCrest /> : faction === 'seraphon' ? <SeraphonCrest /> : faction === 'soulblight' ? <SoulblightCrest /> : faction === 'khorne' ? <KhorneCrest /> : faction === 'nurgle' ? <NurgleCrest /> : faction === 'nighthaunt' ? <NighthauntCrest /> : faction === 'sylvaneth' ? <SylvanethCrest /> : <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />}
+      {(CRESTS[faction] ?? (() => <FallbackCrest initial={(name ?? faction).charAt(0).toUpperCase()} />))()}
     </svg>
   )
 }

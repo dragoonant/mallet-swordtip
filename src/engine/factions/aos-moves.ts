@@ -4,7 +4,7 @@
 // destinations. Every option id encodes its own geometry (`mv:<dx>:<dz>` for a rigid slide, `at:<x>:<z>` for a formation centred
 // on a point) so the answer can be recomputed and re-validated when it is applied; nothing here keeps state besides the queue mark.
 import {
-  EPS, anyWithinEngagementRange, basesOverlap, checkPlacements, dist2D, emptyMoveConstraints, horizontalGap, pathCrossesModels, samplePath, whollyOnBoard,
+  EPS, anyWithinEngagementRange, baseEdgePoints, basesOverlap, checkPlacements, dist2D, emptyMoveConstraints, horizontalGap, isRound, pathCrossesModels, samplePath, whollyOnBoard,
   whollyWithinPolygon, type Footprint, type ResolvedPlacement,
 } from '../geometry'
 import { hookService } from '../hooks-impl'
@@ -13,7 +13,7 @@ import type { EngineContext } from '../modules'
 import type { AbilityWindow } from '../abilities'
 import { boardModelsOf, datasheetOf, enemyModelsOnBoard, hasKeyword, setModelPos, territoryOf, unitModels } from '../state'
 import { terrainService } from '../terrain'
-import type { EdgeRef, GameState, Model, ModelId, PlayerId, UnitId, Vec2, Vec3 } from '../types'
+import type { EdgeRef, GameState, Model, ModelBase, ModelId, PlayerId, UnitId, Vec2, Vec3 } from '../types'
 import { enemiesInCombat } from './aos-common'
 
 export interface MoveOption { id: string; label: string }
@@ -317,27 +317,92 @@ function facingFor(state: GameState, player: PlayerId): number {
 // F12 placement shapes (PlaceRequest): edgeBand false = anywhere in friendly territory (SBG-RA-1 Endless Legions); minEnemyDistance =
 // every model more than that far (horizontal gap) from every enemy model; anywhere = the whole battlefield, no edge band (SER-ENH
 // Blessed by the Old Ones). No shape = Call for Reinforcements (territory, 6" edge band, not in combat).
-export interface PlaceShape { edgeBand?: boolean; minEnemyDistance?: number; anywhere?: boolean }
+// F16 (TZE C2, DOT-BT-1 Fated Arrival): edgeWithin = no 6" band; instead the finished unit must have a model whose base edge is
+// within this many inches of a battlefield edge (nearBoardEdge).
+export interface PlaceShape { edgeBand?: boolean; minEnemyDistance?: number; anywhere?: boolean; edgeWithin?: number }
 
 const boardPolygon = (state: GameState): Vec2[] => {
   const hw = state.board.w / 2, hh = state.board.h / 2
   return [{ x: -hw, z: -hh }, { x: hw, z: -hh }, { x: hw, z: hh }, { x: -hw, z: hh }]
 }
 
-// a compact blob of the unit's models around `centre`: hex lattice points nearest the centre first, each model on the first
-// point that is wholly in friendly territory, in the 6" edge band, not in combat, clear of everything and legal terrain-wise.
-// null when some model finds no point or the finished unit is out of coherency. `shape` (F12) relaxes / tightens the area.
+// F16 (TZE C2): true when the footprint's base edge is within `n` of some battlefield edge
+export function nearBoardEdge(f: Footprint, board: GameState['board'], n: number): boolean {
+  const hw = board.w / 2, hh = board.h / 2
+  return baseEdgePoints(f).some((p) => hw - Math.abs(p.x) <= n + EPS || hh - Math.abs(p.z) <= n + EPS)
+}
+
+// ---- F16 (reinforcement fix): packing by the real base footprints ----
+// Every model of a formation shares one facing, so the centre distance at which two bases leave a given edge gap depends only on
+// the two bases and the direction in the shared local frame. contactDistance finds it by bisection on horizontalGap (the measure
+// isCoherent uses) and memoises it per (base pair, direction, gap).
+const CONTACT_DIRS = 16
+const PACK_GAP = 0.15
+const contactMemo = new Map<string, number>()
+function contactDistance(a: ModelBase, b: ModelBase, k: number, gap: number): number {
+  const key = `${a.shape},${a.radius},${a.radius2 ?? ''}|${b.shape},${b.radius},${b.radius2 ?? ''}|${k}|${gap}`
+  const hit = contactMemo.get(key)
+  if (hit !== undefined) return hit
+  const ang = (2 * Math.PI * k) / CONTACT_DIRS
+  const A: Footprint = { pos: { x: 0, y: 0, z: 0 }, facing: 0, base: a }
+  const at = (d: number): Footprint => ({ pos: { x: Math.cos(ang) * d, y: 0, z: Math.sin(ang) * d }, facing: 0, base: b })
+  let lo = 0
+  let hi = Math.max(a.radius, a.radius2 ?? 0) + Math.max(b.radius, b.radius2 ?? 0) + gap + 0.2
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2
+    const f = at(mid)
+    const g = basesOverlap(A, f) ? -1 : horizontalGap(A, f)
+    if (g < gap) lo = mid
+    else hi = mid
+  }
+  if (contactMemo.size > 20000) contactMemo.clear()
+  contactMemo.set(key, hi)
+  return hi
+}
+
+// a compact blob of the unit's models around `centre`. Each model goes on a spot that is wholly in friendly territory, in the 6"
+// edge band (or per `shape`), not in combat, clear of everything and legal terrain-wise; null when some model finds no spot or the
+// finished unit is not coherent. Units whose models all stand on the same round base use a hex lattice spaced by that base
+// (points nearest the centre first); any other unit (oval or mixed bases, F16 fix) is packed by its real footprints.
 export function reinforcementFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2, shape: PlaceShape = {}): ModelPlacement[] | null {
   if (models.length === 0) return null
+  const b0 = models[0].base
+  const uniformRound = models.every((m) => isRound(m.base) && m.base.radius === b0.radius)
+  return uniformRound ? latticeFormation(state, player, models, coherencyRange, centre, shape) : packedFormation(state, player, models, coherencyRange, centre, shape)
+}
+
+// the territory / 6" band / enemy / terrain tests and the final check shared by both formation builders
+function formationRules(state: GameState, player: PlayerId, models: Model[], shape: PlaceShape) {
   const territory = shape.anywhere ? boardPolygon(state) : territoryOf(state, player)
-  const band = !shape.anywhere && shape.edgeBand !== false
+  const band = !shape.anywhere && shape.edgeBand !== false && shape.edgeWithin === undefined
   const minGap = shape.minEnemyDistance ?? 0
   const mine = new Set(models.map((m) => m.id))
   const others = boardModelsOf(state, player).filter((m) => !mine.has(m.id))
   const enemies = enemyModelsOnBoard(state, player)
   const facing = facingFor(state, player)
-  const rmax = Math.max(...models.map(reachOf))
-  const step = 2 * rmax + 0.12
+  const legal = (m: Model, cand: Footprint, placed: Footprint[]): boolean => {
+    if (!whollyOnBoard(cand, state.board) || !whollyWithinPolygon(cand, territory) || (band && !inEdgeBand(cand, state.board))) return false
+    if (placed.some((o) => basesOverlap(cand, o)) || others.some((o) => basesOverlap(cand, o)) || enemies.some((o) => basesOverlap(cand, o))) return false
+    if (anyWithinEngagementRange(cand, enemies)) return false
+    if (minGap > 0 && enemies.some((e) => horizontalGap(cand, e) <= minGap + EPS)) return false
+    return terrainService.canEndAt(state, m, cand.pos).ok
+  }
+  const finish = (out: ModelPlacement[], fps: Footprint[], coherencyRange: number | undefined): ModelPlacement[] | null => {
+    if (shape.edgeWithin !== undefined && !fps.some((f) => nearBoardEdge(f, state.board, shape.edgeWithin as number))) return null
+    const check = checkPlacements({
+      unitModels: models, placements: out, constraints: emptyMoveConstraints(1e9, { region: territory, mustEndOutsideEngagement: true, coherency: true }),
+      otherFriendly: others, enemies, board: state.board, coherencyRange,
+    })
+    return check.rejection ? null : out
+  }
+  return { band, facing, legal, finish }
+}
+
+// identical round bases: hex lattice spaced by the base (edge gap 0.12"), points nearest the centre first, each model on the first
+// legal one
+function latticeFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2, shape: PlaceShape): ModelPlacement[] | null {
+  const { facing, legal, finish } = formationRules(state, player, models, shape)
+  const step = 2 * reachOf(models[0]) + 0.12
   const pts: Vec2[] = []
   const span = Math.ceil(Math.sqrt(models.length) + 2)
   for (let j = -span; j <= span; j++) for (let i = -span; i <= span; i++) pts.push({ x: centre.x + (i + (Math.abs(j) % 2) * 0.5) * step, z: centre.z + j * step * 0.88 })
@@ -348,23 +413,74 @@ export function reinforcementFormation(state: GameState, player: PlayerId, model
     let chosen: Footprint | null = null
     for (const p of pts) {
       const cand: Footprint = { pos: { x: r3(p.x), y: 0, z: r3(p.z) }, facing, base: m.base }
-      if (!whollyOnBoard(cand, state.board) || !whollyWithinPolygon(cand, territory) || (band && !inEdgeBand(cand, state.board))) continue
-      if (placed.some((o) => basesOverlap(cand, o)) || others.some((o) => basesOverlap(cand, o)) || enemies.some((o) => basesOverlap(cand, o))) continue
-      if (anyWithinEngagementRange(cand, enemies)) continue
-      if (minGap > 0 && enemies.some((e) => horizontalGap(cand, e) <= minGap + EPS)) continue
-      if (!terrainService.canEndAt(state, m, cand.pos).ok) continue
-      chosen = cand
-      break
+      if (legal(m, cand, placed)) { chosen = cand; break }
     }
     if (!chosen) return null
     placed.push(chosen)
     out.push({ modelId: m.id, pos: chosen.pos, facing })
   }
-  const check = checkPlacements({
-    unitModels: models, placements: out, constraints: emptyMoveConstraints(1e9, { region: territory, mustEndOutsideEngagement: true, coherency: true }),
-    otherFriendly: others, enemies, board: state.board, coherencyRange,
-  })
-  return check.rejection ? null : out
+  return finish(out, placed, coherencyRange)
+}
+
+// F16 (Call for Reinforcements fix): oval or mixed bases. A lattice spaced by the longest radius left such units more than ½"
+// apart, so they never passed coherency and were never offered. Here the biggest base goes on the legal point nearest the centre
+// (rings up to 2" out: the option scan steps centres 1.5" apart), then each other model (biggest first) on the legal spot nearest
+// the centre that sits PACK_GAP from an already placed base (contactDistance, 16 directions in the shared facing frame),
+// preferring spots in coherency with two placed models (7+ models, CORE-1.7).
+function packedFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2, shape: PlaceShape): ModelPlacement[] | null {
+  const { band, facing, legal, finish } = formationRules(state, player, models, shape)
+  const range = coherencyRange ?? 0.5
+  const gap = Math.min(PACK_GAP, range / 3)
+  const cos = Math.cos(facing), sin = Math.sin(facing)
+  const need = models.length >= 7 ? 2 : 1
+  const order = models.map((m, i) => ({ m, i })).sort((a, b) => reachOf(b.m) - reachOf(a.m) || a.i - b.i)
+  const placed: { m: Model; f: Footprint }[] = []
+  const fps = (): Footprint[] => placed.map((p) => p.f)
+  const fpAt = (m: Model, p: Vec2): Footprint => ({ pos: { x: r3(p.x), y: 0, z: r3(p.z) }, facing, base: m.base })
+  const maxR = 2
+  // no point of the search area can be in the 6" edge band: nothing to look for
+  if (band && Math.min(state.board.w / 2 - Math.abs(centre.x), state.board.h / 2 - Math.abs(centre.z)) > BAND + maxR) return null
+  const first = order[0].m
+  let start: Footprint | null = null
+  for (let r = 0; r <= maxR + EPS && !start; r += 0.5) {
+    const n = r === 0 ? 1 : Math.max(6, Math.round((2 * Math.PI * r) / 0.75))
+    for (let k = 0; k < n && !start; k++) {
+      const a = (2 * Math.PI * k) / n
+      const cand = fpAt(first, { x: centre.x + Math.cos(a) * r, z: centre.z + Math.sin(a) * r })
+      if (legal(first, cand, [])) start = cand
+    }
+  }
+  if (!start) return null
+  placed.push({ m: first, f: start })
+  for (const { m } of order.slice(1)) {
+    const cands: { f: Footprint; d: number }[] = []
+    for (const o of placed) {
+      for (let k = 0; k < CONTACT_DIRS; k++) {
+        const d = contactDistance(o.m.base, m.base, k, gap)
+        const a = (2 * Math.PI * k) / CONTACT_DIRS
+        const lx = Math.cos(a) * d, lz = Math.sin(a) * d
+        const p = { x: o.f.pos.x + lx * cos - lz * sin, z: o.f.pos.z + lx * sin + lz * cos }
+        cands.push({ f: fpAt(m, p), d: dist2D(p, centre) })
+      }
+    }
+    cands.sort((a, b) => a.d - b.d)
+    const want = Math.min(need, placed.length)
+    const now = fps()
+    let chosen: Footprint | null = null
+    let fallback: Footprint | null = null
+    for (const c of cands) {
+      if (!legal(m, c.f, now)) continue
+      const links = now.filter((o) => horizontalGap(c.f, o) <= range - 0.05).length
+      if (links >= want) { chosen = c.f; break }
+      if (!fallback && links >= 1) fallback = c.f
+    }
+    const f = chosen ?? fallback
+    if (!f) return null
+    placed.push({ m, f })
+  }
+  const byId = new Map(placed.map((p) => [p.m.id, p.f]))
+  const out: ModelPlacement[] = models.map((m) => ({ modelId: m.id, pos: (byId.get(m.id) as Footprint).pos, facing }))
+  return finish(out, fps(), coherencyRange)
 }
 
 // up to `max` legal, well-separated spots for the replacement: scans the territory on a 1.5" grid (the whole board on a 2" grid
@@ -374,11 +490,18 @@ export function reinforcementOptions(state: GameState, player: PlayerId, models:
   const xs = poly.map((p) => p.x), zs = poly.map((p) => p.z)
   const found: Vec2[] = []
   const stepIn = shape.anywhere ? 2 : 1.5
+  // F16 (edgeWithin): only centres close enough to a battlefield edge for the packed unit to reach it
+  const hw = state.board.w / 2, hh = state.board.h / 2
+  const span = shape.edgeWithin === undefined ? Infinity : shape.edgeWithin + 2 * Math.max(0, ...models.map(reachOf)) * Math.ceil(Math.sqrt(models.length))
   for (let z = Math.min(...zs); z <= Math.max(...zs) + EPS; z += stepIn) {
     for (let x = Math.min(...xs); x <= Math.max(...xs) + EPS; x += stepIn) {
       const centre = { x: r3(x), z: r3(z) }
+      if (Math.min(hw - Math.abs(centre.x), hh - Math.abs(centre.z)) > span) continue
       if (reinforcementFormation(state, player, models, coherencyRange, centre, shape)) found.push(centre)
+      // a yes / no question (max 1: replacementFits, the AI's fits test) needs only one spot
+      if (max === 1 && found.length > 0) break
     }
+    if (max === 1 && found.length > 0) break
   }
   if (found.length === 0) return []
   // spread: take the ones furthest apart along the table's long axis
@@ -392,6 +515,7 @@ export function reinforcementOptions(state: GameState, player: PlayerId, models:
   }
   const pos = (v: Vec2): string => {
     const lo = long === 'x' ? (v.x < -state.board.w / 6 ? 'left' : v.x > state.board.w / 6 ? 'right' : 'centre') : (v.z < -state.board.h / 6 ? 'top' : v.z > state.board.h / 6 ? 'bottom' : 'centre')
+    if (shape.edgeWithin !== undefined) return `${lo} of the territory edge`
     return shape.anywhere || shape.edgeBand === false ? `${lo} of the ${shape.anywhere ? 'battlefield' : 'territory'}` : `${lo} of your edge`
   }
   return picks.map((c) => ({ id: `at:${fmt(c.x)}:${fmt(c.z)}`, label: `Set up at the ${pos(c)} (${c.x.toFixed(0)}, ${c.z.toFixed(0)})`, centre: c }))

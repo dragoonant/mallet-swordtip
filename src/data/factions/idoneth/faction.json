@@ -1,0 +1,17 @@
+{
+  "id": "idoneth",
+  "name": "Idoneth Deepkin",
+  "factionKeyword": "IDONETH DEEPKIN",
+  "armyRule": "idoneth.ability.soulraid-hunt",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#1f5f6b",
+    "secondary": "#14264a",
+    "trim": "#b98a4a",
+    "metal": "#e8efe9",
+    "decal": "#4fe3f0"
+  },
+  "combatPatrols": [
+    "idoneth.army.soulraid-hunt"
+  ]
+}
