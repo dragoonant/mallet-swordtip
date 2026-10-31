@@ -237,14 +237,13 @@ faction code hook in `src/engine/factions/behemat.ts`, exported as `behematHooks
 Palette for the whole army (our own hill-gargant look): ruddy sun-tanned skin with pink cheeks and noses, wild ginger and
 straw-blond hair and beards, patched brown leather and oatmeal sackcloth, frayed rope belts, grey-blue granite boulders with
 moss-green patches, rusty iron rings and buckles as small accents. Shared motif: an original crude handprint daubed in red
-clay on sacks and belts. No GW logos, no copied Sons of Behemat icons. All figures are **true MGSD** chibis (~2.5 heads tall,
-huge head, stubby legs, big hands and feet). Gargants read as giants through chunky toy-like bulk and big boulders, not
+clay on sacks and belts. No GW logos, no copied Sons of Behemat icons. All figures are in the house figure style (docs/FIGURE-STYLE.md). Gargants read as giants through chunky bulk and big boulders, not
 through height: each one fills its 90mm base.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `sob-boulder-basher` | Rock-hurler (Boulder Basher, general) | 1 | 90 round | No | A true MGSD chibi hill giant, 2.5 heads tall with an enormous round head, a bulbous red nose, a bristling ginger beard and one eye squinting as it takes aim, a big round belly, stubby tree-trunk legs, a dented iron pot worn as a crown, one huge hand hefting a mossy granite boulder overhead and a fat wooden club with stones lashed on its belt. |
-| `sob-rock-hurler` | Rock-hurler | 1 (×2) | 90 round | No | A true MGSD chibi hill giant, 2.5 heads tall with a huge bald head, gap-toothed grin and floppy ears, a sackcloth loincloth, stubby legs with big bare feet, a bulging rope-tied sack of rocks on its back and a granite boulder clutched in both oversized hands, ready to throw. |
+| `sob-boulder-basher` | Rock-hurler (Boulder Basher, general) | 1 | 90 round | No | A hill giant with a round head, a bulbous red nose, a bristling ginger beard and one eye squinting as it takes aim, a big round belly, short tree-trunk legs, a dented iron pot worn as a crown, one huge hand hefting a mossy granite boulder overhead and a fat wooden club with stones lashed on its belt. |
+| `sob-rock-hurler` | Rock-hurler | 1 (×2) | 90 round | No | A hill giant with a bald head, gap-toothed grin and floppy ears, a sackcloth loincloth, short legs with big bare feet, a bulging rope-tied sack of rocks on its back and a granite boulder clutched in both oversized hands, ready to throw. |
 
 The two plain Rock-hurlers share one figure. The general gets its own figure so the player can tell which gargant is the
 Hero; the rules give no other visible difference. Wallsmasher Stomp figures (Appendix A) are listed there.
@@ -319,7 +318,7 @@ objective you do not control).
   3" of the model, and each **enemy** unit within 2" of that point suffers D3 mortal damage. Then the model is removed.
   (This needs the `onOwnModelSlain` hook plus a point pick, which is not built for any army yet.)
 
-**Figures (if built).** `sob-bullstomper` (1, general: a true MGSD chibi hill giant with a huge bearded head, a leather
+**Figures (if built).** `sob-bullstomper` (1, general: a hill giant with a bearded head, a leather
 patch over one eye, a heavy tree-trunk club, a bulging loot sack on its belt and a big bare foot raised to stomp);
-`sob-mancrusher` (1 ×2: a true MGSD chibi hill giant with a huge grinning head, a rope-tied sack over its shoulder, a club
+`sob-mancrusher` (1 ×2: a hill giant with a grinning head, a rope-tied sack over its shoulder, a club
 made from a broken wall beam in one hand and a boulder in the other).

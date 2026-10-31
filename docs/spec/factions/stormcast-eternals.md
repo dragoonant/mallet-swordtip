@@ -305,17 +305,17 @@ change outside the faction file.
 Palette for the whole army (our own storm-knight livery): burnished gold plate with deep midnight-blue panels and cloth,
 silver-white trims, pale cyan glowing eye-slits and lightning accents, white feathers. Shared motif: an original
 three-pronged lightning-fork-in-a-ring badge. No GW logos, no copied Stormcast hammer-and-comet icons, sigils or Stormhost
-heraldry. All figures are **true MGSD** chibis (~2.5 heads tall, oversized helmeted head, stubby legs, big hands); the
-Gryph-stalker is a chunky toy-like SD beast.
+heraldry. All figures are in the house figure style (docs/FIGURE-STYLE.md); the
+Gryph-stalker is a chunky beast.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `sce-lord-vigilant` | Lord-Vigilant on Gryph-stalker | 1 | 90×52 oval | Mount (Gryph-stalker) | A true MGSD chibi armoured storm-knight lord, 2.5 heads tall with a huge gold helm with a midnight-blue crest and glowing cyan eye-slit, stubby legs, gripping an oversized double-bladed greataxe, riding a chunky toy-like SD beast that mixes a big-eyed hawk head and a lean four-legged hound body with folded wings, short thick legs and a fluffy feathered tail. |
-| `sce-lord-veritant` | Lord-Veritant | 1 | 40 round | No | A true MGSD chibi storm-knight witch-hunter, 2.5 heads tall with a huge gold helm wrapped by a blue cloth blindfold band, stubby legs, a long dark-blue cloak, a sword in one hand and a tall staff topped with a little burning cyan-flame brazier in the other. |
-| `sce-gryph-crow` | Lord-Veritant's Gryph-crow (token) | 1 | none (token, sits beside the Veritant) | No | A tiny chubby SD crow-griffin, round body with oversized head and big eyes, dark blue-black feathers with a gold beak and a pale cyan glint in its eyes, perched alert with wings half-spread. Hidden when the token is removed. |
-| `sce-prosecutor` | Prosecutors | 1 (×3) | 40 round, flying stand | No | A true MGSD chibi winged storm-knight, 2.5 heads tall with a huge gold helm and glowing cyan visor, stubby dangling legs, big white feathered wings made of light, holding a long crackling javelin overhead ready to throw, hovering on a clear stem. |
-| `sce-liberator` | Liberators (Warhammer) | 1 (×4) | 40 round | No | A true MGSD chibi heavy storm-knight infantryman, 2.5 heads tall with a huge rounded gold helm and blue plume, stubby legs planted wide, a big tower shield with an original lightning-ring badge in one hand and a chunky one-handed warhammer in the other. |
-| `sce-liberator-grandhammer` | Liberators (Grandhammer) | 1 | 40 round | No | The same MGSD chibi storm-knight infantryman without a shield, swinging an oversized two-handed hammer with a glowing cyan head over one shoulder. |
+| `sce-lord-vigilant` | Lord-Vigilant on Gryph-stalker | 1 | 90×52 oval | Mount (Gryph-stalker) | An armoured storm-knight lord with a huge gold helm with a midnight-blue crest and glowing cyan eye-slit, short legs, gripping an oversized double-bladed greataxe, riding a chunky beast that mixes a big-eyed hawk head and a lean four-legged hound body with folded wings, short thick legs and a fluffy feathered tail. |
+| `sce-lord-veritant` | Lord-Veritant | 1 | 40 round | No | A storm-knight witch-hunter with a huge gold helm wrapped by a blue cloth blindfold band, short legs, a long dark-blue cloak, a sword in one hand and a tall staff topped with a little burning cyan-flame brazier in the other. |
+| `sce-gryph-crow` | Lord-Veritant's Gryph-crow (token) | 1 | none (token, sits beside the Veritant) | No | A small chubby crow-griffin, round body with head and big eyes, dark blue-black feathers with a gold beak and a pale cyan glint in its eyes, perched alert with wings half-spread. Hidden when the token is removed. |
+| `sce-prosecutor` | Prosecutors | 1 (×3) | 40 round, flying stand | No | A winged storm-knight with a huge gold helm and glowing cyan visor, short dangling legs, big white feathered wings made of light, holding a long crackling javelin overhead ready to throw, hovering on a clear stem. |
+| `sce-liberator` | Liberators (Warhammer) | 1 (×4) | 40 round | No | A heavy storm-knight infantryman with a huge rounded gold helm and blue plume, short legs planted wide, a big tower shield with an original lightning-ring badge in one hand and a chunky one-handed warhammer in the other. |
+| `sce-liberator-grandhammer` | Liberators (Grandhammer) | 1 | 40 round | No | The same storm-knight infantryman without a shield, swinging an oversized two-handed hammer with a glowing cyan head over one shoulder. |
 
 The Grandhammer model gets its own figure because its weapon differs in the rules (and players need to see whether it is
 still alive). No champion (Prime) or musician variants: the Spearhead gives them no rules.

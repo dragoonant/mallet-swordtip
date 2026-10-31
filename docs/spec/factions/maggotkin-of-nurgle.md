@@ -304,15 +304,14 @@ Palette for the whole army (our own plague-garden livery): pallid olive and sick
 iron, verdigris-green bronze, cracked bone horns, dirty cream and mustard rags, with plum-purple and pink blisters as the
 accent colour. Flies are fat, solid, cartoon-round bugs on short stalks (no see-through wings or haze). Shared motif: an
 original drooping mushroom-cap shape and a small cracked iron bell on straps. No GW logos and no copy of the three-circle
-plague-god sigil or any GW heraldry. All figures are **true MGSD** chibis (~2.5 heads tall, huge head, stubby legs, big hands
-and feet); the Rot Fly mount is a chunky toy-like SD bug.
+plague-god sigil or any GW heraldry. All figures are in the house figure style (docs/FIGURE-STYLE.md); the Rot Fly mount is a chunky bug.
 
 | Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt |
 |---|---|---|---|---|---|
-| `mon-spoilpox-scrivener` | Spoilpox Scrivener | 1 | 40 round | No | A true MGSD chibi daemon bookkeeper, 2.5 heads tall with an enormous round pallid-green head, one bone horn, three small grumpy yellow eyes and a long trunk-like drooling snout, stubby legs under a round split belly, holding a huge unrolling parchment tally scroll and a quill, two solid fat flies orbiting on stalks. |
-| `mon-pusgoyle-blightlord` | Pusgoyle Blightlord | 1 (×2) | 60 round | Yes (Rot Fly) | A chunky toy-like SD giant bloated fly with a fat round abdomen, big glossy red compound eyes, stubby legs, short opaque leathery wings and a curled stinger, ridden by a true MGSD chibi rotting knight with a huge single-horned rusty helm, a round belly, stubby legs, a long rusty scythe and a cracked iron bell hanging from the saddle. |
-| `mon-putrid-blightking` | Putrid Blightkings | 1 (×5) | 40 round | No | A true MGSD chibi bloated plague warrior, 2.5 heads tall with an enormous horned rusty helm showing one glowing eye slit, a round pallid belly with a purple blister, stubby legs, verdigris armour plates and an oversized notched rusty cleaver-axe. |
-| `mon-plaguebearer` | Plaguebearers | 1 (×10) | 32 round | No | A true MGSD chibi one-eyed daemon foot-soldier, 2.5 heads tall with a huge round sickly-green head, a single big yellow eye and a single bent horn, a toothy grin, a little pot belly, stubby legs and a long jagged rusty sword, one solid fat fly perched on its horn. |
+| `mon-spoilpox-scrivener` | Spoilpox Scrivener | 1 | 40 round | No | A daemon bookkeeper with a round pallid-green head, one bone horn, three small grumpy yellow eyes and a long trunk-like drooling snout, short legs under a round split belly, holding a huge unrolling parchment tally scroll and a quill, two solid fat flies orbiting on stalks. |
+| `mon-pusgoyle-blightlord` | Pusgoyle Blightlord | 1 (×2) | 60 round | Yes (Rot Fly) | A chunky giant bloated fly with a fat round abdomen, big glossy red compound eyes, short legs, short opaque leathery wings and a curled stinger, ridden by a rotting knight with a huge single-horned rusty helm, a round belly, short legs, a long rusty scythe and a cracked iron bell hanging from the saddle. |
+| `mon-putrid-blightking` | Putrid Blightkings | 1 (×5) | 40 round | No | A bloated plague warrior with an enormous horned rusty helm showing one glowing eye slit, a round pallid belly with a purple blister, short legs, verdigris armour plates and an oversized notched rusty cleaver-axe. |
+| `mon-plaguebearer` | Plaguebearers | 1 (×10) | 32 round | No | An one-eyed daemon foot-soldier with a round sickly-green head, a single big yellow eye and a single bent horn, a toothy grin, a little pot belly, short legs and a long jagged rusty sword, one solid fat fly perched on its horn. |
 
 The two Blightlords are the same figure (identical rules). Blightkings and Plaguebearers use one figure each: the Spearhead
 gives no champion, standard or musician rules, so no variants. Bubonic Cell figures (Appendix A) are listed there.
@@ -394,9 +393,9 @@ Wither). Endless Swarm (Nurglings, end of any turn: Heal (D3) this unit). Attent
 charged: pick an enemy unit in combat with it and roll a D3; on 2+ that unit suffers mortal damage equal to the roll).
 Bilewood Stilts (Rotmire Creed, passive: no mortal damage for Retreating).
 
-**Figures (if built).** `mon-rotbringer-sorcerer` (1, 32 round: MGSD chibi hooded plague mage with a huge cowled head, a
+**Figures (if built).** `mon-rotbringer-sorcerer` (1, 32 round: hooded plague mage with a cowled head, a
 crooked rotwood staff sprouting mushrooms and a little cracked bell); `mon-nurglings` (1 ×6, 40 round: a chunky pile of three
-or four tiny grinning green mites tumbling over each other, each one a ball-shaped head with stubby limbs); `mon-beast-of-nurgle`
-(1, 60 round: a chunky toy-like giant happy slug with a wide drooling grin, stubby arms and a crown of solid pink tentacles);
-`mon-rotmire-creed` (1 ×10, 25 round: MGSD chibi swamp cultist on short wooden stilts with a huge hooded head, mossy rags and a
+or four tiny grinning green mites tumbling over each other, each one a ball-shaped head with short limbs); `mon-beast-of-nurgle`
+(1, 60 round: a chunky giant happy slug with a wide drooling grin, short arms and a crown of solid pink tentacles);
+`mon-rotmire-creed` (1 ×10, 25 round: swamp cultist on short wooden stilts with a hooded head, mossy rags and a
 long blowpipe).

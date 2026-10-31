@@ -313,15 +313,14 @@ None of C1–C5 touches `types.ts`, `actions.ts`, `events.ts`, `rng.ts`, `decide
 Palette for the whole army (our own raider livery): ruddy tan ogor skin with pink scars, blackened and rust-streaked
 scavenged iron plates, dull crimson and mud-brown rags, bone-white tusks, teeth and trophy bones, warm brass rivets and
 buckles as the accent. Shared motif: an original crossed fork-and-cleaver stamped into each round iron belly-plate. No GW
-logos, no copied mawtribe or Gutbuster icons. All figures are **true MGSD** chibis (~2.5 heads tall, huge head, stubby legs,
-big hands and feet); the Maulbeast is a chunky toy-like SD beast. Effects are solid, never see-through.
+logos, no copied mawtribe or Gutbuster icons. All figures are in the house figure style (docs/FIGURE-STYLE.md); the Maulbeast is a chunky beast. Effects are solid, never see-through.
 
 | Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt |
 |---|---|---|---|---|---|
-| `ogm-tyrant` | Tyrant | 1 | 50 round | No | A true MGSD chibi ogre warlord, 2.5 heads tall with a huge bald head, wide grinning jaw full of square teeth, a tall horned iron crest behind his head, a round iron belly-plate stamped with a crossed fork and cleaver, stubby legs, one giant meat-cleaver in each fist. |
-| `ogm-glutton` | Gluttons | 1 (×5) | 40 round | No | A true MGSD chibi ogre brawler, 2.5 heads tall with an enormous round head, a dented iron cap and a hungry open mouth, a big dented belly-plate over a bare gut, crimson loincloth, stubby legs, a spiked club in one hand and a chipped cleaver in the other. |
-| `ogm-irongut` | Ironguts | 1 (×3) | 40 round | No | A true MGSD chibi armoured ogre veteran, 2.5 heads tall with a huge scowling head under a heavy riveted iron helm with tusks, thick blackened shoulder plates and belly-plate, stubby legs, hefting an oversized two-handed iron glaive over one shoulder. |
-| `ogm-maulbeast-cavalry` | Maulbeast Cavalry | 1 (×2) | 90×52 oval | Yes (Maulbeast) | A chunky toy-like SD mount: a stubby barrel-bodied tusked beast with a huge fanged maw, curling horns and a shaggy brown mane, iron plates strapped to its brow, carrying a true MGSD chibi ogre rider (2.5 heads, huge head, iron half-helm) waving a hooked cleaver. |
+| `ogm-tyrant` | Tyrant | 1 | 50 round | No | An ogre warlord with a bald head, wide grinning jaw full of square teeth, a tall horned iron crest behind his head, a round iron belly-plate stamped with a crossed fork and cleaver, short legs, one giant meat-cleaver in each fist. |
+| `ogm-glutton` | Gluttons | 1 (×5) | 40 round | No | An ogre brawler with a round head, a dented iron cap and a hungry open mouth, a big dented belly-plate over a bare gut, crimson loincloth, short legs, a spiked club in one hand and a chipped cleaver in the other. |
+| `ogm-irongut` | Ironguts | 1 (×3) | 40 round | No | An armoured ogre veteran with a scowling head under a heavy riveted iron helm with tusks, thick blackened shoulder plates and belly-plate, short legs, hefting an oversized two-handed iron glaive over one shoulder. |
+| `ogm-maulbeast-cavalry` | Maulbeast Cavalry | 1 (×2) | 90×52 oval | Yes (Maulbeast) | A chunky mount: a short barrel-bodied tusked beast with a huge fanged maw, curling horns and a shaggy brown mane, iron plates strapped to its brow, carrying an ogre rider (iron half-helm) waving a hooked cleaver. |
 
 Gluttons and Ironguts use one figure per unit: the Spearhead gives no champion, standard or musician rules and every model
 carries the same weapon profile, so no variants (the two sculpts on the card differ only in which crude weapon is held). Both
@@ -411,10 +410,10 @@ Conduits of Gut Magic (Gutseers, once per turn for the army, any hero phase: the
 visibility from this unit). Bestial Hunger (Gorger Mawpack, passive: in your charge phase, if not in combat and any enemy unit
 is within 12", it must declare a Charge, and if the roll lets it end within ½" of a visible enemy unit it must).
 
-**Figures (if built).** `ogm-butcher` (1, 50 round: MGSD chibi pot-bellied ogre shaman with a huge grinning head, a
-blood-stained apron, a cleaver and a big iron cauldron on a chain, solid red broth); `ogm-cleaver` (1 ×3, 40 round: MGSD chibi
-pale ogre zealot with a stitched-mouth belly-plate, a hook and a cleaver); `ogm-gutseer` (1 ×3, 40 round: MGSD chibi hooded
-ogre seer clutching a cleaver and a lumpy offering); `ogm-gorger` (1 ×5, 50 round: MGSD chibi gaunt grey ogre with long
+**Figures (if built).** `ogm-butcher` (1, 50 round: pot-bellied ogre shaman with a grinning head, a
+blood-stained apron, a cleaver and a big iron cauldron on a chain, solid red broth); `ogm-cleaver` (1 ×3, 40 round:
+pale ogre zealot with a stitched-mouth belly-plate, a hook and a cleaver); `ogm-gutseer` (1 ×3, 40 round: hooded
+ogre seer clutching a cleaver and a lumpy offering); `ogm-gorger` (1 ×5, 50 round: gaunt grey ogre with long
 clawed arms, wild hair and a starving open maw).
 
 ---

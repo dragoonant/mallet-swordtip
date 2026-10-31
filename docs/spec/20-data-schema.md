@@ -160,7 +160,7 @@ One entry per profile. Multi-profile weapons share `profileGroup`; a model picks
 | `spearhead` | boolean | **AoS** the datasheet is a Spearhead warscroll; a Spearhead army may only use these (SPH-13.7) |
 | `coherencyRange` | number ≥ 0.5 | **AoS** CORE-1.6: a longer coherency range than ½" |
 | `wizard`, `priest` | int | **AoS** power level (P2, none shipped) |
-| `figure` | `{archetype, kit, parts?: Record<Slot, Id>}` | see 30-figures; composition entries may override. Spearhead entries use the placeholder kits `generic-infantry/heavy/monster/vehicle` and the ork kits until MGSD figures exist |
+| `figure` | `{archetype, kit, parts?: Record<Slot, Id>}` | see 30-figures; composition entries may override. Spearhead entries use the placeholder kits `generic-infantry/heavy/monster/vehicle` and the ork kits until the house-style figures exist |
 
 AoS keywords are the printed ones (`HERO`, `INFANTRY`, `CAVALRY`, `WAR MACHINE`, `BRUTE`, `REINFORCEMENTS`, `FLY`); faction keywords are display-only. Abilities that name a unit match on datasheet id (`params.datasheet`), never on a keyword.
 

@@ -1,4 +1,4 @@
-// Renders the app icon (an SD-style mallet over a dark disc) to public/icons/*.png with Playwright's chromium.
+// Renders the app icon (a stylised mallet over a dark disc) to public/icons/*.png with Playwright's chromium.
 // Usage: node tools/gen-icons.mjs
 import { mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'

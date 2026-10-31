@@ -269,15 +269,15 @@ Ledger: `mission.custom.fecDeeds: Record<UnitId, number>` (0..6 per Hero unit). 
 Palette for the whole army (our own "mad court" livery): sickly grey-green and corpse-pale skin, dried-blood crimson and rusty
 red rags worn as "royal" tabards, tarnished gold paper crowns and goblet trim, bone-white bone ornaments, bat-wing purples on the
 flying beasts. Shared motif: an original crooked three-point crown stitched on cloth. No GW logos, no copied Flesh-eater Courts
-heraldry. All figures are **true MGSD** chibis (~2.5 heads tall, huge head, stubby legs, big hands and feet); the mounts and the
-Varghulf are chunky toy-like SD beasts. Gore is kept cartoon-light (solid red splashes, no exposed anatomy).
+heraldry. All figures are in the house figure style (docs/FIGURE-STYLE.md); the mounts and the
+Varghulf are chunky beasts. Gore is kept cartoon-light (solid red splashes, no exposed anatomy).
 
 | Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt |
 |---|---|---|---|---|---|
-| `fec-abhorrant-archregent` | Abhorrant Archregent | 1 | 40 round | No | A true MGSD chibi vampire king, 2.5 heads tall with an enormous pale bald head, pointed ears, big red eyes and a fanged grin, a lopsided gold paper crown, a tattered crimson cape over a bony grey body with stubby clawed legs, one long-taloned hand raised in a dramatic royal gesture. |
-| `fec-cryptguard` | Cryptguard | 1 (×10) | 25 round | No | A true MGSD chibi ghoul guard, 2.5 heads tall with a huge grey-green head, wide hungry eyes and a drooling toothy mouth, a dented helmet too big for it, a rusty breastplate and crimson rag tabard, stubby legs, holding a notched old halberd proudly like a knight. |
-| `fec-morbheg-knight` | Morbheg Knights | 1 (×3) | 75×42 oval | Yes (Nightshrieker) | A chunky toy-like SD giant bat-beast with huge ears, a squashed snout, big leathery purple wings folded up and powerful frog-like hind legs crouched to leap, ridden by a true MGSD chibi ghoul knight with a huge head, a crooked crown-helm and a long bone-tipped lance. |
-| `fec-varghulf-courtier` | Varghulf Courtier | 1 | 90×52 oval | No (monster-sized single model) | A chunky toy-like SD hunched vampire beast, round and top-heavy with a huge bat-eared head, giant fangs and glowing red eyes, oversized clawed forearms knuckling the ground, short stubby hind legs, ragged purple bat wings and a scrap of crimson cloak with a tiny gold crown stuck on one ear. |
+| `fec-abhorrant-archregent` | Abhorrant Archregent | 1 | 40 round | No | A vampire king with a pale bald head, pointed ears, big red eyes and a fanged grin, a lopsided gold paper crown, a tattered crimson cape over a bony grey body with short clawed legs, one long-taloned hand raised in a dramatic royal gesture. |
+| `fec-cryptguard` | Cryptguard | 1 (×10) | 25 round | No | A ghoul guard with a grey-green head, wide hungry eyes and a drooling toothy mouth, a dented helmet too big for it, a rusty breastplate and crimson rag tabard, short legs, holding a notched old halberd proudly like a knight. |
+| `fec-morbheg-knight` | Morbheg Knights | 1 (×3) | 75×42 oval | Yes (Nightshrieker) | A chunky giant bat-beast with huge ears, a squashed snout, big leathery purple wings folded up and powerful frog-like hind legs crouched to leap, ridden by a ghoul knight with a head, a crooked crown-helm and a long bone-tipped lance. |
+| `fec-varghulf-courtier` | Varghulf Courtier | 1 | 90×52 oval | No (monster-sized single model) | A chunky hunched vampire beast, round and top-heavy with a bat-eared head, giant fangs and glowing red eyes, oversized clawed forearms knuckling the ground, short short hind legs, ragged purple bat wings and a scrap of crimson cloak with a tiny gold crown stuck on one ear. |
 
 The Cryptguard use one figure for all 10 models: the Spearhead gives no champion, standard or musician rules. The three Knights
 are identical in the rules. Charnel Watch figures (Appendix A) are listed there.
@@ -349,8 +349,8 @@ charged this turn; D6 per model in it, each 5+ = 1 mortal damage). Unholy Chorus
 visible enemy unit within 10"; for the rest of the turn subtract from its control score the damage points this unit's shooting
 allocated to it this phase).
 
-**Figures (if built).** `fec-abhorrant-gorewarden` (1, 40 round: MGSD chibi winged vampire with a huge head, big ring of keys and
-a crown, bat wings); `fec-royal-beastflayer` (ghoul hunters on 25/28.5 round), `fec-royal-flaymaster` (32 round, MGSD vampire
-huntsman with a hunting horn), `fec-offal-hound` (40 round, chunky SD mutant ghoul-hound); `fec-crypt-horror` (1 ×3, 50 round:
-chunky MGSD swollen ghoul brute with a femur club); `fec-crypt-flayer` (1 ×3, 50 round: chunky MGSD ghoul with leathery bat wings
+**Figures (if built).** `fec-abhorrant-gorewarden` (1, 40 round: winged vampire with a head, big ring of keys and
+a crown, bat wings); `fec-royal-beastflayer` (ghoul hunters on 25/28.5 round), `fec-royal-flaymaster` (32 round, vampire
+huntsman with a hunting horn), `fec-offal-hound` (40 round, chunky mutant ghoul-hound); `fec-crypt-horror` (1 ×3, 50 round:
+chunky swollen ghoul brute with a femur club); `fec-crypt-flayer` (1 ×3, 50 round: chunky ghoul with leathery bat wings
 and an open screaming mouth, solid purple sound rings).

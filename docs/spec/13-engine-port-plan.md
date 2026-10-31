@@ -480,7 +480,7 @@ all geometry helpers, `OBJECTIVE_MARKER_RADIUS`, `OBJECTIVE_RANGE`, `withinObjec
 | AI (compile + bot) | `src/ai/utility.ts`, `src/ai/expected.ts`, `src/ai/stratagems.ts` | drop `judgement`; expected damage from `wound`/`rend`/`ward`; `stratagems.ts` → always pass. Hotseat does not need the bot to be good |
 
 Figures: data uses existing 42k kits as placeholders (cannon → artillery body, cavalry → nearest mounted/monster kit,
-infantry → biped kits). MGSD figures are F6.
+infantry → biped kits). Figures in the house figure style (docs/FIGURE-STYLE.md) are F6.
 
 ## 5. Work packages (Sonnet implementers, lean mode)
 

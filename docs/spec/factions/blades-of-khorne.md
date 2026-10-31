@@ -302,18 +302,17 @@ All four are built and recorded in `docs/spec/13-engine-port-plan.md` §3.12 (F1
 Palette for the whole army (our own blood-hunt livery): deep crimson and raw-meat red hides, blackened iron and dark
 brass armour and collars, bone-white horns and teeth, dark leather straps, ember-orange eyes. Shared motif: an original
 three-fang notch mark (three short downward triangles side by side) stamped on collars and plates. No GW logos, no copy of
-the Khorne skull rune or any Khorne iconography. All figures are **true MGSD** chibis (~2.5 heads tall, huge head, stubby
-legs, big paws/hands); the beasts are chunky toy-like SD quadrupeds with oversized heads. Effects (drool, blood spatter)
+the Khorne skull rune or any Khorne iconography. All figures are in the house figure style (docs/FIGURE-STYLE.md); the beasts are chunky quadrupeds with oversized heads. Effects (drool, blood spatter)
 are solid sculpted shapes, never see-through.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `bok-karanak` | Karanak | 1 | 75×42 oval | No (a beast hero, no rider) | A chunky toy-like SD three-headed daemon hound, its three oversized round heads (wide fanged grins, ember-orange eyes) taking up half its body, stubby thick legs with big clawed paws, crimson hide with dark-brass collar frills and spiky black-iron ridge plates down its back, one solid red drool blob hanging from the middle jaw. |
-| `bok-flesh-hound` | Flesh Hounds | 1 (×10) | 60×35 oval | No | A chunky toy-like SD daemon hound with a single huge head and big toothy grin, ember eyes, stubby legs and fat paws, crimson skin, a wide flared dark-brass collar with the three-fang notch, short black spines along its back. |
-| `bok-claws-packlord` | Claws of Karanak (Packlord) | 1 | 40 round | No | A true MGSD chibi barbarian hunt-leader, 2.5 heads tall with an enormous head wearing a hound-skull mask and a black fur mantle, stubby legs, dark-brass shoulder guard, a hooked axe in one big hand and a short chain flail in the other. |
-| `bok-claws-hound-of-wrath` | Claws of Karanak (Hound of Wrath) | 1 | 60×35 oval | No | A chunky toy-like SD mortal war-hound bred by the cultists, oversized scarred head with a spiked iron muzzle-cage, stubby legs, red-brown hide with leather harness straps and a broken chain leash, distinct from the daemon hounds by its plain fur and iron (not brass) collar. |
-| `bok-claws-brutaliser` | Claws of Karanak (Brutalisers) | 1 (×2) | 32 round | No | A true MGSD chibi hulking cultist bruiser, 2.5 heads tall with a huge shaved head, a dark-brass jaw guard and red war paint, stubby legs, bare arms with leather wraps, dragging a heavy spiked iron cleaver bigger than its body. |
-| `bok-claws-blood-whelp` | Claws of Karanak (Blood Whelps) | 1 (×4) | 28.5 round | No | A true MGSD chibi wild young cultist, 2.5 heads tall with an enormous head of spiky red-dyed hair and a feral fanged grin, stubby legs in ragged crimson trousers, a short notched blade in one hand and a length of hooked chain in the other. |
+| `bok-karanak` | Karanak | 1 | 75×42 oval | No (a beast hero, no rider) | A chunky three-headed daemon hound, its three oversized round heads (wide fanged grins, ember-orange eyes) taking up half its body, short thick legs with big clawed paws, crimson hide with dark-brass collar frills and spiky black-iron ridge plates down its back, one solid red drool blob hanging from the middle jaw. |
+| `bok-flesh-hound` | Flesh Hounds | 1 (×10) | 60×35 oval | No | A chunky daemon hound with a single head and big toothy grin, ember eyes, short legs and fat paws, crimson skin, a wide flared dark-brass collar with the three-fang notch, short black spines along its back. |
+| `bok-claws-packlord` | Claws of Karanak (Packlord) | 1 | 40 round | No | A barbarian hunt-leader with a head wearing a hound-skull mask and a black fur mantle, short legs, dark-brass shoulder guard, a hooked axe in one big hand and a short chain flail in the other. |
+| `bok-claws-hound-of-wrath` | Claws of Karanak (Hound of Wrath) | 1 | 60×35 oval | No | A chunky mortal war-hound bred by the cultists, scarred head with a spiked iron muzzle-cage, short legs, red-brown hide with leather harness straps and a broken chain leash, distinct from the daemon hounds by its plain fur and iron (not brass) collar. |
+| `bok-claws-brutaliser` | Claws of Karanak (Brutalisers) | 1 (×2) | 32 round | No | A hulking cultist bruiser with a shaved head, a dark-brass jaw guard and red war paint, short legs, bare arms with leather wraps, dragging a heavy spiked iron cleaver bigger than its body. |
+| `bok-claws-blood-whelp` | Claws of Karanak (Blood Whelps) | 1 (×4) | 28.5 round | No | A wild young cultist with a head of spiky red-dyed hair and a feral fanged grin, short legs in ragged crimson trousers, a short notched blade in one hand and a length of hooked chain in the other. |
 
 Karanak and the Flesh Hounds are the army's signature figures and must read as daemons at a glance (crimson skin, brass
 collars). The four Claws variants are distinct sculpts for looks only; the rules treat all eight models the same, so the

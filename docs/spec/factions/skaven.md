@@ -288,17 +288,16 @@ change `src/data/types.ts` and need a note in `docs/spec/13-engine-port-plan.md`
 Palette for the whole army (our own under-city livery): grubby brown and grey fur, pink tails and noses, rusty iron and
 tarnished bronze, frayed dirty-green and bone-white rags, glowing sickly-green "warp" crystals and sparks as the accent
 colour. Shared motif: an original three-scratch claw mark painted on cloth and plates. No GW logos, no copied Skaven
-clan icons or the horned-rat sigil. All figures are **true MGSD** chibis (~2.5 heads tall, huge head, stubby legs, big
-hands and feet); the Cannon is a chunky toy-like SD war machine.
+clan icons or the horned-rat sigil. All figures are in the house figure style (docs/FIGURE-STYLE.md); the Cannon is a chunky war machine.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `skv-grey-seer` | Grey Seer | 1 | 32 round | No | A true MGSD chibi rat-sorcerer, 2.5 heads tall with an enormous pale-white rat head, big curling ram horns, glowing green eyes and a sly grin, stubby legs under a tattered grey robe, holding a crooked staff topped with a glowing green crystal and a tiny swinging bell. |
-| `skv-clanrat` | Clanrats | 1 (×20) | 25 round | No | A true MGSD chibi ratman foot-soldier, 2.5 heads tall with a huge brown rat head, buck teeth and twitchy whiskers, a dented rusty helmet, stubby legs, a long pink tail, a patched round wooden shield and a notched rusty short sword. |
-| `skv-stormfiend-gauntlets` | Stormfiends (Shock Gauntlets) | 1 | 60 round | No | A chunky MGSD chibi hulking rat-brute, 2.5 heads tall with a giant rat head, a tiny shrivelled rat rider wired to its back, stubby legs, bronze armour plates and two oversized bronze fists crackling with green lightning coils. |
-| `skv-stormfiend-windlaunchers` | Stormfiends (Windlaunchers) | 1 | 60 round | No | The same chunky MGSD rat-brute with a little wired rat rider, carrying twin stubby mortar tubes on its forearms loaded with glowing green glass gas-globes, a heavy iron club-weight on its tail. |
-| `skv-stormfiend-ratling` | Stormfiends (Ratling Cannons) | 1 | 60 round | No | The same chunky MGSD rat-brute with a little wired rat rider, both arms replaced by oversized spinning multi-barrel bronze guns with ammo drums and green muzzle glow. |
-| `skv-warp-lightning-cannon` | Warp Lightning Cannon | 1 | 120×92 oval | War machine | A chunky toy-like SD war machine: a stubby wooden-and-iron cart on big wobbly wheels carrying a fat bronze cannon with a cracked glowing green crystal in a cage at its breech and copper coils sparking green lightning, two tiny MGSD chibi rat crew (one cranking, one cowering) riding along. |
+| `skv-grey-seer` | Grey Seer | 1 | 32 round | No | A rat-sorcerer with a pale-white rat head, big curling ram horns, glowing green eyes and a sly grin, short legs under a tattered grey robe, holding a crooked staff topped with a glowing green crystal and a tiny swinging bell. |
+| `skv-clanrat` | Clanrats | 1 (×20) | 25 round | No | A ratman foot-soldier with a brown rat head, buck teeth and twitchy whiskers, a dented rusty helmet, short legs, a long pink tail, a patched round wooden shield and a notched rusty short sword. |
+| `skv-stormfiend-gauntlets` | Stormfiends (Shock Gauntlets) | 1 | 60 round | No | A chunky hulking rat-brute with a giant rat head, a tiny shrivelled rat rider wired to its back, short legs, bronze armour plates and two oversized bronze fists crackling with green lightning coils. |
+| `skv-stormfiend-windlaunchers` | Stormfiends (Windlaunchers) | 1 | 60 round | No | The same chunky rat-brute with a little wired rat rider, carrying twin short mortar tubes on its forearms loaded with glowing green glass gas-globes, a heavy iron club-weight on its tail. |
+| `skv-stormfiend-ratling` | Stormfiends (Ratling Cannons) | 1 | 60 round | No | The same chunky rat-brute with a little wired rat rider, both arms replaced by oversized spinning multi-barrel bronze guns with ammo drums and green muzzle glow. |
+| `skv-warp-lightning-cannon` | Warp Lightning Cannon | 1 | 120×92 oval | War machine | A chunky war machine: a short wooden-and-iron cart on big wobbly wheels carrying a fat bronze cannon with a cracked glowing green crystal in a cage at its breech and copper coils sparking green lightning, two small rat crew (one cranking, one cowering) riding along. |
 
 Each Stormfiend gets its own figure because its weapons differ in the rules. Clanrats use one figure for all 20 models: the
 Spearhead gives no champion, standard or musician rules, so no variants. Gnawfeast figures (Appendix A) are listed there.
@@ -375,8 +374,8 @@ Reinforcements; the replacement may instead be set up wholly within 13" of the g
 per battle, any combat phase: the unit suffers D3 mortal damage, then its melee weapons get +1 Attacks for the phase).
 Grey Seer and Clanrats as §5.1 / §5.4.
 
-**Figures (if built).** `skv-clawlord-gnawbeast` (1, 75×42 oval, mount: a chunky toy-like long-legged hairless rat-beast
-with chisel teeth carrying a MGSD chibi armoured rat-warlord with a halberd and a stubby multi-barrel pistol);
-`skv-warlock-engineer` (1, 32 round: MGSD chibi rat tinkerer with brass goggles, a backpack generator with green sparks and
-a long musket); `skv-rat-ogor` (1 ×2, 50 round: chunky MGSD chibi rat-brute with blade-arms and stitched patches);
-`skv-rat-ogor-warpfire` (1, 50 round: the same brute with a stubby flame cannon grafted to one arm, green fire at the nozzle).
+**Figures (if built).** `skv-clawlord-gnawbeast` (1, 75×42 oval, mount: a chunky long-legged hairless rat-beast
+with chisel teeth carrying an armoured rat-warlord with a halberd and a short multi-barrel pistol);
+`skv-warlock-engineer` (1, 32 round: rat tinkerer with brass goggles, a backpack generator with green sparks and
+a long musket); `skv-rat-ogor` (1 ×2, 50 round: chunky rat-brute with blade-arms and stitched patches);
+`skv-rat-ogor-warpfire` (1, 50 round: the same brute with a short flame cannon grafted to one arm, green fire at the nozzle).

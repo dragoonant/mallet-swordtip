@@ -1,4 +1,7 @@
-# Age of Sigmar Spearhead figures (MGSD, 2026-10-29)
+# Age of Sigmar Spearhead figures (2026-10-29)
+
+> Note: the concepts made up to 2026-10-31 used the old banned style labels and are due to be regenerated in the new
+> house figure style (docs/FIGURE-STYLE.md).
 
 Concept art made in Gemini, one chat per army: a clean base figure first, then each other unit made by editing
 that image so the style and proportions stay consistent. Each chosen concept went through the Hunyuan3D pipeline
@@ -113,6 +116,19 @@ GLB contract (same as the 40k figures): y up, 1 unit = 1 inch, origin at the bot
 | `idk-morrsarr-guard` | Akhelian Morrsarr Guard | 60×35 oval, flying stem | 2.0 | GLB done, checked (yaw 90; eel and lance overhang the base) |
 | `idk-akhelian-allopex` | Akhelian Allopex | 90×52 oval, flying stem | 2.4 | GLB done, checked |
 | `idk-namarti-thrall` | Namarti Thralls | 32 | 1.5 | GLB done, checked (glaive overhangs the base) |
+| `hos-vexmor` | Thricefold Discord (Vexmor) | 40 | 1.7 | GLB done, checked (`--nocut`, gown reaches the base) |
+| `hos-vashtiss` | Thricefold Discord (Vashtiss the Coiled) | 28.5 | 1.4 | GLB done, checked |
+| `hos-lascivyr` | Thricefold Discord (Lascivyr) | 28.5 | 1.4 | GLB done, checked (sword overhangs the base) |
+| `hos-daemonette` | Daemonettes | 25 | 1.15 | GLB done, checked |
+| `hos-fiend` | Fiends | 75×42 oval | 1.5 | GLB done, checked (yaw 90) |
+| `hos-seeker` | Seekers | 60×35 oval | 1.7 | GLB done, checked |
+| `hoh-war-despot` | War Despot | 32 | 1.5 | GLB done, checked (glaive overhangs the base) |
+| `hoh-infernal-cohort` | Infernal Cohort with Hashutite Spears | 28.5 | 1.35 | GLB done, checked |
+| `hoh-gong-carrier` | Gong Carrier (token) | 28.5 | 1.3 | GLB done, checked |
+| `hoh-dominator-engine` | Dominator Engine with Immolation Cannons | 80 | 2.4 | GLB done, checked (cannon flames overhang the base) |
+| `hoh-tormentor-bombard` | Tormentor Bombard | 100 | 1.8 | GLB done, checked (yaw 90, `fit` 98, mortar and two crew) |
+| `sob-boulder-basher` | Rock-hurler (Boulder Basher, general) | 90 | 4.0 | GLB done, checked (raised boulder overhangs the base) |
+| `sob-rock-hurler` | Rock-hurler | 90 | 3.6 | GLB done, checked |
 The GLBs are not wired into the game yet. The client's figure slug list needs these slugs before they show up.
 
 ## Designs
@@ -152,7 +168,7 @@ colours or quartering only.
   carries a cleaver and a crooked banner pole topped by a fuming swamp-beast skull over a brown rag.
   `kru-killaboss-gnashtoof` is a warlord in a tall spiked crown-helm with a jagged spear and bone cape, riding a
   chunky purple-grey swamp hound with a huge fanged head. `kru-killbow` (made later, in the same Gemini chat) is a squat giant crossbow on fat wooden wheels with thick
-  rust-iron bow arms, a barbed harpoon bolt, bone trophies and a teal rag, crewed by two MGSD orruks, one at the
+  rust-iron bow arms, a barbed harpoon bolt, bone trophies and a teal rag, crewed by two orruks, one at the
   winch and one pointing. `kru-gutrippa-boss` was not made.
 - Gloomspite Gitz: bright green goblins with huge black-hooded heads, rust-red saddle cloths and rags, chunky
   big-headed grey-white wolves, dull iron and pale-yellow glowing shards. `glo-wolfgit-bow` (the base figure) draws a
@@ -161,8 +177,8 @@ colours or quartering only.
   carries two goblins with long hooked lances, one with a red pennant and one with a glowing shard tip.
   `glo-sunsteala-wheela` is a wicker cart with spiked wheels, a glowing lamp pole and red rag banners, pulled by two
   wolves and crewed by an archer and a spearman. No moon or GW faction icons.
-- Rejects for these two armies: `glo-wolfgit-bow-c1` (the goblin was true MGSD but the wolf had near-realistic
-  proportions; an edit gave it a bigger round head and stubbier legs).
+- Rejects for these two armies: `glo-wolfgit-bow-c1` (the goblin matched the style but the wolf had near-realistic
+  proportions; an edit gave it a bigger round head and shorter legs).
 - Lumineth Realm-lords: ivory-white and pale-gold armour, sky-blue and teal cloth, lilac-pink ribbons and plumes,
   silver blades and small pale-cyan crystals, with elf faces under the helms. The shields carry our three-curl wind
   swirl. `lrl-warden` (the base figure) wears a tall teal-crested ivory helm and holds a long silver pike and a kite
@@ -201,7 +217,7 @@ colours or quartering only.
   ram horns, green eyes, a tattered grey robe and a crooked staff with a green crystal and a little bell.
   `skv-stormfiend-gauntlets` is a hulking big-headed rat-brute in rusty plates with a tiny wired rider on its head and
   two coil-wrapped fists; `-windlaunchers` swaps in twin forearm mortar tubes with green globes and a tail weight, and
-  `-ratling` two six-barrel rotary guns with ammo drums. `skv-warp-lightning-cannon` is a stubby wooden cart with a fat
+  `-ratling` two six-barrel rotary guns with ammo drums. `skv-warp-lightning-cannon` is a short wooden cart with a fat
   coil-wrapped barrel and a caged green crystal, crewed by two clanrats (one cranking, one covering its ears). No
   horned-rat sigil or clan icons.
 - Rejects for these two armies: `sce-prosecutor-c1` (the javelin was a loose translucent lightning bolt and the wings
@@ -226,7 +242,7 @@ colours or quartering only.
   up and couches a gold-tipped lance on a stocky armoured skeleton horse with a fanged skull face.
   `sbg-vargheist` is a chalk-white bat-beast with a crimson mane, a fanged grin, long talons and wide solid
   brown-and-crimson wings. The optional skeleton and knight leader looks were not made. No dynasty heraldry.
-- Rejects for these two armies: `sbg-skeleton-c1` (true MGSD, but it stood on a tall pedestal cut off by the bottom
+- Rejects for these two armies: `sbg-skeleton-c1` (right style, but it stood on a tall pedestal cut off by the bottom
   edge; an edit gave it a thin base with room below).
 
 - Blades of Khorne (Fangs of the Blood God): crimson cloth and hides, blackened iron, dark brass, black fur and
@@ -252,7 +268,7 @@ colours or quartering only.
 - Rejects for these two armies: `bok-claws-brutaliser-c1` (the red stripe over the eye and across the scalp read as a
   copy of a famous video-game character's tattoo; an edit moved the paint to the cheeks and added a topknot),
   `bok-claws-hound-of-wrath-c1` and `-c2` (a near-realistic bulldog with normal legs and a modest head; an edit
-  changed nothing, so a fresh SD prompt was used) and `bok-karanak-c1` (only two heads showed in the side view).
+  changed nothing, so a fresh prompt was used) and `bok-karanak-c1` (only two heads showed in the side view).
 
 - Nighthaunt (Slasher Host): solid, opaque pale frost-teal ghost bodies that fade to sea-green at the tail, charcoal and
   dusty-grey tattered hoods and robes, rust-brown iron, bone-white cartoon skulls and small sickly-green eye-points. Every
@@ -261,15 +277,15 @@ colours or quartering only.
   chipped short blade. `nh-grimghast-reaper` wears a blood-red blindfold under a black hood and holds a big rusty
   scythe. `nh-knight-of-shrouds` wears a tall crown of rusty spikes, a rusty breastplate and a black cloak, and holds a
   rust-red longsword point-down with a tiny cracked hourglass on the crossguard. `nh-spirit-host` is a wide teal blob
-  with three skulls fused side by side, four stubby arms (dagger, chain, two grasping hands) and a solid mist swirl
+  with three skulls fused side by side, four short arms (dagger, chain, two grasping hands) and a solid mist swirl
   for a stand. No Nighthaunt or Nagash icons.
 - Sylvaneth (Spitewing Flight): bark-brown carved wood, pale birch-white masks with glowing amber eyes, spring-green
   leaf hair and cloaks, and solid opaque leaf-shaped insect wings; the shield carries a plain three-curl spiral.
   `syl-arch-revenant` (the base figure) has a curling antler crown, a round leaf-shield and a green-bladed glaive, with
   a little spite on its shoulder spreading teal wings. `syl-gossamid-archer` has long trailing leaf hair, dangling
-  stubby legs, teal wings from a spite on its shoulder and a living-wood bow with a bulb-tipped arrow, and hovers on a
+  short legs, teal wings from a spite on its shoulder and a living-wood bow with a bulb-tipped arrow, and hovers on a
   clear stem. `syl-spiterider-lancer` is an antlered rider with a leaf-shield and a long thorny branch lance on a
-  chunky teal-green insect-dragon with huge amber eyes, mandibles, six stubby legs and teal wings.
+  chunky teal-green insect-dragon with huge amber eyes, mandibles, six short legs and teal wings.
   `syl-revenant-seeker` is a rider in a hood of green and russet leaves with a raised pale-green crescent sickle on
   the same insect-dragon recoloured russet-orange with amber wings. No Sylvaneth glyphs, Wargrove runes or GW icons.
 - Rejects for these two armies: `nh-chainrasp-c1` (the curled tail did not touch the base, so the ghost floated; an
@@ -280,14 +296,14 @@ colours or quartering only.
 - Disciples of Tzeentch (Tzaangor Warflock): cobalt- and sky-blue feathered goat-beasts with big beaks and grey horns,
   turquoise and teal robes, polished gold trim and our gold crescent-moon-with-one-feather emblem on shields, chests
   and disc tops. `dot-tzaangor` (the base figure) has a sky-blue feather crest, a teal loincloth, a curved gold sword
-  and a round teal crescent shield. The three disc riders stand on a chunky toy flying disc with stubby fangs round
+  and a round teal crescent shield. The three disc riders stand on a chunky flying disc with short fangs round
   its rim, held over the base by a clear stem: `dot-tzaangor-enlightened` wears a tall teal-and-gold crested helm and a
   smug half-lidded stare and holds a long curved-bladed spear; `dot-tzaangor-skyfire` has a feather mohawk, a quiver of
   rainbow-feathered arrows and a curved gold bow with a solid pink arrow, on a bronze disc with curled side horns;
   `dot-tzaangor-shaman` has glowing pink eyes, a turquoise robe with the crescent on the chest, a crooked staff topped
   by a big gold crescent and a little curved knife, on the turquoise disc with side horns. No Tzeentch rune, eye or
   flame sigils.
-- Ossiarch Bonereapers (Mortisan Elite): ivory bone with cute cartoon skulls, midnight-blue lacquered plates with
+- Ossiarch Bonereapers (Mortisan Elite): ivory bone with rounded stylised skulls, midnight-blue lacquered plates with
   bronze rims, solid teal blades and eye-lights, oxblood cloth, and our faceted teal soul-gem in a bone ring on chests
   and helms. `obr-immortis-guard` (the base figure) wears a horned bone helm and carries a rib-cage tower shield and a
   teal-bladed halberd. `obr-necropolis-stalker` has three fused skull faces, four arms and four curved teal swords.
@@ -315,6 +331,40 @@ colours or quartering only.
   cyan eyes. `idk-akhelian-allopex` is a fat grinning slate-grey shark with a bronze harness and harpoon launcher and a
   tiny helmeted rider with a hook-blade. Both sea beasts hover on a clear stem. No enclave icons.
 - All eight Daughters and Idoneth concepts were first tries; there are no rejects for these two armies.
+
+- Hedonites of Slaanesh (Epicurean Revellers): pale lilac and porcelain-white skin, violet and magenta padded leather
+  and silks that cover the whole body, burnished gold trim, glossy black crab claws and horns, rose-pink sculpted hair,
+  and our gold crescent-cradling-a-teardrop pendant. `hos-daemonette` (the base figure) has two little black horns, a
+  wild pink ponytail, a wicked grin, a violet tunic with gold rings and one big black crab claw. `hos-vashtiss` has a
+  porcelain-white head, curled black ram horns, a fanged smirk, a long-sleeved magenta bodice, a coiled lilac snake
+  tail, a raised claw and a bladed gold fan. `hos-lascivyr` wears a gold crescent crown and twirls on tiptoe with a
+  curved gold sword, a black claw and solid teal ribbons wrapped round her. `hos-vexmor` wears a tall swept gold
+  headdress, long pink hair and a floor-length violet gown, with a black claw and a crooked gold sceptre topped by
+  the crescent and teardrop. `hos-fiend` is a chunky four-legged beast with a huge lilac head, big black eyes, a pink
+  tongue, a pink mane, pearl-white scale plates, two black pincers, a scorpion tail with a gold barb and solid pink
+  musk puffs. `hos-seeker` is the Daemonette riding sidesaddle on a chubby two-legged pearl-white steed with a
+  lolling tongue, gold bridle and striped tail. Family-friendly and fully covered. No Slaanesh rune or GW icons.
+- Helsmiths of Hashut (Helforge Host): tarnished bronze and soot-black iron, crimson cloth, curled jet-black beards
+  with little boar tusks, solid glowing green eyes and flames, and our flame-in-an-anvil glyph on shields, tabards and
+  the gong. `hoh-infernal-cohort` (the base figure) wears a tall conical bronze helm and black scale armour, with a
+  tall glyph shield and a green-tipped spear. `hoh-war-despot` wears a tall flared helm with short black horns, gold
+  beard rings and a crimson tabard and cape, and holds a cleaver-glaive in solid green flame. `hoh-gong-carrier` is a
+  nervous grey goblin porter with floppy ears, a patched crimson tunic, a padded mallet and a big bronze glyph gong
+  on a back-frame. `hoh-dominator-engine` is a round bull-horned iron furnace walker with a grated green-glowing
+  face, short piston legs, two flared bronze cannon arms belching solid green flame and two chimneys puffing solid
+  smoke balls. `hoh-tormentor-bombard` is a fat bronze mortar on a clawed iron carriage with a caged green-and-purple
+  orb at the breech, crewed by two duardin (one with a ramrod, one with a wrench). No bull-head sigil or GW icons.
+- Sons of Behemat (Stone Lobbas): ruddy sun-tanned giants with rosy cheeks and noses, patched sackcloth and brown
+  leather, rope belts with rusty iron buckles, mossy grey-blue granite boulders and our red-clay handprint.
+  `sob-rock-hurler` (the base figure) is bald and gap-toothed with floppy ears and a sack of rocks on his back, holding
+  a boulder in both hands. `sob-boulder-basher` has a bristling ginger beard, a dented iron pot for a crown, one eye
+  squinting, a stone-lashed club on his belt, a boulder held overhead and a pointing hand. Both stay in the house figure style and
+  tower over the other figures at about 3.7 to 4.1 inches. No GW icons.
+- Rejects for these three armies: `hoh-infernal-cohort-c1` (a tall pedestal base cut off by the bottom edge; an edit
+  gave it a thin base), `hoh-tormentor-bombard-c1` and `-c2` (both crew stood off the base; a "wider base" edit changed
+  nothing, so a high three-quarter view on one large base was asked for) and `sob-rock-hurler-c1` to `-c3` (about 2.8
+  heads tall with a smallish, realistic head and action-figure joints; two edits barely changed it, so a fresh chat
+  with stronger proportion wording gave a 40% head).
 
 ## Pipeline notes
 
@@ -380,3 +430,9 @@ deep and 2.6" tall. If the footprint must be exactly 3 × 2, squash the depth or
   `yaw` -40; the Morrsarr eel faced sideways and needed `yaw` 90. The Allopex was a three-quarter view that Hunyuan
   already put along +Z. The eel and shark stems came through as thin clear posts and the auto base cut (5-8%) kept
   them attached. Sheets: `sheets/contact-daughters.png` and `sheets/contact-idoneth.png`.
+- Slaanesh, Helsmiths and Behemat used `swordtip_b14_picks.json`. The Fiend faced sideways and needed `yaw` 90; the
+  Seeker's steed was already along +Z. The Bombard concept was a high three-quarter view with the barrel pointing
+  sideways; it needed `yaw` 90 so the muzzle faces +Z, and `fit` 98 keeps the crew on its 100 mm base. Vexmor's gown
+  reaches the base, so it was shaped with `--nocut`; the auto base cut (5-8%) was fine for the rest, including
+  Vashtiss's coiled tail. Shapes ran one slug at a time, each after the GPU had been idle for 60 s. Sheets:
+  `sheets/contact-slaanesh.png`, `sheets/contact-helsmiths.png` and `sheets/contact-behemat.png`.

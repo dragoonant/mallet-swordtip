@@ -322,17 +322,17 @@ need a note in `docs/spec/13-engine-port-plan.md` (a new §3.x) and `docs/spec/0
 Palette for the whole army (our own court livery): pale lilac and porcelain-white skin, deep violet and magenta leathers and
 silks, burnished gold trim, glossy black claws and horns, soft teal and pearl accents, rose-pink hair. Shared motif: an original
 crescent cradling a teardrop gem, worn as jewellery and painted on silks. No GW logos, no copy of the Slaanesh rune or any GW
-Hedonite icon. All figures are **true MGSD** chibis (~2.5 heads tall, huge head, stubby legs, big hands and feet); the Fiends and
-the Seekers' steeds are chunky toy-like SD beasts. Hair, silks and musk effects are solid sculpted shapes, never see-through.
+Hedonite icon. All figures are in the house figure style (docs/FIGURE-STYLE.md); the Fiends and
+the Seekers' steeds are chunky beasts. Hair, silks and musk effects are solid sculpted shapes, never see-through.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `hos-vexmor` | Thricefold Discord (Vexmor) | 1 | 40 round | No | A true MGSD chibi daemon courtier, 2.5 heads tall with an oversized lilac head, a tall swept gold headdress, a smug half-lidded smile and long rose-pink hair, stubby legs under a flowing violet gown, one hand a big glossy black crab claw and the other holding a crooked gold sceptre crowned with a teardrop gem. |
-| `hos-vashtiss` | Thricefold Discord (Vashtiss the Coiled) | 1 | 28.5 round | No | A true MGSD chibi daemon courtier, 2.5 heads tall with a huge porcelain-white head, curled black ram horns and a sly fanged grin, a stubby lilac snake-tail body coiled into a spring beneath a magenta silk bodice, one black claw raised and the other twirling a gold fan-blade. |
-| `hos-lascivyr` | Thricefold Discord (Lascivyr the Bladed Blessing) | 1 | 28.5 round | No | A true MGSD chibi daemon blade-dancer, 2.5 heads tall with a huge lilac head, a gold crescent crown and a big pink ponytail, stubby legs on tiptoe in a twirl, a long curved gold sword in one hand and a black sickle claw in the other, teal silk ribbons frozen mid-swirl as solid shapes. |
-| `hos-fiend` | Fiends | 1 (×3) | 75×42 oval | No (beast) | A chunky toy-like SD daemon beast with a huge round lilac head, big glossy black eyes, a long pink tongue and a small sweet-then-wicked smile, a stubby four-legged body with pearl-scale plates, two oversized black crab pincers and a curled scorpion tail tipped with a gold barb, solid rose-pink musk puffs around its feet. |
-| `hos-daemonette` | Daemonettes | 1 (×20) | 25 round | No | A true MGSD chibi daemon handmaiden, 2.5 heads tall with an oversized porcelain-lilac head, big dark eyes, a wicked grin and a wild sculpted rose-pink ponytail, stubby legs on hoof-like tiptoes, wrapped in violet leather straps with gold rings, one arm ending in a big glossy black crab claw. |
-| `hos-seeker` | Seekers | 1 (×5) | 60×35 oval | Yes (daemon steed) | A true MGSD chibi daemon handmaiden rider with a huge lilac head and pink ponytail, one black crab claw raised, riding sidesaddle on a chunky toy-like long-necked two-legged daemon steed with a round pearl-white head, a long lolling pink tongue, gold bridle and a stubby striped tail, both mid-sprint. |
+| `hos-vexmor` | Thricefold Discord (Vexmor) | 1 | 40 round | No | A daemon courtier with a lilac head, a tall swept gold headdress, a smug half-lidded smile and long rose-pink hair, short legs under a flowing violet gown, one hand a big glossy black crab claw and the other holding a crooked gold sceptre crowned with a teardrop gem. |
+| `hos-vashtiss` | Thricefold Discord (Vashtiss the Coiled) | 1 | 28.5 round | No | A daemon courtier with a porcelain-white head, curled black ram horns and a sly fanged grin, a short lilac snake-tail body coiled into a spring beneath a magenta silk bodice, one black claw raised and the other twirling a gold fan-blade. |
+| `hos-lascivyr` | Thricefold Discord (Lascivyr the Bladed Blessing) | 1 | 28.5 round | No | A daemon blade-dancer with a lilac head, a gold crescent crown and a big pink ponytail, short legs on tiptoe in a twirl, a long curved gold sword in one hand and a black sickle claw in the other, teal silk ribbons frozen mid-swirl as solid shapes. |
+| `hos-fiend` | Fiends | 1 (×3) | 75×42 oval | No (beast) | A chunky daemon beast with a round lilac head, big glossy black eyes, a long pink tongue and a small sweet-then-wicked smile, a short four-legged body with pearl-scale plates, two oversized black crab pincers and a curled scorpion tail tipped with a gold barb, solid rose-pink musk puffs around its feet. |
+| `hos-daemonette` | Daemonettes | 1 (×20) | 25 round | No | A daemon handmaiden with a porcelain-lilac head, big dark eyes, a wicked grin and a wild sculpted rose-pink ponytail, short legs on hoof-like tiptoes, wrapped in violet leather straps with gold rings, one arm ending in a big glossy black crab claw. |
+| `hos-seeker` | Seekers | 1 (×5) | 60×35 oval | Yes (daemon steed) | A daemon handmaiden rider with a lilac head and pink ponytail, one black crab claw raised, riding sidesaddle on a chunky long-necked two-legged daemon steed with a round pearl-white head, a long lolling pink tongue, gold bridle and a short striped tail, both mid-sprint. |
 
 The three Heralds get their own figures because the kit sculpts them as three named characters on two base sizes, even though
 their rules are identical. Daemonettes and Seekers use one figure each: the Spearhead gives no champion, standard or musician
@@ -416,9 +416,9 @@ Heal (D3) the general).
 Shoot after Running). Slaughter at Any Cost (Slaangor, enemy shooting phase: if any damage was allocated to the unit this turn, it
 may make a Normal Move as though it were your movement phase).
 
-**Figures (if built).** `hos-shardspeaker` (1, 32 round: MGSD chibi masked sorcerer in layered violet robes holding a hand mirror
-and a smoking staff, solid lilac mist-sprites curling round); `hos-slickblade-seeker` (1 ×5, 75×42 oval, mount: chibi masked rider
-with a long glaive on a chunky SD long-necked daemon steed); `hos-blissbarb-archer` (1 ×10, 28.5 round: chibi masked archer with a
+**Figures (if built).** `hos-shardspeaker` (1, 32 round: masked sorcerer in layered violet robes holding a hand mirror
+and a smoking staff, solid lilac mist-sprites curling round); `hos-slickblade-seeker` (1 ×5, 75×42 oval, mount: masked rider
+with a long glaive on a chunky long-necked daemon steed); `hos-blissbarb-archer` (1 ×10, 28.5 round: masked archer with a
 recurve bow and a pink-feathered quiver); `hos-blissbrew-homonculus` (1, 25 round: tiny round imp swinging a censer of solid
-violet smoke); `hos-slaangor` (1 ×2, 40 round: chunky chibi horned beast-man with claw hands and silk sashes);
+violet smoke); `hos-slaangor` (1 ×2, 40 round: chunky horned beast-man with claw hands and silk sashes);
 `hos-slaangor-gilded` (1, 40 round: the same beast-man with a gilded cleaver in one hand).

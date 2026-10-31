@@ -336,15 +336,15 @@ note in `docs/spec/13-engine-port-plan.md` when built.
 Palette for the whole army (our own livery): cobalt-blue and sky-blue skin and feathers, turquoise and teal cloth, polished
 gold and bronze trim, with magenta-pink and electric-blue sorcerous flame as the accent colours. Shared motif: an original
 crescent-moon-and-feather emblem on cloth and disc rims. No GW logos, no copied Tzeentch eye or flame sigils. All figures are
-**true MGSD** chibis (~2.5 heads tall, huge head, stubby legs, big hands and feet). The flying discs are chunky toy-like SD
+in the house figure style (docs/FIGURE-STYLE.md). The flying discs are chunky
 shapes held up by a **solid** sculpted swirl of turquoise flame (opaque, never see-through) down to the base.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `dot-tzaangor-shaman` | Tzaangor Shaman | 1 | 40 round | Yes (disc) | A true MGSD chibi bird-headed goat-beast sorcerer, 2.5 heads tall with an enormous blue beaked head, long curling gold-tipped horns and big glowing pink eyes, stubby legs under a flowing turquoise robe, waving a tall crooked staff topped with a spinning gold crescent and holding a tiny curved knife, riding a chunky gold-rimmed flying disc with stubby fangs and two little horns on a solid swirl of turquoise flame. |
-| `dot-tzaangor` | Tzaangors | 1 (×10) | 32 round | No | A true MGSD chibi avian goat-beastman warrior, 2.5 heads tall with a huge blue beaked head, short curving horns and a feather crest, stubby legs with hooves, a teal loincloth with gold trim, gripping an oversized curved gold-edged sword and a round teal shield with an original crescent-and-feather emblem. |
-| `dot-tzaangor-enlightened` | Tzaangor Enlightened | 1 (×3) | 40 round | Yes (disc) | A true MGSD chibi bird-headed goat-beast knight, 2.5 heads tall with a huge blue beaked head wearing a tall gold crested helm and a smug half-lidded stare, stubby legs, turquoise robes and gold shoulder plates, holding a long gold spear with a curved blade, standing on a chunky gold-rimmed flying disc with stubby fangs on a solid swirl of turquoise flame. |
-| `dot-tzaangor-skyfire` | Tzaangor Skyfires | 1 (×3) | 40 round | Yes (disc) | A true MGSD chibi bird-headed goat-beast archer, 2.5 heads tall with a huge blue beaked head, sweeping horns and a feather mohawk, stubby legs, a quiver of chunky rainbow-feathered arrows, drawing an oversized curved gold bow with a glowing pink arrow, riding a chunky bronze flying disc with little side horns on a solid swirl of turquoise flame. |
+| `dot-tzaangor-shaman` | Tzaangor Shaman | 1 | 40 round | Yes (disc) | A bird-headed goat-beast sorcerer with a blue beaked head, long curling gold-tipped horns and big glowing pink eyes, short legs under a flowing turquoise robe, waving a tall crooked staff topped with a spinning gold crescent and holding a tiny curved knife, riding a chunky gold-rimmed flying disc with short fangs and two little horns on a solid swirl of turquoise flame. |
+| `dot-tzaangor` | Tzaangors | 1 (×10) | 32 round | No | An avian goat-beastman warrior with a blue beaked head, short curving horns and a feather crest, short legs with hooves, a teal loincloth with gold trim, gripping an oversized curved gold-edged sword and a round teal shield with an original crescent-and-feather emblem. |
+| `dot-tzaangor-enlightened` | Tzaangor Enlightened | 1 (×3) | 40 round | Yes (disc) | A bird-headed goat-beast knight with a blue beaked head wearing a tall gold crested helm and a smug half-lidded stare, short legs, turquoise robes and gold shoulder plates, holding a long gold spear with a curved blade, standing on a chunky gold-rimmed flying disc with short fangs on a solid swirl of turquoise flame. |
+| `dot-tzaangor-skyfire` | Tzaangor Skyfires | 1 (×3) | 40 round | Yes (disc) | A bird-headed goat-beast archer with a blue beaked head, sweeping horns and a feather mohawk, short legs, a quiver of chunky rainbow-feathered arrows, drawing an oversized curved gold bow with a glowing pink arrow, riding a chunky bronze flying disc with little side horns on a solid swirl of turquoise flame. |
 
 One figure per unit: no unit has model-to-model weapon differences in the rules, and the Spearhead gives no champion,
 standard or musician rules. The disc is part of each figure (one GLB, not a separate mount model). Fluxblade figures
@@ -425,9 +425,9 @@ thrown; `fixRoll` in code-hooks.ts is the nearest existing shape); Slashing Fins
 Long-Planned Strike = granted `CRIT_2_HITS` behind the DOT-AB-4 territory gate; Timeslip Pendant = the SKV Cage of Warp
 Lightning shape; Transient Forms = `onOwnModelSlain` + `returnSlainModels`.
 
-Figures if ever built (same palette): `dot-magister-on-disc` (a true MGSD chibi robed human sorcerer with a huge head in a tall
-gold-and-blue hood, stubby legs, a crystal-topped staff and a curved sword, standing on a chunky flying disc on a solid flame
-swirl), `dot-kairic-acolyte` (a true MGSD chibi masked human cultist with a huge head in a beaked gold mask, bare muscled arms,
-a curved blade and a flame-shaped shield), `dot-screamer` (a chunky toy-like SD flying manta-shark daemon, magenta and blue,
-with a big round toothy mouth and fin blades, on a solid flame stem), `dot-flamer` (a chunky toy-like SD tube-bodied daemon
+Figures if ever built (same palette): `dot-magister-on-disc` (a robed human sorcerer with a head in a tall
+gold-and-blue hood, short legs, a crystal-topped staff and a curved sword, standing on a chunky flying disc on a solid flame
+swirl), `dot-kairic-acolyte` (a masked human cultist with a head in a beaked gold mask, bare muscled arms,
+a curved blade and a flame-shaped shield), `dot-screamer` (a chunky flying manta-shark daemon, magenta and blue,
+with a big round toothy mouth and fin blades, on a solid flame stem), `dot-flamer` (a chunky tube-bodied daemon
 with a frilly skirt, waving arms ending in solid sculpted pink-and-blue flames and a big gaping grin).

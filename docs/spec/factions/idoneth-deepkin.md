@@ -281,16 +281,15 @@ No other engine work: the round condition, eligibility keys, `ignoreModifiers: '
 Palette for the whole army (our own deep-sea livery): deep ocean teal and midnight blue cloth, pearl-white and pale sea-glass
 armour plates with tarnished bronze trim, pale blue-grey aelf skin with long white or silver hair, glowing cyan bioluminescence
 as the accent (eyes of the beasts, spear tips, fish). Shared motif: an original spiral-shell crest with three wave lines,
-painted on shields and cloth. No GW logos, no copied enclave icons. All figures are **true MGSD** chibis (~2.5 heads tall, huge
-head, stubby legs, big hands and feet); the eel and shark mounts are chunky toy-like SD sea beasts that "swim" on a solid coral
+painted on shields and cloth. No GW logos, no copied enclave icons. All figures are in the house figure style (docs/FIGURE-STYLE.md); the eel and shark mounts are chunky sea beasts that "swim" on a solid coral
 stand, every water or glow effect solid and opaque, never see-through.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `idk-isharann-soulscryer` | Isharann Soulscryer | 1 | 32 round | No | A true MGSD chibi hunched old sea-aelf seer, 2.5 heads tall with an enormous pale head, long thin white hair and a wise squint, stubby legs under a ragged teal scale-patterned robe, leaning on a tall crooked coral staff hung with a pearl lantern, with three solid little cyan-glowing fish circling on a curl of solid sculpted water. |
-| `idk-morrsarr-guard` | Akhelian Morrsarr Guard | 1 (×3) | 60×35 oval | Yes (eel) | A true MGSD chibi armoured sea-aelf knight with a huge pearl-white crested helm, stubby legs, a small round shell shield and a long lance crackling with solid cyan sparks, riding a chunky toy-like SD fat eel with big glowing eyes, a stubby fin crest and a short curling tail, posed on a solid coral stand. |
-| `idk-akhelian-allopex` | Akhelian Allopex | 1 | 90×52 oval | Yes (shark) | A chunky toy-like SD war-shark, round-bodied with a huge toothy grin, small blank white eyes and blade-like fins, wearing a bronze harness with a stubby harpoon launcher on its back, crewed by a tiny MGSD chibi sea-aelf rider with a hook-blade, on a solid coral stand. |
-| `idk-namarti-thrall` | Namarti Thralls | 1 (×10) | 32 round | No | A true MGSD chibi eyeless sea-aelf warrior, 2.5 heads tall with a huge smooth pale head, no eyes and a calm small mouth, a teal shell-plate tunic, stubby legs and an oversized two-handed curved glaive with a crescent blade. |
+| `idk-isharann-soulscryer` | Isharann Soulscryer | 1 | 32 round | No | A hunched old sea-aelf seer with a pale head, long thin white hair and a wise squint, short legs under a ragged teal scale-patterned robe, leaning on a tall crooked coral staff hung with a pearl lantern, with three solid little cyan-glowing fish circling on a curl of solid sculpted water. |
+| `idk-morrsarr-guard` | Akhelian Morrsarr Guard | 1 (×3) | 60×35 oval | Yes (eel) | An armoured sea-aelf knight with a huge pearl-white crested helm, short legs, a small round shell shield and a long lance crackling with solid cyan sparks, riding a chunky fat eel with big glowing eyes, a short fin crest and a short curling tail, posed on a solid coral stand. |
+| `idk-akhelian-allopex` | Akhelian Allopex | 1 | 90×52 oval | Yes (shark) | A chunky war-shark, round-bodied with a huge toothy grin, small blank white eyes and blade-like fins, wearing a bronze harness with a short harpoon launcher on its back, crewed by a small sea-aelf rider with a hook-blade, on a solid coral stand. |
+| `idk-namarti-thrall` | Namarti Thralls | 1 (×10) | 32 round | No | An eyeless sea-aelf warrior with a smooth pale head, no eyes and a calm small mouth, a teal shell-plate tunic, short legs and an oversized two-handed curved glaive with a crescent blade. |
 
 Morrsarr Guard use one figure for all three models and Thralls one for all ten: the Spearhead gives no champion, standard or
 musician rules, so no variants. Tide Guard figures (Appendix A) are listed there.
@@ -355,8 +354,8 @@ more models; each 3+ = 1 mortal damage — differs from §5.2). Biovoltaic Barri
 pick an enemy unit in combat with it, roll a D6; 3+ = −1 to the Attacks of that unit's weapons for the rest of the turn).
 Strike on the Move (Reavers, passive: may shoot after Running or Retreating that turn).
 
-**Figures (if built).** `idk-akhelian-king` (1, 60: MGSD chibi sea-aelf king with a tall finned crown-helm and a long
-glaive, on a chunky toy-like SD sea-horse-dragon mount with a curling tail); `idk-ishlaen-guard` (1 ×3, 60×35 oval: the
+**Figures (if built).** `idk-akhelian-king` (1, 60: sea-aelf king with a tall finned crown-helm and a long
+glaive, on a chunky sea-horse-dragon mount with a curling tail); `idk-ishlaen-guard` (1 ×3, 60×35 oval: the
 Morrsarr eel rider with a curved sabre and a big round glowing shield instead of the lance); `idk-namarti-reaver` (1 ×10, 32
-round: MGSD chibi eyeless sea-aelf archer with a light curved bow and a short blade on the hip). Morrsarr Guard reuse
+round: eyeless sea-aelf archer with a light curved bow and a short blade on the hip). Morrsarr Guard reuse
 `idk-morrsarr-guard`.

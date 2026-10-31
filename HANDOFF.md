@@ -56,7 +56,7 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
 
 ## F6 (2026-10-30): Slaves to Darkness and Fyreslayers
 - Both armies are playable (start screen has four crests): Darkoath Raiders (Oaths of Darkness, Rage of Arkhar, Fearless Invaders,
-  four enhancements) and Saga Axeband (Awaken the Runes, Magmic Tunnels, Fyresteel Throwing Axes, four enhancements), with MGSD GLBs
+  four enhancements) and Saga Axeband (Awaken the Runes, Magmic Tunnels, Fyresteel Throwing Axes, four enhancements), with GLB figures
   for every unit. Engine tests are named STD-* and FYR-* after their spec Test IDs.
 - QA on the built site (port 4443): `tests/e2e/f6-armies.spec.ts` plays Slaves (human) vs the Fyreslayers bot and Fyreslayers
   (human) vs the Cities bot to the end screen in 4 rounds, no console errors or failed requests; shots in `e2e-out/f6/`
@@ -79,7 +79,7 @@ The 42k handoff and plan are kept in `docs/history/` for reference.
   (GLO-), Hurakan Vanguard (LRL-), Skyhammer Task Force (KO-). Data in `src/data/factions/{kruleboyz,gloomspite,lumineth,kharadron}/`,
   hooks in `src/engine/factions/<army>.ts`, generic engine pieces (moveDeclared window, anchored redeploy, retreat moves, leeward-edge
   state) noted in `docs/spec/13-engine-port-plan.md` section 3.9. Each spec ends with an "as built" section listing its [RULING]s.
-- None of the four has MGSD GLBs yet: every figure is the procedural stand-in (base disc plus coloured block). It loads cleanly, no
+- None of the four has GLB figures yet: every figure is the procedural stand-in (base disc plus coloured block). It loads cleanly, no
   404 or console error. The Arkanaut Frigate is a red box with a cream deck.
 - QA on the built site (`vite preview --port 4453`): `tests/e2e/f8-playthrough.spec.ts` plays Kruleboyz (human) vs the Lumineth bot and
   Kharadron (human) vs the Gloomspite bot to the end screen in 4 rounds, no console errors, no failed requests; shots in `e2e-out/f8/`

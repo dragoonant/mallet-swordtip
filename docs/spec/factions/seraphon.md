@@ -331,19 +331,18 @@ The ids below name the checks (tests/engine/seraphon.test.ts, tests/data/serapho
 Palette for the whole army (our own star-jungle look): turquoise and teal scales with pale cream bellies for the saurus,
 leaf-green chameleon skinks that shade to sky blue, black-and-orange salamander skin for the Spawn, dark plum-red
 Terrawings, burnished gold armour plates set with glowing star-blue celestite stones. Shared motif: an original
-three-ray sunburst disc. No GW logos, no copied Seraphon glyphs or Old One iconography. All figures are **true MGSD** chibis
-(~2.5 heads tall, oversized head, stubby legs, big hands and feet); beasts are chunky toy-like SD shapes.
+three-ray sunburst disc. No GW logos, no copied Seraphon glyphs or Old One iconography. All figures are in the house figure style (docs/FIGURE-STYLE.md); beasts are chunky shapes.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `ser-sunblood` | Sunblood Pack (Sunblood) | 1 | 40 round | No | A true MGSD chibi lizard warlord, 2.5 heads tall with a huge spiky-crested reptile head roaring wide, stubby clawed legs, a gold sunburst shield on one arm and a big star-blue crystal-studded club raised overhead, teal scales and gold armour plates. |
-| `ser-saurus-bodyguard` | Sunblood Pack (Bodyguard) | 1 (×2) | 32 round | No | A true MGSD chibi lizard guard, 2.5 heads tall with a big blunt-snouted teal head and a gold headband, stubby legs planted wide, a round gold shield and a short crystal-edged mace held ready. |
-| `ser-venomites` | Venomites token | 1 | 25 round | No | A tiny chunky toy-like SD cluster of three fat little green-and-yellow snakes coiled around a pebble, oversized cute heads with glistening fangs. |
-| `ser-saurus-warrior` | Saurus Warriors | 1 (×10) | 32 round | No | A true MGSD chibi lizard soldier, 2.5 heads tall with an oversized toothy turquoise head, stubby legs, a cream belly, a round gold shield with a sunburst boss and a chunky stone-and-crystal club. |
-| `ser-hunter` | Hunters of Huanchi | 1 (×10) | 25 round (Alpha 28.5) | No | A true MGSD chibi chameleon hunter, 2.5 heads tall with a huge round head, big swivel eyes and a curled tail, stubby legs crouched low, leaf-green skin fading to blue, holding a long thin blowpipe to its lips. |
-| `ser-terrawing` | Terrawings | 1 (×3) | 32 round, flying stand | No | A chunky toy-like SD baby pterosaur, oversized head with a long pointed beak and a tall crest, short round body, wide leathery plum-red wings with orange edges, tiny clawed feet, flapping on a clear stem. |
-| `ser-spawn-of-chotec` | Spawn of Chotec | 1 | 90×52 oval | Beast (large) | A chunky toy-like SD fire salamander, a fat low body with stubby legs, an enormous round head with a wide grinning mouth dripping glowing orange acid, a tall spiny sail-fin along its back in black and orange, and a little gold collar band. |
-| `ser-sun-acolyte` | Sun Acolyte token | 1 (×3) | 25 round | No | A true MGSD chibi skink attendant, 2.5 heads tall with a huge head and wide eyes, stubby legs, a sky-blue body and a gold sunburst pendant, carrying a long-handled bronze pot that glows orange at the rim. |
+| `ser-sunblood` | Sunblood Pack (Sunblood) | 1 | 40 round | No | A lizard warlord with a spiky-crested reptile head roaring wide, short clawed legs, a gold sunburst shield on one arm and a big star-blue crystal-studded club raised overhead, teal scales and gold armour plates. |
+| `ser-saurus-bodyguard` | Sunblood Pack (Bodyguard) | 1 (×2) | 32 round | No | A lizard guard with a big blunt-snouted teal head and a gold headband, short legs planted wide, a round gold shield and a short crystal-edged mace held ready. |
+| `ser-venomites` | Venomites token | 1 | 25 round | No | A tiny chunky cluster of three fat little green-and-yellow snakes coiled around a pebble, round heads with glistening fangs. |
+| `ser-saurus-warrior` | Saurus Warriors | 1 (×10) | 32 round | No | A lizard soldier with a toothy turquoise head, short legs, a cream belly, a round gold shield with a sunburst boss and a chunky stone-and-crystal club. |
+| `ser-hunter` | Hunters of Huanchi | 1 (×10) | 25 round (Alpha 28.5) | No | A chameleon hunter with a round head, big swivel eyes and a curled tail, short legs crouched low, leaf-green skin fading to blue, holding a long thin blowpipe to its lips. |
+| `ser-terrawing` | Terrawings | 1 (×3) | 32 round, flying stand | No | A chunky baby pterosaur, head with a long pointed beak and a tall crest, short round body, wide leathery plum-red wings with orange edges, tiny clawed feet, flapping on a clear stem. |
+| `ser-spawn-of-chotec` | Spawn of Chotec | 1 | 90×52 oval | Beast (large) | A chunky fire salamander, a fat low body with short legs, a round head with a wide grinning mouth dripping glowing orange acid, a tall spiny sail-fin along its back in black and orange, and a little gold collar band. |
+| `ser-sun-acolyte` | Sun Acolyte token | 1 (×3) | 25 round | No | A skink attendant with a head and wide eyes, short legs, a sky-blue body and a gold sunburst pendant, carrying a long-handled bronze pot that glows orange at the rim. |
 
 The Sunblood, Bodyguards and tokens need their own figures: the Sunblood's survival switches Scaled Protectors, and the
 token count drives Venomite Swarm and the Spawn's control score, so players must see them. No champion or musician

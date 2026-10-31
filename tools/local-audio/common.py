@@ -231,7 +231,7 @@ ALT.update({
 })
 
 # ---- F14 armies: Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth (aos-<army>-<thing>).
-# Cartoony rather than gory: bites, chops and squelches, no gore. Vocal cues stay wordless (Whisper-small checks them).
+# Playful rather than gory: bites, chops and squelches, no gore. Vocal cues stay wordless (Whisper-small checks them).
 SFX.update({
     "aos-khorne-roar": dict(dur=3.0, p="a crowd of savage men roaring a furious wild battle roar"),
     "aos-khorne-hound-bay": dict(dur=3.5, p="a pack of large hounds baying and howling"),
@@ -266,7 +266,7 @@ SFX.update({
 })
 
 # ---- F15 armies: Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch, Ossiarch Bonereapers (aos-<army>-<thing>).
-# Cartoony rather than gory. Generation lengths are a little longer than the F14 batch so short hits keep >= 0.6 s of
+# Playful rather than gory. Generation lengths are a little longer than the F14 batch so short hits keep >= 0.6 s of
 # content after trimming. Vocal cues stay wordless (Whisper-small checks them).
 SFX.update({
     "aos-daughters-war-cry": dict(dur=3.0, p="a group of women ululating a high trilling wild war cry"),
@@ -316,7 +316,7 @@ ALT.update({
 })
 
 # ---- F17 armies: Hedonites of Slaanesh, Helsmiths of Hashut, Flesh-eater Courts, Ogor Mawtribes, Sons of Behemat.
-# Cartoony rather than gory; vocal cues stay wordless (Whisper-small checks them). Generation lengths leave >= 0.6 s of
+# Playful rather than gory; vocal cues stay wordless (Whisper-small checks them). Generation lengths leave >= 0.6 s of
 # strong content after trimming.
 SFX.update({
     "aos-slaanesh-laugh": dict(dur=3.0, p="a woman laughing an eerie high lilting giggle with echo"),

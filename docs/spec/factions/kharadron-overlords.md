@@ -288,19 +288,18 @@ faction code hook in `src/engine/factions/kharadron.ts` (registered in `code-hoo
 
 Palette for the whole army (our own sky-port livery): ivory and deep crimson armour plates, burnished copper and brass
 fittings, dark plum leather, glowing aether-green lenses and tubes, grey-white beards. Shared motif: an original
-cog-inside-a-cloud badge. No GW logos, no copied Kharadron runes or guild heraldry. All figures are **true MGSD** chibis
-(~2.5 heads tall, oversized head, stubby legs, big hands); the Frigate is a chunky toy-like SD airship.
+cog-inside-a-cloud badge. No GW logos, no copied Kharadron runes or guild heraldry. All figures are in the house figure style (docs/FIGURE-STYLE.md); the Frigate is a chunky airship.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `ko-admiral` | Arkanaut Admiral | 1 | 32 round | No | A true MGSD chibi duardin sky-admiral, 2.5 heads tall with a huge head in an ivory-and-copper diving-style helm with a glowing green visor and a big braided grey beard, stubby legs, crimson coat-tails, a giant piston-driven copper hammer in one fist and a stubby triple-barrel pistol in the other. |
-| `ko-arkanaut` | Arkanaut Company (pistol + cutter) | 1 (×7) | 25 round | No | A true MGSD chibi duardin sky-sailor, 2.5 heads tall with an enormous round helmet with green goggle lenses and a breathing hose, bushy beard, stubby legs, ivory chest plate with crimson trim, a short curved cutlass in one hand and a chunky brass pistol in the other. |
-| `ko-arkanaut-skypike` | Arkanaut Company (Skypike) | 1 | 25 round | No | The same MGSD chibi sky-sailor holding a long brass pole-arm with a glowing green aether bulb and a hooked spear tip, braced in a heroic lunge. |
-| `ko-arkanaut-volley` | Arkanaut Company (Volley Gun) | 1 | 25 round | No | The same MGSD chibi sky-sailor hugging an oversized rotary multi-barrel brass gun with a hand-crank and ammo drum, tiny legs planted wide. |
-| `ko-arkanaut-skyhook` | Arkanaut Company (Light Skyhook) | 1 | 25 round | No | The same MGSD chibi sky-sailor shouldering a stubby harpoon launcher with a big barbed brass hook and coiled chain. |
-| `ko-skywarden` | Skywardens (pistol + skypike) | 1 (×2) | 32 round, flying stand | No | A true MGSD chibi duardin flyer, 2.5 heads tall with a giant bubble helmet, a round copper balloon-engine on its back with a little propeller, dangling stubby legs, a long hooked pike in one hand and a flame-nozzle pistol in the other, hovering on a clear stem. |
-| `ko-skywarden-volley` | Skywardens (Volley Gun) | 1 | 32 round, flying stand | No | The same MGSD chibi flyer with the backpack balloon-engine, gripping an oversized rotary brass gun with both hands while hovering. |
-| `ko-frigate` | Arkanaut Frigate | 1 | 120×92 oval, flying stand | Vehicle | A chunky toy-like SD airship: a short, fat ivory-and-crimson hull with a big rounded prow, two oversized copper balloon-domes on stubby struts above, glowing green portholes, a large harpoon cannon on the bow, tiny chibi duardin crew peeking over the rail, floating on a thick clear stand. |
+| `ko-admiral` | Arkanaut Admiral | 1 | 32 round | No | A duardin sky-admiral with a head in an ivory-and-copper diving-style helm with a glowing green visor and a big braided grey beard, short legs, crimson coat-tails, a giant piston-driven copper hammer in one fist and a short triple-barrel pistol in the other. |
+| `ko-arkanaut` | Arkanaut Company (pistol + cutter) | 1 (×7) | 25 round | No | A duardin sky-sailor with an enormous round helmet with green goggle lenses and a breathing hose, bushy beard, short legs, ivory chest plate with crimson trim, a short curved cutlass in one hand and a chunky brass pistol in the other. |
+| `ko-arkanaut-skypike` | Arkanaut Company (Skypike) | 1 | 25 round | No | The same sky-sailor holding a long brass pole-arm with a glowing green aether bulb and a hooked spear tip, braced in a heroic lunge. |
+| `ko-arkanaut-volley` | Arkanaut Company (Volley Gun) | 1 | 25 round | No | The same sky-sailor hugging an oversized rotary multi-barrel brass gun with a hand-crank and ammo drum, short legs planted wide. |
+| `ko-arkanaut-skyhook` | Arkanaut Company (Light Skyhook) | 1 | 25 round | No | The same sky-sailor shouldering a short harpoon launcher with a big barbed brass hook and coiled chain. |
+| `ko-skywarden` | Skywardens (pistol + skypike) | 1 (×2) | 32 round, flying stand | No | A duardin flyer with a giant bubble helmet, a round copper balloon-engine on its back with a little propeller, dangling short legs, a long hooked pike in one hand and a flame-nozzle pistol in the other, hovering on a clear stem. |
+| `ko-skywarden-volley` | Skywardens (Volley Gun) | 1 | 32 round, flying stand | No | The same flyer with the backpack balloon-engine, gripping an oversized rotary brass gun with both hands while hovering. |
+| `ko-frigate` | Arkanaut Frigate | 1 | 120×92 oval, flying stand | Vehicle | A chunky airship: a short, fat ivory-and-crimson hull with a big rounded prow, two oversized copper balloon-domes on short struts above, glowing green portholes, a large harpoon cannon on the bow, small duardin crew peeking over the rail, floating on a thick clear stand. |
 
 Every special-weapon model gets its own figure because its weapons differ in the rules (and players need to see
 whether it is still alive). No champion or musician variants: the Spearhead gives them no rules.

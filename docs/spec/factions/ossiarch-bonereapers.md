@@ -297,15 +297,15 @@ params; (b) = new faction code hook in `src/engine/factions/ossiarch.ts` (regist
 Palette for the whole army (our own bone-legion livery): polished ivory and warm bone for skulls, ribs and limbs; deep midnight-blue
 lacquered armour plates with dull bronze rims; glowing verdigris-teal blades, eye-lights and soul-gems as the accent colour; dark
 oxblood-red cloth strips. Shared motif: an original faceted teal soul-gem set in a bone ring, worn on chests and weapon hilts. No GW
-logos, no copied Ossiarch or Nagash icons. All figures are **true MGSD** chibis (~2.5 heads tall, huge skull head, stubby legs);
+logos, no copied Ossiarch or Nagash icons. All figures are in the house figure style (docs/FIGURE-STYLE.md);
 glowing effects are **solid, opaque sculpted shapes** (no see-through materials, no transparency).
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `obr-mortisan-ossifector` | Mortisan Ossifector | 1 | 32 round | No | A true MGSD chibi bone-sculptor mage, 2.5 heads tall with a huge elongated skull wearing a tall spiked bone crown, teal eye-lights, a midnight-blue robe with oxblood sash, four stubby bony arms (two holding a chisel and a little femur wand), and a solid teal ribbon of sculpted soul-mist coiling up from the base around its legs. |
-| `obr-immortis-guard` | Immortis Guard | 1 (×3) | 50 round | No | A chunky true MGSD chibi bone bodyguard, 2.5 heads tall and extra broad, with a huge horned skull helm, glowing teal eye-slits, a big midnight-blue rib-shaped tower shield in one stubby arm and an oversized teal-bladed halberd in the other, oxblood loincloth, short sturdy bone legs. |
-| `obr-necropolis-stalker` | Necropolis Stalkers | 1 (×3) | 50 round | No | A true MGSD chibi four-armed bone duelist, 2.5 heads tall with a huge cluster of three cartoon skull faces on one head, each with teal eye-lights, four stubby arms each gripping a curved teal sword, midnight-blue shoulder plates and a tattered oxblood tabard, crouched on short bony legs. |
-| `obr-morghast-archai` | Morghast Archai | 1 (×2) | 60 round | No | A true MGSD chibi winged bone herald, 2.5 heads tall with a huge horned skull under a tall bronze-rimmed midnight-blue helm, two chunky stubby bone wings with solid teal sculpted feather-shards, a long teal-bladed glaive held in both stubby arms, oxblood cloth strips, standing on short clawed bone legs. |
+| `obr-mortisan-ossifector` | Mortisan Ossifector | 1 | 32 round | No | A bone-sculptor mage with a huge elongated skull wearing a tall spiked bone crown, teal eye-lights, a midnight-blue robe with oxblood sash, four short bony arms (two holding a chisel and a little femur wand), and a solid teal ribbon of sculpted soul-mist coiling up from the base around its legs. |
+| `obr-immortis-guard` | Immortis Guard | 1 (×3) | 50 round | No | A chunky bone bodyguard, and extra broad, with a huge horned skull helm, glowing teal eye-slits, a big midnight-blue rib-shaped tower shield in one short arm and an oversized teal-bladed halberd in the other, oxblood loincloth, short sturdy bone legs. |
+| `obr-necropolis-stalker` | Necropolis Stalkers | 1 (×3) | 50 round | No | A four-armed bone duelist with a huge cluster of three cartoon skull faces on one head, each with teal eye-lights, four short arms each gripping a curved teal sword, midnight-blue shoulder plates and a tattered oxblood tabard, crouched on short bony legs. |
+| `obr-morghast-archai` | Morghast Archai | 1 (×2) | 60 round | No | A winged bone herald with a huge horned skull under a tall bronze-rimmed midnight-blue helm, two chunky short bone wings with solid teal sculpted feather-shards, a long teal-bladed glaive held in both short arms, oxblood cloth strips, standing on short clawed bone legs. |
 
 Datasheet model ids (the GLB map keys are `ossiarch.unit.<unit>/<modelId>`): `ossiarch.unit.mortisan-ossifector/mortisan-ossifector`,
 `ossiarch.unit.immortis-guard/immortis-guard`, `ossiarch.unit.necropolis-stalkers/necropolis-stalker`,
@@ -377,8 +377,8 @@ No unit has the Reinforcements keyword. Every unit has Ward (6+).
 - Harvester, *Repair Construct* — end of any turn: a friendly Mortek Guard unit within 6"; roll a D6 per bone-tithe point; each 4+
   returns 1 slain model; then reset the points to 0.
 
-Figures, if built later: `obr-mortisan-soulreaper`, `obr-mortek-guard`, `obr-kavalos-deathrider` (a mount: chunky SD bone horse),
-`obr-gothizzar-harvester` (a monster: chunky toy-like SD four-legged bone beast), in the §10 palette.
+Figures, if built later: `obr-mortisan-soulreaper`, `obr-mortek-guard`, `obr-kavalos-deathrider` (a mount: chunky bone horse),
+`obr-gothizzar-harvester` (a monster: chunky four-legged bone beast), in the §10 palette.
 
 ---
 
@@ -433,5 +433,5 @@ above; not saved to `docs/sources/`. Bases from Wahapedia (same day). Army id if
   if it started in combat it must end in combat.
 - Teratic Cohort, Beast (the Wahapedia page notes a control-score cap of 1 for Beast units; the PDF itself prints no such rule).
 
-Figures, if built later: `obr-liege-kavalos` (a mount: chunky SD armoured bone horse), `obr-kavalos-deathrider`, and a mixed
+Figures, if built later: `obr-liege-kavalos` (a mount: chunky armoured bone horse), `obr-kavalos-deathrider`, and a mixed
 `obr-teratic-cohort` set (centaur, cyclops, prowler and harpy constructs), in the §10 palette.

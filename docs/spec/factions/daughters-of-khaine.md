@@ -295,15 +295,15 @@ code hook in `src/engine/factions/daughters.ts`, exported as `daughtersHooks` an
 Palette for the whole army (our own temple livery): deep crimson and oxblood cloth, glossy black leather, warm bronze trim and
 blades, pale porcelain skin with dark-teal warpaint stripes, long silver-white hair, emerald-teal serpent scales on the Melusai,
 and blood-red as the accent. The shared motif is an original three-drop teardrop sigil, painted on cloth and shields. No GW logos,
-no copied Khaine rune or temple icons. All figures are **true MGSD** chibis (~2.5 heads tall, huge head, stubby legs, big hands);
-the steeds and serpent tails are chunky, toy-like SD shapes, and flames and effects are solid, not see-through.
+no copied Khaine rune or temple icons. All figures are in the house figure style (docs/FIGURE-STYLE.md);
+the steeds and serpent tails are chunky shapes, and flames and effects are solid, not see-through.
 
 | Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt |
 |---|---|---|---|---|---|
-| `dok-melusai-ironscale` | Melusai Ironscale | 1 | 40 round | No (serpent body) | A true MGSD chibi serpent-woman champion, 2.5 heads tall with an enormous head, fierce eyes and a tall swept silver-white ponytail under a bronze crested circlet, a stubby human torso in crimson and black leather on a short, thick, coiled emerald snake tail, holding a long bronze glaive-staff with a curved blade at each end. |
-| `dok-witch-aelf` | Witch Aelves | 1 (×10) | 25 round | No | A true MGSD chibi aelf zealot, 2.5 heads tall with a huge head, wild silver-white hair in a high ponytail, teal warpaint stripes and a fierce grin, stubby legs in black boots, a crimson wrap and harness, holding two short curved bronze knives mid-twirl. |
-| `dok-doomfire-warlock` | Doomfire Warlocks | 1 (×5) | 60×35 oval | Yes: dark steed | A chunky toy-like MGSD chibi black horse with a big round head, short thick legs and a crimson saddle cloth, ridden by a tiny MGSD chibi hooded aelf sorcerer, huge head with a glowing violet rune on his brow, a stubby crossbow on his back and a curved bronze scimitar wreathed in solid black-and-violet flame. |
-| `dok-blood-stalker` | Blood Stalkers | 1 (×5) | 40 round | No (serpent body) | A true MGSD chibi serpent-woman archer, 2.5 heads tall with a huge head, silver-white braids and a slim bronze half-mask, a stubby torso in crimson leather on a short coiled teal-scaled snake tail, drawing a big dark-wood recurve bow with a solid glowing red arrow nocked. |
+| `dok-melusai-ironscale` | Melusai Ironscale | 1 | 40 round | No (serpent body) | A serpent-woman champion with a head, fierce eyes and a tall swept silver-white ponytail under a bronze crested circlet, a short human torso in crimson and black leather on a short, thick, coiled emerald snake tail, holding a long bronze glaive-staff with a curved blade at each end. |
+| `dok-witch-aelf` | Witch Aelves | 1 (×10) | 25 round | No | An aelf zealot with a head, wild silver-white hair in a high ponytail, teal warpaint stripes and a fierce grin, short legs in black boots, a crimson wrap and harness, holding two short curved bronze knives mid-twirl. |
+| `dok-doomfire-warlock` | Doomfire Warlocks | 1 (×5) | 60×35 oval | Yes: dark steed | A chunky black horse with a big round head, short thick legs and a crimson saddle cloth, ridden by a small hooded aelf sorcerer, head with a glowing violet rune on his brow, a short crossbow on his back and a curved bronze scimitar wreathed in solid black-and-violet flame. |
+| `dok-blood-stalker` | Blood Stalkers | 1 (×5) | 40 round | No (serpent body) | A serpent-woman archer with a head, silver-white braids and a slim bronze half-mask, a short torso in crimson leather on a short coiled teal-scaled snake tail, drawing a big dark-wood recurve bow with a solid glowing red arrow nocked. |
 
 The two Witch Aelves units share one figure: the Spearhead gives no champion, standard or musician rules, so no variants are
 needed. The Blood Stalkers look alike in the rules too, so one figure covers all five (the kit's second pose is not needed).
@@ -382,10 +382,10 @@ Dance of Death (Sisters of Slaughter, once per turn for the army, enemy combat p
 enemy combat ranges but must end in combat). Shadow Leap (Shadowstalkers, once per battle, your movement phase: remove the unit and
 set it up anywhere more than 6" from all enemy units).
 
-**Figures (if built).** `dok-slaughter-queen-cauldron` (1, 120×92 oval, war machine: a chunky toy-like bladed bronze shrine-cart
-holding a steaming cauldron of solid red liquid, a big SD statue of a many-armed warrior goddess-figure of our own design behind it,
-and a MGSD chibi priestess with a huge head standing at the rim); `dok-hag-queen` (1, 25 round: MGSD chibi priestess with a tall
-headdress, a curved knife and a bronze goblet); `dok-bloodwrack-medusa` (1, 40 round: MGSD chibi serpent-sorceress with a huge
-head, a crown of small chunky snakes and a long spear); `dok-sister-of-slaughter` (1 ×10, 25 round: MGSD chibi gladiator aelf
-with a bronze face-cage helm, a barbed whip and a small round buckler-blade); `dok-shadowstalker` (1 ×9, 28.5 round: MGSD chibi
+**Figures (if built).** `dok-slaughter-queen-cauldron` (1, 120×92 oval, war machine: a chunky bladed bronze shrine-cart
+holding a steaming cauldron of solid red liquid, a big statue of a many-armed warrior goddess-figure of our own design behind it,
+and a priestess with a head standing at the rim); `dok-hag-queen` (1, 25 round: priestess with a tall
+headdress, a curved knife and a bronze goblet); `dok-bloodwrack-medusa` (1, 40 round: serpent-sorceress with a huge
+head, a crown of small chunky snakes and a long spear); `dok-sister-of-slaughter` (1 ×10, 25 round: gladiator aelf
+with a bronze face-cage helm, a barbed whip and a small round buckler-blade); `dok-shadowstalker` (1 ×9, 28.5 round:
 hooded aelf assassin trailing solid black smoke, with twin daggers).

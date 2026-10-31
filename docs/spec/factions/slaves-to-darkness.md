@@ -205,13 +205,13 @@ Palette for the army: dark crimson and rust cloth, tarnished bronze and blackene
 grey-brown furs, ash-blue warpaint; small carved "oathstone" pebbles on cords as the shared motif. No
 eight-pointed stars, no GW sigils — use original jagged scratch-runes instead.
 
-| Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt (TRUE MGSD chibi, ~2.5 heads tall, huge head, stubby legs) |
+| Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt (house figure style, see docs/FIGURE-STYLE.md) |
 |---|---|---|---|---|---|
-| `darkoath-warqueen` | Darkoath Warqueen | 1 | 32 round | no | A tiny chibi barbarian warrior-queen, ~2.5 heads tall with a huge head under a horned bronze half-helm and wild red braids, stubby legs in fur boots, crimson war-cloak, necklace of carved oathstones, raising an oversized rune-scratched bronze axe. |
-| `darkoath-savager` | Darkoath Savagers | 1 (×9) | 28.5 round | no | A chibi tribal berserker ~2.5 heads tall with a giant shaggy-haired head, ash-blue warpaint stripes, bare chest with rust-red sash, stubby legs, a crude iron axe in one fist and a hide buckler in the other. |
-| `darkoath-godspeaker` | Darkoath Savagers (Godspeaker) | 1 | 28.5 round | no | A chibi hooded seer ~2.5 heads tall with an oversized head in a bone-and-feather mask, stubby legs under a long tattered crimson robe, clutching a gnarled staff hung with oathstones and glowing ash-blue charms. |
-| `darkoath-fellrider` | Darkoath Fellriders | 1 (×5) | 60×35 oval | yes (warsteed) | A chibi horse-raider ~2.5 heads tall with a big helmeted head and tiny legs astride a stocky, big-headed shaggy black steed with bronze-studded barding, waving a curved blade with a quiver of javelins on its back. |
-| `darkoath-marauder` | Darkoath Marauders | 1 (×10) | 28.5 round | no | A chibi barbarian footsoldier ~2.5 heads tall with a huge head in a simple iron cap with small horns, grey fur mantle, stubby legs, round wooden shield painted with a crude red scratch-rune, short bronze sword, oathstone pebble on a cord. |
+| `darkoath-warqueen` | Darkoath Warqueen | 1 | 32 round | no | A small barbarian warrior-queen with a head under a horned bronze half-helm and wild red braids, short legs in fur boots, crimson war-cloak, necklace of carved oathstones, raising an oversized rune-scratched bronze axe. |
+| `darkoath-savager` | Darkoath Savagers | 1 (×9) | 28.5 round | no | A tribal berserker with a giant shaggy-haired head, ash-blue warpaint stripes, bare chest with rust-red sash, short legs, a crude iron axe in one fist and a hide buckler in the other. |
+| `darkoath-godspeaker` | Darkoath Savagers (Godspeaker) | 1 | 28.5 round | no | A hooded seer with a head in a bone-and-feather mask, short legs under a long tattered crimson robe, clutching a gnarled staff hung with oathstones and glowing ash-blue charms. |
+| `darkoath-fellrider` | Darkoath Fellriders | 1 (×5) | 60×35 oval | yes (warsteed) | A horse-raider with a big helmeted head and short legs astride a stocky, big-headed shaggy black steed with bronze-studded barding, waving a curved blade with a quiver of javelins on its back. |
+| `darkoath-marauder` | Darkoath Marauders | 1 (×10) | 28.5 round | no | A barbarian footsoldier with a head in a simple iron cap with small horns, grey fur mantle, short legs, round wooden shield painted with a crude red scratch-rune, short bronze sword, oathstone pebble on a cord. |
 
 Champion/musician/standard models in the plastic kits are not separate figures here: the Spearhead gives
 them no distinct rules, and only the Godspeaker matters to a mechanic (Visions of Glory), so it gets its own

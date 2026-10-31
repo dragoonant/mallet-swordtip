@@ -271,16 +271,15 @@ the faction file.
 Palette for the whole army (our own grave-host livery): pale frost-teal spectral bodies fading to a deeper sea-green at the
 wispy tails, charcoal-black and dusty grey tattered hoods and robes, rust-brown iron chains, shackles and blades, aged bone skulls,
 and small sickly-green soulfire flames as the accent colour. Shared motif: an original cracked-hourglass-and-padlock badge on
-belts and blades. No GW logos, no copied Nighthaunt or Nagash icons. All figures are **true MGSD** chibis (~2.5 heads tall,
-huge skull-faced hooded head, stubby limbs); ghost tails are **solid, opaque sculpted wisps** that reach down to the base as the
+belts and blades. No GW logos, no copied Nighthaunt or Nagash icons. All figures are in the house figure style (docs/FIGURE-STYLE.md); ghost tails are **solid, opaque sculpted wisps** that reach down to the base as the
 figure's stand (no see-through materials, no transparency).
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `nh-knight-of-shrouds` | Knight of Shrouds | 1 | 32 round | No | A true MGSD chibi ghost knight, 2.5 heads tall with a huge grinning skull under a tall spiked iron crown and a deep black hood, glowing green eye-points, a tattered black cloak over rusty breastplate, holding an oversized rust-red longsword with a tiny hourglass on the hilt, its body tapering into a thick solid frost-teal spectral tail planted on the base. |
-| `nh-spirit-host` | Spirit Hosts | 1 (×3) | 50 round | No | A chunky toy-like SD gestalt ghost, a round wobbly frost-teal blob body made of three squashed-together cartoon skull faces with big hollow eyes, four stubby clawed arms holding a little rusty dagger and a chain, wrapped in torn grey rags, sitting on a thick solid swirl of sea-green spectral mist. |
-| `nh-grimghast-reaper` | Grimghast Reapers | 1 (×10) | 32 round | No | A true MGSD chibi ghost reaper, 2.5 heads tall with a huge skull wearing a dark red blindfold and a ragged black hood, stubby arms swinging an oversized curved rusty scythe, a short tattered robe flowing into a solid frost-teal ghost tail curling onto the base. |
-| `nh-chainrasp` | Chainrasps | 1 (×20) | 25 round | No | A true MGSD chibi shackled ghost, 2.5 heads tall with a huge sad-grinning skull under a torn grey hood, rusty manacles and a dangling ball-and-chain on one wrist, a chipped rusty short blade in the other hand, its ragged robe trailing into a stubby solid frost-teal ghost tail on the base. |
+| `nh-knight-of-shrouds` | Knight of Shrouds | 1 | 32 round | No | A ghost knight with a huge grinning skull under a tall spiked iron crown and a deep black hood, glowing green eye-points, a tattered black cloak over rusty breastplate, holding an oversized rust-red longsword with a tiny hourglass on the hilt, its body tapering into a thick solid frost-teal spectral tail planted on the base. |
+| `nh-spirit-host` | Spirit Hosts | 1 (×3) | 50 round | No | A chunky gestalt ghost, a round wobbly frost-teal blob body made of three squashed-together cartoon skull faces with big hollow eyes, four short clawed arms holding a little rusty dagger and a chain, wrapped in torn grey rags, sitting on a thick solid swirl of sea-green spectral mist. |
+| `nh-grimghast-reaper` | Grimghast Reapers | 1 (×10) | 32 round | No | A ghost reaper with a huge skull wearing a dark red blindfold and a ragged black hood, short arms swinging an oversized curved rusty scythe, a short tattered robe flowing into a solid frost-teal ghost tail curling onto the base. |
+| `nh-chainrasp` | Chainrasps | 1 (×20) | 25 round | No | A shackled ghost with a huge sad-grinning skull under a torn grey hood, rusty manacles and a dangling ball-and-chain on one wrist, a chipped rusty short blade in the other hand, its ragged robe trailing into a short solid frost-teal ghost tail on the base. |
 
 Chainrasps carry a mix of weapons in the kit but the Spearhead gives them one profile, so one figure covers both units (an extra
 pose may be added for variety, not as a rules variant). No champion or standard variants: the Spearhead gives them no rules.
@@ -352,4 +351,4 @@ Dreadblade Harrows (2). 22 models. No unit has the Reinforcements keyword. Every
   than 6" from every enemy unit (redeploy.ts, PlaceRequest `anywhere`).
 
 Figures, if built later: `nh-spirit-torment`, `nh-chainghast`, `nh-bladegheist`, `nh-dreadscythe-harridan`, `nh-dreadblade-harrow`
-(a mount: chunky SD ghost horse), in the §10 palette.
+(a mount: chunky ghost horse), in the §10 palette.

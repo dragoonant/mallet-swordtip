@@ -239,15 +239,15 @@ None. No Wizard or Priest and no lore. (The Battlesmith's icon and the runes are
 
 Palette for the whole army: ruddy tan skin with glowing molten-gold rune inlays, flame-orange crests and
 beards, burnished bronze-gold helmets and bracers, charcoal-black loincloths and belts, ember-red accents.
-All figures are original **true MGSD** chibis (~2.5 heads tall, oversized head, stubby legs, big hands),
+All figures are original designs in the house figure style (docs/FIGURE-STYLE.md),
 no GW logos, no copied icons (our god-symbol is an original flaming anvil-and-beard sigil).
 
 | Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt |
 |---|---|---|---|---|---|
-| `fyr-battlesmith` | Battlesmith | 1 | 32 round | No | A true MGSD chibi duardin war-poet, 2.5 heads tall with a huge bearded head under a bronze crested helm, stubby legs, gripping a broad battle-axe in one fist and a tall banner-pole topped with an original flaming anvil sigil in the other, glowing gold runes on bare ruddy arms, flame-orange beard and crest. |
-| `fyr-hearthguard` | Hearthguard Berzerkers | 1 (×5) | 32 round | No | A true MGSD chibi duardin bodyguard, 2.5 heads tall with an enormous head in a tall bronze dragon-snouted helm with a flame-orange crest, stubby legs, holding a long two-handed poleaxe whose blade glows like hot metal, bare chest with molten-gold rune inlays and a heavy gold belt. |
-| `fyr-vulkite` | Vulkite Berzerkers | 1 (×20) | 32 round | No | A true MGSD chibi duardin berserker, 2.5 heads tall with a giant head, wild flame-orange beard and mohawk crest bursting from a small bronze helm, stubby legs in a mid-leap pose, a short glowing hand-axe in each fist, ruddy bare torso etched with blazing gold runes. |
-| `fyr-vulkite-karl` (optional) | Vulkite Berzerkers (unit leader look) | 1 (×4, one per unit) | 32 round | No | The same MGSD chibi berserker with a taller fan-shaped crest, a gold face-mask visor and a bigger notched axe, so each Vulkite unit has a visible leader; skip if the pipeline is short on time (rules do not use a champion). |
+| `fyr-battlesmith` | Battlesmith | 1 | 32 round | No | A duardin war-poet with a bearded head under a bronze crested helm, short legs, gripping a broad battle-axe in one fist and a tall banner-pole topped with an original flaming anvil sigil in the other, glowing gold runes on bare ruddy arms, flame-orange beard and crest. |
+| `fyr-hearthguard` | Hearthguard Berzerkers | 1 (×5) | 32 round | No | A duardin bodyguard with a head in a tall bronze dragon-snouted helm with a flame-orange crest, short legs, holding a long two-handed poleaxe whose blade glows like hot metal, bare chest with molten-gold rune inlays and a heavy gold belt. |
+| `fyr-vulkite` | Vulkite Berzerkers | 1 (×20) | 32 round | No | A duardin berserker with a giant head, wild flame-orange beard and mohawk crest bursting from a small bronze helm, short legs in a mid-leap pose, a short glowing hand-axe in each fist, ruddy bare torso etched with blazing gold runes. |
+| `fyr-vulkite-karl` (optional) | Vulkite Berzerkers (unit leader look) | 1 (×4, one per unit) | 32 round | No | The same berserker with a taller fan-shaped crest, a gold face-mask visor and a bigger notched axe, so each Vulkite unit has a visible leader; skip if the pipeline is short on time (rules do not use a champion). |
 
 ---
 

@@ -300,16 +300,15 @@ Palette for the whole army (our own forest-spirit livery): warm bark-brown woode
 leaf cloaks and hair, teal-to-cyan translucent-looking (but solid, opaque) insect wings, amber-gold glowing eyes and sap accents.
 The two dragonspite cavalry units are told apart by mount colour: Lancers on teal-green dragonspites, Seekers on autumn
 russet-orange ones. Shared motif: an original three-leaf spiral badge carved into shields and bark. No GW logos, no copied
-Sylvaneth glyphs, Wargrove runes or sculpt details. All riders and infantry are **true MGSD** chibis (~2.5 heads tall, huge head,
-stubby legs, big hands); dragonspites are chunky, toy-like SD insect-dragons. Wings and effects are solid shapes, never
+Sylvaneth glyphs, Wargrove runes or sculpt details. All riders and infantry are in the house figure style (docs/FIGURE-STYLE.md); dragonspites are chunky insect-dragons. Wings and effects are solid shapes, never
 see-through.
 
 | Slug | Unit | Models needed | Base (mm) | Mount / vehicle | Concept prompt |
 |---|---|---|---|---|---|
-| `syl-arch-revenant` | Arch-Revenant | 1 | 40 round | No (wings are a companion spite on its back) | A true MGSD chibi tree-spirit warrior, 2.5 heads tall with a huge pale birch-wood face, glowing amber eyes and a tall crown of curling antler-branches, stubby bark legs, a big round leaf-shield on one arm and a long glaive with a curved green blade, carried aloft by a chubby little dragonfly-spite clinging to its back with four big solid teal wings. |
-| `syl-gossamid-archer` | Gossamid Archers | 1 (×5) | 32 round | No | A true MGSD chibi slender forest-spirit archer, 2.5 heads tall with a huge pale wooden face, long trailing leaf-green hair and amber eyes, stubby dangling legs, hovering on a pair of solid teal moth-wings sprouting from a small spite hugging its chest, drawing an oversized curved living-wood bow with a fat grub-tipped arrow. |
-| `syl-spiterider-lancer` | Spiterider Lancers | 1 (×3) | 60 round | Mount (teal-green dragonspite) | A true MGSD chibi bark-skinned rider, 2.5 heads tall with a huge antlered wooden head, stubby legs and a big leaf-shield, levelling a long thorn-tipped lance, seated on a chunky toy-like SD insect-dragon with a round segmented teal-green body, big friendly compound eyes, curved mandibles, short claw legs and two pairs of solid stubby wings. |
-| `syl-revenant-seeker` | Revenant Seekers | 1 (×3) | 60 round | Mount (russet dragonspite) | A true MGSD chibi bark-skinned rider, 2.5 heads tall with a huge hooded wooden face and glowing amber eyes, stubby legs, swinging an oversized crescent sickle with a pale green blade, seated on a chunky toy-like SD insect-dragon with a round segmented autumn russet-orange body, curved mandibles, short claw legs and two pairs of solid stubby amber wings. |
+| `syl-arch-revenant` | Arch-Revenant | 1 | 40 round | No (wings are a companion spite on its back) | A tree-spirit warrior with a huge pale birch-wood face, glowing amber eyes and a tall crown of curling antler-branches, short bark legs, a big round leaf-shield on one arm and a long glaive with a curved green blade, carried aloft by a chubby little dragonfly-spite clinging to its back with four big solid teal wings. |
+| `syl-gossamid-archer` | Gossamid Archers | 1 (×5) | 32 round | No | A slender forest-spirit archer with a huge pale wooden face, long trailing leaf-green hair and amber eyes, short dangling legs, hovering on a pair of solid teal moth-wings sprouting from a small spite hugging its chest, drawing an oversized curved living-wood bow with a fat grub-tipped arrow. |
+| `syl-spiterider-lancer` | Spiterider Lancers | 1 (×3) | 60 round | Mount (teal-green dragonspite) | A bark-skinned rider with an antlered wooden head, short legs and a big leaf-shield, levelling a long thorn-tipped lance, seated on a chunky insect-dragon with a round segmented teal-green body, big friendly compound eyes, curved mandibles, short claw legs and two pairs of solid short wings. |
+| `syl-revenant-seeker` | Revenant Seekers | 1 (×3) | 60 round | Mount (russet dragonspite) | A bark-skinned rider with a huge hooded wooden face and glowing amber eyes, short legs, swinging an oversized crescent sickle with a pale green blade, seated on a chunky insect-dragon with a round segmented autumn russet-orange body, curved mandibles, short claw legs and two pairs of solid short amber wings. |
 
 No champion, musician or standard variants: the Spearhead gives none of them rules. Bitterbark Copse figures are listed in
 Appendix A.
@@ -412,7 +411,7 @@ Warscroll abilities:
 
 | Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt |
 |---|---|---|---|---|---|
-| `syl-branchwych` | Branchwych | 1 | 32 round | No | A true MGSD chibi tree-witch, 2.5 heads tall with a huge bark face, antler-branch crown and amber eyes, stubby root legs, a big curved green scythe and a chubby grub familiar peeking from her shoulder. |
-| `syl-treelord` | Treelord | 1 | 70 round | Monster | A chunky toy-like SD walking tree giant with a huge round knotted face and glowing amber eyes, short stump legs with root toes, oversized talon-branch hands and a leafy summer canopy on its head. |
-| `syl-kurnoth-hunter` | Kurnoth Hunters | 1 (×3) | 50 round | No | A true MGSD chibi tall bark-warrior, 2.5 heads tall with a huge antlered wooden head, stubby legs braced wide, drawing an oversized living-wood greatbow with a thick green arrow. |
-| `syl-tree-revenant` | Tree-Revenants | 1 (×5) | 32 round | No | A true MGSD chibi lithe forest-spirit swordsman, 2.5 heads tall with a huge pale wooden mask-face and leaf hair, stubby legs in a fencing stance, holding a curved enchanted blade with a faint green edge. |
+| `syl-branchwych` | Branchwych | 1 | 32 round | No | A tree-witch with a huge bark face, antler-branch crown and amber eyes, short root legs, a big curved green scythe and a chubby grub familiar peeking from her shoulder. |
+| `syl-treelord` | Treelord | 1 | 70 round | Monster | A chunky walking tree giant with a huge round knotted face and glowing amber eyes, short stump legs with root toes, oversized talon-branch hands and a leafy summer canopy on its head. |
+| `syl-kurnoth-hunter` | Kurnoth Hunters | 1 (×3) | 50 round | No | A tall bark-warrior with an antlered wooden head, short legs braced wide, drawing an oversized living-wood greatbow with a thick green arrow. |
+| `syl-tree-revenant` | Tree-Revenants | 1 (×5) | 32 round | No | A lithe forest-spirit swordsman with a huge pale wooden mask-face and leaf hair, short legs in a fencing stance, holding a curved enchanted blade with a faint green edge. |

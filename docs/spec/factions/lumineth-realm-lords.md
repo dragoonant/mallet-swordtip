@@ -286,16 +286,15 @@ resolves to a hook).
 
 Palette for the whole army: ivory-white and pale-gold armour, sky-blue and deep teal cloth, soft lilac-pink wind ribbons and
 plumes, polished silver blades, faintly glowing pale-cyan crystal accents. Shared motif: an original three-curl **wind swirl**
-sigil (no copied Lumineth runes or GW icons). All figures are original **true MGSD** chibis (~2.5 heads tall, oversized head,
-stubby legs); mounts and the spirit are chunky toy-like SD shapes.
+sigil (no copied Lumineth runes or GW icons). All figures are original designs in the house figure style (docs/FIGURE-STYLE.md); mounts and the spirit are chunky shapes.
 
 | Slug | Unit | Models needed | Base (mm) | Mount | Concept prompt |
 |---|---|---|---|---|---|
-| `lrl-windmage` | Hurakan Windmage | 1 | 60×35 oval | Yes (cloud spirit) | A true MGSD chibi elf wind-mage, 2.5 heads tall with a huge serene head under a tall pale-gold crescent headdress, stubby legs, long sky-blue cape streaming sideways, holding a short sprinkler-like censer staff, riding on a puffy smiling white cloud spirit with little swirling wind curls. |
-| `lrl-windcharger` | Hurakan Windchargers | 1 (×5) | 60×35 oval | Yes (treerunner) | A true MGSD chibi elf archer-rider, 2.5 heads tall with a giant head in a slim ivory helm with a lilac plume, stubby legs, drawing a curved silver bow, astride a chunky round-bodied, long-tailed, beaked running lizard-bird mount in plum-red scales with stubby strong legs and an ivory-and-teal saddle cloth. |
-| `lrl-spirit-of-the-wind` | Hurakan Spirit of the Wind | 1 | 60 round | No (monster) | A chunky toy-like SD wind spirit: a big-headed, cheerful, translucent pale-cyan aelf-like figure with swept-back horn-shaped curls, its lower body a tight spinning whirlwind funnel on the base, holding an oversized elegant longbow, lilac ribbons and leaf-like crystal shards orbiting it. |
-| `lrl-warden` | Vanari Auralan Wardens | 1 (×10) | 32 round | No | A true MGSD chibi elf pike-guard, 2.5 heads tall with an enormous head in a tall ivory helm with a teal crest, stubby legs in a firm braced stance, long silver pike held forward, small kite shield with an original wind-swirl sigil, sky-blue tabard and pale-gold trim. |
-| `lrl-warden-banner` (optional) | Vanari Auralan Wardens (standard look) | 1 (×1) | 32 round | No | The same MGSD chibi pike-guard with a tall pole topped by a crescent-and-swirl standard and a hanging teal banner, so the unit has a visible leader; skip if time is short (no rule uses a champion or standard). |
+| `lrl-windmage` | Hurakan Windmage | 1 | 60×35 oval | Yes (cloud spirit) | An elf wind-mage with a serene head under a tall pale-gold crescent headdress, short legs, long sky-blue cape streaming sideways, holding a short sprinkler-like censer staff, riding on a puffy smiling white cloud spirit with little swirling wind curls. |
+| `lrl-windcharger` | Hurakan Windchargers | 1 (×5) | 60×35 oval | Yes (treerunner) | An elf archer-rider with a giant head in a slim ivory helm with a lilac plume, short legs, drawing a curved silver bow, astride a chunky round-bodied, long-tailed, beaked running lizard-bird mount in plum-red scales with short strong legs and an ivory-and-teal saddle cloth. |
+| `lrl-spirit-of-the-wind` | Hurakan Spirit of the Wind | 1 | 60 round | No (monster) | A chunky wind spirit: a big-headed, cheerful, translucent pale-cyan aelf-like figure with swept-back horn-shaped curls, its lower body a tight spinning whirlwind funnel on the base, holding an oversized elegant longbow, lilac ribbons and leaf-like crystal shards orbiting it. |
+| `lrl-warden` | Vanari Auralan Wardens | 1 (×10) | 32 round | No | An elf pike-guard with a head in a tall ivory helm with a teal crest, short legs in a firm braced stance, long silver pike held forward, small kite shield with an original wind-swirl sigil, sky-blue tabard and pale-gold trim. |
+| `lrl-warden-banner` (optional) | Vanari Auralan Wardens (standard look) | 1 (×1) | 32 round | No | The same pike-guard with a tall pole topped by a crescent-and-swirl standard and a hanging teal banner, so the unit has a visible leader; skip if time is short (no rule uses a champion or standard). |
 
 ---
 

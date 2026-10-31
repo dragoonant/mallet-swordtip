@@ -37,7 +37,7 @@ function IronjawzCrest() {
   // mushroom below ~32px).
   return (
     <g>
-      {/* lower jaw: heavy U, tusks sweeping up and out on both sides, a row of stubby lower teeth */}
+      {/* lower jaw: heavy U, tusks sweeping up and out on both sides, a row of short lower teeth */}
       <path d="M9 40 Q12 60 32 61 Q52 60 55 40 L49 41 Q32 56 15 41 Z" fill="currentColor" />
       <path d="M8 44 Q1 26 11 8 Q12 28 21 40 Z" fill="currentColor" />
       <path d="M56 44 Q63 26 53 8 Q52 28 43 40 Z" fill="currentColor" />
