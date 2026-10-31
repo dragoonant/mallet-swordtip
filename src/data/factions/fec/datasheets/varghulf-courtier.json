@@ -1,0 +1,28 @@
+[
+  {
+    "id": "fec.unit.varghulf-courtier",
+    "faction": "fec",
+    "name": "Varghulf Courtier",
+    "keywords": ["HERO", "INFANTRY"],
+    "factionKeywords": ["DEATH", "FLESH-EATER COURTS"],
+    "stats": { "M": 10, "W": 8, "Sv": 5, "OC": 2, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "varghulf-courtier",
+        "name": "Varghulf Courtier",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "oval", "mm": 90, "mm2": 52 },
+        "weapons": {
+          "default": ["fec.weapon.immense-claws", "fec.weapon.dagger-like-fangs"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["fec.ability.victory-feast"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

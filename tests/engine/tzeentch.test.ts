@@ -356,7 +356,7 @@ describe('DOT-BT battle traits', () => {
     for (const m of unitModels(t, ENL)) for (const e of Object.values(t.models).filter((x) => t.units[x.unitId].player === 'B' && t.units[x.unitId].location === 'board')) expect(horizontalGap(m, e)).toBeGreaterThan(6)
   })
 
-  it('DOT-BT-2 an Enlightened unit still in reserve at the start of round 4 is destroyed; an arrived unit cannot Move that phase', () => {
+  it('DOT-BT-2 an Enlightened unit still in reserve at the start of round 4 is not destroyed (battle trait, core 24.1); an arrived unit cannot Move that phase', () => {
     const s = aosState({
       players: { A: makeAosPlayer('A', { faction: 'tzeentch', patrolId: ARMY, enhancementId: MUTAGENIC, regimentAbilityId: FLUX }), B: makeAosPlayer('B') },
     }, bundle())
@@ -365,8 +365,8 @@ describe('DOT-BT battle traits', () => {
     s.round = 4
     const ctx = ctxFor(s)
     missionService.onWindow(ctx, 'round.start', '4')
-    expect(s.units[ENL].location).toBe('destroyed')
-    expect(of(evOf(ctx), 'UnitDestroyed').map((e) => e.unitId)).toEqual([ENL])
+    expect(s.units[ENL].location).toBe('reserves')
+    expect(of(evOf(ctx), 'UnitDestroyed')).toEqual([])
     expect(s.units[TZ].location).toBe('board')
     // arrival: set up this turn, so it counts as activated and cannot use Move abilities
     const t = game()

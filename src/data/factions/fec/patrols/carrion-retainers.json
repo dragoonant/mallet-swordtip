@@ -1,0 +1,30 @@
+{
+  "id": "fec.army.carrion-retainers",
+  "faction": "fec",
+  "name": "Carrion Retainers",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "abhorrant-archregent", "datasheet": "fec.unit.abhorrant-archregent", "size": 1 },
+    { "ref": "cryptguard", "datasheet": "fec.unit.cryptguard", "size": 10 },
+    { "ref": "morbheg-knights", "datasheet": "fec.unit.morbheg-knights", "size": 3 },
+    { "ref": "varghulf-courtier", "datasheet": "fec.unit.varghulf-courtier", "size": 1 }
+  ],
+  "warlord": "abhorrant-archregent",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "fec.ability.noble-deeds",
+    "fec.ability.summon-loyal-subjects",
+    "fec.ability.feeding-frenzy"
+  ],
+  "regimentAbilities": [
+    { "id": "fec.ability.crusading-army", "default": true },
+    { "id": "fec.ability.defenders-of-the-realm", "default": false }
+  ],
+  "enhancements": [
+    { "id": "fec.enh.ulguan-cloak", "default": true },
+    { "id": "fec.enh.blood-river-chalice", "default": false },
+    { "id": "fec.enh.rousing-oration", "default": false },
+    { "id": "fec.enh.crimson-victuals", "default": false }
+  ]
+}

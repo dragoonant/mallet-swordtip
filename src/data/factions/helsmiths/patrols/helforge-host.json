@@ -1,0 +1,29 @@
+{
+  "id": "helsmiths.army.helforge-host",
+  "faction": "helsmiths",
+  "name": "Helforge Host",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "war-despot", "datasheet": "helsmiths.unit.war-despot", "size": 1 },
+    { "ref": "dominator-engine", "datasheet": "helsmiths.unit.dominator-engine", "size": 1 },
+    { "ref": "tormentor-bombard", "datasheet": "helsmiths.unit.tormentor-bombard", "size": 1 },
+    { "ref": "infernal-cohort-gong", "datasheet": "helsmiths.unit.infernal-cohort", "size": 5, "tokens": { "gong-carrier": 1 } },
+    { "ref": "infernal-cohort", "datasheet": "helsmiths.unit.infernal-cohort", "size": 5 }
+  ],
+  "warlord": "war-despot",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "helsmiths.ability.harness-daemonic-power"
+  ],
+  "regimentAbilities": [
+    { "id": "helsmiths.ability.suppressive-bombardment", "default": true },
+    { "id": "helsmiths.ability.grinding-advance", "default": false }
+  ],
+  "enhancements": [
+    { "id": "helsmiths.enh.talisman-of-obsidian", "default": true },
+    { "id": "helsmiths.enh.amulet-of-burning-hate", "default": false },
+    { "id": "helsmiths.enh.chalice-of-darkness", "default": false },
+    { "id": "helsmiths.enh.scroll-of-petrification", "default": false }
+  ]
+}

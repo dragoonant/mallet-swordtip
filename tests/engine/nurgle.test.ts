@@ -306,11 +306,11 @@ describe('MON-BT battle traits', () => {
     // anywhere (not tied to the deployment zone) and every model more than 6" from every enemy model
     for (const m of unitModels(t, arriving)) for (const x of unitModels(t, BOSS)) expect(horizontalGap(m, x)).toBeGreaterThan(6)
     expect(t.phaseState.activated).toContain(arriving)
-    // a unit still in reserve at the start of round 4 is destroyed
+    // F18 (core 24.1): held back by a battle trait, not a Deploy ability, so still in reserve after the start of round 4
     const u = game()
     u.round = 4
     missionService.onWindow(ctxFor(u, []), 'round.start', '4')
-    for (const id of [BL2, PB2]) expect(u.units[id].location, id).toBe('destroyed')
+    for (const id of [BL2, PB2]) expect(u.units[id].location, id).toBe('reserves')
     expect(u.units[BL1].location).toBe('board')
   })
 

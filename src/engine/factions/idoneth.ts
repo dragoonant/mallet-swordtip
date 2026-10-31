@@ -196,7 +196,8 @@ const mistActivate: ActivatedAbilityHook & { targets: typeof mistTargets } = {
     }
     // scope 'attacker': the holder is the unit being attacked, the modified roll is the attacker's wound roll
     const effect: Effect = { modifyRoll: { roll: 'wound', value: -1 } }
-    effectService.grant(ctx, target.id, effect, { sourceAbilityId: use.abilityId, sourceUnitId: caster.id, scope: { who: 'attacker' }, duration: 'untilNextTurn' })
+    // F18 (HOH C3): "until your next turn" is the caster's next turn, not the enemy holder's
+    effectService.grant(ctx, target.id, effect, { sourceAbilityId: use.abilityId, sourceUnitId: caster.id, scope: { who: 'attacker' }, duration: 'untilNextTurn', expiryOwner: use.player })
     announce(ctx, use, target.id, `Ritual of the Creeping Mist: rolled ${rolled}${bonus ? ` +${bonus}` : ''}, attacks against ${target.name} get -1 to wound until your next turn`)
   },
 }

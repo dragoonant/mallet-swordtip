@@ -121,7 +121,7 @@ export interface HookQueries {
   moveEdgeConstraintFor(state: GameState, unitId: UnitId): EdgeRef | null
   // GLO-BT-1 (F8): true when an effect with `flag` applies to the unit: an ActiveEffect (effectService.activeFor) or a passive
   // descriptor the unit holds itself (battle trait, regiment ability, datasheet ability, enhancement), gate and `when` passed
-  unitHasEffectFlag(state: GameState, unitId: UnitId, flag: 'noRetreatDamage' | 'moveThroughModels' | 'shootAfterFallBack' | 'chargeAfterFallBack'): boolean
+  unitHasEffectFlag(state: GameState, unitId: UnitId, flag: 'noRetreatDamage' | 'moveThroughModels' | 'shootAfterFallBack' | 'chargeAfterFallBack' | 'noAbilities' | 'passAcrossTerrain'): boolean
   // ---- F12 ----
   // SCE-AB-5: extra charge dice (Effect.extraChargeDice summed over the unit's own passive descriptors and ActiveEffects)
   chargeDiceBonus(state: GameState, unitId: UnitId): number
@@ -141,6 +141,11 @@ export interface HookQueries {
   castingRollBonusFor(state: GameState, casterUnitId: UnitId): number
   // OBR C1: true when some source's forbidsWard denies the ward roll of `wardedUnitId` against this attacker / attack kind
   wardForbidden(state: GameState, info: WardDenialInfo): boolean
+  // ---- F18 (Slaanesh, Helsmiths, FEC, Ogors, Behemat; every source entry is asked after its gate) ----
+  // HOS C3: every pileInBonus answer for `unitId` (one per source), with the id of the ability that gives it
+  pileInBonusFor(state: GameState, unitId: UnitId): { expr: DiceExpr; sourceId: string }[]
+  // OGM C4: summed wardRollModifier answers (one per source: its largest answer)
+  wardRollModifierFor(state: GameState, info: WardDenialInfo): number
 }
 
 // F16 (OBR C1): what forbidsWard is asked about (kind = DestroyedBy['kind'] of the damage pool)
@@ -453,6 +458,7 @@ function keyApplies(entry: HookSourceEntry, key: keyof Effect, effect: Effect, h
     case 'move': return hook === 'onMove' && triggerHook(entry) === hook
     case 'modifyStat': case 'setStat': case 'halveStat': case 'grantWeaponAbility': case 'grantKeyword': return hook === 'onStatQuery'
     case 'halveRoll': return hook === 'onAdvanceRoll'
+    case 'rollFloor': return ROLL_HOOK[effect.rollFloor!.roll] === hook
     case 'forbid': return hook === 'onEligibility'
     default: return (ELIGIBILITY_KEYS as readonly string[]).includes(key) && hook === 'onEligibility'
   }
@@ -594,7 +600,7 @@ function resultFor(ctx: EngineContext | null, state: GameState, hook: HookName, 
   const holder = state.units[m.entry.holderUnitId]
   switch (m.key) {
     case 'reroll': return { kind: 'roll', reroll: e.reroll }
-    case 'modifyRoll': return { kind: 'roll', modifier: e.modifyRoll!.value, ...(e.modifyRoll!.armourOnly ? { armourOnly: true } : {}) }
+    case 'modifyRoll': return { kind: 'roll', modifier: e.modifyRoll!.value, ...(e.modifyRoll!.armourOnly ? { armourOnly: true } : {}), ...(e.affectsCompanion ? { affectsCompanion: true } : {}) }
     case 'autoResult': return e.autoResult!.outcome === 'pass' ? { kind: 'roll', autoPass: true } : { kind: 'roll', autoFail: true }
     case 'ignoreModifiers': return { kind: 'roll', ignoreModifiers: true }
     case 'ignoreNegativeModifiers': return { kind: 'roll', ignoreNegative: true }
@@ -963,8 +969,12 @@ export const hookService: HookService & HookQueries = {
 
   advanceRollFor(state, unitId, rolled) {
     const data: Data = { movingUnitId: unitId, roll: null }
-    const matches = matchEffects(state, 'onAdvanceRoll', data, new Set<keyof Effect>(['halveRoll', 'modifyRoll']))
+    const matches = matchEffects(state, 'onAdvanceRoll', data, new Set<keyof Effect>(['halveRoll', 'modifyRoll', 'rollFloor']))
     let v = rolled
+    // F18 (Effect.rollFloor, HOS-AB-5 / OGM-ENH Lungburster): the natural roll counts as the floor when lower, before halving
+    // and modifiers; the highest floor applies
+    const floor = Math.max(0, ...matches.filter((m) => m.key === 'rollFloor').map((m) => m.effect.rollFloor!.value))
+    v = Math.max(v, floor)
     if (matches.some((m) => m.key === 'halveRoll')) v = Math.ceil(v / 2)
     for (const m of matches) if (m.key === 'modifyRoll') v += m.effect.modifyRoll!.value
     return Math.max(0, v)
@@ -1232,6 +1242,38 @@ export const hookService: HookService & HookQueries = {
       const spec = codeHookFor(entry.code)
       if (!spec?.castingRollBonus || !gateOpen(state, entry)) continue
       const v = spec.castingRollBonus(state, entry, casterUnitId)
+      if (!v) continue
+      const key = entry.active ? `active:${entry.active.id}` : entry.source.id
+      const prev = bySource.get(key)
+      if (prev === undefined || Math.abs(v) > Math.abs(prev)) bySource.set(key, v)
+    }
+    let sum = 0
+    for (const v of bySource.values()) sum += v
+    return sum
+  },
+
+  pileInBonusFor(state, unitId) {
+    const out: { expr: DiceExpr; sourceId: string }[] = []
+    const seen = new Set<string>()
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.pileInBonus || !gateOpen(state, entry)) continue
+      const key = entry.active ? `active:${entry.active.id}` : entry.source.id
+      if (seen.has(key)) continue
+      const v = spec.pileInBonus(state, entry, unitId)
+      if (v === null || v === undefined || v === 0 || v === '0') continue
+      seen.add(key)
+      out.push({ expr: v, sourceId: entry.source.id })
+    }
+    return out
+  },
+
+  wardRollModifierFor(state, info) {
+    const bySource = new Map<string, number>()
+    for (const entry of sourcesFor(state)) {
+      const spec = codeHookFor(entry.code)
+      if (!spec?.wardRollModifier || !gateOpen(state, entry)) continue
+      const v = spec.wardRollModifier(state, entry, info)
       if (!v) continue
       const key = entry.active ? `active:${entry.active.id}` : entry.source.id
       const prev = bySource.get(key)

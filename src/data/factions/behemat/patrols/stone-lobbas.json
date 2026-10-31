@@ -1,0 +1,29 @@
+{
+  "id": "behemat.army.stone-lobbas",
+  "faction": "behemat",
+  "name": "Stone Lobbas",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "boulder-basher", "datasheet": "behemat.unit.boulder-basher", "size": 1 },
+    { "ref": "rock-hurler-1", "datasheet": "behemat.unit.rock-hurler", "size": 1 },
+    { "ref": "rock-hurler-2", "datasheet": "behemat.unit.rock-hurler", "size": 1 }
+  ],
+  "warlord": "boulder-basher",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "behemat.ability.boulder-basher",
+    "behemat.ability.bowled-over",
+    "behemat.ability.close-one-eye"
+  ],
+  "regimentAbilities": [
+    { "id": "behemat.ability.greedy-and-grabby", "default": true },
+    { "id": "behemat.ability.surly-sorts", "default": false }
+  ],
+  "enhancements": [
+    { "id": "behemat.enh.humongous-strides", "default": true },
+    { "id": "behemat.enh.ard-ead", "default": false },
+    { "id": "behemat.enh.lucky-rock", "default": false },
+    { "id": "behemat.enh.hungry-gobbler", "default": false }
+  ]
+}

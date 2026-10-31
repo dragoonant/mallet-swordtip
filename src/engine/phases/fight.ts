@@ -92,7 +92,9 @@ function actKey(state: GameState, unitId: UnitId): string {
 // ---------- eligibility and order (CORE-10.2-10.8) ----------
 function eligibleToFight(state: GameState, unitId: UnitId): boolean {
   const u = state.units[unitId]
-  return !!u && u.location === 'board' && (u.turn.chargedThisTurn || isInCombat(state, unitId))
+  if (!u || u.location !== 'board' || !(u.turn.chargedThisTurn || isInCombat(state, unitId))) return false
+  // F18 (HOH C4, Effect.noAbilities): the Fight ability is a Core ability the unit cannot use (it can still be attacked)
+  return !hookService.unitHasEffectFlag(state, unitId, 'noAbilities')
 }
 
 function rawStrikeFirst(state: GameState, unitId: UnitId): boolean {
@@ -120,7 +122,7 @@ function eligibleFighters(state: GameState, player: PlayerId, step: FightState['
   const fought = new Set(fight.fought)
   const snapshot = step === 'fightsFirst' ? sfSnapshot(state) : null
   // CORE-10.7: Strike-last units wait while some other unit in combat has not fought
-  const othersWaiting = Object.values(state.units).some((u) => u.location === 'board' && !fought.has(u.id) && u.id !== fight.currentUnitId && isInCombat(state, u.id) && !hasStrikeLast(state, u.id))
+  const othersWaiting = Object.values(state.units).some((u) => u.location === 'board' && !fought.has(u.id) && u.id !== fight.currentUnitId && isInCombat(state, u.id) && !hasStrikeLast(state, u.id) && eligibleToFight(state, u.id))
   const out: UnitId[] = []
   for (const u of boardUnitsOf(state, player)) {
     // F12: a unit with an extra Fight left may be picked again, but only after the Strike-first step
@@ -301,11 +303,67 @@ function legalPileIns(state: GameState, unitId: UnitId, dist: number, limit = 3)
   return out
 }
 
+// F18 (HOS C3, EngineCodeHook.pileInBonus): extra pile-in inches for this activation, rolled once and kept in the marks
+function pileInBonus(ctx: EngineContext, unitId: UnitId, act: string): number {
+  const s = ctx.state
+  const key = `fi:pileBonus:${act}`
+  const kept = readMark(s, key)
+  if (kept !== null) return Number(kept)
+  let total = 0
+  const player = s.units[unitId]?.player ?? s.activePlayer
+  for (const b of hookService.pileInBonusFor?.(s, unitId) ?? []) {
+    const r = ctx.rollExpr(b.expr, { purpose: 'ability', player, unitId })
+    total += r.total
+    const name = s.abilities[b.sourceId]?.name ?? b.sourceId
+    ctx.emit({ type: 'AbilityTriggered', abilityId: b.sourceId, sourceUnitId: unitId, targetUnitId: unitId, summary: `${name}: +${r.total}" pile-in`, player })
+  }
+  writeMark(s, key, String(total))
+  return total
+}
+
+// ---------- F18 (HOS C4, HOS-RA-1 Bringers of Degradation): a chained Fight ----------
+// chainFight(state, unitId) writes fi:chain:<player> = unitId. Right after the current activation of that player resolves (its
+// fightAfter window included), the named unit is picked at once if fightPickable still allows it (same Strike-first / Strike-last
+// checks), with no chooseFightUnit decision. The alternation then continues as if the player had made one pick. A chained
+// activation never offers another chain (isChainedFight).
+const CHAIN = 'fi:chain:'
+const CHAINED = 'fi:chained:'
+export function chainFight(state: GameState, unitId: UnitId): void {
+  const u = state.units[unitId]
+  if (u) writeMark(state, CHAIN + u.player, unitId)
+}
+// what the pick step would offer now: the unit's player could pick it in the current step (the unit fighting right now excluded)
+export function fightPickable(state: GameState, unitId: UnitId): boolean {
+  const fight = state.phaseState.fight as FightState | null
+  const u = state.units[unitId]
+  if (!fight || state.phase !== 'fight' || !u) return false
+  return eligibleFighters(state, u.player, fight.step).includes(unitId)
+}
+// the unit's current activation was started by chainFight
+export function isChainedFight(state: GameState, unitId: UnitId): boolean {
+  return readMark(state, CHAINED + unitId) === String(activationsOf(state, unitId))
+}
+function startChain(ctx: EngineContext, player: PlayerId): void {
+  const s = ctx.state
+  const id = readMark(s, CHAIN + player)
+  if (id === null || id === '') return
+  writeMark(s, CHAIN + player, '')
+  if (!fightPickable(s, id)) return
+  const fight = s.phaseState.fight as FightState
+  fight.currentUnitId = id
+  fight.subStep = 'pileIn'
+  // the chained activation counts as part of `player`'s pick: the other player picks once it is over
+  fight.nextToSelect = otherPlayer(player)
+  writeMark(s, ACTS + id, String(activationsOf(s, id) + 1))
+  writeMark(s, CHAINED + id, String(activationsOf(s, id)))
+  ctx.emit({ type: 'FightUnitSelected', unitId: id, step: fight.step })
+}
+
 function doPileIn(ctx: EngineContext, unitId: UnitId): 'pending' | 'progress' {
   const s = ctx.state
   const act = actKey(s, unitId)
   if (ctx.marked(`fi:piledIn:${act}`)) return 'progress'
-  const dist = hookService.pileInDistance?.(s, unitId, 3) ?? 3
+  const dist = (hookService.pileInDistance?.(s, unitId, 3) ?? 3) + pileInBonus(ctx, unitId, act)
   // offered only when some model can actually move (otherwise there is nothing to decide)
   const planned = unitModels(s, unitId).length === 0 ? [] : planPileIn(s, unitId, dist)
   if (planned.length === 0 || pileInRejection(s, unitId, dist, planned) !== null) { ctx.once(`fi:piledIn:${act}`); return 'progress' }
@@ -445,7 +503,9 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
   const act = actKey(s, unitId)
   if (!unit || unit.location !== 'board') {
     if (fightResolvedOnce(ctx, unitId, act)) return 'pending'
-    finishUnit(ctx, unitId, unit?.player ?? s.activePlayer)
+    const who = unit?.player ?? s.activePlayer
+    finishUnit(ctx, unitId, who)
+    startChain(ctx, who)
     return 'progress'
   }
 
@@ -476,6 +536,7 @@ function driveFightUnit(ctx: EngineContext): 'pending' | 'progress' {
   }
   if (fightResolvedOnce(ctx, unitId, act)) return 'pending'
   finishUnit(ctx, unitId, unit.player)
+  startChain(ctx, unit.player)
   return 'progress'
 }
 

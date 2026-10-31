@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ogors.enh.wallwrecker",
+    "faction": "ogors",
+    "name": "Wallwrecker",
+    "text": "The general's moves and charges may pass across terrain features as though it could fly. It does not gain the Fly keyword.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ogors.ability.wallwrecker"
+  },
+  {
+    "id": "ogors.enh.lungburster",
+    "faction": "ogors",
+    "name": "Lungburster",
+    "text": "When a friendly unit wholly within 9\" of the general (the general counts) rolls a 1, 2 or 3 for its run roll, it may use 4 instead.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ogors.ability.lungburster"
+  },
+  {
+    "id": "ogors.enh.deathcheater",
+    "faction": "ogors",
+    "name": "Deathcheater",
+    "text": "The general has Ward (6+) while it is more than 3\" from every other friendly unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ogors.ability.deathcheater"
+  },
+  {
+    "id": "ogors.enh.gristlegobbler",
+    "faction": "ogors",
+    "name": "Gristlegobbler",
+    "text": "Once per battle, at the end of any turn, each enemy unit in combat with the general suffers D3 mortal damage, then the general Heals (3).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "ogors.ability.gristlegobbler"
+  }
+]

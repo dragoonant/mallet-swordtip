@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ogors.unit.ironguts",
+    "faction": "ogors",
+    "name": "Ironguts",
+    "keywords": ["INFANTRY"],
+    "factionKeywords": ["DESTRUCTION", "OGOR MAWTRIBES"],
+    "stats": { "M": 6, "W": 4, "Sv": 4, "OC": 2 },
+    "composition": [
+      {
+        "modelId": "irongut",
+        "name": "Irongut",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": { "default": ["ogors.weapon.irongut-weapon"] },
+        "figure": { "archetype": "heavy", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["ogors.ability.stomping-marauders"],
+    "coreAbilities": [],
+    "figure": { "archetype": "heavy", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

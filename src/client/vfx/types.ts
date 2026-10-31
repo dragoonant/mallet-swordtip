@@ -12,13 +12,15 @@ export interface Vec3Like {
 /** Ranged weapon look driving tracer colour/thickness/behaviour in vfx.shoot(). */
 export type ShotKind = 'bolter' | 'shoota' | 'heavy' | 'flame' | 'psychic'
 
-/** The 14 ranged visual families (src/client/vfx/families.ts holds each one's look). Classified from a
+/** The ranged visual families (src/client/vfx/families.ts holds each one's look). Classified from a
  *  weapon's name / abilities / faction by weaponFlavour.ts's `vfxFamily`. */
 export type VfxFamily =
   | 'bolt' | 'autocannon' | 'las' | 'lascannon' | 'plasma' | 'melta' | 'flamer'
   | 'missile' | 'grenade' | 'gauss' | 'pulse' | 'dakka' | 'bio' | 'psychic'
   // Age of Sigmar black powder: the Great Cannon's iron ball and grapeshot, and pistols.
   | 'cannonball' | 'grapeshot' | 'flintlock'
+  // F18: a thrown boulder (Sons of Behemat), green daemonic hellfire shells and flame jets (Helsmiths of Hashut).
+  | 'boulder' | 'hellfire' | 'hellflame'
 
 /** One projectile of a volley: where it leaves, where it is aimed (the target model), and whether it lands. */
 export interface VolleyShot {

@@ -1,0 +1,41 @@
+{
+  "id": "ogors.army.warglutt-marauders",
+  "faction": "ogors",
+  "name": "Warglutt Marauders",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "tyrant", "datasheet": "ogors.unit.tyrant", "size": 1 },
+    { "ref": "gluttons-2", "datasheet": "ogors.unit.gluttons", "size": 2 },
+    {
+      "ref": "gluttons-3",
+      "datasheet": "ogors.unit.gluttons",
+      "size": 3,
+      "reserve": { "ability": "ogors.ability.more-ogors-my-lord" }
+    },
+    { "ref": "ironguts", "datasheet": "ogors.unit.ironguts", "size": 3 },
+    { "ref": "maulbeast-1", "datasheet": "ogors.unit.maulbeast-cavalry", "size": 1 },
+    {
+      "ref": "maulbeast-2",
+      "datasheet": "ogors.unit.maulbeast-cavalry",
+      "size": 1,
+      "reserve": { "ability": "ogors.ability.more-ogors-my-lord" }
+    }
+  ],
+  "warlord": "tyrant",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "ogors.ability.nomadic-warriors",
+    "ogors.ability.scoff-down-fresh-flesh"
+  ],
+  "regimentAbilities": [
+    { "id": "ogors.ability.blinding-dust-clouds", "default": true },
+    { "id": "ogors.ability.brutish-barging", "default": false }
+  ],
+  "enhancements": [
+    { "id": "ogors.enh.gristlegobbler", "default": true },
+    { "id": "ogors.enh.wallwrecker", "default": false },
+    { "id": "ogors.enh.lungburster", "default": false },
+    { "id": "ogors.enh.deathcheater", "default": false }
+  ]
+}

@@ -47,7 +47,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
     if (psychic || /force|stave|staff|goad/.test(text)) return 'force'
     // Tyranid claws, talons and teeth rend and slash, so they voice as the cutting sound; only a klaw/fist
     // (or a plain crushing profile) is the heavy crunch.
-    if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks|hoove?s|clubbing|celestite.club|war-relic/.test(text)) return 'crush'
+    if (/fist|klaw|hammer|maul(?!er)|smasher|mace|crush|limbs|legs|servo|mutation|sentinel(?![- ]blade)|mining|improvised|gauntlet|dozer|armoured hull|armoured-hull|armoured tracks|tracks|hoove?s|clubbing|celestite.club|war-relic|\bclub|eadbutt|pummelling|gutbiter/.test(text)) return 'crush'
     if (/choppa|chain|sword|blade|axe|eviscerator|knife|knives|reaper|claw|talon|teeth|jaws|snappa|stikka|maw|hyperphase|mandible|flail|whip|glaive|spear|lance|khopesh|fang|sickle|scythe|maw|bite|halberd|scimitar|sciansa|scianlar|keldrisaith|lanmari|voltspear|hooks|beak/.test(text)) return 'chain'
     return strength >= 8 ? 'crush' : 'chain'
   }
@@ -68,6 +68,10 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
   // darting pale sparks and their razorshell harpoon launcher a heavy bolt; a Tzaangor's arrow of fate is a streak of warpflame.
   if (/doomfire|scryfish|arrow.of.fate/.test(text)) return 'psychic'
   if (/harpoon/.test(text)) return 'heavy'
+  // F18: the Dominator's immolation cannons are a gout of daemonfire, the Bombard's ruinous torrent a heavy lobbed shell and a gargant's
+  // hurled rocks a heavy lob.
+  if (/immolation/.test(text)) return 'flame'
+  if (/ruinous.energy|hurlin/.test(text)) return 'heavy'
   // A macro plasma *incinerator* is a plasma gun, not a flame template.
   if (/plasma.*incinerat/.test(text)) return 'heavy'
   // TORRENT is the rules-level marker for a flame template (no hit roll, auto-hits).
@@ -98,7 +102,7 @@ export function weaponFlavour(weaponId: string, weapon: WeaponData | undefined, 
 import type { VfxFamily } from './vfx/types'
 export type { VfxFamily } from './vfx/types'
 
-export const VFX_FAMILIES: readonly VfxFamily[] = ['bolt', 'autocannon', 'las', 'lascannon', 'plasma', 'melta', 'flamer', 'missile', 'grenade', 'gauss', 'pulse', 'dakka', 'bio', 'psychic', 'cannonball', 'grapeshot', 'flintlock']
+export const VFX_FAMILIES: readonly VfxFamily[] = ['bolt', 'autocannon', 'las', 'lascannon', 'plasma', 'melta', 'flamer', 'missile', 'grenade', 'gauss', 'pulse', 'dakka', 'bio', 'psychic', 'cannonball', 'grapeshot', 'flintlock', 'boulder', 'hellfire', 'hellflame']
 
 export interface VfxClassification {
   family: VfxFamily
@@ -109,7 +113,7 @@ export interface VfxClassification {
 
 /** Engine faction ids by the prefix of a weapon id ('ork.w.shoota'), for weapons classified with no faction given. */
 const ID_PREFIX_FACTION: [string, string][] = [
-  ['ork.', 'ork'], ['khorne.', 'khorne'], ['nurgle.', 'nurgle'], ['nighthaunt.', 'nighthaunt'], ['sylvaneth.', 'sylvaneth'], ['daughters.', 'daughters'], ['idoneth.', 'idoneth'], ['tzeentch.', 'tzeentch'], ['ossiarch.', 'ossiarch'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['stormcast.', 'stormcast'], ['skaven.', 'skaven'], ['seraphon.', 'seraphon'], ['soulblight.', 'soulblight'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
+  ['ork.', 'ork'], ['khorne.', 'khorne'], ['nurgle.', 'nurgle'], ['nighthaunt.', 'nighthaunt'], ['sylvaneth.', 'sylvaneth'], ['daughters.', 'daughters'], ['idoneth.', 'idoneth'], ['tzeentch.', 'tzeentch'], ['ossiarch.', 'ossiarch'], ['slaanesh.', 'slaanesh'], ['helsmiths.', 'helsmiths'], ['fec.', 'fec'], ['ogors.', 'ogors'], ['behemat.', 'behemat'], ['cities.', 'cities'], ['ironjawz.', 'ironjawz'], ['slaves.', 'slaves'], ['fyreslayers.', 'fyreslayers'], ['kruleboyz.', 'kruleboyz'], ['gloomspite.', 'gloomspite'], ['lumineth.', 'lumineth'], ['kharadron.', 'kharadron'], ['stormcast.', 'stormcast'], ['skaven.', 'skaven'], ['seraphon.', 'seraphon'], ['soulblight.', 'soulblight'], ['nec', 'necrons'], ['tyr', 'tyranids'], ['gsc.', 'genestealer-cults'], ['tau.', 'tau-empire'],
   ['am.', 'astra-militarum'], ['lov.', 'leagues-of-votann'], ['gk.', 'grey-knights'], ['csm', 'chaos-space-marines'], ['we.', 'world-eaters'], ['ade', 'adepta-sororitas'], ['cus.', 'adeptus-custodes'], ['drk.', 'drukhari'], ['ael.', 'aeldari'], ['adm.', 'adeptus-mechanicus'], ['dg.', 'death-guard'], ['ths.', 'thousand-sons'], ['sw.', 'space-wolves'], ['da.', 'dark-angels'], ['ba.', 'blood-angels'], ['dw.', 'deathwatch'], ['bt.', 'black-templars'],
 ]
 
@@ -142,6 +146,11 @@ export function classifyVfxFamily(weaponId: string, weapon: WeaponData | undefin
   // F16: Khainite heartseeker bows and thrown keldrisaiths are hard kinetic streaks (the Doomfire crossbow too: blood-red bolts); Idoneth scryfish
   // are a swarm of pale soul-energy streaks, their razorshell harpoon launcher a lobbed missile; a Tzaangor's arrow of fate is a bright
   // crystal-tipped streak.
+  // F18: a gargant's hurled rocks are a lobbed boulder; the Bombard's torrent of ruinous energy is a ball of green daemonfire and the Dominator's
+  // immolation cannons a green flame plume.
+  if (/hurlin|boulder/.test(text)) return kw('boulder')
+  if (/ruinous.energy/.test(text)) return kw('hellfire')
+  if (/immolation/.test(text)) return kw('hellflame')
   if (/heartseeker|keldrisaith|doomfire/.test(text)) return kw('bolt')
   if (/scryfish/.test(text)) return kw('pulse')
   if (/harpoon/.test(text)) return kw('missile')
@@ -196,7 +205,7 @@ export function vfxFamily(weaponId: string, weapon: WeaponData | undefined, fact
 const FAMILY_FLAVOUR: Record<VfxFamily, RangedFlavour> = {
   bolt: 'bolter', autocannon: 'heavy', las: 'bolter', lascannon: 'heavy', plasma: 'heavy', melta: 'flame', flamer: 'flame',
   missile: 'heavy', grenade: 'heavy', gauss: 'psychic', pulse: 'psychic', dakka: 'shoota', bio: 'shoota', psychic: 'psychic',
-  cannonball: 'heavy', grapeshot: 'shoota', flintlock: 'bolter',
+  cannonball: 'heavy', grapeshot: 'shoota', flintlock: 'bolter', boulder: 'heavy', hellfire: 'heavy', hellflame: 'flame',
 }
 
 /** A family mapped back onto the 5 SFX/tracer flavours. */

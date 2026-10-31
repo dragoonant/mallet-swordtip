@@ -238,7 +238,8 @@ function runStage(ctx: EngineContext, p: StageParams): StageResult {
       const r = g.result as RollModifierResult
       // CORE-12.4 Companion: friendly buffs do not apply, negative modifiers and enemy abilities still do
       const friendly = !!g.source.unitId && s.units[g.source.unitId]?.player === p.attackerPlayer
-      if (p.companion && !isSave && friendly && (r.modifier ?? 0) > 0) continue
+      // F18 (HOS C1): unless the modifier's effect names Companion weapons (RollModifierResult.affectsCompanion)
+      if (p.companion && !isSave && friendly && (r.modifier ?? 0) > 0 && !r.affectsCompanion) continue
       if (r.modifier) ent.mods.push(r.modifier)
       if (r.ignoreModifiers) ent.ignore = true
       if (r.ignoreNegative) ent.ignoreNeg = true
@@ -626,6 +627,8 @@ function wardThreshold(ctx: EngineContext, unitId: UnitId, rep: Model, mortal: b
     if (adj.threshold !== null) best = best === null ? adj.threshold : Math.min(best, adj.threshold)
     modifier += adj.modifier
   }
+  // F18 (OGM C4, EngineCodeHook.wardRollModifier): attacker-side modifiers to this ward roll (Exotic Giblets), before the clamp
+  if (attackerUnitId && kind) modifier += hookService.wardRollModifierFor(s, { wardedUnitId: unitId, attackerUnitId, kind })
   // cards: Eroding Miasma / Fight to the Last / Shield of Thorns
   return cardWard(s, unitId, best === null ? null : { needed: best, modifier: Math.max(-1, Math.min(1, modifier)) })
 }

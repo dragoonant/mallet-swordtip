@@ -125,6 +125,31 @@ export const DECLARED_GLB_SLUGS: readonly string[] = [
   'obr-immortis-guard',
   'obr-necropolis-stalker',
   'obr-morghast-archai',
+  // Hedonites of Slaanesh: Epicurean Revellers.
+  'hos-vexmor',
+  'hos-vashtiss',
+  'hos-lascivyr',
+  'hos-fiend',
+  'hos-daemonette',
+  'hos-seeker',
+  // Helsmiths of Hashut: Helforge Host. (hoh-gong-carrier is a token look no warscroll model uses.)
+  'hoh-war-despot',
+  'hoh-dominator-engine',
+  'hoh-tormentor-bombard',
+  'hoh-infernal-cohort',
+  // Flesh-eater Courts: Carrion Retainers.
+  'fec-abhorrant-archregent',
+  'fec-cryptguard',
+  'fec-morbheg-knight',
+  'fec-varghulf-courtier',
+  // Ogor Mawtribes: Warglutt Marauders.
+  'ogm-tyrant',
+  'ogm-glutton',
+  'ogm-irongut',
+  'ogm-maulbeast-cavalry',
+  // Sons of Behemat: Stone Lobbas.
+  'sob-boulder-basher',
+  'sob-rock-hurler',
 ]
 
 /** The declared slugs whose file exists: the only ones the game ever requests. */
@@ -240,6 +265,28 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'tzeentch.unit.tzaangors/tzaangor': 'dot-tzaangor',
   'tzeentch.unit.tzaangor-enlightened/tzaangor-enlightened': 'dot-tzaangor-enlightened',
   'tzeentch.unit.tzaangor-skyfires/tzaangor-skyfire': 'dot-tzaangor-skyfire',
+  // F18: Hedonites of Slaanesh, Helsmiths of Hashut, Flesh-eater Courts, Ogor Mawtribes, Sons of Behemat (slugs from each spec's Figures table).
+  // The three Heralds of the Thricefold Discord are three models with their own figures. The Gong Carrier token has a slug in the spec but no model, so no slug here.
+  'slaanesh.unit.thricefold-discord/vexmor': 'hos-vexmor',
+  'slaanesh.unit.thricefold-discord/vashtiss': 'hos-vashtiss',
+  'slaanesh.unit.thricefold-discord/lascivyr': 'hos-lascivyr',
+  'slaanesh.unit.fiends/fiend': 'hos-fiend',
+  'slaanesh.unit.daemonettes/daemonette': 'hos-daemonette',
+  'slaanesh.unit.seekers/seeker': 'hos-seeker',
+  'helsmiths.unit.war-despot/war-despot': 'hoh-war-despot',
+  'helsmiths.unit.dominator-engine/dominator-engine': 'hoh-dominator-engine',
+  'helsmiths.unit.tormentor-bombard/tormentor-bombard': 'hoh-tormentor-bombard',
+  'helsmiths.unit.infernal-cohort/infernal-cohort': 'hoh-infernal-cohort',
+  'fec.unit.abhorrant-archregent/abhorrant-archregent': 'fec-abhorrant-archregent',
+  'fec.unit.cryptguard/cryptguard': 'fec-cryptguard',
+  'fec.unit.morbheg-knights/morbheg-knight': 'fec-morbheg-knight',
+  'fec.unit.varghulf-courtier/varghulf-courtier': 'fec-varghulf-courtier',
+  'ogors.unit.tyrant/tyrant': 'ogm-tyrant',
+  'ogors.unit.gluttons/glutton': 'ogm-glutton',
+  'ogors.unit.ironguts/irongut': 'ogm-irongut',
+  'ogors.unit.maulbeast-cavalry/maulbeast-rider': 'ogm-maulbeast-cavalry',
+  'behemat.unit.boulder-basher/boulder-basher': 'sob-boulder-basher',
+  'behemat.unit.rock-hurler/rock-hurler': 'sob-rock-hurler',
   // Ossiarch Bonereapers.
   'ossiarch.unit.mortisan-ossifector/mortisan-ossifector': 'obr-mortisan-ossifector',
   'ossiarch.unit.immortis-guard/immortis-guard': 'obr-immortis-guard',

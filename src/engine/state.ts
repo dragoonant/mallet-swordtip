@@ -33,6 +33,11 @@ export function emptyTurnState(): UnitTurnState {
 }
 
 // AoS unit fields (13-port-plan §2.1) for a unit built outside createGameState
+// F18 (core 24.1): a Deploy ability carries the DEPLOY keyword in its descriptor
+export function isDeployAbility(a: { keywords?: string[] } | undefined): boolean {
+  return !!a?.keywords?.some((k) => k.toUpperCase() === 'DEPLOY')
+}
+
 export function aosUnitFields(): Pick<Unit, 'reserveArrival' | 'setUpTurn' | 'replacementOf' | 'replaced' | 'tokens'> {
   return { reserveArrival: null, setUpTurn: null, replacementOf: null, replaced: false, tokens: {} }
 }
@@ -623,6 +628,8 @@ export function createGameState(setup: GameSetup, bundle: DataBundle, seed: stri
         ...aosUnitFields(),
         // AoS reserve units (Ere We Go): never deployed; brought on by their arrival ability (setup skips them)
         reserveArrival: pu.reserve?.ability ?? null,
+        // F18 (core 24.1): how it went into reserve (only a DEPLOY-keyword ability makes it die at the start of round 4)
+        ...(pu.reserve ? { reserveVia: { abilityId: pu.reserve.via ?? null, deploy: isDeployAbility(bundle.abilities[pu.reserve.via ?? '']) } } : {}),
         tokens: { ...(pu.tokens ?? {}) },
       }
       if (pu.reserve) addAbility(pu.reserve.ability, 'datasheet')

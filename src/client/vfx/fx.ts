@@ -420,7 +420,7 @@ export class FxEngine {
         p.glow = this.claimSprite(true, 'glow_orb', cols.color)
         break
       case 'lob':
-        if (proj.sprite) p.head = this.claimSprite(true, proj.sprite, cols.core)
+        if (proj.sprite) p.head = this.claimSprite(!proj.solid, proj.sprite, cols.core)
         if (proj.model) p.model = this.models.acquire(proj.model)
         break
       case 'rocket':
@@ -646,7 +646,8 @@ export class FxEngine {
       const vy = (dy / l) * speed + (rand() - 0.5) * speed * spread * 0.8 + 0.8
       const vz = (dz / l) * speed + (rand() - 0.5) * speed * spread
       const sz0 = 0.35 + rand() * 0.25
-      this.spr(true, proj.sprite ?? 'fire_blob', WHITE, p.fromX, p.fromY, p.fromZ, 0.38 + rand() * 0.12, sz0, sz0 * 2.6, 0.75, vx, vy, vz, -1.5, 1.4, (rand() - 0.5) * 4)
+      const flameSprite = proj.sprite ?? 'fire_blob'
+      this.spr(true, flameSprite, isTintable(flameSprite) ? (p.colors as FamilyColors).color : WHITE, p.fromX, p.fromY, p.fromZ, 0.38 + rand() * 0.12, sz0, sz0 * 2.6, 0.75, vx, vy, vz, -1.5, 1.4, (rand() - 0.5) * 4)
       if (rand() < 0.25) this.spr(false, SMOKE_TEX[(rand() * 3) | 0], SMOKE_GREY, p.fromX, p.fromY, p.fromZ, 0.7, 0.4, 1.5, 0.35, vx * 0.7, vy + 1.2, vz * 0.7, -0.5, 1.2, rand() - 0.5, 0.15)
     }
   }

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "slaanesh.enh.twisted-grace",
+    "faction": "slaanesh",
+    "name": "Twisted Grace",
+    "text": "When the general piles in in a turn in which it charged, add D6\" to its pile-in distance.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaanesh.ability.twisted-grace"
+  },
+  {
+    "id": "slaanesh.enh.high-courtiers",
+    "faction": "slaanesh",
+    "name": "High Courtiers",
+    "text": "While the general is wholly within combat range of a friendly Daemonettes unit, the general and that Daemonettes unit have Ward (5+).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaanesh.ability.high-courtiers"
+  },
+  {
+    "id": "slaanesh.enh.excess-of-violence",
+    "faction": "slaanesh",
+    "name": "Excess of Violence",
+    "text": "Once per battle, in any combat phase, pick a visible friendly unit wholly within 12\" of the general (the general counts). Until the start of your next turn, its melee weapons, Companion weapons included, have Crit (2 Hits).",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaanesh.ability.excess-of-violence"
+  },
+  {
+    "id": "slaanesh.enh.irresistible-soul-musk",
+    "faction": "slaanesh",
+    "name": "Irresistible Soul-Musk",
+    "text": "Once per battle, in your movement phase, pick a visible friendly Seekers or Fiends unit wholly within 12\" of the general. Take it off the battlefield and set it up again anywhere more than 6\" from every enemy unit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "slaanesh.ability.irresistible-soul-musk"
+  }
+]

@@ -1,0 +1,150 @@
+[
+  {
+    "id": "helsmiths.ability.helforge-host",
+    "name": "Helforge Host",
+    "text": "Army marker for the Helsmiths of Hashut Helforge Host. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "helsmiths.ability.harness-daemonic-power",
+    "name": "Harness Daemonic Power",
+    "text": "At the start of each of your hero phases this must be used, before any other ability: take every daemonic power point off your units, then gain points equal to the battle round number plus 1 and hand them out to your units, no more than 3 to each unit. Points you do not hand out are lost. Points stay on a unit until your next hero phase.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "limit": "oncePerTurnArmy",
+    "code": "helsmithsHarness",
+    "params": { "mandatory": true, "max": 3, "bonus": 1, "token": "daemonic-power", "priority": "P1" }
+  },
+  {
+    "id": "helsmiths.ability.grinding-advance",
+    "name": "Grinding Advance",
+    "text": "Once per battle, in the deployment phase once both armies are set up, pick up to 2 friendly Infernal Cohort units. Each may move up to 3\". Those units cannot use Charge abilities in battle round 1.",
+    "trigger": "activated",
+    "timing": { "kind": "deployment", "whose": "your" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly", "count": 2 }],
+    "duration": "battle",
+    "code": "helsmithsGrindingAdvance",
+    "params": { "distance": 3, "maxTargets": 2, "priority": "P1" }
+  },
+  {
+    "id": "helsmiths.ability.suppressive-bombardment",
+    "name": "Suppressive Bombardment",
+    "text": "Once per turn, in your shooting phase, pick an enemy Infantry unit that had damage points allocated to it this turn by shooting attacks of a friendly Tormentor Bombard. Until the start of your next turn, that unit rolls 1 fewer dice for its charge rolls, to a minimum of 1 dice.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "limit": "oncePerTurn",
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "duration": "untilNextTurn",
+    "code": "helsmithsSuppressiveBombardment",
+    "params": { "fewerDice": 1, "priority": "P1" }
+  },
+  {
+    "id": "helsmiths.ability.black-hearted-conqueror",
+    "name": "Black-Hearted Conqueror",
+    "text": "While this unit has at least 1 daemonic power point, each other friendly unit with 0 points counts as having 1 point while it is wholly within 6\" of this unit and visible to it. The range grows by 3\" for each point this unit has.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "helsmithsConqueror",
+    "params": { "range": 6, "perPoint": 3 }
+  },
+  {
+    "id": "helsmiths.ability.daemonic-strength",
+    "name": "Daemonic Strength",
+    "text": "For each daemonic power point this unit has, add 1\" to its Move characteristic and 1 to the Attacks characteristic of each of its weapons.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "helsmithsDaemonicStrength",
+    "params": { "move": 1, "attacks": 1 }
+  },
+  {
+    "id": "helsmiths.ability.calculated-trajectory",
+    "name": "Calculated Trajectory",
+    "text": "Add 1 to hit rolls for this unit's shooting attacks that target an enemy unit with 5 or more models that is more than 12\" away from this unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "when": { "weaponType": "ranged", "not": { "range": { "within": 12 } } }, "modifyRoll": { "roll": "hit", "value": 1 } },
+    "code": "helsmithsCalculatedTrajectory",
+    "params": { "minModels": 5, "beyond": 12 }
+  },
+  {
+    "id": "helsmiths.ability.ruinous-bombardment",
+    "name": "Ruinous Bombardment",
+    "text": "Once per turn, in your shooting phase, if this unit used a Shoot ability this turn and every one of its attacks targeted the same enemy unit, that unit is the first target. You may also pick as many other enemy units within 6\" of it as this unit has daemonic power points. Roll a dice for each target: on a 3+ subtract 3 from that unit's control score for the rest of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "limit": "oncePerTurnArmy",
+    "duration": "untilEndOfTurn",
+    "code": "helsmithsRuinousBombardment",
+    "params": { "range": 6, "succeedOn": 3, "control": 3, "priority": "P2" }
+  },
+  {
+    "id": "helsmiths.ability.strike-the-gongs",
+    "name": "Strike the Gongs",
+    "text": "Once per battle, in any hero phase, if this unit has a Gong Carrier on the battlefield, you may remove the Gong Carrier and return D3 slain models to this unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "any" },
+    "limit": "oncePerBattle",
+    "code": "helsmithsStrikeTheGongs",
+    "params": { "token": "gong-carrier", "returnModels": "D3", "priority": "P1" }
+  },
+  {
+    "id": "helsmiths.ability.daemonic-resilience",
+    "name": "Daemonic Resilience",
+    "text": "With 1 daemonic power point this unit has Ward (6+). With 2 points it has Ward (5+). With 3 points it has Ward (5+) and ignores the first damage point allocated to it in each phase.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "code": "helsmithsDaemonicResilience",
+    "params": { "ward1": 6, "ward2": 5 }
+  },
+  {
+    "id": "helsmiths.ability.talisman-of-obsidian",
+    "name": "Talisman of Obsidian",
+    "text": "In each phase, ignore the first damage point allocated to the general.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "helsmithsTalisman"
+  },
+  {
+    "id": "helsmiths.ability.amulet-of-burning-hate",
+    "name": "Amulet of Burning Hate",
+    "text": "Once per battle, in any combat phase: until the end of the turn, an unmodified hit roll of 5+ for the general's attacks is a critical hit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "duration": "untilEndOfTurn",
+    "code": "helsmithsAmulet",
+    "params": { "critOn": 5, "priority": "P1" }
+  },
+  {
+    "id": "helsmiths.ability.chalice-of-darkness",
+    "name": "Chalice of Darkness",
+    "text": "Once per battle, in your shooting phase, pick a visible enemy unit within 12\" of the general. That unit suffers D3 mortal damage.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "code": "helsmithsChalice",
+    "params": { "range": 12, "damage": "D3", "priority": "P1" }
+  },
+  {
+    "id": "helsmiths.ability.scroll-of-petrification",
+    "name": "Scroll of Petrification",
+    "text": "Once per battle, in any hero phase: until the end of the turn the general has Ward (2+), but it cannot use abilities and cannot be picked by friendly abilities.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "duration": "untilEndOfTurn",
+    "code": "helsmithsScroll",
+    "params": { "ward": 2, "priority": "P1" }
+  }
+]

@@ -5,7 +5,7 @@
 // destroyed at the round.start window of round 4. There are no mission rules, secondaries or early endings here.
 import type { ScoringRule, TimingWindowId } from '../data/types'
 import type { DecisionHandler, EngineContext, WindowTrigger } from './modules'
-import { removeModel } from './state'
+import { isDeployAbility, removeModel } from './state'
 import type { AttackKind, GameResult, GameState, ModelId, ObjectiveId, PlayerId, UnitId } from './types'
 
 export interface ModelDestroyedInfo {
@@ -104,11 +104,29 @@ function scoreTurn(ctx: EngineContext): void {
   }
 }
 
-// CORE-4.14: every unit still in reserve at the start of round 4 is destroyed
+// F18 (core 24.1): what an ability that sets a unit up in reserve during the game calls; records how the unit got there
+export function setUpInReserve(state: GameState, unitId: UnitId, abilityId: string | null): void {
+  const u = state.units[unitId]
+  if (!u) return
+  u.location = 'reserves'
+  u.reserveVia = { abilityId, deploy: isDeployAbility(abilityId ? state.abilities[abilityId] : undefined) }
+}
+
+// a unit still in reserve at the start of round 4 that dies there (SPH-7.3, core 24.1): one set up in reserve by a Deploy
+// ability. A unit held back by a battle trait ("not set up during the deployment phase", every shipped Spearhead reserve) stays.
+// A unit that never got onto the battlefield and has no way to arrive (dropped at deployment) is removed as before.
+export function reserveDiesAtDeadline(state: GameState, unitId: UnitId): boolean {
+  const u = state.units[unitId]
+  if (!u || u.location !== 'reserves') return false
+  if (u.reserveVia) return u.reserveVia.deploy
+  return !u.reserveArrival
+}
+
+// SPH-7.3 / core 24.1: at the start of round 4, units set up in reserve by a Deploy ability and still there are destroyed
 function destroyReserves(ctx: EngineContext): void {
   const s = ctx.state
   for (const unit of Object.values(s.units)) {
-    if (unit.location !== 'reserves') continue
+    if (!reserveDiesAtDeadline(s, unit.id)) continue
     for (const id of [...unit.models]) if (s.models[id]) removeModel(s, id)
     unit.location = 'destroyed'
     ctx.emit({ type: 'UnitDestroyed', unitId: unit.id, byPlayer: null, byUnitId: null, byModelId: null, kind: 'other', player: unit.player })

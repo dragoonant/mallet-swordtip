@@ -1,0 +1,32 @@
+[
+  {
+    "id": "behemat.unit.boulder-basher",
+    "faction": "behemat",
+    "name": "Rock-hurler (Boulder Basher)",
+    "keywords": ["HERO", "MONSTER"],
+    "factionKeywords": ["DESTRUCTION", "SONS OF BEHEMAT"],
+    "stats": { "M": 8, "W": 12, "Sv": 5, "OC": 5 },
+    "composition": [
+      {
+        "modelId": "boulder-basher",
+        "name": "Rock-hurler (Boulder Basher)",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 90 },
+        "weapons": {
+          "default": [
+            "behemat.weapon.hurlin-rocks",
+            "behemat.weapon.massive-club-and-rocks",
+            "behemat.weapon.eadbutt"
+          ]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["behemat.ability.drop-toss-or-roll"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

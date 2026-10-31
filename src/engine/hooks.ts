@@ -107,6 +107,9 @@ export interface RollModifierResult {
   ignoreNegative?: boolean
   // F16 (Effect.onlySixes): the roll succeeds only on an unmodified 6 (attack.ts runStage)
   onlySix?: boolean
+  // F18 (HOS C1): a friendly positive modifier that also reaches Companion weapons (attack.ts runStage skips friendly
+  // positive modifiers on a Companion weapon unless this is set, CORE-12.4). Copied from Effect.affectsCompanion
+  affectsCompanion?: boolean
 }
 export interface StatModifierResult { kind: 'stat'; delta?: number; set?: number; cap?: number; halve?: boolean }
 export interface AttackCountResult { kind: 'attacks'; delta?: number }
@@ -164,6 +167,12 @@ export interface ActivatedAbilityHook {
   targets?(state: GameState, unitId: UnitId | null): UnitId[]
   // "choose one" modes (abilityMode options); absent = descriptor.modes or none
   modes?: { id: string; label: string }[]
+  // F18 (additive; FEC-BT-2 Summon Loyal Subjects): modes computed from the game when the effect happens, after the targets
+  // were declared (`targetUnitIds`) and the roll succeeded; overrides `modes`. An empty list = no mode decision
+  modesFor?(state: GameState, unitId: UnitId | null, player: PlayerId, targetUnitIds?: UnitId[]): { id: string; label: string }[]
+  // F18 (additive; HOS C6 Dispensers of Favour): how many targets the declare step may pick (absent or <= 1 = one). With N > 1
+  // the abilityTarget decision repeats without the units already picked, with a 'done' option after the first pick
+  maxTargets?(state: GameState, unitId: UnitId | null): number
   // apply the effect (emit events, grant effects, queue mortal damage …)
   resolve(ctx: EngineContext, use: AbilityUse): void
 }
@@ -260,6 +269,12 @@ export const EFFECT_HOOKS: Record<keyof Effect, HookName[]> = {
   ignoreNegativeModifiers: ['onHitRoll', 'onWoundRoll', 'onSaveRoll', 'onChargeRoll', 'onFeelNoPainRoll'],
   // F16 (IDK-ENH Mind Flare): a roll-hook result ({ kind: 'roll', onlySix }) at the holder's hit roll
   onlySixes: ['onHitRoll'],
+  // F18 (HOS-AB-5, OGM-ENH Lungburster): the run roll floor, read by hookService.advanceRollFor at onAdvanceRoll
+  rollFloor: ['onAdvanceRoll'],
+  // F18 (HOH-ENH Scroll of Petrification): read directly (hookService.unitHasEffectFlag 'noAbilities')
+  noAbilities: [],
+  // F18 (OGM-ENH Wallwrecker): read directly by terrain.ts (hookService.unitHasEffectFlag 'passAcrossTerrain')
+  passAcrossTerrain: [],
 }
 
 // hooks a descriptor must be registered at: its trigger's hook plus every hook its effect keys need

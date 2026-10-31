@@ -127,6 +127,10 @@
             "properties": {
               "ability": {
                 "$ref": "common.schema.json#/$defs/Id"
+              },
+              "via": {
+                "$ref": "common.schema.json#/$defs/Id",
+                "description": "F18 (core 24.1): the ability that set the unit up in reserve; with the DEPLOY keyword the unit is destroyed at the start of round 4 if still in reserve"
               }
             },
             "required": [

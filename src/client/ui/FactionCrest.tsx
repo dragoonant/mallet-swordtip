@@ -6,12 +6,14 @@
 // Seraphon a stepped-pyramid sun under a star, Soulblight a bat-winged drop of blood, Blades of Khorne a hound skull over crossed blades,
 // Maggotkin of Nurgle three flies circling a cracked bell, Nighthaunt a hooded wisp holding a lantern, Sylvaneth a spiral of thorned leaves,
 // Daughters of Khaine a curved dagger inside a heart outline, Idoneth Deepkin an eel coiled round a pale moon, Disciples of Tzeentch an eye set in a
-// spiralling flame, Ossiarch Bonereapers a bone crown over two crossed femurs. One 64x64 viewBox each, drawn with
+// spiralling flame, Ossiarch Bonereapers a bone crown over two crossed femurs, Hedonites of Slaanesh two curling ribbons that form a mirror round a
+// teardrop gem, Helsmiths of Hashut a horned bull head over a flaming anvil, Flesh-eater Courts a cracked, dripping crown over a bone goblet,
+// Ogor Mawtribes a round iron gut-plate with a fanged maw, Sons of Behemat a giant's fist clutching a boulder. One 64x64 viewBox each, drawn with
 // currentColor plus a handful of fixed accents so a crest reads on dark panels and on a bright active tile.
 import type { CSSProperties, ReactElement } from 'react'
 
 /** Faction ids the game ships a crest for; anything else gets a plain shield with the initial. */
-export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron' | 'stormcast' | 'skaven' | 'seraphon' | 'soulblight' | 'khorne' | 'nurgle' | 'nighthaunt' | 'sylvaneth' | 'daughters' | 'idoneth' | 'tzeentch' | 'ossiarch'
+export type CrestFaction = 'cities' | 'ironjawz' | 'slaves' | 'fyreslayers' | 'kruleboyz' | 'gloomspite' | 'lumineth' | 'kharadron' | 'stormcast' | 'skaven' | 'seraphon' | 'soulblight' | 'khorne' | 'nurgle' | 'nighthaunt' | 'sylvaneth' | 'daughters' | 'idoneth' | 'tzeentch' | 'ossiarch' | 'slaanesh' | 'helsmiths' | 'fec' | 'ogors' | 'behemat'
 
 function CitiesCrest() {
   return (
@@ -432,6 +434,108 @@ function OssiarchCrest() {
   )
 }
 
+function SlaaneshCrest() {
+  // Hedonites of Slaanesh (Epicurean Revellers): two mirrored ribbons that sweep out and round into an oval hand-mirror, each end curling
+  // over like a ringlet, the tails crossing below as the handle, a pink teardrop gem hung in the glass. No rune, no GW icon.
+  const ribbon = (key: string, flip: boolean) => (
+    <g key={key} transform={flip ? 'translate(64 0) scale(-1 1)' : undefined} fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M29 7 C13 7 7 24 12 37 C16 46 25 49 30 45" stroke="#0f1119" strokeWidth="7.6" />
+      <path d="M29 7 C13 7 7 24 12 37 C16 46 25 49 30 45" stroke="currentColor" strokeWidth="4.6" />
+      <path d="M29 7 C34 5 38 9 35 12 C33 14 30 12 31 10" stroke="currentColor" strokeWidth="2.6" />
+      <path d="M30 45 C27 52 22 55 19 61" stroke="#0f1119" strokeWidth="6.4" />
+      <path d="M30 45 C27 52 22 55 19 61" stroke="currentColor" strokeWidth="3.6" />
+    </g>
+  )
+  return (
+    <g>
+      {ribbon('r', true)}
+      {ribbon('l', false)}
+      <path d="M32 18 C40 28 41 36 32 43 C23 36 24 28 32 18 Z" fill="#e45bc9" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M29.5 28 C29 32 30 36 32 38" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" opacity="0.8" />
+    </g>
+  )
+}
+
+function HelsmithsCrest() {
+  // Helsmiths of Hashut (Helforge Host): a horned bull's head, a flaring muzzle and two sweeping horns, over a bar of daemonfire (green) licking up
+  // from a heavy anvil. The head is a general bull shape, not the Hashut sigil.
+  return (
+    <g>
+      {/* anvil: a flat top, the pointed horn on the left, a waisted body and a broad foot */}
+      <path d="M5 44 H54 L51 50 H42 C42 53 43 55 46 56 V61 H18 V56 C21 55 22 53 22 50 H15 C11 50 8 47 5 44 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      {/* daemonfire on the anvil face */}
+      <path d="M17 44 C13 37 19 34 17 28 C23 32 26 38 22 44 Z" fill="#46d85a" stroke="#0f1119" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M26 44 C22 35 31 32 29 24 C36 30 38 38 34 44 Z" fill="#7bf08a" stroke="#0f1119" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M38 44 C35 38 41 36 40 30 C45 34 47 39 44 44 Z" fill="#46d85a" stroke="#0f1119" strokeWidth="1.4" strokeLinejoin="round" />
+      {/* the bull: horns sweeping out and up, small ears, a broad brow narrowing to a flared muzzle */}
+      <path d="M22 13 C12 14 6 10 5 2 C9 8 15 8 23 7 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M42 13 C52 14 58 10 59 2 C55 8 49 8 41 7 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M22 14 L14 15 L20 19 Z M42 14 L50 15 L44 19 Z" fill="currentColor" stroke="#0f1119" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M21 8 H43 L41 21 C40 26 41 28 39 31 C37 33 27 33 25 31 C23 28 24 26 23 21 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M25 16 L30 18 M39 16 L34 18" stroke="#0f1119" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="29" cy="28" r="1.5" fill="#0f1119" />
+      <circle cx="35" cy="28" r="1.5" fill="#0f1119" />
+    </g>
+  )
+}
+
+function FecCrest() {
+  // Flesh-eater Courts (Carrion Retainers): a three-pointed paper crown with a crack running through it, blood dripping from its band into a bone goblet.
+  return (
+    <g>
+      {/* goblet: bowl, stem, foot */}
+      <path d="M17 36 H47 C47 47 41 52 34 52 V56 H42 V60 H22 V56 H30 V52 C23 52 17 47 17 36 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M19 38 H45 C44 41 43 42 42 43 H22 C21 42 20 41 19 38 Z" fill="#c0262b" />
+      {/* drips falling from the crown band */}
+      <path d="M22 25 V31 M32 25 V33 M42 25 V29" stroke="#c0262b" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="22" cy="32.4" r="2.1" fill="#c0262b" />
+      <circle cx="32" cy="34.4" r="2.1" fill="#c0262b" />
+      <circle cx="42" cy="30.4" r="2.1" fill="#c0262b" />
+      {/* crown: a band under three points, the middle tallest */}
+      <path d="M10 25 L8 6 L21 15 L32 2 L43 15 L56 6 L54 25 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      <rect x="10" y="20" width="44" height="5.4" fill="#0f1119" fillOpacity="0.5" />
+      {/* the crack: a jagged line from the middle point down through the band */}
+      <path d="M33 4 L29 11 L35 15 L30 20 L34 25" fill="none" stroke="#0f1119" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+    </g>
+  )
+}
+
+function OgorsCrest() {
+  // Ogor Mawtribes (Warglutt Marauders): a round, riveted iron belly-plate with a huge fanged maw across it: upper and lower fangs, two big tusks.
+  return (
+    <g>
+      <circle cx="32" cy="32" r="28" fill="currentColor" stroke="#0f1119" strokeWidth="2.4" />
+      <circle cx="32" cy="32" r="24" fill="none" stroke="#0f1119" strokeWidth="1.4" opacity="0.5" />
+      {[[32, 9], [11, 32], [53, 32], [32, 55], [16, 16], [48, 16], [16, 48], [48, 48]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.9" fill="#0f1119" opacity="0.7" />)}
+      {/* the maw */}
+      <path d="M9 34 C15 20 49 20 55 34 C49 54 15 54 9 34 Z" fill="#0f1119" />
+      <path d="M17 29 L21 38 L25 28 L29 38 L33 28 L37 38 L41 28 L45 38 L47 29 C41 24 23 24 17 29 Z" fill="#f4ecd6" />
+      <path d="M20 44 L24 36 L28 45 L32 36 L36 45 L40 36 L44 44 C38 49 26 49 20 44 Z" fill="#f4ecd6" />
+      <path d="M11 35 L17 19 L19 35 Z M53 35 L47 19 L45 35 Z" fill="#f4ecd6" stroke="#0f1119" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M28 42 C30 46 34 46 36 42 C34 40 30 40 28 42 Z" fill="#c0262b" />
+    </g>
+  )
+}
+
+function BehematCrest() {
+  // Sons of Behemat (Stone Lobbas): a huge fist, forearm coming up from below, four fat knuckled fingers and a thumb clamped round a mossy boulder.
+  return (
+    <g>
+      {/* the boulder */}
+      <path d="M13 28 L19 11 L35 5 L50 12 L55 28 L49 42 L18 42 Z" fill="currentColor" fillOpacity="0.55" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M19 11 L26 20 L24 30 M35 5 L38 17 L48 22" fill="none" stroke="#0f1119" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" opacity="0.7" />
+      <path d="M21 13 C26 9 30 10 32 14 C28 16 25 15 21 13 Z" fill="#6bc04a" />
+      {/* forearm and wrist */}
+      <path d="M20 62 L21 50 H44 L45 62 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+      {/* four fingers, knuckles up, clamped over the boulder's lower half */}
+      {[0, 1, 2, 3].map((i) => <rect key={i} x={13 + i * 10} y={33} width="10.4" height="19" rx="5" fill="currentColor" stroke="#0f1119" strokeWidth="2" />)}
+      {[0, 1, 2, 3].map((i) => <path key={i} d={`M${15.5 + i * 10} 41 H${21 + i * 10}`} stroke="#0f1119" strokeWidth="1.4" strokeLinecap="round" opacity="0.55" />)}
+      {/* thumb across the front */}
+      <path d="M6 48 C5 41 14 37 24 44 C26 47 22 51 18 50 C14 49 10 52 6 48 Z" fill="currentColor" stroke="#0f1119" strokeWidth="2" strokeLinejoin="round" />
+    </g>
+  )
+}
+
 function FallbackCrest({ initial }: { initial: string }) {
   return (
     <g>
@@ -447,6 +551,7 @@ const CRESTS: Record<string, () => ReactElement> = {
   stormcast: () => <StormcastCrest />, skaven: () => <SkavenCrest />, seraphon: () => <SeraphonCrest />, soulblight: () => <SoulblightCrest />,
   khorne: () => <KhorneCrest />, nurgle: () => <NurgleCrest />, nighthaunt: () => <NighthauntCrest />, sylvaneth: () => <SylvanethCrest />,
   daughters: () => <DaughtersCrest />, idoneth: () => <IdonethCrest />, tzeentch: () => <TzeentchCrest />, ossiarch: () => <OssiarchCrest />,
+  slaanesh: () => <SlaaneshCrest />, helsmiths: () => <HelsmithsCrest />, fec: () => <FecCrest />, ogors: () => <OgorsCrest />, behemat: () => <BehematCrest />,
 }
 
 export function FactionCrest({ faction, name, size = 48, style }: { faction: string; name?: string; size?: number; style?: CSSProperties }) {

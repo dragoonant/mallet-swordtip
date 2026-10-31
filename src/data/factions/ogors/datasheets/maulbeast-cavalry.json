@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ogors.unit.maulbeast-cavalry",
+    "faction": "ogors",
+    "name": "Maulbeast Cavalry",
+    "keywords": ["CAVALRY"],
+    "factionKeywords": ["DESTRUCTION", "OGOR MAWTRIBES"],
+    "stats": { "M": 10, "W": 7, "Sv": 3, "OC": 3 },
+    "composition": [
+      {
+        "modelId": "maulbeast-rider",
+        "name": "Maulbeast Rider",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "oval", "mm": 90, "mm2": 52 },
+        "weapons": { "default": ["ogors.weapon.gutbiter-weapons", "ogors.weapon.maulbeast-horns-and-fangs"] },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["ogors.ability.shock-and-gore"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

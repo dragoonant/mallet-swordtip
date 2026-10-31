@@ -1,0 +1,31 @@
+[
+  {
+    "id": "helsmiths.unit.dominator-engine",
+    "faction": "helsmiths",
+    "name": "Dominator Engine with Immolation Cannons",
+    "keywords": ["WAR MACHINE", "REINFORCEMENTS"],
+    "factionKeywords": ["CHAOS", "HELSMITHS OF HASHUT"],
+    "stats": { "M": 6, "W": 10, "Sv": 2, "OC": 2 },
+    "composition": [
+      {
+        "modelId": "dominator-engine",
+        "name": "Dominator Engine",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 80 },
+        "weapons": {
+          "default": [
+            "helsmiths.weapon.immolation-cannons",
+            "helsmiths.weapon.horns-and-pummelling-strikes"
+          ]
+        },
+        "figure": { "archetype": "vehicle", "kit": "generic-vehicle" }
+      }
+    ],
+    "abilities": ["helsmiths.ability.daemonic-strength"],
+    "coreAbilities": [],
+    "figure": { "archetype": "vehicle", "kit": "generic-vehicle" },
+    "spearhead": true
+  }
+]

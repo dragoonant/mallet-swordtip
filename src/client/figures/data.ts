@@ -278,7 +278,7 @@ const KNOWN_KIT: Record<string, KitId> = {
   // F16 armies: the same stand-ins (shown only until a GLB loads or when its file is missing); the faction paintScheme tints them.
   'daughters.unit.melusai-ironscale': 'ael-farseer',
   'daughters.unit.witch-aelves': 'ael-guardian',
-  'daughters.unit.doomfire-warlocks': 'cdm-bloodcrusher',
+  'daughters.unit.doomfire-warlocks': 'adm-hound-carbine', // a low long beast with a rider fills the 60x35mm oval (the juggernaut kit read as a tall red pillar)
   'daughters.unit.blood-stalkers': 'ael-guardian',
   'idoneth.unit.isharann-soulscryer': 'ael-farseer',
   'idoneth.unit.akhelian-morrsarr-guard': 'cdm-bloodcrusher',
@@ -292,6 +292,25 @@ const KNOWN_KIT: Record<string, KitId> = {
   'ossiarch.unit.immortis-guard': 'we-berzerker',
   'ossiarch.unit.necropolis-stalkers': 'csm-cultist',
   'ossiarch.unit.morghast-archai': 'cdm-bloodcrusher',
+  // F18 armies: stand-ins shown only until the GLB loads or when its file is missing; the faction paintScheme tints them.
+  'slaanesh.unit.thricefold-discord': 'ael-farseer',
+  'slaanesh.unit.fiends': 'cdm-flesh-hound',
+  'slaanesh.unit.daemonettes': 'ael-guardian',
+  'slaanesh.unit.seekers': 'adm-hound-carbine',
+  'helsmiths.unit.war-despot': 'we-berzerker',
+  'helsmiths.unit.dominator-engine': 'ork-deff-dread',
+  'helsmiths.unit.tormentor-bombard': 'am-field-gun',
+  'helsmiths.unit.infernal-cohort': 'dw-intercessor',
+  'fec.unit.abhorrant-archregent': 'ael-farseer',
+  'fec.unit.cryptguard': 'csm-cultist',
+  'fec.unit.morbheg-knights': 'cdm-flesh-hound',
+  'fec.unit.varghulf-courtier': 'cdm-flesh-hound',
+  'ogors.unit.tyrant': 'we-berzerker',
+  'ogors.unit.gluttons': 'we-berzerker',
+  'ogors.unit.ironguts': 'we-berzerker',
+  'ogors.unit.maulbeast-cavalry': 'cdm-flesh-hound',
+  'behemat.unit.boulder-basher': 'we-berzerker',
+  'behemat.unit.rock-hurler': 'we-berzerker',
 }
 
 /** Models of a mixed unit that look different from the rest of it (a flamer sister is not a rifle sister), keyed
@@ -811,7 +830,7 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   // Daughters of Khaine: serpent-bodied Melusai a head above the Witch Aelves, Warlocks mounted on 60x35mm ovals.
   'daughters.unit.melusai-ironscale': 1.5,
   'daughters.unit.witch-aelves': 1.0,
-  'daughters.unit.doomfire-warlocks': 1.9,
+  'daughters.unit.doomfire-warlocks': 1.5,
   'daughters.unit.blood-stalkers': 1.35,
   // Idoneth: eel riders and the war-shark on ovals, a stooped Soulscryer, eyeless Thralls a little taller than a footsoldier.
   'idoneth.unit.isharann-soulscryer': 1.2,
@@ -828,6 +847,29 @@ const HEIGHT_BY_DATASHEET: Record<string, number> = {
   'ossiarch.unit.immortis-guard': 1.5,
   'ossiarch.unit.necropolis-stalkers': 1.4,
   'ossiarch.unit.morghast-archai': 2.1,
+  // Slaanesh: Heralds a head taller than the Daemonettes, Fiends and Seekers' steeds long beasts on 75x42 / 60x35mm ovals.
+  'slaanesh.unit.thricefold-discord': 1.5,
+  'slaanesh.unit.daemonettes': 1.05,
+  'slaanesh.unit.fiends': 1.5,
+  'slaanesh.unit.seekers': 1.5,
+  // Helsmiths: a squat war-despot, the Dominator an 80mm walker, the Bombard a 100mm mortar carriage, Cohort spearmen short and stocky.
+  'helsmiths.unit.war-despot': 1.2,
+  'helsmiths.unit.dominator-engine': 2.4,
+  'helsmiths.unit.tormentor-bombard': 2.4,
+  'helsmiths.unit.infernal-cohort': 1.0,
+  // Flesh-eater Courts: lanky ghouls, bat-riders on 75x42mm ovals, the Varghulf a hulking beast on a 90x52mm oval.
+  'fec.unit.abhorrant-archregent': 1.5,
+  'fec.unit.cryptguard': 1.05,
+  'fec.unit.morbheg-knights': 1.7,
+  'fec.unit.varghulf-courtier': 2.4,
+  // Ogors: broad brawlers a head and a half above a footsoldier on 40-50mm bases, Maulbeast riders on 90x52mm ovals.
+  'ogors.unit.tyrant': 2.0,
+  'ogors.unit.gluttons': 1.7,
+  'ogors.unit.ironguts': 1.8,
+  'ogors.unit.maulbeast-cavalry': 2.5,
+  // Sons of Behemat: gargants fill a 90mm base (1.77" radius), so they stand tall and wide.
+  'behemat.unit.boulder-basher': 3.6,
+  'behemat.unit.rock-hurler': 3.4,
   // Space Wolves: the Invictor Tactical Warsuit is a tall bipedal walker on a 90mm base.
   'sw.invictor-tactical-warsuit': 2.4,
   'sw.battle-leader-thoryk': 1.2,

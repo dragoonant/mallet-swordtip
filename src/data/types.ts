@@ -169,6 +169,16 @@ export interface Effect {
   // ---- F16 engine-core (Daughters, Idoneth, Tzeentch, Ossiarch) ----
   // IDK-ENH Mind Flare: the holder's hit rolls succeed only on an unmodified 6 (attack.ts runStage, the Wreathed in Smoke path)
   onlySixes?: 'hit'
+  // ---- F18 engine-core (Slaanesh, Helsmiths, Flesh-eater Courts, Ogors, Sons of Behemat) ----
+  // HOS-AB-5 Quicksilver Speed / OGM-ENH Lungburster: a rolled value lower than `value` counts as `value`, applied to the
+  // natural roll before halving and modifiers (hookService.advanceRollFor; the highest floor among the unit's effects wins)
+  rollFloor?: { roll: 'advance'; value: number }
+  // HOH-ENH Scroll of Petrification: the holder unit cannot use abilities (no activated abilities, no Core moves / shooting /
+  // charging / fighting) and cannot be picked as the target of friendly abilities. Passive descriptors still apply.
+  noAbilities?: true
+  // OGM-ENH Wallwrecker: the unit's moves ignore terrain (impassable crossing and climb cost) as if it could fly, but not
+  // models or combat ranges (terrain.ts isFlyer)
+  passAcrossTerrain?: true
 }
 export type EffectList = Effect | Effect[]
 
@@ -199,7 +209,8 @@ export type AbilityTiming =
   // abilityId 'core.move' = a reaction to a declared Move (KO-BT-1, abilities.ts window 'moveDeclared'); keyword 'ATTACK' = a reaction
   // to declaring a Shoot or Fight attack (LRL-BT-3, abilities.ts runReactionWindow)
   | { kind: 'reaction'; trigger: 'youDeclared' | 'opponentDeclaredAttack'; abilityId?: Id; keyword?: AbilityKeyword } // P1
-export type AbilityKeyword = 'CORE' | 'ATTACK' | 'MOVE' | 'RUN' | 'CHARGE' | 'SPELL' | 'PRAYER' | 'UNLIMITED'
+// F18 'DEPLOY' (core 24.1): a Deploy ability; a unit it sets up in reserve dies at the start of round 4 if still there
+export type AbilityKeyword = 'CORE' | 'ATTACK' | 'MOVE' | 'RUN' | 'CHARGE' | 'SPELL' | 'PRAYER' | 'UNLIMITED' | 'DEPLOY'
 
 export interface AbilityDescriptor {
   id: Id
@@ -397,7 +408,10 @@ export interface PatrolUnitData {
   attachTo?: string
   enhancement?: Id
   // AoS: the unit starts in reserve and arrives through this ability (Ironjawz Ere We Go)
-  reserve?: { ability: Id }
+  // F18 (core 24.1): `via` = the ability that set the unit up in reserve. Only a Deploy ability (its descriptor's keywords
+  // include 'DEPLOY') makes the unit die at the start of battle round 4 if it is still there; a unit held back by a battle
+  // trait ("not set up during the deployment phase": every shipped Spearhead reserve) has no `via` and is never destroyed
+  reserve?: { ability: Id; via?: Id }
   // SPH-2.7 (P2)
   tokens?: Record<string, number>
 }

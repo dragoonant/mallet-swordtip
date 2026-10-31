@@ -13,10 +13,13 @@ const layout = bundle.terrainLayouts['sph-fire-and-jade-standard']
 describe('Spearhead armies (SPH-2)', () => {
   it('SPH-2.1 all armies ship, each with a general that is one of its units', () => {
     expect(armies.map((a) => a.id).sort()).toEqual([
+      'behemat.army.stone-lobbas',
       'cities.army.castelite-company',
       'daughters.army.heartflayer-troupe',
+      'fec.army.carrion-retainers',
       'fyreslayers.army.saga-axeband',
       'gloomspite.army.snarlpack-huntaz',
+      'helsmiths.army.helforge-host',
       'idoneth.army.soulraid-hunt',
       'ironjawz.army.bigmob',
       'kharadron.army.skyhammer-task-force',
@@ -25,9 +28,11 @@ describe('Spearhead armies (SPH-2)', () => {
       'lumineth.army.hurakan-vanguard',
       'nighthaunt.army.slasher-host',
       'nurgle.army.bleak-host',
+      'ogors.army.warglutt-marauders',
       'ossiarch.army.mortisan-elite',
       'seraphon.army.sunblooded-prowlers',
       'skaven.army.warpspark-clawpack',
+      'slaanesh.army.epicurean-revellers',
       'slaves.army.darkoath-raiders',
       'soulblight.army.bloodcrave-hunt',
       'stormcast.army.vigilant-brotherhood',

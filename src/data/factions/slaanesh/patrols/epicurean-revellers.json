@@ -1,0 +1,29 @@
+{
+  "id": "slaanesh.army.epicurean-revellers",
+  "faction": "slaanesh",
+  "name": "Epicurean Revellers",
+  "mode": "spearhead",
+  "units": [
+    { "ref": "thricefold-discord", "datasheet": "slaanesh.unit.thricefold-discord", "size": 3 },
+    { "ref": "fiends", "datasheet": "slaanesh.unit.fiends", "size": 3 },
+    { "ref": "daemonettes-1", "datasheet": "slaanesh.unit.daemonettes", "size": 10 },
+    { "ref": "daemonettes-2", "datasheet": "slaanesh.unit.daemonettes", "size": 10 },
+    { "ref": "seekers", "datasheet": "slaanesh.unit.seekers", "size": 5 }
+  ],
+  "warlord": "thricefold-discord",
+  "stratagems": [],
+  "secondaries": [],
+  "battleTraits": [
+    "slaanesh.ability.favour-most-fickle"
+  ],
+  "regimentAbilities": [
+    { "id": "slaanesh.ability.bringers-of-degradation", "default": true },
+    { "id": "slaanesh.ability.daemonic-onslaught", "default": false }
+  ],
+  "enhancements": [
+    { "id": "slaanesh.enh.high-courtiers", "default": true },
+    { "id": "slaanesh.enh.twisted-grace", "default": false },
+    { "id": "slaanesh.enh.excess-of-violence", "default": false },
+    { "id": "slaanesh.enh.irresistible-soul-musk", "default": false }
+  ]
+}

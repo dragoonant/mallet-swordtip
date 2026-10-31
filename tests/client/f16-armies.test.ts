@@ -35,9 +35,9 @@ describe('F16 armies on the client', () => {
     expect([FACTION_ALLIANCE.daughters, FACTION_ALLIANCE.idoneth, FACTION_ALLIANCE.tzeentch, FACTION_ALLIANCE.ossiarch]).toEqual(['Order', 'Order', 'Chaos', 'Death'])
   })
 
-  it('FIG-F16-002 all twenty armies have a distinct crest and a blurb, so the start screen shows twenty real tiles', () => {
+  it('FIG-F16-002 all twenty-five armies have a distinct crest and a blurb, so the start screen shows twenty-five real tiles', () => {
     const armies = Object.values(bundle.patrols).filter((p) => p.mode === 'spearhead').map((p) => p.faction)
-    expect(new Set(armies).size).toBe(20)
+    expect(new Set(armies).size).toBe(25)
     const crests = new Set<string>()
     for (const f of armies) {
       expect(FACTION_BLURBS[f], f).toBeTruthy()
@@ -46,7 +46,7 @@ describe('F16 armies on the client', () => {
       expect(svg, f).not.toContain('<text')
       crests.add(svg.replace(/data-testid="[^"]*"|aria-label="[^"]*"/g, ''))
     }
-    expect(crests.size).toBe(20)
+    expect(crests.size).toBe(25)
   })
 
   it('FIG-F16-003 Predict the Future, Cheat Destiny and the Ossiarch picks get their own prompt titles and hints', () => {

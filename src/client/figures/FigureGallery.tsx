@@ -260,7 +260,7 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'soulreaper', faction: 'thousand-sons', label: 'Scarab Terminator (soulreaper cannon)' },
   { datasheetId: 'ths.scarab-occult-terminators', modelId: 'hellfyre', faction: 'thousand-sons', label: 'Scarab Terminator (hellfyre rack)' },
   { datasheetId: 'ths.tzaangors', modelId: 'tzaangor', faction: 'thousand-sons', label: 'Tzaangor' },
-  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight | khorne | nurgle | nighthaunt | sylvaneth | daughters | idoneth | tzeentch | ossiarch)
+  // Age of Sigmar Spearhead (?gallery&faction=cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight | khorne | nurgle | nighthaunt | sylvaneth | daughters | idoneth | tzeentch | ossiarch | slaanesh | helsmiths | fec | ogors | behemat)
   { datasheetId: 'cities.unit.freeguild-cavalier-marshal', modelId: 'cavalier-marshal', faction: 'cities', label: 'Cavalier-Marshal' },
   { datasheetId: 'cities.unit.freeguild-steelhelms', modelId: 'steelhelm', faction: 'cities', label: 'Steelhelm' },
   { datasheetId: 'cities.unit.freeguild-cavaliers', modelId: 'cavalier', faction: 'cities', label: 'Freeguild Cavalier' },
@@ -354,6 +354,26 @@ const GALLERY_ENTRIES: GalleryEntry[] = [
   { datasheetId: 'ossiarch.unit.immortis-guard', modelId: 'immortis-guard', faction: 'ossiarch', label: 'Immortis Guard' },
   { datasheetId: 'ossiarch.unit.necropolis-stalkers', modelId: 'necropolis-stalker', faction: 'ossiarch', label: 'Necropolis Stalker' },
   { datasheetId: 'ossiarch.unit.morghast-archai', modelId: 'morghast-archai', faction: 'ossiarch', label: 'Morghast Archai' },
+  { datasheetId: 'slaanesh.unit.thricefold-discord', modelId: 'vexmor', faction: 'slaanesh', label: 'Vexmor' },
+  { datasheetId: 'slaanesh.unit.thricefold-discord', modelId: 'vashtiss', faction: 'slaanesh', label: 'Vashtiss the Coiled' },
+  { datasheetId: 'slaanesh.unit.thricefold-discord', modelId: 'lascivyr', faction: 'slaanesh', label: 'Lascivyr' },
+  { datasheetId: 'slaanesh.unit.fiends', modelId: 'fiend', faction: 'slaanesh', label: 'Fiend' },
+  { datasheetId: 'slaanesh.unit.daemonettes', modelId: 'daemonette', faction: 'slaanesh', label: 'Daemonette' },
+  { datasheetId: 'slaanesh.unit.seekers', modelId: 'seeker', faction: 'slaanesh', label: 'Seeker' },
+  { datasheetId: 'helsmiths.unit.war-despot', modelId: 'war-despot', faction: 'helsmiths', label: 'War Despot' },
+  { datasheetId: 'helsmiths.unit.dominator-engine', modelId: 'dominator-engine', faction: 'helsmiths', label: 'Dominator Engine' },
+  { datasheetId: 'helsmiths.unit.tormentor-bombard', modelId: 'tormentor-bombard', faction: 'helsmiths', label: 'Tormentor Bombard' },
+  { datasheetId: 'helsmiths.unit.infernal-cohort', modelId: 'infernal-cohort', faction: 'helsmiths', label: 'Infernal Cohort' },
+  { datasheetId: 'fec.unit.abhorrant-archregent', modelId: 'abhorrant-archregent', faction: 'fec', label: 'Abhorrant Archregent' },
+  { datasheetId: 'fec.unit.cryptguard', modelId: 'cryptguard', faction: 'fec', label: 'Cryptguard' },
+  { datasheetId: 'fec.unit.morbheg-knights', modelId: 'morbheg-knight', faction: 'fec', label: 'Morbheg Knight' },
+  { datasheetId: 'fec.unit.varghulf-courtier', modelId: 'varghulf-courtier', faction: 'fec', label: 'Varghulf Courtier' },
+  { datasheetId: 'ogors.unit.tyrant', modelId: 'tyrant', faction: 'ogors', label: 'Tyrant' },
+  { datasheetId: 'ogors.unit.gluttons', modelId: 'glutton', faction: 'ogors', label: 'Glutton' },
+  { datasheetId: 'ogors.unit.ironguts', modelId: 'irongut', faction: 'ogors', label: 'Irongut' },
+  { datasheetId: 'ogors.unit.maulbeast-cavalry', modelId: 'maulbeast-rider', faction: 'ogors', label: 'Maulbeast Rider' },
+  { datasheetId: 'behemat.unit.boulder-basher', modelId: 'boulder-basher', faction: 'behemat', label: 'Boulder Basher' },
+  { datasheetId: 'behemat.unit.rock-hurler', modelId: 'rock-hurler', faction: 'behemat', label: 'Rock-hurler' },
 ]
 
 // Figures are true tabletop-miniature scale (~1-2 world-inches tall — see resolveBase), so packing

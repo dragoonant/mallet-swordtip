@@ -1,0 +1,137 @@
+[
+  {
+    "id": "behemat.ability.stone-lobbas",
+    "name": "Stone Lobbas",
+    "text": "Army marker for the Sons of Behemat Stone Lobbas. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "behemat.ability.boulder-basher",
+    "name": "Boulder Basher",
+    "text": "The general has the Hero keyword and does not have Reinforcements, so it can never be called back. It is the only Hero in the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "behemat.ability.bowled-over",
+    "name": "Bowled Over",
+    "text": "In your shooting phase, pick an enemy unit that has had at least 1 damage point allocated to it by shooting attacks from friendly units this turn and roll a dice. On a 3+, until the start of your next turn, whenever the enemy makes a charge roll for that unit, change the highest dice in the roll so it equals the lowest dice before adding them up.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "roll": { "dice": "D6", "succeedOn": 3 },
+    "duration": "untilNextTurn",
+    "code": "behematBowledOver",
+    "params": { "priority": "P2" }
+  },
+  {
+    "id": "behemat.ability.close-one-eye",
+    "name": "Close One Eye!",
+    "text": "In your hero phase, your general picks another friendly unit wholly within 12\" of it. Add 1 to hit rolls for that unit's shooting attacks for the rest of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilEndOfTurn",
+    "code": "behematCloseOneEye",
+    "params": {
+      "targets": "friendlyWhollyNearGeneral",
+      "range": 12,
+      "excludeGeneral": true,
+      "grant": { "when": { "weaponType": "ranged" }, "modifyRoll": { "roll": "hit", "value": 1 } },
+      "priority": "P2"
+    }
+  },
+  {
+    "id": "behemat.ability.surly-sorts",
+    "name": "Surly Sorts",
+    "text": "Once per battle, in any combat phase, pick a friendly unit that is in combat. Add 1 to the Attacks characteristic of its melee weapons for the rest of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly", "state": "inEngagement" }],
+    "duration": "untilEndOfTurn",
+    "code": "behematSurlySorts",
+    "params": {
+      "targets": "friendlyInCombat",
+      "grant": { "when": { "weaponType": "melee" }, "modifyStat": { "stat": "A", "value": 1 } },
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "behemat.ability.greedy-and-grabby",
+    "name": "Greedy and Grabby",
+    "text": "Add 5 to the control score of every friendly unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "modifyStat": { "stat": "OC", "value": 5 } }
+  },
+  {
+    "id": "behemat.ability.drop-toss-or-roll",
+    "name": "Drop, Toss or Roll",
+    "text": "In your shooting phase, before this unit shoots, pick one option for it until the end of the turn. Drop: its ranged weapons have Shoot in Combat. Toss: add 6\" to the Range of its ranged weapons. Roll: add 1 to hit rolls for its shooting attacks. An option picked for one friendly unit cannot be picked for another friendly unit in the same turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "duration": "untilEndOfTurn",
+    "modes": [
+      { "id": "drop", "name": "Drop", "text": "Ranged weapons have Shoot in Combat." },
+      { "id": "toss", "name": "Toss", "text": "Add 6\" to the Range of ranged weapons." },
+      { "id": "roll", "name": "Roll", "text": "Add 1 to hit rolls for shooting attacks." }
+    ],
+    "code": "behematDropTossRoll",
+    "params": { "range": 6, "priority": "P1" }
+  },
+  {
+    "id": "behemat.ability.ard-ead",
+    "name": "'Ard 'Ead",
+    "text": "Once per battle, in any combat phase, add 1 to hit rolls for combat attacks made with the general's 'Eadbutt until the end of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "duration": "untilEndOfTurn",
+    "code": "behematArdEad",
+    "params": {
+      "targets": "self",
+      "grant": { "when": { "weaponId": "behemat.weapon.eadbutt" }, "modifyRoll": { "roll": "hit", "value": 1 } },
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "behemat.ability.humongous-strides",
+    "name": "Humongous Strides",
+    "text": "Add 1 to charge rolls for the general.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": { "modifyRoll": { "roll": "charge", "value": 1 } }
+  },
+  {
+    "id": "behemat.ability.lucky-rock",
+    "name": "Lucky Rock",
+    "text": "Once per battle, in your shooting phase, add 1 to the Attacks characteristic of the general's Hurlin' Rocks until the end of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "shooting", "whose": "your" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "duration": "untilEndOfTurn",
+    "code": "behematLuckyRock",
+    "params": {
+      "targets": "self",
+      "grant": { "when": { "weaponId": "behemat.weapon.hurlin-rocks" }, "modifyStat": { "stat": "A", "value": 1 } },
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "behemat.ability.hungry-gobbler",
+    "name": "Hungry Gobbler",
+    "text": "At the end of any turn, if the general's combat attacks slew at least one enemy model this turn, Heal (D3) the general.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerTurn",
+    "scope": { "who": "bearer" },
+    "code": "behematHungryGobbler",
+    "params": { "heal": "D3", "priority": "P2" }
+  }
+]

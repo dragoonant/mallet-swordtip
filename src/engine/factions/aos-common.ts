@@ -158,6 +158,8 @@ const ANGLES = 24
 // the models returned earlier in this call included (ENG-F17-1: a unit hemmed in by other models gets back every model that fits;
 // the spot must still be in coherency with the models that were there before the call). Returns the number actually returned.
 // Returned models come back at full Health.
+// F18 (core 22.0): "only set up in combat if its unit is already in combat": a returned model may be set up within combat range
+// of the enemy units the unit is in combat with when the ability resolves, never within combat range of any other enemy unit.
 export function returnSlainModels(ctx: EngineContext, unitId: UnitId, count: number, source: string): number {
   const s = ctx.state
   const unit = onBoard(s, unitId)
@@ -168,7 +170,9 @@ export function returnSlainModels(ctx: EngineContext, unitId: UnitId, count: num
   if (anchors.length === 0) return 0
   const need = coherencyNeighboursNeeded(anchors.length + n)
   const others = Object.values(s.models).filter((m) => s.units[m.unitId]?.location === 'board')
-  const enemies = others.filter((m) => s.units[m.unitId].player !== unit.player)
+  // F18 (core 22.0): the enemy units it is already in combat with do not keep returned models away
+  const engaged = new Set(enemiesInCombat(s, unitId))
+  const enemies = others.filter((m) => s.units[m.unitId].player !== unit.player && !engaged.has(m.unitId))
   let returned = 0
   const placed: Model[] = []
   for (let i = 0; i < n; i++) {

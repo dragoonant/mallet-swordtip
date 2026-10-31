@@ -62,7 +62,7 @@ const FLAVOUR_SOUND: Record<WeaponFlavour, { id: SfxId; volume?: number }> = {
 /** Spearhead weapons (all eight armies) by what their id or name says. Blades and polearms swing, the
  *  lance crashes, hooves and sidearms thud, choppas chop, brute gear smashes, the Great Cannon booms. These are `aos-`
  *  ids: each plays its own generated file when there is one, else the mapped 42k file (aos.ts). */
-const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron|stormcast|skaven|seraphon|soulblight|khorne|nurgle|nighthaunt|sylvaneth|daughters|idoneth|tzeentch|ossiarch)\./
+const AOS_FACTION_ID = /^(cities|ironjawz|slaves|fyreslayers|kruleboyz|gloomspite|lumineth|kharadron|stormcast|skaven|seraphon|soulblight|khorne|nurgle|nighthaunt|sylvaneth|daughters|idoneth|tzeentch|ossiarch|slaanesh|helsmiths|fec|ogors|behemat)\./
 /** The F8 armies' own weapon sounds, matched on the full weapon id before the shared rules below: Kruleboyz crossbows,
  *  Killbow and jagged blades, the Gitz' bows and wolf jaws, Lumineth wind magic, bows and pikes, Kharadron aether guns
  *  and skyhooks (the Frigate's heavy skyhook is the broadside). */
@@ -142,6 +142,26 @@ const AOS_ARMY_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = 
   [/^tzeentch\..*disc/, 'aos-tzeentch-disc', 0.8],
   [/^ossiarch\..*(halberd|spirit-weapons)/, 'aos-ossiarch-blade'],
   [/^ossiarch\..*(stalker-blades|talons)/, 'aos-ossiarch-clack'],
+  // F17: the Discord's whips and the Seekers' lashing tongues crack, Fiends' pincers and daemon claws snap; the Bombard booms,
+  // the Dominator's immolation cannons and the Despot's glaive roar with hellfire, the Dominator's bull-headed blows and the
+  // artillerists' tools ring like a forge hammer; ghouls gnash and rake, Morbheg lances crash; ogor clubs thud, the Tyrant's
+  // meatcleavers chop, gutbiters ring off a gut-plate, Maulbeasts snarl; gargants hurl boulders and swing clubs like a stomp.
+  [/^slaanesh\..*(thricefold-arsenal|tongue)/, 'aos-slaanesh-whip'],
+  [/^slaanesh\..*(pincers|claws)/, 'aos-slaanesh-claws'],
+  [/^helsmiths\..*torrent-of-ruinous-energy/, 'aos-helsmiths-bombard'],
+  [/^helsmiths\..*immolation-cannons/, 'aos-helsmiths-hellfire'],
+  [/^helsmiths\..*daemonflame-glaive/, 'aos-helsmiths-hellfire', 0.8],
+  [/^helsmiths\..*(pummelling|artillerist)/, 'aos-helsmiths-hammer'],
+  [/^fec\..*fangs/, 'aos-fec-gnash'],
+  [/^fec\..*lance/, 'aos-lance-charge-impact', 0.9],
+  [/^fec\..*(claws|cursed-weapon)/, 'aos-fec-claws'],
+  [/^ogors\..*(glutton|irongut)/, 'aos-ogors-club'],
+  [/^ogors\..*gutbiter/, 'aos-ogors-gutplate'],
+  [/^ogors\..*meatcleavers/, 'aos-choppa-hit'],
+  [/^ogors\..*maulbeast/, 'aos-ogors-snarl'],
+  [/^behemat\..*hurlin-rocks/, 'aos-behemat-boulder'],
+  [/^behemat\..*massive-club/, 'aos-behemat-stomp', 0.9],
+  [/^behemat\..*eadbutt/, 'aos-fist-smash'],
 ]
 const AOS_WEAPON_RULES: readonly (readonly [RegExp, SoundId, number?])[] = [
   [/grapeshot/, 'aos-cannon-fire', 0.85],
@@ -589,6 +609,13 @@ const AOS_DEATH: Record<string, readonly AosSfxId[]> = {
   idoneth: ['aos-idoneth-death'],
   tzeentch: ['aos-tzeentch-death'],
   ossiarch: ['aos-ossiarch-death', 'aos-soulblight-death'],
+  // F17 armies: a daemon shrieks and vanishes, a Helsmith clanks down in a hiss of steam, a ghoul flops over, an ogor topples,
+  // a gargant falls with a ground-shaking crash.
+  slaanesh: ['aos-slaanesh-death'],
+  helsmiths: ['aos-helsmiths-death', 'aos-human-death-1'],
+  fec: ['aos-fec-death'],
+  ogors: ['aos-ogors-death', 'aos-orruk-death-2'],
+  behemat: ['aos-behemat-fall'],
 }
 
 function takeFor(modelId: string): number {
@@ -640,6 +667,13 @@ const ARMY_MOVE: Record<string, (kw: readonly string[]) => EventSound | undefine
   idoneth: (kw) => (kw.includes('FLY') ? at('aos-idoneth-swim', 0.5) : undefined),
   tzeentch: (kw) => (kw.includes('FLY') ? at('aos-tzeentch-disc', 0.5) : undefined),
   ossiarch: (kw) => (kw.includes('FLY') ? at('aos-ossiarch-wings', 0.5) : at('aos-ossiarch-march', 0.5)),
+  // F17: Seekers gallop and Fiends skitter; the Dominator Engine and Bombard grind on; Morbheg Knights flap; Maulbeasts pound
+  // along; gargants shake the ground with every step.
+  slaanesh: (kw) => (kw.includes('CAVALRY') ? at('aos-slaanesh-gallop', 0.55) : kw.includes('BEAST') ? at('aos-slaanesh-chitter', 0.5) : undefined),
+  helsmiths: (kw) => (kw.includes('WAR MACHINE') ? at('aos-helsmiths-engine', 0.5) : undefined),
+  fec: (kw) => (kw.includes('FLY') ? at('aos-fec-wings', 0.55) : undefined),
+  ogors: (kw) => (kw.includes('CAVALRY') ? at('aos-ogors-paws', 0.55) : undefined),
+  behemat: () => at('aos-behemat-step', 0.6),
 }
 
 /** F8 army charges: the movement sound of the unit plus the army's own war cry (a Gnashtoof snarls, a Wheela rattles in). */
@@ -687,6 +721,19 @@ const ARMY_CHARGE: Record<string, (kw: readonly string[]) => EventSound[]> = {
   idoneth: (kw) => [kw.includes('FLY') ? at('aos-idoneth-swim', 0.8) : at('aos-armoured-march', 0.6), at('aos-idoneth-whale-song', 0.6)],
   tzeentch: (kw) => (kw.includes('FLY') ? [at('aos-tzeentch-disc', 0.8), at('aos-tzeentch-bleat', 0.6)] : [at('aos-tzeentch-bleat', 0.85)]),
   ossiarch: (kw) => [kw.includes('FLY') ? at('aos-ossiarch-wings', 0.8) : at('aos-ossiarch-march', 0.8), at('aos-ossiarch-horn', 0.6)],
+  // F17: Daemonettes laugh (Seekers gallop in, Fiends skitter); the Dominator grinds forward under a bull's bellow and the
+  // Cohort marches to the gong; Morbhegs swoop and screech, the court's heroes roar and the Cryptguard cackle; Maulbeasts
+  // snarl and pound in, ogors bellow with laughter; a gargant stomps in with a grunt.
+  slaanesh: (kw) =>
+    kw.includes('CAVALRY') ? [at('aos-slaanesh-gallop', 0.8), at('aos-slaanesh-laugh', 0.6)]
+      : kw.includes('BEAST') ? [at('aos-slaanesh-chitter', 0.85)] : [at('aos-slaanesh-laugh', 0.85)],
+  helsmiths: (kw) =>
+    kw.includes('WAR MACHINE') ? [at('aos-helsmiths-engine', 0.8), at('aos-helsmiths-bellow', 0.7)] : [at('aos-armoured-march', 0.6), at('aos-helsmiths-gong', 0.5)],
+  fec: (kw) =>
+    kw.includes('FLY') ? [at('aos-fec-wings', 0.8), at('aos-fec-screech', 0.7)]
+      : kw.includes('HERO') ? [at('aos-fec-roar', 0.85)] : [at('aos-fec-cackle', 0.85)],
+  ogors: (kw) => (kw.includes('CAVALRY') ? [at('aos-ogors-paws', 0.8), at('aos-ogors-snarl', 0.8)] : [at('aos-orruk-stomp', 0.6), at('aos-ogors-bellow', 0.85)]),
+  behemat: () => [at('aos-behemat-step', 0.8), at('aos-behemat-grunt', 0.8)],
 }
 
 /** F12 army spells, prayers and roars, by ability id: the Lord-Veritant's holy flame, Grey Seer warp lightning,
@@ -792,6 +839,57 @@ const AOS_ABILITY_SOUND: Record<string, EventSound> = {
   'ossiarch.ability.switch-aspects': at('aos-ossiarch-clack', 0.8),
   'ossiarch.ability.shard-storm': at('aos-ossiarch-shard-storm'),
   'ossiarch.ability.mend-constructs': at('aos-ossiarch-clack', 0.7),
+  // F17: Slaanesh's musk spells shimmer and the daemons laugh; the Helsmiths' bombards boom, gongs ring and hellfire roars;
+  // the court's fanfare summons its subjects and ghouls gnash at the feast; ogors bellow, burp and snarl; gargants grunt,
+  // hurl and bowl their boulders.
+  'slaanesh.ability.favour-most-fickle': at('aos-slaanesh-laugh', 0.6),
+  'slaanesh.ability.bringers-of-degradation': at('aos-slaanesh-claws', 0.8),
+  'slaanesh.ability.daemonic-onslaught': at('aos-slaanesh-gallop', 0.8),
+  'slaanesh.ability.dispensers-of-favour': at('aos-slaanesh-musk', 0.8),
+  'slaanesh.ability.soporific-musk': at('aos-slaanesh-musk'),
+  'slaanesh.ability.lithe-and-swift': at('aos-slaanesh-claws', 0.7),
+  'slaanesh.ability.quicksilver-speed': at('aos-slaanesh-gallop', 0.7),
+  'slaanesh.ability.twisted-grace': at('aos-slaanesh-whip', 0.6),
+  'slaanesh.ability.excess-of-violence': at('aos-slaanesh-laugh', 0.8),
+  'slaanesh.ability.irresistible-soul-musk': at('aos-slaanesh-musk', 0.8),
+  'helsmiths.ability.harness-daemonic-power': at('aos-helsmiths-hellfire', 0.6),
+  'helsmiths.ability.grinding-advance': at('aos-helsmiths-engine', 0.8),
+  'helsmiths.ability.suppressive-bombardment': at('aos-helsmiths-bombard', 0.7),
+  'helsmiths.ability.daemonic-strength': at('aos-helsmiths-bellow', 0.7),
+  'helsmiths.ability.calculated-trajectory': at('aos-helsmiths-bombard', 0.6),
+  'helsmiths.ability.ruinous-bombardment': at('aos-helsmiths-bombard', 0.9),
+  'helsmiths.ability.strike-the-gongs': at('aos-helsmiths-gong'),
+  'helsmiths.ability.daemonic-resilience': at('aos-helsmiths-hellfire', 0.5),
+  'helsmiths.ability.amulet-of-burning-hate': at('aos-helsmiths-hellfire', 0.7),
+  'helsmiths.ability.chalice-of-darkness': at('aos-helsmiths-hellfire', 0.8),
+  'helsmiths.ability.scroll-of-petrification': at('aos-helsmiths-hammer', 0.6),
+  'fec.ability.noble-deeds': at('aos-fec-fanfare', 0.6),
+  'fec.ability.summon-loyal-subjects': at('aos-fec-fanfare'),
+  'fec.ability.feeding-frenzy': at('aos-fec-gnash', 0.8),
+  'fec.ability.deranged-transformation': at('aos-fec-cackle', 0.8),
+  'fec.ability.royal-bodyguard': at('aos-fec-fanfare', 0.5),
+  'fec.ability.predators-pounce': at('aos-fec-roar', 0.8),
+  'fec.ability.victory-feast': at('aos-fec-gnash', 0.8),
+  'fec.ability.blood-river-chalice': at('aos-fec-gnash', 0.6),
+  'fec.ability.rousing-oration': at('aos-fec-fanfare', 0.8),
+  'fec.ability.crimson-victuals': at('aos-fec-gnash', 0.7),
+  'ogors.ability.nomadic-warriors': at('aos-ogors-bellow', 0.6),
+  'ogors.ability.more-ogors-my-lord': at('aos-ogors-bellow', 0.8),
+  'ogors.ability.scoff-down-fresh-flesh': at('aos-ogors-burp'),
+  'ogors.ability.brutish-barging': at('aos-ogors-gutplate', 0.8),
+  'ogors.ability.roaring-warlord': at('aos-ogors-bellow'),
+  'ogors.ability.stomping-marauders': at('aos-ogors-paws', 0.6),
+  'ogors.ability.shock-and-gore': at('aos-ogors-snarl', 0.9),
+  'ogors.ability.lungburster': at('aos-ogors-bellow', 0.6),
+  'ogors.ability.gristlegobbler': at('aos-ogors-burp', 0.8),
+  'behemat.ability.bowled-over': at('aos-behemat-rumble'),
+  'behemat.ability.close-one-eye': at('aos-behemat-grunt', 0.8),
+  'behemat.ability.surly-sorts': at('aos-behemat-grunt', 0.9),
+  'behemat.ability.drop-toss-or-roll': at('aos-behemat-boulder', 0.8),
+  'behemat.ability.ard-ead': at('aos-behemat-grunt', 0.8),
+  'behemat.ability.humongous-strides': at('aos-behemat-step', 0.7),
+  'behemat.ability.lucky-rock': at('aos-behemat-boulder', 0.8),
+  'behemat.ability.hungry-gobbler': at('aos-ogors-burp', 0.7),
 }
 
 /** Sounds to play for one engine event. `perspective` (the human seat) is optional — omit it to get

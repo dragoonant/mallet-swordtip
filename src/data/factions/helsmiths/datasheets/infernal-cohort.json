@@ -1,0 +1,28 @@
+[
+  {
+    "id": "helsmiths.unit.infernal-cohort",
+    "faction": "helsmiths",
+    "name": "Infernal Cohort with Hashutite Spears",
+    "keywords": ["INFANTRY", "REINFORCEMENTS"],
+    "factionKeywords": ["CHAOS", "HELSMITHS OF HASHUT"],
+    "stats": { "M": 4, "W": 1, "Sv": 3, "OC": 1 },
+    "composition": [
+      {
+        "modelId": "infernal-cohort",
+        "name": "Infernal Cohort Warrior",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "round", "mm": 28.5 },
+        "weapons": {
+          "default": ["helsmiths.weapon.hashutite-spear"]
+        },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["helsmiths.ability.strike-the-gongs", "helsmiths.ability.daemonic-resilience"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

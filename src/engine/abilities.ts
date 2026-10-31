@@ -16,7 +16,7 @@
 // army-wide), Rule of One (CORE-3.3: one CORE ability per unit per phase; CORE-3.4: the same ability once per unit per
 // phase unless it has the UNLIMITED keyword) and `fromRound`. Uses are recorded in Player.abilityUses.
 import { parseDiceExpr, rollSum } from './dice'
-import { codeHookFor } from './hooks-impl'
+import { codeHookFor, hookService } from './hooks-impl'
 import type { DecisionHandler, EngineContext } from './modules'
 import type { ActivatedAbilityHook } from './hooks'
 import { applyRetreat, applySlide, parseAt, parseSlide, placeShapeOf, readMoveQueue, readPlaceRequest, retreatOptions, slideOptions, writeMoveQueue, writePlaceRequest } from './factions/aos-moves'
@@ -91,8 +91,19 @@ interface Candidate { ab: RuntimeAbility; unitId: UnitId | null }
 // (Mighty Destroyers only offers A Proper Ruckus while it is unspent).
 type ExtHook = ActivatedAbilityHook & {
   targets?(state: GameState, unitId: UnitId | null, player?: PlayerId): UnitId[]
-  modesFor?(state: GameState, unitId: UnitId | null, player: PlayerId): { id: string; label: string }[]
 }
+
+// F18 (HOH C4, Effect.noAbilities): a unit under it uses no abilities and cannot be picked by its own side's abilities
+export function unitHasNoAbilities(state: GameState, unitId: UnitId | null | undefined): boolean {
+  if (!unitId || !state.units[unitId]) return false
+  return hookService.unitHasEffectFlag(state, unitId, 'noAbilities')
+}
+// the targets a hook offers, minus `player`'s own units under noAbilities (enemy targets are untouched)
+function legalTargets(state: GameState, hook: ExtHook, unitId: UnitId | null, player: PlayerId): UnitId[] {
+  const raw = hook.targets?.(state, unitId, player) ?? []
+  return raw.filter((id) => state.units[id]?.player !== player || !unitHasNoAbilities(state, id))
+}
+const DONE_ID = '__done'
 
 function activateOf(ab: RuntimeAbility): ExtHook | null {
   return codeHookFor(ab.code)?.activate ?? null
@@ -205,17 +216,20 @@ function usableFor(state: GameState, player: PlayerId, window: AbilityWindow): C
     const hook = activateOf(ab)
     if (!hook) continue
     if (!limitOk(state, player, ab, unitId)) continue
+    // F18 (HOH C4): a unit under noAbilities uses none
+    if (unitHasNoAbilities(state, unitId)) continue
     // CORE-15 (F8): a spell needs a caster with casting power left this phase
     if (ab.castingValue !== undefined && (!unitId || !canCast(state, unitId))) continue
     if (!hook.canUse(state, unitId, { abilityId: ab.id, unitId, player })) continue
-    if (hook.targets && hook.targets(state, unitId, player).length === 0) continue
+    if (hook.targets && legalTargets(state, hook, unitId, player).length === 0) continue
     out.push(c)
   }
   return out
 }
 
 // ---------- progress marks ----------
-interface Selection { abilityId: AbilityId; unitId: UnitId | null; target?: UnitId; mode?: string }
+// F18 (HOS C6): `picked` = targets chosen so far by a multi-target declare (maxTargets > 1); `done` = the player stopped picking
+interface Selection { abilityId: AbilityId; unitId: UnitId | null; target?: UnitId; mode?: string; picked?: UnitId[]; done?: boolean }
 
 const selPrefix = (k: string): string => `abil:sel:${k}=`
 const rollPrefix = (k: string): string => `abil:roll:${k}=`
@@ -334,8 +348,11 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
     if (s.phaseState.marks.includes(passMark(k))) return false
     const sel = readMark<Selection>(s, selPrefix(k))
     if (!sel) {
-      const usable = usableFor(s, player, window)
-      if (usable.length === 0) return false
+      const all = usableFor(s, player, window)
+      if (all.length === 0) return false
+      // F18 (HOH C2): mandatory abilities (params.mandatory) are offered alone and first; the others come back once they are used
+      const forced = all.filter((c) => c.ab.params?.mandatory === true)
+      const usable = forced.length > 0 ? forced : all
       const choices = usable.map((c) => ({ id: `${c.ab.id}#${c.unitId ?? '-'}`, abilityId: c.ab.id, unitId: c.unitId }))
       const data: WindowData = { window, k, choices }
       // F12: a descriptor with params.mandatory (Blessed by the Old Ones) cannot be passed while it is on offer
@@ -353,7 +370,27 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
 
     // Declare: target
     if (hook.targets && sel.target === undefined) {
-      const cands = hook.targets(s, sel.unitId, player)
+      const max = hook.maxTargets?.(s, sel.unitId) ?? 1
+      const picked = sel.picked ?? []
+      const cands = legalTargets(s, hook, sel.unitId, player).filter((id) => !picked.includes(id))
+      if (max > 1) {
+        // F18 (HOS C6): repeat the pick until N targets, Done, or no candidate is left
+        if (picked.length >= max || cands.length === 0 || sel.done) {
+          if (picked.length === 0) { clearMark(s, selPrefix(k)); continue }
+          writeMark(s, selPrefix(k), { ...sel, target: picked[0], picked }); continue
+        }
+        if (cands.length === 1 && picked.length === 0) { writeMark(s, selPrefix(k), { ...sel, target: cands[0], picked: [cands[0]] }); continue }
+        const data: WindowData = { window, k }
+        ctx.decide({
+          kind: 'chooseOption', player, window: DISPLAY_WINDOW[window], canPass: true,
+          context: { topic: 'abilityTarget', unitId: sel.unitId, abilityId: ab.id, data: { ...data, multi: true, picked } as unknown as Record<string, unknown> },
+          options: [
+            ...cands.map((id) => ({ id, label: `${unitName(s, id)} (${picked.length + 1} of up to ${max})`, action: optionAction(player, id) })),
+            ...(picked.length > 0 ? [{ id: DONE_ID, label: `Done (${picked.length} picked)`, action: optionAction(player, DONE_ID) }] : []),
+          ],
+        })
+        return true
+      }
       if (cands.length === 0) { clearMark(s, selPrefix(k)); continue }
       if (cands.length === 1) { writeMark(s, selPrefix(k), { ...sel, target: cands[0] }); continue }
       const data: WindowData = { window, k }
@@ -393,7 +430,8 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
     }
 
     // Effect: the mode (only when the effect happens)
-    const modes = hook.modesFor?.(s, sel.unitId, player) ?? hook.modes ?? ab.modes?.map((m) => ({ id: m.id, label: m.name })) ?? []
+    const targetUnitIds = sel.picked && sel.picked.length > 0 ? [...sel.picked] : sel.target ? [sel.target] : []
+    const modes = hook.modesFor?.(s, sel.unitId, player, targetUnitIds) ?? hook.modes ?? ab.modes?.map((m) => ({ id: m.id, label: m.name })) ?? []
     let modeId: string | null = sel.mode ?? null
     if (success && modes.length > 0 && modeId === null) {
       if (modes.length === 1) modeId = modes[0].id
@@ -425,7 +463,7 @@ function runWindow(ctx: EngineContext, window: AbilityWindow, player: PlayerId, 
       ? `${ab.name}: casting roll ${cast.total}${cast.miscast ? ', miscast' : cast.unbound ? ', unbound' : cast.cast ? ', cast' : ', not cast'}`
       : ab.roll ? (success ? `${ab.name}: rolled ${roll ? rollSum(roll) : 0}, it works` : `${ab.name}: rolled ${roll ? rollSum(roll) : 0}, it fails`) : ab.name
     ctx.emit({ type: 'AbilityTriggered', abilityId: ab.id, sourceUnitId: sel.unitId, targetUnitId: sel.target ?? null, summary, player })
-    if (success) hook.resolve(ctx, { abilityId: ab.id, unitId: sel.unitId, player, targetUnitIds: sel.target ? [sel.target] : [], modeId, roll })
+    if (success) hook.resolve(ctx, { abilityId: ab.id, unitId: sel.unitId, player, targetUnitIds, modeId, roll })
     if (s.pending) return true
   }
   throw new Error('abilities.runWindow: did not settle')
@@ -479,7 +517,12 @@ export const abilityService: AbilityService = {
       }
       const sel = readMark<Selection>(s, selPrefix(k))
       if (!sel) return { code: 'E_NOT_AN_OPTION', reason: 'abilities: no ability is being declared' }
-      if (topic === 'abilityTarget') writeMark(s, selPrefix(k), { ...sel, target: action.optionId })
+      if (topic === 'abilityTarget' && (pending.context.data as Record<string, unknown> | undefined)?.multi === true) {
+        // F18 (HOS C6): a multi-target pick adds one target, or stops picking
+        if (action.optionId === DONE_ID) writeMark(s, selPrefix(k), { ...sel, done: true })
+        else if (!pending.options.some((o) => o.id === action.optionId)) return { code: 'E_NOT_AN_OPTION', reason: `target ${action.optionId} is not offered` }
+        else writeMark(s, selPrefix(k), { ...sel, picked: [...(sel.picked ?? []), action.optionId] })
+      } else if (topic === 'abilityTarget') writeMark(s, selPrefix(k), { ...sel, target: action.optionId })
       else if (topic === 'abilityMode') writeMark(s, selPrefix(k), { ...sel, mode: action.optionId })
       else return { code: 'E_NOT_AN_OPTION', reason: `abilities: no handler for topic ${topic}` }
     },

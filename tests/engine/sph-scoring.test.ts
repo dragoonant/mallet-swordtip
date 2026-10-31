@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createContext, DEFAULT_MODULES, SeededRng, setModelPos, type EngineContext, type GameEvent, type GameState, type PlayerId, type UnitId,
 } from '../../src/engine'
-import { missionService } from '../../src/engine/missions'
+import { missionService, setUpInReserve } from '../../src/engine/missions'
 import { objectiveService } from '../../src/engine/objectives'
 import { aosBundle, aosPingEngine, aosState, autoDeployAos, makeAosSetup } from '../fixtures'
 
@@ -158,16 +158,24 @@ describe('scoring (WP3)', () => {
     expect(r.state.players.B.vp).toBe(0)
   })
 
-  it('SPH-014 / ROUND-019 a unit still in reserve at the start of round 4 is destroyed', () => {
+  it('SPH-014 / ROUND-019 a unit set up in reserve by a Deploy ability and still there at the start of round 4 is destroyed; one held back by a battle trait is not (core 24.1)', () => {
     const state = aosState()
     autoDeployAos(state, 'A')
+    state.abilities = { ...state.abilities, 'fx.a.deploy': { ...state.abilities[Object.keys(state.abilities)[0]], id: 'fx.a.deploy', name: 'Lurk', keywords: ['DEPLOY'] } }
     state.units['A:guard'].location = 'reserves'
     state.units['A:guard'].reserveArrival = 'fx.a.ambush'
+    setUpInReserve(state, 'A:guard', 'fx.a.deploy')
+    expect(state.units['A:guard'].reserveVia).toEqual({ abilityId: 'fx.a.deploy', deploy: true })
+    // held back by a battle trait: arrives later, never destroyed for being in reserve
+    state.units['A:knight'].location = 'reserves'
+    state.units['A:knight'].reserveArrival = 'fx.a.ambush'
+    state.units['A:knight'].reserveVia = { abilityId: null, deploy: false }
     state.round = 4
     const { ctx, events } = ctxFor(state)
     missionService.onWindow(ctx, 'round.start', '4')
     expect(state.units['A:guard'].location).toBe('destroyed')
     expect(events.filter((e) => e.type === 'UnitDestroyed' && e.unitId === 'A:guard')).toHaveLength(1)
+    expect(state.units['A:knight'].location).toBe('reserves')
     // units on the table are untouched
     expect(state.units['A:boss'].location).toBe('board')
   })

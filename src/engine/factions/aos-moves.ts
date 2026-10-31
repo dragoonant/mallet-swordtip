@@ -51,11 +51,14 @@ export interface SlideResult { ok: boolean; reason?: string; resolved?: Resolved
 //                     not leave it either
 //  noCombatPath       F14 (SYL-AB-2 Zephyrspites): the normalMove path test applied even when every model has FLY, plus
 //                     mayNotEndInCombat; slideOptions offers nothing at all to a unit that starts in combat
+//  combatPathExcept   F18 (OGM-RA-1 Brutish Barging): the noCombatPath path test, but the combat ranges of the listed units'
+//                     models are ignored for the PATH (the units it is already in combat with); implies mayNotEndInCombat (the
+//                     end test still counts every enemy). Unlike noCombatPath, a unit that starts in combat is offered slides
 // A Move-ability edge constraint from a code hook (LRL-RA-2 Roaring Headwind, hookService.moveEdgeConstraintFor) is always
 // applied the same way as towardEdge.
 export interface SlideOpts {
   passThrough?: boolean; mustEndOutOfCombat?: boolean; mayNotEndInCombat?: boolean; towardEdge?: EdgeRef | null; normalMove?: boolean
-  closerToUnit?: UnitId | null; endFree?: boolean; noCombatPath?: boolean
+  closerToUnit?: UnitId | null; endFree?: boolean; noCombatPath?: boolean; combatPathExcept?: UnitId[]
 }
 
 // F14: the closest-model gap between the unit (optionally slid by dx, dz) and another unit; Infinity when either has no models
@@ -81,7 +84,7 @@ export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: num
   const models = unitModels(state, unitId)
   if (models.length === 0) return { ok: false, reason: 'no models' }
   if (Math.hypot(dx, dz) > maxDistance + 1e-3) return { ok: false, reason: `further than ${maxDistance}"` }
-  const outOfCombat = opts.mustEndOutOfCombat === true || opts.mayNotEndInCombat === true || opts.normalMove === true || opts.noCombatPath === true
+  const outOfCombat = opts.mustEndOutOfCombat === true || opts.mayNotEndInCombat === true || opts.normalMove === true || opts.noCombatPath === true || opts.combatPathExcept !== undefined
   if (outOfCombat || opts.endFree) mustEndInCombat = false
   const closer = opts.closerToUnit && state.units[opts.closerToUnit]?.location === 'board' ? opts.closerToUnit : null
   if (closer && !(unitGapAfter(state, unitId, closer, dx, dz) < unitGapAfter(state, unitId, closer) - EPS)) {
@@ -117,6 +120,15 @@ export function checkSlide(state: GameState, unitId: UnitId, dx: number, dz: num
       if (samplePath(r.path).some((p) => anyWithinEngagementRange(fp(r.model, p, r.facing), enemies))) return { ok: false, reason: 'a Normal Move may not pass through combat range' }
     }
   }
+  // F18 combatPathExcept: the path may not enter the combat range of any OTHER enemy unit
+  if (opts.combatPathExcept) {
+    const skip = new Set(opts.combatPathExcept)
+    const others = enemies.filter((e) => !skip.has(e.unitId))
+    for (const r of result.resolved) {
+      if (r.distance <= EPS || others.length === 0) continue
+      if (samplePath(r.path).some((p) => anyWithinEngagementRange(fp(r.model, p, r.facing), others))) return { ok: false, reason: 'the move may not pass through the combat range of another enemy unit' }
+    }
+  }
   const endsInCombat = result.resolved.some((r) => anyWithinEngagementRange(fp(r.model, r.to, r.facing), enemies))
   if (mustEndInCombat && !endsInCombat) return { ok: false, reason: 'a unit that starts in combat must end in combat' }
   if (outOfCombat && endsInCombat) return { ok: false, reason: 'the move may not end in combat' }
@@ -132,7 +144,7 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
   const inCombat = enemiesInCombat(state, unitId).length > 0
   // F14 noCombatPath: every path would start inside a combat range, so a unit in combat cannot make the move at all
   if (opts.noCombatPath && inCombat) return out
-  const mustEnd = inCombat && !opts.mustEndOutOfCombat && !opts.mayNotEndInCombat && !opts.normalMove && !opts.endFree
+  const mustEnd = inCombat && !opts.mustEndOutOfCombat && !opts.mayNotEndInCombat && !opts.normalMove && !opts.endFree && !opts.combatPathExcept
   const c = centroidOf(models)
   const enemies = enemyModelsOnBoard(state, unit.player)
   const nearestEnemy = enemies.length ? enemies.reduce((a, b) => (dist2D(c, b.pos) < dist2D(c, a.pos) ? b : a)) : null
@@ -157,7 +169,7 @@ export function slideOptions(state: GameState, unitId: UnitId, maxDistance: numb
   }
   heads.push({ dir: { x: 1, z: 0 }, label: 'Slide right' }, { dir: { x: -1, z: 0 }, label: 'Slide left' }, { dir: { x: 0, z: 1 }, label: 'Slide down the table' }, { dir: { x: 0, z: -1 }, label: 'Slide up the table' })
   // diagonals: a unit boxed in on all four sides often still has a diagonal way out (retreats, edge moves)
-  if (opts.towardEdge || opts.mustEndOutOfCombat || opts.mayNotEndInCombat || opts.normalMove || opts.closerToUnit || opts.noCombatPath || opts.endFree) {
+  if (opts.towardEdge || opts.mustEndOutOfCombat || opts.mayNotEndInCombat || opts.normalMove || opts.closerToUnit || opts.noCombatPath || opts.endFree || opts.combatPathExcept) {
     const D = Math.SQRT1_2
     heads.push({ dir: { x: D, z: D }, label: 'Slide down and right' }, { dir: { x: -D, z: D }, label: 'Slide down and left' }, { dir: { x: D, z: -D }, label: 'Slide up and right' }, { dir: { x: -D, z: -D }, label: 'Slide up and left' })
   }
@@ -319,7 +331,9 @@ function facingFor(state: GameState, player: PlayerId): number {
 // Blessed by the Old Ones). No shape = Call for Reinforcements (territory, 6" edge band, not in combat).
 // F16 (TZE C2, DOT-BT-1 Fated Arrival): edgeWithin = no 6" band; instead the finished unit must have a model whose base edge is
 // within this many inches of a battlefield edge (nearBoardEdge).
-export interface PlaceShape { edgeBand?: boolean; minEnemyDistance?: number; anywhere?: boolean; edgeWithin?: number }
+// F18 (OGM C1, More Ogors, My Lord!): edgeAll = EVERY model's base edge within edgeWithin of a battlefield edge (not just one);
+// formations are then a line of models parallel to the nearest battlefield edge (edgeLineFormation)
+export interface PlaceShape { edgeBand?: boolean; minEnemyDistance?: number; anywhere?: boolean; edgeWithin?: number; edgeAll?: boolean }
 
 const boardPolygon = (state: GameState): Vec2[] => {
   const hw = state.board.w / 2, hh = state.board.h / 2
@@ -366,6 +380,7 @@ function contactDistance(a: ModelBase, b: ModelBase, k: number, gap: number): nu
 // (points nearest the centre first); any other unit (oval or mixed bases, F16 fix) is packed by its real footprints.
 export function reinforcementFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2, shape: PlaceShape = {}): ModelPlacement[] | null {
   if (models.length === 0) return null
+  if (shape.edgeAll && shape.edgeWithin !== undefined) return edgeLineFormation(state, player, models, coherencyRange, centre, shape)
   const b0 = models[0].base
   const uniformRound = models.every((m) => isRound(m.base) && m.base.radius === b0.radius)
   return uniformRound ? latticeFormation(state, player, models, coherencyRange, centre, shape) : packedFormation(state, player, models, coherencyRange, centre, shape)
@@ -388,7 +403,8 @@ function formationRules(state: GameState, player: PlayerId, models: Model[], sha
     return terrainService.canEndAt(state, m, cand.pos).ok
   }
   const finish = (out: ModelPlacement[], fps: Footprint[], coherencyRange: number | undefined): ModelPlacement[] | null => {
-    if (shape.edgeWithin !== undefined && !fps.some((f) => nearBoardEdge(f, state.board, shape.edgeWithin as number))) return null
+    const near = (f: Footprint): boolean => nearBoardEdge(f, state.board, shape.edgeWithin as number)
+    if (shape.edgeWithin !== undefined && !(shape.edgeAll ? fps.every(near) : fps.some(near))) return null
     const check = checkPlacements({
       unitModels: models, placements: out, constraints: emptyMoveConstraints(1e9, { region: territory, mustEndOutsideEngagement: true, coherency: true }),
       otherFriendly: others, enemies, board: state.board, coherencyRange,
@@ -400,6 +416,54 @@ function formationRules(state: GameState, player: PlayerId, models: Model[], sha
 
 // identical round bases: hex lattice spaced by the base (edge gap 0.12"), points nearest the centre first, each model on the first
 // legal one
+// F18 (OGM C1): the unit as a line along the battlefield edge nearest `centre`, every model facing inwards with its base edge
+// just inside `edgeWithin` of that edge, neighbours PACK_GAP apart, the line centred on the projection of `centre`
+function edgeLineFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2, shape: PlaceShape): ModelPlacement[] | null {
+  const { legal, finish } = formationRules(state, player, models, shape)
+  const hw = state.board.w / 2, hh = state.board.h / 2
+  const gaps = [{ e: 'W', d: centre.x + hw }, { e: 'E', d: hw - centre.x }, { e: 'S', d: centre.z + hh }, { e: 'N', d: hh - centre.z }]
+  gaps.sort((a, b) => a.d - b.d)
+  const edge = gaps[0].e
+  // inward unit vector, along-edge unit vector, facing (direction (cos, sin) points inwards)
+  const inward = edge === 'W' ? { x: 1, z: 0 } : edge === 'E' ? { x: -1, z: 0 } : edge === 'S' ? { x: 0, z: 1 } : { x: 0, z: -1 }
+  const along = { x: -inward.z, z: inward.x }
+  const facing = Math.atan2(inward.z, inward.x)
+  const lim = shape.edgeWithin as number
+  const edgePoint = edge === 'W' ? { x: -hw, z: centre.z } : edge === 'E' ? { x: hw, z: centre.z } : edge === 'S' ? { x: centre.x, z: -hh } : { x: centre.x, z: hh }
+  // smallest inset (from the edge) at which the base is wholly on the board, plus a little (always inside `edgeWithin`)
+  const insetFor = (m: Model): number => {
+    for (let d = 0; d < 6; d += 0.05) {
+      const f: Footprint = { pos: { x: edgePoint.x + inward.x * d, y: 0, z: edgePoint.z + inward.z * d }, facing, base: m.base }
+      if (whollyOnBoard(f, state.board)) return d + Math.min(0.25, lim / 2)
+    }
+    return 0.5
+  }
+  const insets = models.map(insetFor)
+  const fpAt = (i: number, o: number): Footprint => ({
+    pos: { x: r3(edgePoint.x + inward.x * insets[i] + along.x * o), y: 0, z: r3(edgePoint.z + inward.z * insets[i] + along.z * o) }, facing, base: models[i].base,
+  })
+  // lay the line from offset 0, then shift it so it is centred on `centre`
+  const offs: number[] = [0]
+  let at = 0
+  for (let i = 1; i < models.length; i++) {
+    const prev = fpAt(i - 1, at)
+    let o = at + 0.1
+    for (; o < at + 12; o += 0.05) { const f = fpAt(i, o); if (!basesOverlap(prev, f) && horizontalGap(prev, f) >= PACK_GAP) break }
+    offs.push(o)
+    at = o
+  }
+  const shift = -at / 2
+  const placed: Footprint[] = []
+  const out: ModelPlacement[] = []
+  for (let i = 0; i < models.length; i++) {
+    const f = fpAt(i, offs[i] + shift)
+    if (!legal(models[i], f, placed)) return null
+    placed.push(f)
+    out.push({ modelId: models[i].id, pos: f.pos, facing })
+  }
+  return finish(out, placed, coherencyRange)
+}
+
 function latticeFormation(state: GameState, player: PlayerId, models: Model[], coherencyRange: number | undefined, centre: Vec2, shape: PlaceShape): ModelPlacement[] | null {
   const { facing, legal, finish } = formationRules(state, player, models, shape)
   const step = 2 * reachOf(models[0]) + 0.12
@@ -504,9 +568,10 @@ export function reinforcementOptions(state: GameState, player: PlayerId, models:
     if (max === 1 && found.length > 0) break
   }
   if (found.length === 0) return []
-  // spread: take the ones furthest apart along the table's long axis
+  // spread: take the ones furthest apart along the table's long axis (F18 edgeAll: around the whole perimeter)
   const long = state.board.w >= state.board.h ? 'x' : 'z'
-  found.sort((a, b) => a[long] - b[long] || a.x - b.x)
+  if (shape.edgeAll) found.sort((a, b) => Math.atan2(a.z, a.x) - Math.atan2(b.z, b.x))
+  else found.sort((a, b) => a[long] - b[long] || a.x - b.x)
   const picks: Vec2[] = []
   const want = Math.min(max, found.length)
   for (let k = 0; k < want; k++) {

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "fec.unit.morbheg-knights",
+    "faction": "fec",
+    "name": "Morbheg Knights",
+    "keywords": ["CAVALRY", "FLY"],
+    "factionKeywords": ["DEATH", "FLESH-EATER COURTS"],
+    "stats": { "M": 12, "W": 4, "Sv": 4, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "morbheg-knight",
+        "name": "Morbheg Knight",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "oval", "mm": 75, "mm2": 42 },
+        "weapons": {
+          "default": ["fec.weapon.grisly-lance", "fec.weapon.nightshrieker-claws"]
+        },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["fec.ability.predators-pounce"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

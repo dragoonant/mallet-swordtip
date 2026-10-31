@@ -376,8 +376,8 @@ const auraActivate: ActivatedAbilityHook = {
     // a recast replaces the old marker; the aura lasts until the start of the caster's next turn, not the target's (the default expiry
     // belongs to the unit that holds the effect)
     target.effects = target.effects.filter((e) => e.sourceAbilityId !== use.abilityId)
-    const active = effectService.grant(ctx, target.id, {}, { sourceAbilityId: use.abilityId, sourceUnitId: use.unitId, scope: { who: 'self' }, duration: 'untilNextTurn' })
-    active.expires = { kind: 'nextOwnTurn', round: s.round, player: use.player }
+    // F18 (HOH C3): the effect sits on an enemy unit and lasts until the start of the user's next turn
+    const active = effectService.grant(ctx, target.id, {}, { sourceAbilityId: use.abilityId, sourceUnitId: use.unitId, scope: { who: 'self' }, duration: 'untilNextTurn', expiryOwner: use.player })
     announce(ctx, use, target.id, `Mutative Aura: until the start of the next turn, ${target.name} suffers 1 mortal damage for each unmodified 1 it rolls to hit in combat`)
   },
 }

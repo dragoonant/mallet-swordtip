@@ -331,15 +331,32 @@ Maulbeast Cavalry units share one figure. Mawseeker Mob figures are listed in Ap
 
 ## 11. Implementation notes
 
-Not built yet. Planned files: data `src/data/factions/ogors/` (faction.json with `factionKeyword: 'OGOR MAWTRIBES'`,
-`armyRule: 'ogors.ability.warglutt-marauders'` marker; datasheets/{tyrant, gluttons, ironguts, maulbeast-cavalry}.json;
-weapons.json; abilities.json; enhancements.json; patrols/warglutt-marauders.json). Hooks `src/engine/factions/ogors.ts`
-(`...ogorsHooks` in `code-hooks.ts`). Tests `tests/engine/ogors.test.ts`, `tests/data/ogors.test.ts` (one test per OGM- id).
-Patrol: `battleTraits: ['ogors.ability.nomadic-warriors', 'ogors.ability.scoff-down-fresh-flesh']`, regiment list Blinding
-Dust Clouds (default) then Brutish Barging, enhancement list Gristlegobbler (default), Wallwrecker, Lungburster,
-Deathcheater. Figure mapping keys `<datasheet id>/<modelId>`.
+Built (F18). Data `src/data/factions/ogors/` (faction.json `factionKeyword: 'OGOR MAWTRIBES'`, `armyRule` marker
+`ogors.ability.warglutt-marauders`; datasheets/{tyrant, gluttons, ironguts, maulbeast-cavalry}.json; weapons.json; abilities.json;
+enhancements.json; patrols/warglutt-marauders.json). Hooks `src/engine/factions/ogors.ts` (`...ogorsHooks` in `code-hooks.ts`).
+Tests `tests/engine/ogors.test.ts`, `tests/data/ogors.test.ts` (one test per OGM- id, plus OGM-REG and the AI-hint check).
+Patrol: `battleTraits: ['ogors.ability.nomadic-warriors', 'ogors.ability.scoff-down-fresh-flesh']`, regiment list Blinding Dust Clouds
+(default) then Brutish Barging, enhancement list Gristlegobbler (default), Wallwrecker, Lungburster, Deathcheater. The Gluttons
+datasheet is one warscroll (composition 2-3) used by two patrol entries; `gluttons-3` and `maulbeast-2` carry
+`reserve: { ability: 'ogors.ability.more-ogors-my-lord' }` and no `via` (the PDF text is a battle trait, so core 24.1 never
+destroys them). Figure mapping keys `<datasheet id>/<modelId>`: `ogors.unit.tyrant/tyrant`, `ogors.unit.gluttons/glutton`,
+`ogors.unit.ironguts/irongut`, `ogors.unit.maulbeast-cavalry/maulbeast-rider`.
 
----
+How the rules landed (as built):
+- **Scoff Down Fresh Flesh** is an army descriptor with `UNLIMITED` (the engine's once-per-phase rule is per ability and unit, and an
+  army ability has no unit) and the phase mark `ogm:scoff:<unitId>` for the once-per-unit rule. The three upgrades are the descriptor's
+  data `modes`. Raw and Bloody Flesh is a battle-long declarative effect; Exotic Giblets and Steaming Brains are empty battle-long
+  effects whose id keys `mission.custom.ogmScoff`, read by `wardRollModifier` and by `produce` at onObjectiveControl. Both need
+  `state.cards.turnLog` (always present in a real game; tests set `s.cards.turnLog` by hand).
+- **Stomping Marauders** has no declarative form for a unit-level control bonus, and `produce` is only asked of active effects, so
+  `ensureEffects` puts one empty battle-long effect on each Ironguts unit the first time any ability window runs (the hero phase of
+  round 1 at the latest, before any objective check).
+- **Brutish Barging** is offered when the average roll (7") would let a unit that charged move somewhere that is not combat; the real 2D6
+  is rolled after the target is picked and the unit may end up with only "stay" if the roll is small.
+- **Shock and Gore** is offered in the combat-phase ability windows, i.e. before the first activation of the phase (there is no window
+  between activations), which is enough because the penalty lasts the whole turn.
+- AI: the hints are `ogorsAbilityTiming / ogorsTargetBonus / ogorsModeBonus / ogorsOptionUnit` (read by `src/ai/utility.ts`;
+  `ogorsOptionUnit` reads the unit out of the `<abilityId>#<unitId>` option id, because the ability-use options carry no unit hint).
 
 ## Appendix A — Mawseeker Mob (same PDF, pages 5–8; out of scope)
 

@@ -695,6 +695,30 @@
         },
         "onlySixes": {
           "const": "hit"
+        },
+        "rollFloor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "roll",
+            "value"
+          ],
+          "properties": {
+            "roll": {
+              "const": "advance"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            }
+          }
+        },
+        "noAbilities": {
+          "const": true
+        },
+        "passAcrossTerrain": {
+          "const": true
         }
       },
       "not": {
@@ -1467,7 +1491,8 @@
         "CHARGE",
         "SPELL",
         "PRAYER",
-        "UNLIMITED"
+        "UNLIMITED",
+        "DEPLOY"
       ]
     }
   }

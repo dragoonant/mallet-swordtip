@@ -67,6 +67,12 @@ const FACTION_COLOR: Record<string, string> = {
   idoneth: '#9ff3ff',
   tzeentch: '#e65ad8',
   ossiarch: '#38e0c0',
+  // F18: Slaanesh musk-pink lashes, Helsmiths green daemonfire, Flesh-eater Courts dried-blood crimson, Ogors rusty crude-iron orange, Behemat dusty stone.
+  slaanesh: '#ff7ac8',
+  helsmiths: '#6dff7c',
+  fec: '#c23a3a',
+  ogors: '#e8a860',
+  behemat: '#d8c8a0',
   sm: '#5aa7ff',
   ork: '#8dff5a',
   necrons: '#39ff6a',
@@ -103,7 +109,7 @@ export function factionColor(faction: string): THREE.Color {
  *  'rend' = quick crossing scratch-slashes (Darkoath), 'ember' = a molten overhead axe-fall that throws embers (Fyreslayers),
  *  'spark' = the original spark-and-streak clash every other faction keeps. */
 export type MeleeStyle = 'blade' | 'chop' | 'rend' | 'ember' | 'spark'
-const MELEE_STYLE: Record<string, MeleeStyle> = { cities: 'blade', ironjawz: 'chop', slaves: 'rend', fyreslayers: 'ember', kruleboyz: 'rend', gloomspite: 'rend', lumineth: 'blade', kharadron: 'spark', stormcast: 'spark', skaven: 'rend', seraphon: 'chop', soulblight: 'blade', khorne: 'rend', nurgle: 'chop', nighthaunt: 'blade', sylvaneth: 'blade', daughters: 'rend', idoneth: 'blade', tzeentch: 'spark', ossiarch: 'chop' }
+const MELEE_STYLE: Record<string, MeleeStyle> = { cities: 'blade', ironjawz: 'chop', slaves: 'rend', fyreslayers: 'ember', kruleboyz: 'rend', gloomspite: 'rend', lumineth: 'blade', kharadron: 'spark', stormcast: 'spark', skaven: 'rend', seraphon: 'chop', soulblight: 'blade', khorne: 'rend', nurgle: 'chop', nighthaunt: 'blade', sylvaneth: 'blade', daughters: 'rend', idoneth: 'blade', tzeentch: 'spark', ossiarch: 'chop', slaanesh: 'rend', helsmiths: 'ember', fec: 'rend', ogors: 'chop', behemat: 'chop' }
 export function meleeStyle(faction: string): MeleeStyle {
   return MELEE_STYLE[faction] ?? 'spark'
 }

@@ -1,0 +1,147 @@
+[
+  {
+    "id": "ogors.ability.warglutt-marauders",
+    "name": "Warglutt Marauders",
+    "text": "Army marker for the Warglutt Marauders. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "ogors.ability.nomadic-warriors",
+    "name": "Nomadic Warriors",
+    "text": "The 3-model Gluttons and one Maulbeast Cavalry unit are not set up in the deployment phase: they start in reserve and arrive through More Ogors, My Lord!.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "ogors.ability.more-ogors-my-lord",
+    "name": "More Ogors, My Lord!",
+    "text": "In your movement phase from battle round 3, set this unit up anywhere on the battlefield with every model within 1\" of a battlefield edge and more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["CORE"],
+    "fromRound": 3,
+    "params": { "fromRound": 3, "minEnemyDistance": 6, "anywhere": true, "edgeWithin": 1, "edgeAll": true }
+  },
+  {
+    "id": "ogors.ability.scoff-down-fresh-flesh",
+    "name": "Scoff Down Fresh Flesh",
+    "text": "At the end of any turn in which an enemy unit was destroyed, pick a friendly unit that fought this turn. For the rest of the battle it gains one upgrade of your choice. Raw and Bloody Flesh: +1 to hit rolls for its combat attacks if it charged in the same turn. Exotic Giblets: subtract 1 from ward rolls made against damage from its combat attacks. Steaming Brains: add 3 to its control score.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "keywords": ["UNLIMITED"],
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "modes": [
+      { "id": "raw", "name": "Raw and Bloody Flesh", "text": "+1 to hit rolls for the unit's combat attacks if it charged in the same turn, for the rest of the battle." },
+      { "id": "giblets", "name": "Exotic Giblets", "text": "-1 to ward rolls made against damage points from the unit's combat attacks, for the rest of the battle." },
+      { "id": "brains", "name": "Steaming Brains", "text": "+3 to the unit's control score for the rest of the battle." }
+    ],
+    "duration": "battle",
+    "code": "ogorsScoffDown",
+    "params": { "army": true, "brains": 3, "priority": "P1" }
+  },
+  {
+    "id": "ogors.ability.brutish-barging",
+    "name": "Brutish Barging",
+    "text": "Once per battle, at the end of your turn, pick a friendly unit that charged this turn and roll 2D6. It may move up to that many inches. It may pass through the combat ranges of enemy units it was in combat with when the move began, but it cannot end the move in combat.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "your" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "ogorsBrutishBarging",
+    "params": { "dice": "2D6", "priority": "P1" }
+  },
+  {
+    "id": "ogors.ability.blinding-dust-clouds",
+    "name": "Blinding Dust Clouds",
+    "text": "Subtract 1 from hit rolls for attacks that target a friendly unit that was set up this turn.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "attacker" },
+    "effect": { "modifyRoll": { "roll": "hit", "value": -1 } },
+    "code": "ogorsBlindingDust",
+    "params": { "priority": "P1" }
+  },
+  {
+    "id": "ogors.ability.roaring-warlord",
+    "name": "Roaring Warlord",
+    "text": "In your hero phase, pick a visible friendly unit within 12\" of this unit (this unit counts) and roll a dice. On a 3+ add 1 to that unit's charge rolls for the rest of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "roll": { "dice": "D6", "succeedOn": 3 },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilEndOfTurn",
+    "code": "ogorsRoaringWarlord",
+    "params": { "range": 12, "bonus": 1, "priority": "P1" }
+  },
+  {
+    "id": "ogors.ability.wall-of-meat",
+    "name": "Wall of Meat",
+    "text": "Add 1 to save rolls for attacks that target this unit, unless it charged in the same turn.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "when": { "unitCharged": false }, "modifyRoll": { "roll": "save", "value": 1 } }
+  },
+  {
+    "id": "ogors.ability.stomping-marauders",
+    "name": "Stomping Marauders",
+    "text": "Add 2 to this unit's control score if it charged in the same turn.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "ogorsStompingMarauders",
+    "params": { "control": 2 }
+  },
+  {
+    "id": "ogors.ability.shock-and-gore",
+    "name": "Shock and Gore",
+    "text": "Once per turn for the army, in your combat phase, if this unit charged this turn, pick an enemy unit in combat with it and roll a dice. On a 3+ subtract 1 from the wound rolls of that unit's attacks for the rest of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "your" },
+    "limit": "oncePerTurnArmy",
+    "roll": { "dice": "D6", "succeedOn": 3 },
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "duration": "untilEndOfTurn",
+    "code": "ogorsShockAndGore",
+    "params": { "army": true, "priority": "P1" }
+  },
+  {
+    "id": "ogors.ability.wallwrecker",
+    "name": "Wallwrecker",
+    "text": "The bearer's moves and charges may pass across terrain features as though it could fly. It does not gain the Fly keyword.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "effect": { "passAcrossTerrain": true }
+  },
+  {
+    "id": "ogors.ability.lungburster",
+    "name": "Lungburster",
+    "text": "When a friendly unit wholly within 9\" of the bearer (the bearer's unit counts) rolls a 1, 2 or 3 for its run roll, it may use 4 instead.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "friendly", "within": 9, "wholly": true },
+    "effect": { "rollFloor": { "roll": "advance", "value": 4 } }
+  },
+  {
+    "id": "ogors.ability.deathcheater",
+    "name": "Deathcheater",
+    "text": "The bearer has Ward (6+) while it is more than 3\" from every other friendly unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "ogorsDeathcheater",
+    "params": { "ward": 6, "range": 3 }
+  },
+  {
+    "id": "ogors.ability.gristlegobbler",
+    "name": "Gristlegobbler",
+    "text": "Once per battle, at the end of any turn, each enemy unit in combat with the bearer suffers D3 mortal damage. Then Heal (3) the bearer.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "code": "ogorsGristlegobbler",
+    "params": { "mortal": "D3", "heal": 3, "priority": "P1" }
+  }
+]

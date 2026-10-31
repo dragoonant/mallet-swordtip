@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ogors.unit.gluttons",
+    "faction": "ogors",
+    "name": "Gluttons",
+    "keywords": ["INFANTRY"],
+    "factionKeywords": ["DESTRUCTION", "OGOR MAWTRIBES"],
+    "stats": { "M": 6, "W": 4, "Sv": 5, "OC": 2 },
+    "composition": [
+      {
+        "modelId": "glutton",
+        "name": "Glutton",
+        "min": 2,
+        "max": 3,
+        "default": 2,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": { "default": ["ogors.weapon.glutton-weapons"] },
+        "figure": { "archetype": "heavy", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["ogors.ability.wall-of-meat"],
+    "coreAbilities": [],
+    "figure": { "archetype": "heavy", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

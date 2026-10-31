@@ -1,0 +1,17 @@
+{
+  "id": "fec",
+  "name": "Flesh-eater Courts",
+  "factionKeyword": "FLESH-EATER COURTS",
+  "armyRule": "fec.ability.carrion-retainers",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#7d1f2a",
+    "secondary": "#5d6b4a",
+    "trim": "#b99a45",
+    "metal": "#8f8f7f",
+    "decal": "#e6dcc3"
+  },
+  "combatPatrols": [
+    "fec.army.carrion-retainers"
+  ]
+}

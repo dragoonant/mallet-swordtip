@@ -260,6 +260,8 @@ function doSelect(ctx: EngineContext): 'pending' | 'declare' | 'reinforcements' 
   const eligible: UnitId[] = []
   for (const u of boardUnitsOf(s, active)) {
     if (u.bodyguardUnitId || activated.has(u.id) || setUpThisTurn(s, u.id)) continue
+    // F18 (HOH C4, Effect.noAbilities): no Normal Move / Run / Retreat
+    if (hookService.unitHasEffectFlag(s, u.id, 'noAbilities')) continue
     eligible.push(u.id)
   }
   if (eligible.length === 0) return 'reinforcements'
@@ -377,7 +379,8 @@ function doMove(ctx: EngineContext): 'pending' | 'select' {
 // ---------- reserve arrival (13-port-plan §1.2: Ere We Go style, data params) ----------
 // F16 (TZE C2, DOT-BT-1 Fated Arrival): territory = set up wholly within friendly territory (not the deployment zone);
 // edgeWithin = some model's base edge must be within that many inches of a battlefield edge
-interface ArrivalParams { fromRound: number; minEnemyDistance: number; anywhere: boolean; territory?: boolean; edgeWithin?: number }
+// F18 (OGM C1): edgeAll = EVERY model's base edge within edgeWithin of a battlefield edge
+interface ArrivalParams { fromRound: number; minEnemyDistance: number; anywhere: boolean; territory?: boolean; edgeWithin?: number; edgeAll?: boolean }
 
 function arrivalParams(state: GameState, unitId: UnitId): ArrivalParams | null {
   const u = state.units[unitId]
@@ -390,6 +393,7 @@ function arrivalParams(state: GameState, unitId: UnitId): ArrivalParams | null {
     anywhere: p.anywhere !== false,
     ...(p.territory === true ? { territory: true } : {}),
     ...(typeof p.edgeWithin === 'number' ? { edgeWithin: p.edgeWithin } : {}),
+    ...(p.edgeAll === true ? { edgeAll: true } : {}),
   }
 }
 
@@ -407,7 +411,7 @@ function eligibleArrivals(state: GameState, player: PlayerId): UnitId[] {
 // the set-up rules a reserve arrival (and an out-of-phase redeploy, FYR-RA-1 Magmic Tunnels via src/engine/redeploy.ts) follows
 // F16 (TZE C2): territory (region = friendly territory, wins over anywhere) and edgeWithin (checked in resolveSetUp, not a
 // MoveConstraints field: types.ts stays as it is)
-export interface SetUpParams { minEnemyDistance: number; anywhere: boolean; territory?: boolean; edgeWithin?: number }
+export interface SetUpParams { minEnemyDistance: number; anywhere: boolean; territory?: boolean; edgeWithin?: number; edgeAll?: boolean }
 
 // the area a set-up must be wholly within (null = anywhere on the battlefield)
 export function setUpRegion(state: GameState, player: PlayerId, p: SetUpParams): Polygon | null {
@@ -453,8 +457,10 @@ export function resolveSetUp(state: GameState, unitId: UnitId, placements: Model
     if (!end.ok) return { rejection: { code: 'E_OVERLAP', reason: end.reason ?? `${r.model.id} cannot be set up there`, details: { modelId: r.model.id } } }
   }
   // F16 (TZE C2): at least one model's base edge within edgeWithin of a battlefield edge
-  if (p.edgeWithin !== undefined && !result.resolved.some((r) => nearBoardEdge({ pos: r.to, facing: r.facing, base: r.model.base }, state.board, p.edgeWithin as number))) {
-    return { rejection: { code: 'E_OUT_OF_RANGE', reason: `must be set up within ${p.edgeWithin}" of a battlefield edge` } }
+  // F18 (OGM C1): with edgeAll, every model's base edge
+  const near = (r: ResolvedPlacement): boolean => nearBoardEdge({ pos: r.to, facing: r.facing, base: r.model.base }, state.board, p.edgeWithin as number)
+  if (p.edgeWithin !== undefined && !(p.edgeAll ? result.resolved.every(near) : result.resolved.some(near))) {
+    return { rejection: { code: 'E_OUT_OF_RANGE', reason: p.edgeAll ? `every model must be within ${p.edgeWithin}" of a battlefield edge` : `must be set up within ${p.edgeWithin}" of a battlefield edge` } }
   }
   return result
 }
@@ -585,10 +591,11 @@ function arrivalCandidates(state: GameState, pending: Extract<PendingDecision, {
   const out: Action[] = []
   const ap = arrivalParams(state, unitId)
   // F16 (TZE C2): an edge arrival in friendly territory: packed formations centred along the territory's battlefield edges
-  if (models.length > 0 && ap?.territory && ap.edgeWithin !== undefined) {
-    const shape = { edgeBand: false, edgeWithin: ap.edgeWithin, minEnemyDistance: ap.minEnemyDistance }
+  // F18 (OGM C1): an every-model edge arrival anywhere: lines along all four battlefield edges
+  if (models.length > 0 && (ap?.territory || ap?.edgeAll) && ap.edgeWithin !== undefined) {
+    const shape = { edgeBand: false, edgeWithin: ap.edgeWithin, minEnemyDistance: ap.minEnemyDistance, ...(ap.edgeAll ? { edgeAll: true, anywhere: !ap.territory } : {}) }
     const range = datasheetOf(state, unitId).coherencyRange
-    for (const o of reinforcementOptions(state, pending.player, models, range, 5, shape)) {
+    for (const o of reinforcementOptions(state, pending.player, models, range, ap.edgeAll ? 8 : 5, shape)) {
       const placements = reinforcementFormation(state, pending.player, models, range, o.centre, shape)
       if (placements && resolveArrival(state, unitId, placements).rejection === null) out.push({ type: 'deployUnit', player: pending.player, decisionId: pending.id, unitId, placements })
     }

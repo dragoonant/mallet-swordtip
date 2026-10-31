@@ -15,6 +15,10 @@ export interface EffectGrant {
   scope: Scope
   duration: Duration
   when?: ActiveEffect['when']
+  // F18 (HOH C3): whose next turn ends an 'untilNextTurn' effect; default = the holder unit's player. An ability that puts an
+  // "until your next turn" effect on an ENEMY unit passes its own player here (else it would end at the start of the enemy's
+  // next turn, i.e. right after the turn it was used in)
+  expiryOwner?: PlayerId
 }
 
 export interface EffectService {
@@ -50,7 +54,7 @@ export const effectService: EffectService = {
   grant(ctx, unitId, effect, grant) {
     const s = ctx.state
     const unit = s.units[unitId]
-    const owner = unit?.player ?? null
+    const owner = grant.expiryOwner ?? unit?.player ?? null
     const active: ActiveEffect = {
       id: nextEffectId(s, unitId),
       sourceAbilityId: grant.sourceAbilityId,

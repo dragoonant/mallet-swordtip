@@ -1,0 +1,47 @@
+[
+  {
+    "id": "slaanesh.unit.thricefold-discord",
+    "faction": "slaanesh",
+    "name": "Thricefold Discord",
+    "keywords": ["HERO", "WIZARD", "INFANTRY"],
+    "factionKeywords": ["CHAOS", "HEDONITES OF SLAANESH"],
+    "stats": { "M": 6, "W": 3, "Sv": 5, "OC": 2, "ward": 5 },
+    "wizard": 1,
+    "composition": [
+      {
+        "modelId": "vexmor",
+        "name": "Vexmor",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 40 },
+        "weapons": { "default": ["slaanesh.weapon.thricefold-arsenal"] },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      },
+      {
+        "modelId": "vashtiss",
+        "name": "Vashtiss the Coiled",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 28.5 },
+        "weapons": { "default": ["slaanesh.weapon.thricefold-arsenal"] },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      },
+      {
+        "modelId": "lascivyr",
+        "name": "Lascivyr the Bladed Blessing",
+        "min": 1,
+        "max": 1,
+        "default": 1,
+        "base": { "shape": "round", "mm": 28.5 },
+        "weapons": { "default": ["slaanesh.weapon.thricefold-arsenal"] },
+        "figure": { "archetype": "infantry", "kit": "generic-infantry" }
+      }
+    ],
+    "abilities": ["slaanesh.ability.thricefold-court", "slaanesh.ability.dispensers-of-favour"],
+    "coreAbilities": [],
+    "figure": { "archetype": "infantry", "kit": "generic-infantry" },
+    "spearhead": true
+  }
+]

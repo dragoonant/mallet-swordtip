@@ -1,0 +1,26 @@
+[
+  {
+    "id": "slaanesh.unit.seekers",
+    "faction": "slaanesh",
+    "name": "Seekers",
+    "keywords": ["CAVALRY", "SEEKERS"],
+    "factionKeywords": ["CHAOS", "HEDONITES OF SLAANESH"],
+    "stats": { "M": 14, "W": 3, "Sv": 6, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "seeker",
+        "name": "Seeker",
+        "min": 5,
+        "max": 5,
+        "default": 5,
+        "base": { "shape": "oval", "mm": 60, "mm2": 35 },
+        "weapons": { "default": ["slaanesh.weapon.agonising-claws", "slaanesh.weapon.steeds-poisoned-tongue"] },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["slaanesh.ability.quicksilver-speed"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

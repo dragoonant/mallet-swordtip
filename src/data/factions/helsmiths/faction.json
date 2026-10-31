@@ -1,0 +1,17 @@
+{
+  "id": "helsmiths",
+  "name": "Helsmiths of Hashut",
+  "factionKeyword": "HELSMITHS OF HASHUT",
+  "armyRule": "helsmiths.ability.helforge-host",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#a8743a",
+    "secondary": "#7a1f24",
+    "trim": "#d4a63a",
+    "metal": "#2a2a2e",
+    "decal": "#4be06a"
+  },
+  "combatPatrols": [
+    "helsmiths.army.helforge-host"
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "behemat.weapon.hurlin-rocks",
+    "name": "Hurlin' Rocks",
+    "type": "ranged",
+    "range": 12,
+    "A": 3,
+    "skill": 4,
+    "wound": 2,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "behemat.weapon.massive-club-and-rocks",
+    "name": "Massive Club and Rocks",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 2,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "behemat.weapon.eadbutt",
+    "name": "'Eadbutt",
+    "type": "melee",
+    "range": 0,
+    "A": 1,
+    "skill": 4,
+    "wound": 2,
+    "rend": 2,
+    "D": 3,
+    "abilities": []
+  }
+]

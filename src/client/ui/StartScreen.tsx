@@ -1,6 +1,6 @@
-// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (any of the twenty:
+// Pre-game setup screen (docs/spec/50-client.md §5, Spearhead edition, 13-port-plan §4.3). Pick your army (any of the twenty-five:
 // Cities of Sigmar, Fyreslayers, Lumineth Realm-lords, Kharadron Overlords, Stormcast Eternals, Seraphon, Slaves to Darkness, Skaven,
-// Soulblight Gravelords, Ironjawz, Kruleboyz, Gloomspite Gitz, Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth, Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch and Ossiarch Bonereapers; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
+// Soulblight Gravelords, Ironjawz, Kruleboyz, Gloomspite Gitz, Blades of Khorne, Maggotkin of Nurgle, Nighthaunt, Sylvaneth, Daughters of Khaine, Idoneth Deepkin, Disciples of Tzeentch, Ossiarch Bonereapers, Hedonites of Slaanesh, Helsmiths of Hashut, Flesh-eater Courts, Ogor Mawtribes and Sons of Behemat; any pairing, mirrors included), its regiment ability and enhancement, a bot or a second seat on this
 // device, and Start. The battleplan is fixed (Fire and Jade, standard terrain); only its realm side (Aqshy, Ghyran or random) is picked.
 // The engine asks the remaining pre-battle questions (attacker, deployment, first turn) as ordinary prompts.
 import { FactionCrest } from './FactionCrest'
@@ -35,6 +35,11 @@ export const FACTION_BLURBS: Record<string, string> = {
   daughters: 'Blood-drunk temple warriors: a serpent-bodied champion, a whirling pack of Witch Aelves, dark-steed sorcerers who hurl black fire and coiled archers whose arrows hunt hearts, each round of fighting winding the whole troupe tighter.',
   idoneth: 'Raiders from the deep who fight with the tides: a stooped soul-seer, eel-riding knights, a snapping war-shark and eyeless thralls, hitting harder or faster as the tide turns from round to round.',
   tzeentch: 'A scheming flock of bird-headed beast-men: a sorcerer on a flying disc, sword-wielding Tzaangors and spear-armed Enlightened, plus Skyfire archers, who can wait in reserve and peek at the cards before they are dealt.',
+  slaanesh: 'Languid, cruel daemon courtiers: three preening Heralds who count as three units, pincered Fiends, two packs of quick-clawed Daemonettes and Seekers racing ahead on long-necked steeds, all swayed by a favour that shifts with the size of the army.',
+  helsmiths: 'Furnace-lords of the black north: a glaive-swinging War Despot, spearmen of the Infernal Cohort, a horned engine that belches fire and a siege mortar, all drinking in daemonic power that is handed out afresh every round.',
+  fec: 'A mad court that thinks itself noble: a crowned Archregent, rusty-halberd Cryptguard, bat-riding Morbheg Knights and a hulking Varghulf, all earning noble deeds in battle that they spend to stand the fallen back up.',
+  ogors: 'A gluttonous warband of belly-plated ogres: a cleaver-wielding Tyrant, brawling Gluttons, iron-helmed Ironguts and tusked Maulbeast riders, with some of them held back to burst out of the board edge late in the game.',
+  behemat: 'Hill giants with more boulder than sense: a pair of Rock-hurlers and a Boulder Basher who lob stones across the field, drop them on toes in melee or simply roll them, and are big enough to hold an objective on their own.',
   ossiarch: 'Cold, drilled constructs of bone: a sculptor-mage who barks the ranks into order, shield-and-halberd bodyguards, four-armed duelists and winged Morghasts that swoop in from the second round.',
 }
 
@@ -43,14 +48,15 @@ export const FACTION_ALLIANCE: Record<string, 'Order' | 'Chaos' | 'Death' | 'Des
   cities: 'Order', fyreslayers: 'Order', lumineth: 'Order', kharadron: 'Order', stormcast: 'Order', seraphon: 'Order',
   sylvaneth: 'Order', daughters: 'Order', idoneth: 'Order',
   slaves: 'Chaos', skaven: 'Chaos', khorne: 'Chaos', nurgle: 'Chaos', tzeentch: 'Chaos',
-  soulblight: 'Death', nighthaunt: 'Death', ossiarch: 'Death',
-  ironjawz: 'Destruction', kruleboyz: 'Destruction', gloomspite: 'Destruction',
+  slaanesh: 'Chaos', helsmiths: 'Chaos',
+  soulblight: 'Death', nighthaunt: 'Death', ossiarch: 'Death', fec: 'Death',
+  ironjawz: 'Destruction', kruleboyz: 'Destruction', gloomspite: 'Destruction', ogors: 'Destruction', behemat: 'Destruction',
 }
 const ALLIANCE_COLOR: Record<string, string> = { Order: '#6fa8ff', Chaos: '#c966e0', Death: '#5fd8b0', Destruction: '#ec8a3c' }
 
 // Preferred card order on the start screen (anything else follows, in data order).
 // Grouped by Grand Alliance (Order, Chaos, Death, Destruction), so each alliance sits together in the grid and shares an edge colour.
-const FACTION_ORDER = ['cities', 'fyreslayers', 'lumineth', 'kharadron', 'stormcast', 'seraphon', 'sylvaneth', 'daughters', 'idoneth', 'slaves', 'skaven', 'khorne', 'nurgle', 'tzeentch', 'soulblight', 'nighthaunt', 'ossiarch', 'ironjawz', 'kruleboyz', 'gloomspite']
+const FACTION_ORDER = ['cities', 'fyreslayers', 'lumineth', 'kharadron', 'stormcast', 'seraphon', 'sylvaneth', 'daughters', 'idoneth', 'slaves', 'skaven', 'khorne', 'nurgle', 'tzeentch', 'slaanesh', 'helsmiths', 'soulblight', 'nighthaunt', 'ossiarch', 'fec', 'ironjawz', 'kruleboyz', 'gloomspite', 'ogors', 'behemat']
 
 // Own-words one-liners for the regiment abilities and enhancements shown on the cards; the full rules text from the data is the
 // tooltip. An id without an entry here falls back to its data text.
@@ -175,6 +181,36 @@ export const OPTION_BLURBS: Record<string, string> = {
   'ossiarch.enh.shard-storm': 'A spell (7): in your hero phase, a dice per model of a visible enemy unit within 12"; each 5+ is 1 mortal damage.',
   'ossiarch.enh.mend-constructs': 'A spell (6): in your hero phase, a friendly unit near your general heals D3 damage.',
   'ossiarch.enh.helm-of-tyranny': 'Once per battle, at the end of your turn, a 3+ cuts 3 from the control score of an enemy unit within 12" of your general for the rest of the turn.',
+  'slaanesh.ability.bringers-of-degradation': 'When you pick a unit to fight, you may pick two Daemonettes units: the second fights straight after the first.',
+  'slaanesh.ability.daemonic-onslaught': 'Once per battle, after both armies are set up, a Seekers or Fiends unit close to your general makes a free Normal Move.',
+  'slaanesh.enh.high-courtiers': 'While your general stands close to a Daemonettes unit, both have a 5+ Ward.',
+  'slaanesh.enh.twisted-grace': 'When your general charged this turn, it piles in D6" further.',
+  'slaanesh.enh.excess-of-violence': 'Once per battle, in a combat phase, a nearby unit (your general too) gets Crit (2 Hits) on its melee weapons until your next turn.',
+  'slaanesh.enh.irresistible-soul-musk': 'Once per battle, in your movement phase, lift a nearby Seekers or Fiends unit off the board and set it down anywhere more than 6" from the enemy.',
+  'helsmiths.ability.grinding-advance': 'Once per battle, after both armies are set up, up to 2 Infernal Cohorts shuffle forward 3" (but cannot charge in round 1).',
+  'helsmiths.ability.suppressive-bombardment': 'Once a turn, an Infantry unit hurt by your Tormentor Bombard\'s shooting rolls one fewer die when it charges.',
+  'helsmiths.enh.talisman-of-obsidian': 'In each phase your general ignores the first damage point dealt to it.',
+  'helsmiths.enh.amulet-of-burning-hate': 'Once per battle, in a combat phase, your general scores a critical hit on any unmodified hit roll of 5+.',
+  'helsmiths.enh.chalice-of-darkness': 'Once per battle, in your shooting phase, a visible enemy within 12" of your general takes D3 mortal damage.',
+  'helsmiths.enh.scroll-of-petrification': 'Once per battle, in a hero phase, your general has a 2+ Ward for the turn, but cannot use abilities or be picked by yours.',
+  'fec.ability.crusading-army': 'Your units add 1 to their run rolls and charge rolls.',
+  'fec.ability.defenders-of-the-realm': 'Your units add 1 to their saves while they contest an objective you control.',
+  'fec.enh.ulguan-cloak': 'Enemies more than 12" from your general cannot see it, so cannot shoot it.',
+  'fec.enh.blood-river-chalice': 'Once per battle, in your hero phase, your general heals 2D3 damage.',
+  'fec.enh.rousing-oration': 'In your hero phase, roll for each other unit near your general: every 5+ gives the general a noble deed.',
+  'fec.enh.crimson-victuals': 'A spell (6): in your hero phase, a visible enemy within 18" takes D3 mortal damage and a nearby Cryptguard unit gets slain models back.',
+  'ogors.ability.brutish-barging': 'Once per battle, at the end of your turn, a unit that charged moves 2D6" through the enemy it was fighting, but cannot end in combat.',
+  'ogors.ability.blinding-dust-clouds': 'Attacks against a unit that was set up this turn (arrivals) are at -1 to hit.',
+  'ogors.enh.gristlegobbler': 'Once per battle, at the end of any turn, every enemy fighting your general takes D3 mortal damage, then it heals 3.',
+  'ogors.enh.wallwrecker': 'Your general walks and charges over terrain as though it could fly.',
+  'ogors.enh.lungburster': 'Nearby units that roll a 1, 2 or 3 to run may count it as a 4.',
+  'ogors.enh.deathcheater': 'Your general has a 6+ Ward while it stands more than 3" from every other friendly unit.',
+  'behemat.ability.surly-sorts': 'Once per battle, in a combat phase, a unit in combat gets +1 Attacks on its melee weapons for the turn.',
+  'behemat.ability.greedy-and-grabby': 'Every one of your units counts +5 towards control of an objective.',
+  'behemat.enh.humongous-strides': 'Your general adds 1 to its charge rolls.',
+  'behemat.enh.ard-ead': 'Once per battle, in a combat phase, your general\'s \'Eadbutt hits at +1 for the turn.',
+  'behemat.enh.lucky-rock': 'Once per battle, in your shooting phase, your general\'s Hurlin\' Rocks get +1 Attacks.',
+  'behemat.enh.hungry-gobbler': 'At the end of any turn in which your general\'s combat attacks slew a model, it heals D3.',
 }
 
 interface FactionChoice {
@@ -237,13 +273,13 @@ html[data-ff="compact"] .ss-check { display: flex; align-items: center; gap: 10p
 html[data-ff="compact"] .ss-field { display: flex; flex-direction: column; gap: 6px; }
 html[data-ff="compact"] .ss-card button[aria-pressed] { font-size: 12px !important; }
 html[data-ff="compact"] .ss-secondary { font-size: 13px; }
-/* Twenty army tiles, grouped by Grand Alliance: 5 x 4 in a desktop column and on a phone held upright; a phone held sideways has the
-   width for 10 x 2 (iPhone 15 Pro landscape, 852x393: each tile ~78px wide with a two-line name and a 25px crest). */
+/* Twenty-five army tiles, grouped by Grand Alliance: 5 x 5 in a desktop column and on a phone held upright; a phone held sideways has the
+   width for 9 x 3 (iPhone 15 Pro landscape, 852x393: each tile ~88px wide with a two-line name and a 25px crest; the grid scrolls). */
 html[data-ff="compact"] .ss-armies { gap: 4px !important; }
 html[data-ff="compact"] .ss-card .ss-armies button[aria-pressed] { padding: 4px 1px !important; font-size: 9.5px !important; gap: 2px !important; }
 html[data-ff="compact"] .ss-armies .ss-badge { width: 32px !important; height: 32px !important; }
 html[data-ff="compact"] .ss-armies .ss-badge svg { width: 28px; height: 28px; }
-@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(10, minmax(0, 1fr)) !important; }
+@media (orientation: landscape) { html[data-ff="compact"] .ss-armies { grid-template-columns: repeat(9, minmax(0, 1fr)) !important; }
   html[data-ff="compact"] .ss-card .ss-armies button[aria-pressed] { font-size: 8px !important; min-height: 64px; padding: 3px 0 !important; }
   html[data-ff="compact"] .ss-armies .ss-badge { width: 28px !important; height: 28px !important; }
   html[data-ff="compact"] .ss-armies .ss-badge svg { width: 25px; height: 25px; } }
@@ -262,7 +298,7 @@ const label: CSSProperties = { fontSize: 12, textTransform: 'uppercase', letterS
 const row: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' }
 const input: CSSProperties = { ...buttonBase, flex: 1, cursor: 'text' }
 const blurb: CSSProperties = { ...mutedText, marginTop: -8 }
-// Twenty armies sit five by four (the CSS class makes it ten by two on a phone held sideways); never an orphan card.
+// Twenty-five armies sit five by five (the CSS class makes it nine by three on a phone held sideways); never an orphan card.
 const factionGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 5 }
 const factionCard: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '5px 2px', fontSize: 10.5, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal', minWidth: 0, overflowWrap: 'anywhere' }
 const factionBadge: CSSProperties = { width: 46, height: 46, borderRadius: 6, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: 30, fontWeight: 700 }

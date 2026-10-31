@@ -413,6 +413,39 @@ Tests: `tests/engine/engine-f16.test.ts` (F16-<spec id>); `engine-f12.test.ts` S
 
 Tests: `tests/engine/engine-f17.test.ts` (ENG-F17-<n>).
 
+### 3.15 F18 engine-core: generic mechanisms for Hedonites of Slaanesh, Helsmiths of Hashut, Flesh-eater Courts, Ogor Mawtribes and Sons of Behemat, plus two core-rule fixes (additive)
+
+Frozen contracts, additive only: `hooks.ts` `RollModifierResult + affectsCompanion`, `ActivatedAbilityHook + modesFor(state,
+unitId, player, targetUnitIds?)` (was an abilities.ts-only extra; same call shape plus the declared targets) `+ maxTargets(state,
+unitId)`, `EFFECT_HOOKS + rollFloor ['onAdvanceRoll'], noAbilities [], passAcrossTerrain []`; `types.ts` `Unit + reserveVia?`.
+`src/data/types.ts` + schemas: `Effect + rollFloor, noAbilities, passAcrossTerrain`; `AbilityKeyword + 'DEPLOY'`;
+`PatrolUnitData.reserve + via?`. No `actions.ts` / `events.ts` / `rng.ts` / `decider.ts` / `index.ts` change. Non-frozen:
+`EngineCodeHook + pileInBonus, wardRollModifier`; `HookQueries + pileInBonusFor, wardRollModifierFor`; `unitHasEffectFlag` flags
+`+ noAbilities, passAcrossTerrain`; `EffectGrant + expiryOwner`; `PlaceShape / ArrivalParams / SetUpParams + edgeAll`;
+`SlideOpts + combatPathExcept`; `phases/fight.ts chainFight, fightPickable, isChainedFight`; `abilities.ts unitHasNoAbilities`;
+`missions.ts setUpInReserve, reserveDiesAtDeadline`; `state.ts isDeployAbility`.
+
+| Mechanism | Where | For |
+|---|---|---|
+| ENG-F18-1 `Effect.affectsCompanion` on a `modifyRoll` entry is copied onto the roll result; `runStage` skips a friendly positive modifier on a Companion weapon only without it (CORE-12.4) | `hooks.ts`, `hooks-impl.ts`, `attack.ts` | HOS-BT-1 Favour (hit / wound band) |
+| ENG-F18-2 `Effect.rollFloor: { roll: 'advance', value }`: `advanceRollFor` replaces the natural run roll with the highest floor among the unit's matching effects, before `halveRoll` and `modifyRoll` (one mechanism for both specs' C2 / C3) | `hooks-impl.ts`, data types/schema | HOS-AB-5 Quicksilver Speed, OGM-ENH Lungburster |
+| ENG-F18-3 `EngineCodeHook.pileInBonus(state, entry, unitId): DiceExpr \| null` -> `pileInBonusFor` (one per source). `doPileIn` rolls the bonuses once per activation (`fi:pileBonus:<act>` mark, an `AbilityTriggered` line per source) and adds the total to the pile-in distance, which the decision, validation and candidates carry | `code-hooks.ts`, `hooks-impl.ts`, `phases/fight.ts` | HOS-ENH Twisted Grace |
+| ENG-F18-4 `chainFight(state, unitId)` writes `fi:chain:<player>`; right after that player's current activation (fightAfter window included) the named unit is activated without a pick decision when `fightPickable` still allows it (same Strike-first / Strike-last tests); the alternation then continues as if the player made one pick. `isChainedFight(state, unitId)` = the current activation came from a chain (hooks must not chain again) | `phases/fight.ts` | HOS-RA-1 Bringers of Degradation |
+| ENG-F18-5 CORE-4.5 step 3: once deployment is over, `transition` runs the `'deployment'` ability window for the attacker, then the defender (key `deploy:abilities`), before the first battle round; `runWindow` drains a MoveQueue first, as in every window. Units moved there are not "set up this turn" | `reducer.ts` | HOS-RA-2 Daemonic Onslaught, HOH-RA-1 Grinding Advance |
+| ENG-F18-6 `maxTargets` N > 1: the declare step repeats the `abilityTarget` decision (context data `multi`), without the units already picked, with a `__done` option after the first pick, until N, Done, or no candidate; `use.targetUnitIds` carries them in pick order. `modesFor` now receives the declared targets, so modes can be built per target (any split of a resource) | `hooks.ts`, `abilities.ts` | HOS-AB-2 Dispensers of Favour, HOH-RA-1 (2 Cohorts), FEC-BT-2 Summon Loyal Subjects |
+| ENG-F18-7 when some usable candidate has `params.mandatory`, the `abilityUse` offer lists only the mandatory ones (no pass); the others come back after | `abilities.ts` | HOH-BT-1 Harness Daemonic Power |
+| ENG-F18-8 `EffectGrant.expiryOwner`: whose next turn ends an `untilNextTurn` effect (default the holder's player). Idoneth Ritual of the Creeping Mist now passes the caster's player (it used to end at the start of the enemy's next turn, right after the caster's turn); Tzeentch Mutative Aura uses it instead of rewriting `expires`. Every other shipped `untilNextTurn` grant targets a friendly unit | `effects.ts`, `factions/idoneth.ts`, `factions/tzeentch.ts` | HOH-RA-2 Suppressive Bombardment, SOB-BT-2 Bowled Over |
+| ENG-F18-9 `Effect.noAbilities` (`unitHasEffectFlag`): the unit uses no activated ability (`usableFor`), its own side cannot pick it (`legalTargets` for ability targets, cards.ts command targets), and it cannot move (movement pick list), shoot (`unitEligibleToShoot`), charge (`canDeclareCharge`) or fight (`eligibleToFight`; it no longer holds up Strike-last units). It can still be attacked; passive descriptors still apply | `abilities.ts`, `cards.ts`, `phases/*.ts` | HOH-ENH Scroll of Petrification |
+| ENG-F18-10 `edgeAll` on an arrival (`params.edgeAll`) / `SetUpParams` / `PlaceShape`: every model's base edge must be within `edgeWithin` of a battlefield edge. With `edgeAll`, `reinforcementFormation` lays the unit as a line along the nearest battlefield edge (`edgeLineFormation`; a 7+ model unit cannot keep coherency in one line and gets no spot), `reinforcementOptions` spreads the spots around the whole perimeter, and `arrivalCandidates` offers up to 8 | `phases/movement.ts`, `factions/aos-moves.ts` | OGM-BT-1 More Ogors, My Lord! |
+| ENG-F18-11 `Effect.passAcrossTerrain`: `terrain.ts isFlyer` also answers true for it, so only impassable crossing and the climb cost ignore terrain; models and combat ranges still block (movement / charge read the FLY keyword) | `terrain.ts`, data types/schema | OGM-ENH Wallwrecker |
+| ENG-F18-12 `EngineCodeHook.wardRollModifier(state, entry, { wardedUnitId, attackerUnitId, kind })` -> `wardRollModifierFor` (one answer per source: its largest), added to the ward modifier in `wardThreshold` before the +-1 clamp | `code-hooks.ts`, `hooks-impl.ts`, `attack.ts` | OGM-BT-2 Exotic Giblets |
+| ENG-F18-13 `SlideOpts.combatPathExcept: UnitId[]`: the path may not enter the combat range of any enemy unit not listed; implies mayNotEndInCombat; a unit in combat is still offered slides. approximation: rigid slide | `factions/aos-moves.ts` | OGM-RA-1 Brutish Barging |
+| ENG-F18-14 core 22.0: `returnSlainModels` lets a returned model be set up within combat range of the enemy units the unit is in combat with when it resolves, never of any other enemy unit | `factions/aos-common.ts` | every return-slain-models ability |
+| SPH-7.3 / core 24.1: only a unit set up in reserve by a Deploy ability (descriptor keyword `DEPLOY`) and still there at the start of round 4 is destroyed. `Unit.reserveVia { abilityId, deploy }` is set from `reserve.via` at state creation (or `setUpInReserve` during the game). Every shipped Spearhead reserve is held back by a battle trait ("not set up during the deployment phase": Ironjawz, Nurgle, Ossiarch, Seraphon, Soulblight, Tzeentch, Ogors; checked against the PDFs), so none is destroyed any more. A unit in reserve with no arrival ability (dropped at deployment) is still removed | `missions.ts`, `state.ts`, data types/schema | core 24.1 |
+
+Tests: `tests/engine/engine-f18.test.ts` (ENG-F18-<n>); `sph-scoring.test.ts` SPH-014 and the reserve parts of MON-BT-1, OBR-BT-1,
+SER-BT-2 and DOT-BT-2 follow core 24.1.
+
 ## 4. Client impact
 
 ### 4.1 Counts

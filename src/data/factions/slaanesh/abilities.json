@@ -1,0 +1,147 @@
+[
+  {
+    "id": "slaanesh.ability.epicurean-revellers",
+    "name": "Epicurean Revellers",
+    "text": "Army marker for the Hedonites of Slaanesh Epicurean Revellers. Its battle trait, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "slaanesh.ability.favour-most-fickle",
+    "name": "Favour Most Fickle",
+    "text": "Count your units on the battlefield (each Thricefold Discord model counts as one). One bonus applies to every friendly unit. 5+: +2 Control. 4: +1 to hit and wound rolls for combat attacks. 3: +1 to run and charge rolls. 2: Ward (5+). 1: +2 Attacks on melee weapons. Companion weapons are included.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": [
+      { "modifyStat": { "stat": "OC", "value": 2 } },
+      { "when": { "weaponType": "melee" }, "modifyRoll": { "roll": "hit", "value": 1 }, "affectsCompanion": true },
+      { "when": { "weaponType": "melee" }, "modifyRoll": { "roll": "wound", "value": 1 }, "affectsCompanion": true },
+      { "modifyRoll": { "roll": "advance", "value": 1 } },
+      { "modifyRoll": { "roll": "charge", "value": 1 } },
+      { "feelNoPain": 5 },
+      { "when": { "weaponType": "melee" }, "modifyStat": { "stat": "A", "value": 2 }, "affectsCompanion": true }
+    ],
+    "code": "slaaneshFavourMostFickle",
+    "params": { "control": 5, "combat": 4, "move": 3, "ward": 2, "attacks": 1 }
+  },
+  {
+    "id": "slaanesh.ability.bringers-of-degradation",
+    "name": "Bringers of Degradation",
+    "text": "When you pick a unit to fight in the combat phase, you can pick two friendly Daemonettes units instead of one. The second one fights straight after the first, then the pick passes to your opponent as normal.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "slaaneshBringersOfDegradation",
+    "params": { "window": "afterFight", "priority": "P1" }
+  },
+  {
+    "id": "slaanesh.ability.daemonic-onslaught",
+    "name": "Daemonic Onslaught",
+    "text": "Once per battle, in the deployment phase, once every unit has been set up, pick a friendly Seekers or Fiends unit wholly within 12\" of your general. It can make a Normal Move as if it were your movement phase.",
+    "trigger": "activated",
+    "timing": { "kind": "deployment", "whose": "your" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "slaaneshDaemonicOnslaught",
+    "params": { "range": 12, "priority": "P1" }
+  },
+  {
+    "id": "slaanesh.ability.thricefold-court",
+    "name": "Thricefold Court",
+    "text": "For Favour Most Fickle only, each model of this unit counts as a separate unit.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "slaanesh.ability.dispensers-of-favour",
+    "name": "Dispensers of Favour",
+    "text": "Spell (casting value 6). In your hero phase, pick up to as many different friendly units wholly within 12\" of this unit as this unit has models. If the spell is cast, until the start of your next turn: Daemonettes weapons have Anti-charge (+1 Rend), Seekers add 2\" to their Move characteristic, and Fiends add 1 to the hit rolls of their combat attacks. Other units get nothing.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilNextTurn",
+    "code": "slaaneshDispensersOfFavour",
+    "params": { "range": 12, "priority": "P1" }
+  },
+  {
+    "id": "slaanesh.ability.soporific-musk",
+    "name": "Soporific Musk",
+    "text": "Once per turn (for the army), in any charge phase, pick an enemy unit and roll a dice. If this unit is not in combat, the target must be a visible enemy unit within 9\" of it; if it is in combat, the target must be an enemy unit in combat with it. On a 4+, the target has Strike-last for the rest of the turn.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "charge", "whose": "any" },
+    "limit": "oncePerTurnArmy",
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "roll": { "dice": "D6", "succeedOn": 4 },
+    "code": "slaaneshSoporificMusk",
+    "params": { "range": 9, "army": true, "priority": "P1" }
+  },
+  {
+    "id": "slaanesh.ability.lithe-and-swift",
+    "name": "Lithe and Swift",
+    "text": "Add 1 to the Attacks characteristic of this unit's Piercing Claws if it charged this turn.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "unitCharged": true, "weaponId": "slaanesh.weapon.piercing-claws" },
+      "modifyStat": { "stat": "A", "value": 1 }
+    }
+  },
+  {
+    "id": "slaanesh.ability.quicksilver-speed",
+    "name": "Quicksilver Speed",
+    "text": "When this unit makes a run roll and the dice shows 1, 2 or 3, you can count it as a 4 instead (before any modifiers).",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "rollFloor": { "roll": "advance", "value": 4 } }
+  },
+  {
+    "id": "slaanesh.ability.twisted-grace",
+    "name": "Twisted Grace",
+    "text": "When the general piles in in a turn in which it charged, add D6\" to its pile-in distance.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "slaaneshTwistedGrace",
+    "params": { "bonus": "D6" }
+  },
+  {
+    "id": "slaanesh.ability.high-courtiers",
+    "name": "High Courtiers",
+    "text": "While the general is wholly within combat range of a friendly Daemonettes unit, the general and that Daemonettes unit have Ward (5+).",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "slaaneshHighCourtiers",
+    "params": { "ward": 5, "range": 3 }
+  },
+  {
+    "id": "slaanesh.ability.excess-of-violence",
+    "name": "Excess of Violence",
+    "text": "Once per battle, in any combat phase, pick a visible friendly unit wholly within 12\" of the general (the general counts). Until the start of your next turn, its melee weapons, Companion weapons included, have Crit (2 Hits).",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "fight", "whose": "any" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilNextTurn",
+    "scope": { "who": "bearer" },
+    "code": "slaaneshExcessOfViolence",
+    "params": { "range": 12, "priority": "P2" }
+  },
+  {
+    "id": "slaanesh.ability.irresistible-soul-musk",
+    "name": "Irresistible Soul-Musk",
+    "text": "Once per battle, in your movement phase, pick a visible friendly Seekers or Fiends unit wholly within 12\" of the general. Take it off the battlefield and set it up again anywhere more than 6\" from every enemy unit.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "limit": "oncePerBattle",
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "scope": { "who": "bearer" },
+    "code": "slaaneshSoulMusk",
+    "params": { "range": 12, "minEnemyDistance": 6, "priority": "P2" }
+  }
+]

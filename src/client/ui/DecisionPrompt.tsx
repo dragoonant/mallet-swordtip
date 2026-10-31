@@ -152,6 +152,11 @@ const ABILITY_MODE_HINT: Readonly<Record<string, string>> = {
   'ossiarch.ability.relentless-discipline-combat': 'The discipline roll is made after you pick (a D6, with +1 near your general and any other bonus); on a 4+ the unit gets the effect you choose here: +1 to the wound rolls of its combat attacks, or a Ward (5+), until the phase ends.',
   'ossiarch.ability.relentless-discipline': 'The discipline roll is made after you pick (a D6, with +1 near your general and any other bonus); on a 4+ the unit gets the effect you choose here until the phase ends.',
   'ossiarch.ability.switch-aspects': 'Blade-parry Aspect: enemy melee attacks against this unit are at -1 to hit this turn. Destroyer Aspect: this unit\'s combat attacks cannot be warded this turn.',
+  // F18: Flesh-eater Courts spend a Hero's noble deeds points as a split between two units; Sons of Behemat pick one of three throws a turn;
+  // Ogors pick a lasting upgrade.
+  'fec.ability.summon-loyal-subjects': 'Each option is a split of this Hero\'s noble deeds points: 1 point stands a slain Cryptguard model back up, 2 points a slain Morbheg Knight, all of them within 9" of the Hero. The cost of the split is in the label and comes off the Hero\'s tally.',
+  'behemat.ability.drop-toss-or-roll': 'Pick how this gargant throws until the end of the turn. Drop: its ranged weapons can shoot while in combat. Toss: +6" to their range. Roll: +1 to its shooting hit rolls. An option another gargant already used this turn is not offered again.',
+  'ogors.ability.scoff-down-fresh-flesh': 'The upgrade stays on this unit for the rest of the battle. Raw and Bloody Flesh: +1 to hit with combat attacks after a charge. Exotic Giblets: -1 to ward rolls against its combat damage. Steaming Brains: +3 to its control score.',
 }
 const ABILITY_TARGET_HINT: Readonly<Record<string, string>> = {
   'ossiarch.ability.relentless-discipline': 'Pick the friendly unit that makes the discipline roll. It scores +1 on the roll while wholly within 12" of your general.',
@@ -161,6 +166,15 @@ const ABILITY_TARGET_HINT: Readonly<Record<string, string>> = {
   'daughters.ability.zealous-orator': 'Pick a friendly unit close to your general that is not in combat: each slain model it has comes back on a 5+.',
   'idoneth.ability.ethersea-predators': 'Pick a friendly Cavalry unit that fought this turn: it heals D3 damage.',
   'idoneth.ability.mind-flare': 'Pick the enemy unit fighting your general: until the phase ends it only hits on an unmodified 6.',
+  // F18
+  'fec.ability.summon-loyal-subjects': 'Pick the Hero that spends its noble deeds points (the tally is on its card and in the top bar). Next you choose how to split them.',
+  'ogors.ability.scoff-down-fresh-flesh': 'An enemy unit was destroyed this turn: pick one of your units that fought, to gain a lasting upgrade.',
+  'ogors.ability.shock-and-gore': 'Pick the enemy unit fighting your charger: on a 3+ it wounds at -1 for the rest of the turn.',
+  'slaanesh.ability.soporific-musk': 'Pick the enemy unit to lull: a dice roll decides whether it is held back from charging or fighting.',
+  'slaanesh.ability.dispensers-of-favour': 'Pick the friendly units within 12" that gain a boon if the spell is cast (up to as many as the caster has models).',
+  'helsmiths.ability.grinding-advance': 'Pick up to 2 Infernal Cohorts to shuffle forward 3" before round 1 (they cannot charge in round 1).',
+  'helsmiths.ability.suppressive-bombardment': 'Pick the enemy Infantry unit your Tormentor Bombard just hurt: until your next turn it rolls one fewer die for its charges.',
+  'behemat.ability.close-one-eye': 'Pick the friendly unit near your general that adds 1 to its shooting hit rolls for the turn.',
 }
 
 export function chooseOptionInfoFor(
@@ -241,8 +255,42 @@ export function chooseOptionInfoFor(
       hint: 'You just spent a battle tactic card on its command. Put it on the bottom of your deck instead of the discard pile, so it can come round again much later. Pass to discard it as usual.',
     }
   }
+  // F18: abilities offered once both armies are set up, before round 1 (Grinding Advance, Daemonic Onslaught): the deployment view stays up.
+  if (context.topic === 'abilityUse' && context.data?.window === 'deployment') {
+    return {
+      title: 'Both armies are set up: use an ability?',
+      hint: 'Some abilities can be used now, before round 1 begins: pick one, or pass. An ability left unused here is gone for the battle if it says "once per battle".',
+    }
+  }
+  // F18: Helsmiths of Hashut hand out the round's daemonic power one point at a time, then pick extra Ruinous Bombardment targets.
+  if (context.topic === 'abilityChoice' && context.data?.code === 'helsmithsHarness' && typeof context.data?.points === 'number') {
+    const left = context.data.points
+    return {
+      title: `Harness Daemonic Power: ${left} point${left === 1 ? '' : 's'} to hand out`,
+      hint: `Pick the unit that gets the next point (3 at most on any unit). Each point adds 1" to its Move and 1 to its weapons' Attacks, and the Despot's and the Dominator's own abilities grow with it. Points you do not hand out are lost; pass to stop.`,
+    }
+  }
+  if (context.topic === 'abilityChoice' && context.data?.code === 'helsmithsRuinousBombardment') {
+    const left = typeof context.data.left === 'number' ? context.data.left : 1
+    return {
+      title: `Ruinous Bombardment: ${left} more target${left === 1 ? '' : 's'}`,
+      hint: `The shell's blast reaches other enemy units within 6" of the main target: pick one more to roll a dice against (a 4+ cuts its control score). You can add as many as the Bombard has daemonic power; pass to stop.`,
+    }
+  }
+  // F18: a multi-target declare (Dispensers of Favour, Grinding Advance) repeats the pick; each option says which pick it is, and Done stops.
+  if (context.topic === 'abilityTarget' && context.data?.multi === true) {
+    const abi = context.abilityId && state ? state.abilities[context.abilityId] : undefined
+    const first = options?.find((o) => typeof o.label === 'string' && /\((\d+) of up to (\d+)\)/.test(o.label))
+    const m = first?.label?.match(/\((\d+) of up to (\d+)\)/)
+    const nth = m ? Number(m[1]) : 1
+    const max = m ? Number(m[2]) : undefined
+    return {
+      title: `${abi?.name ?? 'Ability'}: pick target ${nth}${max ? ` of up to ${max}` : ''}`,
+      hint: `${ABILITY_TARGET_HINT[context.abilityId ?? ''] ?? 'Pick a unit this ability affects.'}${nth > 1 ? ' Choose Done to stop with the units picked so far.' : ''} Cancel drops the whole ability.`,
+    }
+  }
   // F14: Nurgle's Embrace spends the army's disease points one at a time on an enemy unit in combat with it.
-  if (context.topic === 'abilityChoice' && typeof context.data?.points === 'number' && context.abilityId && state?.abilities[context.abilityId]) {
+  if (context.topic === 'abilityChoice' && context.data?.code === 'nurgleEmbrace' && typeof context.data?.points === 'number' && context.abilityId && state?.abilities[context.abilityId]) {
     const left = context.data.points
     return {
       title: `${state.abilities[context.abilityId].name}: spend a disease point`,
@@ -276,6 +324,9 @@ function passLabelFor(pending: PendingDecision): string {
     if (pending.context.topic === 'extraTactic') return 'Keep my hand'
     if (pending.context.topic === 'abilityMode' && pending.context.data?.redeploy === true) return 'Leave it where it was'
     if (pending.context.topic === 'abilityMode' && pending.context.data?.move === true) return 'Leave it here'
+    if (pending.context.topic === 'abilityTarget' && pending.context.data?.multi === true) return 'Cancel the ability'
+    if (pending.context.topic === 'abilityChoice' && pending.context.data?.code === 'helsmithsHarness') return 'Lose the rest'
+    if (pending.context.topic === 'abilityChoice' && pending.context.data?.code === 'helsmithsRuinousBombardment') return 'No more targets'
   }
   return PASS_LABEL[pending.kind] ?? 'Pass'
 }

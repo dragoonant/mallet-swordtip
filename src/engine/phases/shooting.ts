@@ -122,6 +122,8 @@ export function unitEligibleToShoot(ctx: EngineContext, unitId: UnitId, _opts?: 
   const s = ctx.state
   const u = s.units[unitId]
   if (!u || u.location !== 'board') return false
+  // F18 (HOH C4, Effect.noAbilities): the Shoot ability is a Core ability the unit cannot use
+  if (hookService.unitHasEffectFlag(s, unitId, 'noAbilities')) return false
   if ((u.turn.moveType === 'advance' || u.turn.moveType === 'fallBack') && !hookService.eligibilityFor?.(s, unitId, 'shoot')) return false
   return buildShootingWeaponEntries(ctx, unitId).some((e) => e.legalTargets.length > 0)
 }

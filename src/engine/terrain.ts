@@ -14,6 +14,7 @@
 // barricades may be crossed but never stood on top of).
 import { partlyWithinPolygon, pointInPolygon, pointToSegment, signedDistanceToBase, whollyWithinPolygon, EPS, type Footprint } from './geometry'
 import { hasKeyword } from './state'
+import { hookService } from './hooks-impl'
 import type { WallData } from '../data/types'
 import type { GameState, Model, Path, TerrainPiece, TerrainPieceId, Vec2, Vec3 } from './types'
 
@@ -209,8 +210,24 @@ export interface TerrainService {
   piecesWhollyWithin(state: GameState, model: Model): TerrainPieceId[]
 }
 
+// F18 (OGM C2, Effect.passAcrossTerrain): terrain-only flight. Used only for crossing impassable terrain and the climb cost, so a
+// unit with the effect still cannot cross models or combat ranges (movement.ts / charge.ts read the FLY keyword for those)
+const terrainFlightCache = new WeakMap<object, boolean>()
+function gameHasTerrainFlight(state: GameState): boolean {
+  const key = state.abilities as object
+  let v = terrainFlightCache.get(key)
+  if (v === undefined) {
+    v = Object.values(state.abilities).some((a) => JSON.stringify(a).includes('passAcrossTerrain'))
+    terrainFlightCache.set(key, v)
+  }
+  return v
+}
 function isFlyer(state: GameState, model: Model): boolean {
-  return hasKeyword(state, model.unitId, 'FLY')
+  if (hasKeyword(state, model.unitId, 'FLY')) return true
+  const unit = state.units[model.unitId]
+  if (!unit) return false
+  if (!gameHasTerrainFlight(state) && !unit.effects.some((e) => JSON.stringify(e.effect).includes('passAcrossTerrain'))) return false
+  return hookService.unitHasEffectFlag(state, model.unitId, 'passAcrossTerrain')
 }
 
 const isUnstable = (p: TerrainPiece): boolean => p.traits.includes('unstable')

@@ -75,6 +75,18 @@ export const SOURCE_HUES: Record<string, { major: string | null; minor: string |
   idoneth: { major: '#657f8c', minor: '#827563' },
   tzeentch: { major: '#77a6bb', minor: '#b1926f' },
   ossiarch: { major: '#a89e8a', minor: '#202d3c' },
+  // The five F18 armies. PROVISIONAL: taken from each spec's palette (the baked GLBs were not on disk yet), warmer and duller than the spec as the earlier
+  // armies measured out. Re-measure from the textures (linear-space HSV, saturated texels) once the files land, then drop this note.
+  // Slaanesh: lilac and porcelain skin as the major, magenta silks and leathers as the minor; gold, black claws and teal stay.
+  // Helsmiths: tarnished bronze plate as the major, oxblood cloth as the minor; the green daemonfire is the accent and stays.
+  // Flesh-eater Courts: sickly grey-green skin as the major, dried-blood crimson rags as the minor; paper-gold crowns and bone are left alone.
+  // Ogors: ruddy tan skin as the major, dull crimson rags as the minor; the blackened iron and bone tusks are neutral.
+  // Sons of Behemat: ruddy sun-tanned skin as the major, patched brown leather and sackcloth as the minor; the granite boulders are grey and stay.
+  slaanesh: { major: '#9a86b8', minor: '#8a3d78' },
+  helsmiths: { major: '#8a6a3e', minor: '#6e2a2c' },
+  fec: { major: '#76866b', minor: '#7a2f2f' },
+  ogors: { major: '#a8744f', minor: '#7a3434' },
+  behemat: { major: '#a8765a', minor: '#7d5a3a' },
   // Black plate has no hue to remap; the bone-coloured tabards/trim are the only repaintable colour.
   'black-templars': { major: null, minor: '#e6dfc8' },
 }

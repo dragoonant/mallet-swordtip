@@ -1,0 +1,17 @@
+{
+  "id": "ogors",
+  "name": "Ogor Mawtribes",
+  "factionKeyword": "OGOR MAWTRIBES",
+  "armyRule": "ogors.ability.warglutt-marauders",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#c98a5e",
+    "secondary": "#3a3430",
+    "trim": "#b8863b",
+    "metal": "#5a4a40",
+    "decal": "#e8dcc4"
+  },
+  "combatPatrols": [
+    "ogors.army.warglutt-marauders"
+  ]
+}

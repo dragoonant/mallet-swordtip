@@ -26,7 +26,7 @@ import { applySlide, checkSlide, parseAt, parseSlide, slideOptions } from './fac
 import { healUnit, inCombat, returnSlainModels, returnableModels } from './factions/aos-common'
 import { losService } from './los'
 import { awardVp } from './missions'
-import { codeHookFor, sourceGateOpen, sourcesFor } from './hooks-impl'
+import { codeHookFor, hookService, sourceGateOpen, sourcesFor } from './hooks-impl'
 import { otherPlayer, type DecisionHandler, type EngineContext, type WindowTrigger } from './modules'
 import { canDeclareCharge, neededChargeDistance } from './phases/charge'
 import { boardModelsOf, datasheetOf, enemyModelsOnBoard, keywordsOf, modelStats, setModelPos, spawnUnitCopy, territoryOf, unitModels } from './state'
@@ -953,6 +953,8 @@ function offersFor(s: GameState, p: PlayerId, slots: CommandSlot[], cc: CommandC
     if (!def || !slots.includes(def.slot) || !whoseOk(s, p, def.whose)) continue
     if (officersLocked(s, p, cardId)) continue
     for (const t of def.targets(s, p, cc)) {
+      // F18 (HOH C4, Effect.noAbilities): a friendly unit under it cannot be picked by a command
+      if (s.units[t]?.player === p && hookService.unitHasEffectFlag(s, t, 'noAbilities')) continue
       // a set-aside card (CITIES-BT-1) comes back after its command, so using it costs nothing
       // a fulfilled oath (STD-BT-1) can no longer be scored, so keeping it is worth little
       const keep = cardId === setAside ? -0.2 : fulfilled.includes(cardId) ? 0.05 : tacticOdds(s, p, cardId)

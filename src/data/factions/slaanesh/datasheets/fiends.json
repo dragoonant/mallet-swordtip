@@ -1,0 +1,26 @@
+[
+  {
+    "id": "slaanesh.unit.fiends",
+    "faction": "slaanesh",
+    "name": "Fiends",
+    "keywords": ["BEAST", "FIENDS"],
+    "factionKeywords": ["CHAOS", "HEDONITES OF SLAANESH"],
+    "stats": { "M": 10, "W": 4, "Sv": 5, "OC": 1, "ward": 6 },
+    "composition": [
+      {
+        "modelId": "fiend",
+        "name": "Fiend",
+        "min": 3,
+        "max": 3,
+        "default": 3,
+        "base": { "shape": "oval", "mm": 75, "mm2": 42 },
+        "weapons": { "default": ["slaanesh.weapon.deadly-pincers-and-barbed-stinger"] },
+        "figure": { "archetype": "monster", "kit": "generic-monster" }
+      }
+    ],
+    "abilities": ["slaanesh.ability.soporific-musk"],
+    "coreAbilities": [],
+    "figure": { "archetype": "monster", "kit": "generic-monster" },
+    "spearhead": true
+  }
+]

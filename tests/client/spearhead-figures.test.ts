@@ -107,6 +107,27 @@ const NEW_MODELS: Array<[string, string, string]> = [
   ['ossiarch.unit.immortis-guard', 'immortis-guard', 'obr-immortis-guard'],
   ['ossiarch.unit.necropolis-stalkers', 'necropolis-stalker', 'obr-necropolis-stalker'],
   ['ossiarch.unit.morghast-archai', 'morghast-archai', 'obr-morghast-archai'],
+  // F18: Hedonites of Slaanesh, Helsmiths of Hashut, Flesh-eater Courts, Ogor Mawtribes, Sons of Behemat.
+  ['slaanesh.unit.thricefold-discord', 'vexmor', 'hos-vexmor'],
+  ['slaanesh.unit.thricefold-discord', 'vashtiss', 'hos-vashtiss'],
+  ['slaanesh.unit.thricefold-discord', 'lascivyr', 'hos-lascivyr'],
+  ['slaanesh.unit.fiends', 'fiend', 'hos-fiend'],
+  ['slaanesh.unit.daemonettes', 'daemonette', 'hos-daemonette'],
+  ['slaanesh.unit.seekers', 'seeker', 'hos-seeker'],
+  ['helsmiths.unit.war-despot', 'war-despot', 'hoh-war-despot'],
+  ['helsmiths.unit.dominator-engine', 'dominator-engine', 'hoh-dominator-engine'],
+  ['helsmiths.unit.tormentor-bombard', 'tormentor-bombard', 'hoh-tormentor-bombard'],
+  ['helsmiths.unit.infernal-cohort', 'infernal-cohort', 'hoh-infernal-cohort'],
+  ['fec.unit.abhorrant-archregent', 'abhorrant-archregent', 'fec-abhorrant-archregent'],
+  ['fec.unit.cryptguard', 'cryptguard', 'fec-cryptguard'],
+  ['fec.unit.morbheg-knights', 'morbheg-knight', 'fec-morbheg-knight'],
+  ['fec.unit.varghulf-courtier', 'varghulf-courtier', 'fec-varghulf-courtier'],
+  ['ogors.unit.tyrant', 'tyrant', 'ogm-tyrant'],
+  ['ogors.unit.gluttons', 'glutton', 'ogm-glutton'],
+  ['ogors.unit.ironguts', 'irongut', 'ogm-irongut'],
+  ['ogors.unit.maulbeast-cavalry', 'maulbeast-rider', 'ogm-maulbeast-cavalry'],
+  ['behemat.unit.boulder-basher', 'boulder-basher', 'sob-boulder-basher'],
+  ['behemat.unit.rock-hurler', 'rock-hurler', 'sob-rock-hurler'],
 ]
 
 describe('Spearhead figures and board', () => {
@@ -162,8 +183,8 @@ describe('Spearhead figures and board', () => {
     expect(checked).toBeGreaterThanOrEqual(MODELS.length + NEW_MODELS.length)
   })
 
-  it('FIG-AOS-007 the army painter has source hues for the eighteen armies with their own bands, and every figure fix names a declared slug', () => {
-    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron', 'stormcast', 'skaven', 'seraphon', 'soulblight', 'khorne', 'nurgle', 'nighthaunt', 'sylvaneth', 'daughters', 'idoneth', 'tzeentch', 'ossiarch']) {
+  it('FIG-AOS-007 the army painter has source hues for the twenty-three armies with their own bands, and every figure fix names a declared slug', () => {
+    for (const army of ['slaves', 'fyreslayers', 'kruleboyz', 'gloomspite', 'lumineth', 'kharadron', 'stormcast', 'skaven', 'seraphon', 'soulblight', 'khorne', 'nurgle', 'nighthaunt', 'sylvaneth', 'daughters', 'idoneth', 'tzeentch', 'ossiarch', 'slaanesh', 'helsmiths', 'fec', 'ogors', 'behemat']) {
       const h = SOURCE_HUES[army]
       expect(h, army).toBeDefined()
       expect(h.major ?? h.minor, army).toBeTruthy()

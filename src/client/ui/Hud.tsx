@@ -576,6 +576,12 @@ function readoutText(r: FactionResource): { label: string; value: string; title:
     const name = r.label.replace(/^Tide:\s*/, '')
     return { label: 'Tide', value: name, title: `${name}${r.max !== undefined ? `, round ${r.value} of ${r.max}` : ''}`, short: `Tide ${name.replace(/ Tide$/, '')}` }
   }
+  // F18: the Helsmiths' pool of points to hand out reads "Daemonic power 3 to hand out"; a Flesh-eater Hero's tally "Archregent deeds 4/6".
+  if (r.id === 'helsmiths-pool') return { label: 'Daemonic power', value: `${r.value} to hand out`, title: `Daemonic power: ${r.value} to hand out`, short: `Power ${r.value}` }
+  if (r.id.startsWith('fec.deeds.')) {
+    const who = r.label.replace(/ deeds$/, '')
+    return { label: r.label, value: `${r.value}/${r.max ?? 6}`, title: `${r.label} ${r.value}/${r.max ?? 6}`, short: `${who} ${r.value}/${r.max ?? 6}` }
+  }
   const value = `${r.value}${r.max !== undefined ? `/${r.max}` : ''}`
   return { label: r.label, value, title: `${r.label} ${value}`, short: `${r.label.includes(' ') ? r.label.split(' ').pop() : r.label.slice(0, 3)} ${value}` }
 }

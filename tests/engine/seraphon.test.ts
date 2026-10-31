@@ -288,7 +288,7 @@ describe('SER-BT Hidden Hunters and Vengeance of Azyr', () => {
     expect(resolveSetUp(s, HA, row(2, 4), params).rejection).toBeNull()
   })
 
-  it('SER-BT-2 a Hunters / Spawn unit still in reserve at the start of round 4 is destroyed', () => {
+  it('SER-BT-2 a Hunters / Spawn unit still in reserve at the start of round 4 is not destroyed (held back by a battle trait, core 24.1)', () => {
     const s = aosState({
       players: { A: makeAosPlayer('A', { faction: 'seraphon', patrolId: 'seraphon.army.sunblooded-prowlers', enhancementId: VENOM, regimentAbilityId: AEGIS }), B: makeAosPlayer('B') },
     }, bundle())
@@ -297,9 +297,9 @@ describe('SER-BT Hidden Hunters and Vengeance of Azyr', () => {
     s.round = 4
     const ctx = ctxFor(s, [])
     missionService.onWindow(ctx, 'round.start', '4')
-    for (const id of [HA, HB, SP]) expect(s.units[id].location, id).toBe('destroyed')
+    for (const id of [HA, HB, SP]) expect(s.units[id].location, id).toBe('reserves')
     expect(s.units[PACK].location).toBe('board')
-    expect(of(eventsOf(ctx), 'UnitDestroyed').map((e) => e.unitId).sort()).toEqual([HA, HB, SP].sort())
+    expect(of(eventsOf(ctx), 'UnitDestroyed')).toEqual([])
   })
 
   it('SER-BT-3 Vengeance of Azyr: end of each turn, one D6 per enemy unit in combat with a friendly Saurus unit, 4+ = 1 mortal; non-Saurus contacts do not count', () => {

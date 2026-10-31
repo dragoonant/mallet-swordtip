@@ -26,11 +26,16 @@ import { nurgleAbilityTiming, nurgleModeBonus, nurgleTargetBonus } from '../engi
 import { seraphonAbilityTiming, seraphonTargetBonus } from '../engine/factions/seraphon'
 import { khorneAbilityTiming, khorneChargeFocus, khorneMeleeEdge, khorneTargetBonus } from '../engine/factions/khorne'
 import { nighthauntAbilityTiming, nighthauntTargetBonus } from '../engine/factions/nighthaunt'
+import { slaaneshAbilityTiming, slaaneshTargetBonus } from '../engine/factions/slaanesh'
 import { sylvanethAbilityTiming, sylvanethTargetBonus } from '../engine/factions/sylvaneth'
 import { idonethAbilityTiming, idonethMoveThenCharge, idonethTargetBonus } from '../engine/factions/idoneth'
+import { behematAbilityTiming, behematModeBonus, behematOptionUnit, behematTargetBonus } from '../engine/factions/behemat'
 import { tzeentchAbilityTiming, tzeentchTargetBonus } from '../engine/factions/tzeentch'
 import { ossiarchAbilityTiming, ossiarchModeBonus, ossiarchTargetBonus } from '../engine/factions/ossiarch'
 import { daughtersAbilityTiming, daughtersStayBonus, daughtersTargetBonus } from '../engine/factions/daughters'
+import { fecAbilityTiming, fecModeBonus, fecTargetBonus } from '../engine/factions/fec'
+import { ogorsAbilityTiming, ogorsModeBonus, ogorsOptionUnit, ogorsTargetBonus } from '../engine/factions/ogors'
+import { helsmithsAbilityTiming, helsmithsTargetBonus } from '../engine/factions/helsmiths'
 import { citiesHoldWeight } from '../engine/factions/cities'
 import { reinforcementOptions } from '../engine/factions/aos-moves'
 import { datasheetOf } from '../engine/state'
@@ -1063,7 +1068,7 @@ function scoreChooseOption(state: GameState, player: PlayerId, pending: PendingD
     case 'abilityUse':
       // an offered ability is worth using; passing ends the window
       if (declining) return -1
-      return 1 + (hintUnitId && state.units[hintUnitId] ? unitValue(state, hintUnitId) * 0.001 : 0) + abilityTiming(state, player, action.optionId.split('#')[0], hintUnitId)
+      return 1 + (hintUnitId && state.units[hintUnitId] ? unitValue(state, hintUnitId) * 0.001 : 0) + abilityTiming(state, player, action.optionId.split('#')[0], hintUnitId ?? behematOptionUnit(state, action.optionId) ?? ogorsOptionUnit(state, action.optionId))
     case 'abilityTarget':
     case 'pileInTarget': {
       // a target is always better than backing out: pick the most valuable unit (friendly buffs and enemy debuffs alike)
@@ -1122,6 +1127,8 @@ function abilityTiming(state: GameState, player: PlayerId, abilityId: string, un
   if (serTiming !== null) return serTiming
   const dokTiming = code?.startsWith('daughters') ? daughtersAbilityTiming(state, player, code, unitId) : null
   if (dokTiming !== null) return dokTiming
+  const fecTiming = code?.startsWith('fec') ? fecAbilityTiming(state, player, code, unitId) : null
+  if (fecTiming !== null) return fecTiming
   const dotTiming = code?.startsWith('tzeentch') ? tzeentchAbilityTiming(state, player, code, unitId) : null
   if (dotTiming !== null) return dotTiming
   const sylTiming = code?.startsWith('sylvaneth') ? sylvanethAbilityTiming(state, player, code, unitId) : null
@@ -1130,8 +1137,16 @@ function abilityTiming(state: GameState, player: PlayerId, abilityId: string, un
   if (obrTiming !== null) return obrTiming
   const idkTiming = code?.startsWith('idoneth') ? idonethAbilityTiming(state, player, code, unitId) : null
   if (idkTiming !== null) return idkTiming
+  const sobTiming = code?.startsWith('behemat') ? behematAbilityTiming(state, player, code, unitId) : null
+  if (sobTiming !== null) return sobTiming
   const nhTiming = code?.startsWith('nighthaunt') ? nighthauntAbilityTiming(state, player, code, unitId) : null
   if (nhTiming !== null) return nhTiming
+  const hosTiming = code?.startsWith('slaanesh') ? slaaneshAbilityTiming(state, player, code, unitId) : null
+  if (hosTiming !== null) return hosTiming
+  const ogmTiming = code?.startsWith('ogors') ? ogorsAbilityTiming(state, player, code, unitId) : null
+  if (ogmTiming !== null) return ogmTiming
+  const hohTiming = code?.startsWith('helsmiths') ? helsmithsAbilityTiming(state, player, code, unitId) : null
+  if (hohTiming !== null) return hohTiming
   if (code === 'fyreslayersPlantTheIcon') {
     // once per battle, Ward for one turn: wait for the turn the units around the Battlesmith are actually fighting
     const src = unitId ? centerOfUnit(state, unitId) : null
@@ -1200,6 +1215,8 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
   if (serBonus !== null) return serBonus
   const dokBonus = code?.startsWith('daughters') ? daughtersTargetBonus(state, player, code, unitId) : null
   if (dokBonus !== null) return dokBonus
+  const fecBonus = code?.startsWith('fec') ? fecTargetBonus(state, player, code, unitId) : null
+  if (fecBonus !== null) return fecBonus
   const dotBonus = code?.startsWith('tzeentch') ? tzeentchTargetBonus(state, player, code, unitId) : null
   if (dotBonus !== null) return dotBonus
   const sylBonus = code?.startsWith('sylvaneth') ? sylvanethTargetBonus(state, player, code, unitId) : null
@@ -1208,8 +1225,16 @@ function abilityTargetBonus(state: GameState, player: PlayerId, pending: Pending
   if (obrBonus !== null) return obrBonus
   const idkBonus = code?.startsWith('idoneth') ? idonethTargetBonus(state, player, code, unitId) : null
   if (idkBonus !== null) return idkBonus
+  const sobBonus = code?.startsWith('behemat') ? behematTargetBonus(state, player, code, unitId) : null
+  if (sobBonus !== null) return sobBonus
   const nhBonus = code?.startsWith('nighthaunt') ? nighthauntTargetBonus(state, player, code, unitId) : null
   if (nhBonus !== null) return nhBonus
+  const hosBonus = code?.startsWith('slaanesh') ? slaaneshTargetBonus(state, player, code, unitId) : null
+  if (hosBonus !== null) return hosBonus
+  const ogmBonus = code?.startsWith('ogors') ? ogorsTargetBonus(state, player, code, unitId) : null
+  if (ogmBonus !== null) return ogmBonus
+  const hohBonus = code?.startsWith('helsmiths') ? helsmithsTargetBonus(state, player, code, unitId) : null
+  if (hohBonus !== null) return hohBonus
   if (code === 'citiesIronweldDiscipline') {
     // the Cannon fires at it: expected damage, not size
     let best = 0
@@ -1281,6 +1306,12 @@ function abilityModeBonus(state: GameState, pending: PendingDecision, optionId: 
   if (nurMode !== null) return nurMode
   const obrMode = koCode?.startsWith('ossiarch') ? ossiarchModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId, selectedAbilityTarget(state, pending)) : null
   if (obrMode !== null) return obrMode
+  const ogmMode = koCode?.startsWith('ogors') ? ogorsModeBonus(state, pending.player, koCode, optionId, selectedAbilityTarget(state, pending)) : null
+  if (ogmMode !== null) return ogmMode
+  const fecMode = koCode?.startsWith('fec') ? fecModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId, selectedAbilityTarget(state, pending)) : null
+  if (fecMode !== null) return fecMode
+  const sobMode = koCode?.startsWith('behemat') ? behematModeBonus(state, koCode, (pending as { context?: { unitId?: UnitId | null } }).context?.unitId ?? null, optionId) : null
+  if (sobMode !== null) return sobMode
   const placed = abilityPlacementScore(state, pending, optionId)
   if (placed !== null) return placed
   const target = selectedAbilityTarget(state, pending)

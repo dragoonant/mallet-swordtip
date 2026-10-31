@@ -1,0 +1,77 @@
+[
+  {
+    "id": "helsmiths.weapon.daemonflame-glaive",
+    "name": "Daemonflame Glaive",
+    "type": "melee",
+    "range": 0,
+    "A": 5,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": [{ "ability": "CRIT_MORTAL" }]
+  },
+  {
+    "id": "helsmiths.weapon.immolation-cannons",
+    "name": "Immolation Cannons",
+    "type": "ranged",
+    "range": 8,
+    "A": 5,
+    "skill": 2,
+    "wound": 4,
+    "rend": 1,
+    "D": "D3",
+    "abilities": [{ "ability": "SHOOT_IN_COMBAT" }]
+  },
+  {
+    "id": "helsmiths.weapon.horns-and-pummelling-strikes",
+    "name": "Horns and Pummelling Strikes",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "helsmiths.weapon.torrent-of-ruinous-energy",
+    "name": "Torrent of Ruinous Energy",
+    "type": "ranged",
+    "range": 30,
+    "A": 4,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": [
+      { "ability": "ANTI", "keyword": "CAVALRY", "value": 1 },
+      { "ability": "ANTI", "keyword": "INFANTRY", "value": 1 }
+    ]
+  },
+  {
+    "id": "helsmiths.weapon.artillerist-weapons",
+    "name": "Artillerist Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "helsmiths.weapon.hashutite-spear",
+    "name": "Hashutite Spear",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [{ "ability": "ANTI", "keyword": "@charged", "value": 1 }]
+  }
+]

@@ -99,7 +99,7 @@ Feature footprints are **not in the sources**. Our defaults until real dimension
 |---|---|
 | SPH-7.1 | Core alternating deployment is **not** used. The **attacker sets up their whole army first**, then the defender sets up their whole army. |
 | SPH-7.2 | Every unit must be set up **wholly within friendly territory** and **more than 6" from enemy territory**. Unit coherency rules apply as in core. |
-| SPH-7.3 | Abilities that deploy units elsewhere (e.g. into reserve, core 24.1) still apply. A unit still in reserve at the **start of battle round 4** is destroyed (core 24.1) — with 4 rounds this is the last round. |
+| SPH-7.3 | Abilities that deploy units elsewhere (e.g. into reserve, core 24.1) still apply. At the **start of battle round 4** (the last round) a unit that was set up in reserve **using a Deploy ability** and is still in reserve is destroyed (core 24.1). A unit held back by a battle trait ("not set up during the deployment phase", which is how every shipped Spearhead reserve works: Ironjawz, Nurgle, Ossiarch, Seraphon, Soulblight, Tzeentch, Ogors) is never destroyed for being in reserve. The engine records how each unit went into reserve (`Unit.reserveVia`: the ability, and whether its descriptor has the `DEPLOY` keyword; patrol data `reserve.via`). |
 | SPH-7.4 | The attacker is the player who "finished setting up first" for any rule that keys off that. |
 
 ## 8. Battle rounds

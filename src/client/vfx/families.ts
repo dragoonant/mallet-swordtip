@@ -59,6 +59,8 @@ export interface FamilyFx {
     model?: ModelName
     /** Lob/rocket arc height as a fraction of the flight distance. */
     arc?: number
+    /** A lob whose sprite is solid matter (a thrown boulder), drawn normally rather than additively. */
+    solid?: boolean
     /** Model tumble, radians/second. */
     spin?: number
     /** Glow orb size at the projectile head (0/undefined = none). */
@@ -190,6 +192,32 @@ export const FAMILY_FX: Record<VfxFamily, FamilyFx> = {
     muzzle: { sprite: 'muzzle_ballistic', color: '#ffc870', size: 2.2, life: 0.18, sparks: 9, smoke: true },
     projectile: { type: 'streak', speed: 78, color: '#c9a86a', core: '#fff3d0', width: 0.07, length: 0.8, head: 0.18 },
     impact: 'sparks', impactScale: 1.15, impactColor: '#e8c070', staggerMs: 22,
+  },
+  // F18: Sons of Behemat hurl a boulder in a high lazy arc and it lands in a ring of dust and grit, no fire; the Helsmiths' Tormentor Bombard lobs
+  // a ball of green daemonfire that bursts with a purple warp-wisp, and the Dominator's immolation cannons belch a green plume.
+  boulder: {
+    family: 'boulder', label: 'Boulder', examples: "Rock-hurler: Hurlin' Rocks",
+    muzzle: { sprite: null, color: '#c8b48c', size: 1, life: 0.2, sparks: 0, smoke: true },
+    projectile: {
+      type: 'lob', speed: 24, color: '#8a8478', core: '#ffffff', width: 1.2, length: 1.1, sprite: 'debris_chunk', arc: 0.34, spin: 3, head: 1.6, solid: true,
+      trail: { sprite: 'smoke_puff_2', rate: 18, size0: 0.35, size1: 0.85, life: 0.6, alpha: 0.3, additive: false, color: '#b8a888', spread: 0.3, rise: 0.15 },
+    },
+    impact: 'iron', impactScale: 1.9, impactColor: '#d8c8a0', staggerMs: 420,
+  },
+  hellfire: {
+    family: 'hellfire', label: 'Hellfire', examples: 'Tormentor Bombard: Torrent of Ruinous Energy',
+    muzzle: { sprite: 'muzzle_energy', color: '#6dff7c', size: 1.6, life: 0.18, sparks: 5, smoke: true },
+    projectile: {
+      type: 'lob', speed: 30, color: '#58ff70', core: '#58ff70', width: 0.6, length: 1, sprite: 'glow_orb', arc: 0.26, head: 1.6,
+      trail: { sprite: 'glow_orb', rate: 55, size0: 0.7, size1: 0.15, life: 0.4, alpha: 0.7, additive: true, color: '#3dd65a', spread: 0.4 },
+    },
+    impact: 'warp', impactScale: 1.5, impactColor: '#6dff7c', staggerMs: 300,
+  },
+  hellflame: {
+    family: 'hellflame', label: 'Hellflame', examples: 'Dominator Engine: Immolation Cannons',
+    muzzle: { sprite: 'muzzle_energy', color: '#6dff7c', size: 1.1, life: 0.16, sparks: 2, smoke: false },
+    projectile: { type: 'cone', speed: 20, duration: 0.7, color: '#4bff6a', core: '#d8ffd0', width: 1, length: 0, sprite: 'glow_orb' },
+    impact: 'warp', impactScale: 0.9, impactColor: '#5dff78', staggerMs: 110,
   },
   flintlock: {
     family: 'flintlock', label: 'Flintlock', examples: 'Dragoon pistol',

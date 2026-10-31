@@ -1,0 +1,38 @@
+[
+  {
+    "id": "behemat.enh.ard-ead",
+    "faction": "behemat",
+    "name": "'Ard 'Ead",
+    "text": "Once per battle, in any combat phase, add 1 to hit rolls for combat attacks made with the general's 'Eadbutt until the end of the turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "behemat.ability.ard-ead"
+  },
+  {
+    "id": "behemat.enh.humongous-strides",
+    "faction": "behemat",
+    "name": "Humongous Strides",
+    "text": "Add 1 to the general's charge rolls.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "behemat.ability.humongous-strides"
+  },
+  {
+    "id": "behemat.enh.lucky-rock",
+    "faction": "behemat",
+    "name": "Lucky Rock",
+    "text": "Once per battle, in your shooting phase, the general's Hurlin' Rocks have +1 Attacks until the end of the turn.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "behemat.ability.lucky-rock"
+  },
+  {
+    "id": "behemat.enh.hungry-gobbler",
+    "faction": "behemat",
+    "name": "Hungry Gobbler",
+    "text": "At the end of any turn, if the general's combat attacks slew at least one enemy model this turn, Heal (D3) the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "behemat.ability.hungry-gobbler"
+  }
+]

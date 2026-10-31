@@ -126,7 +126,10 @@ export function redeployFormation(state: GameState, unitId: UnitId, centre: Vec2
   const step = 2 * Math.max(...models.map(reach)) + 0.12
   const span = Math.ceil(Math.sqrt(models.length) + 2)
   const pts: Vec2[] = []
-  for (let j = -span; j <= span; j++) for (let i = -span; i <= span; i++) pts.push({ x: centre.x + (i + (Math.abs(j) % 2) * 0.5) * step, z: centre.z + j * step * 0.88 })
+  // rows are 0.88 steps apart; an oval base (cavalry, 60x35) is only as deep as its short side, and a row that far away leaves a 5-model
+  // unit out of coherency (HOS-ENH-4 Soul-Musk on the Seekers), so the rows close up to the short side + 0.12"
+  const rowStep = Math.min(step * 0.88, 2 * Math.min(...models.map((m) => Math.min(m.base.radius, m.base.radius2 ?? m.base.radius))) + 0.12)
+  for (let j = -span; j <= span; j++) for (let i = -span; i <= span; i++) pts.push({ x: centre.x + (i + (Math.abs(j) % 2) * 0.5) * step, z: centre.z + j * rowStep })
   pts.sort((a, b) => dist2D(a, centre) - dist2D(b, centre))
   const facing = models[0].facing
   const placed: Footprint[] = []

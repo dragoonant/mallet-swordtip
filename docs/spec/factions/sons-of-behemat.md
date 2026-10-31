@@ -55,7 +55,8 @@ Power Through (CORE-5.13) against most targets.
   brought back by Call for Reinforcements. It is the army's only Hero. The two other Rock-hurlers keep Reinforcements.
 - Notes: a Hero that is a Monster gets no Guarded Hero (CORE-14.2).
 
-### SOB-BT-2 `behemat.ability.bowled-over` — Bowled Over
+### SOB-BT-2 / SOB-BT-3 `behemat.ability.bowled-over` — Bowled Over
+(SOB-BT-2 is the declare and the roll, SOB-BT-3 is the charge penalty the mark causes.)
 - **Timing:** Your shooting phase. No printed limit, so once per phase for the army (CORE-3.4).
 - **Declare:** Pick an enemy unit that was **allocated at least 1 damage point by shooting attacks from any friendly unit
   this turn**.
@@ -66,7 +67,7 @@ Power Through (CORE-5.13) against most targets.
   RULING: "this turn" equals "this shooting phase". The army has no other way to shoot in its own turn, and Covering Fire
   (enemy turn) cannot happen in the same turn as this ability.
 
-### SOB-BT-3 `behemat.ability.close-one-eye` — Close One Eye!
+### SOB-BT-4 `behemat.ability.close-one-eye` — Close One Eye!
 - **Timing:** Your hero phase (once per phase, CORE-3.4).
 - **Used by:** your general, which must be on the battlefield.
 - **Declare:** Pick **another** friendly unit **wholly within 12"** of the general.
@@ -160,11 +161,11 @@ faction code hook in `src/engine/factions/behemat.ts`, exported as `behematHooks
 | Weapons | (a) | Plain weapon data. Hurlin' Rocks `range 12, A 3, hit 4, wound 2, rend 1, D 'D3'`; Massive Club and Rocks `A 4, hit 4, wound 2, rend 1, D 2`; 'Eadbutt `A 1, hit 4, wound 2, rend 2, D 3`. |
 | SOB-RA-2 Greedy and Grabby | (a) | Passive regiment descriptor, `trigger 'always'`, scope `self` (the chosen regiment ability sits on every friendly unit, `hooks-impl.ts` source walk), `effect { modifyStat: { stat: 'OC', value: 5 } }` (the Fyreslayers Powerful Presence shape). This is exact here, because every unit in the army, a reinforcement replacement included, is one model, so +5 Control per model equals +5 to the control score. |
 | SOB-ENH Humongous Strides | (a) | Passive enhancement, `trigger 'chargeRoll'`, scope `bearer`, `effect { modifyRoll: { roll: 'charge', value: 1 } }` (the Daughters / Ironjawz charge-roll shape). |
-| SOB-BT-3 Close One Eye! | (b) `behematGrant` | One shared grant hook (below). Descriptor `timing phase command / your`, `params { targets: 'friendlyWhollyNearGeneral', range: 12, excludeGeneral: true, grant: { modifyRoll: { roll: 'hit', value: 1 }, when: { weaponType: 'ranged' } } }`. `canUse` needs the general on the board. |
-| SOB-RA-1 Surly Sorts | (b) `behematGrant` | `timing phase fight / any`, `limit oncePerBattle`, `params { targets: 'friendlyInCombat', grant: { modifyStat: { stat: 'A', value: 1 }, when: { weaponType: 'melee' } } }` (the Khorne Savagery shape). Offered in the start-of-combat window and between fight activations. |
-| SOB-ENH 'Ard 'Ead | (b) `behematGrant` | Enhancement, `timing phase fight / any`, `limit oncePerBattle`, `params { targets: 'self', grant: { modifyRoll: { roll: 'hit', value: 1 }, when: { weaponId: 'behemat.weapon.eadbutt' } } }`. |
-| SOB-ENH Lucky Rock | (b) `behematGrant` | Enhancement, `timing phase shooting / your`, `limit oncePerBattle`, `params { targets: 'self', grant: { modifyStat: { stat: 'A', value: 1 }, when: { weaponId: 'behemat.weapon.hurlin-rocks' } } }`. |
-| `behematGrant` (shared) | (b) | `ActivatedAbilityHook`. `targets(state, unitId)` by `params.targets`: `'self'` = [the user's unit]; `'friendlyInCombat'` = friendly units on the board that are `inCombat`; `'friendlyWhollyNearGeneral'` = friendly units on the board with `whollyWithinUnit(t, general, range)`, minus the general when `excludeGeneral`. `canUse` = the list is non-empty (and the picked target is in it). `resolve`: `effectService.grant(ctx, target, params.grant, { sourceAbilityId, sourceUnitId, scope: { who: 'self' }, duration: 'untilEndOfTurn' })` + `announce`. One hook covers four rules, so there are fewer names and fewer tests. |
+| SOB-BT-4 Close One Eye! | (b) `behematCloseOneEye` | Built with the shared grant factory (below). Descriptor `timing phase command / your`, `params { targets: 'friendlyWhollyNearGeneral', range: 12, excludeGeneral: true, grant: { modifyRoll: { roll: 'hit', value: 1 }, when: { weaponType: 'ranged' } } }`. `canUse` needs the general on the board. |
+| SOB-RA-1 Surly Sorts | (b) `behematSurlySorts` | `timing phase fight / any`, `limit oncePerBattle`, `params { targets: 'friendlyInCombat', grant: { modifyStat: { stat: 'A', value: 1 }, when: { weaponType: 'melee' } } }` (the Khorne Savagery shape). Offered in the start-of-combat window and between fight activations. |
+| SOB-ENH 'Ard 'Ead | (b) `behematArdEad` | Enhancement, `timing phase fight / any`, `limit oncePerBattle`, `params { targets: 'self', grant: { modifyRoll: { roll: 'hit', value: 1 }, when: { weaponId: 'behemat.weapon.eadbutt' } } }`. |
+| SOB-ENH Lucky Rock | (b) `behematLuckyRock` | Enhancement, `timing phase shooting / your`, `limit oncePerBattle`, `params { targets: 'self', grant: { modifyStat: { stat: 'A', value: 1 }, when: { weaponId: 'behemat.weapon.hurlin-rocks' } } }`. |
+| grant factory (shared) | (b) | One `grantHook(name, targetKind, text)` factory in `behemat.ts` builds the four `ActivatedAbilityHook`s above. Each keeps its own `code` name (not one `behematGrant`) so the AI hints, which dispatch on the code, can tell the four apart. `targets(state, unitId, player)` by the factory's target kind (the data's `params.targets` names the same kind; only `params.range` and `params.grant` are read from data): `'self'` = [the user's unit]; `'friendlyInCombat'` = friendly units on the board that are `inCombat`; `'friendlyWhollyNearGeneral'` = friendly units on the board with `whollyWithinUnit(t, general, range)`, minus the general when `excludeGeneral`. `canUse` = the list is non-empty (and the picked target is in it). `resolve`: `effectService.grant(ctx, target, params.grant, { sourceAbilityId, sourceUnitId, scope: { who: 'self' }, duration: 'untilEndOfTurn' })` + `announce`. One factory covers four rules. |
 | SOB-ENH Hungry Gobbler | (b) `behematHungryGobbler` | Enhancement, `timing endOfTurn / any`, no declare (the bearer). `canUse` = general on the board and `slewInFightThisTurn(state, general)` (F14 turn ledger, `attack.ts`: melee kills only, Crit (Mortal) pools of combat attacks included; Power Through and ability mortals excluded) and `isDamaged`. Resolve: `n = rollExpr(params.heal ?? 'D3')`, `healUnit(ctx, general, n, abilityId)`, announce. (`isDamaged` in `canUse` stops the AI from wasting the use. The rule itself would allow a Heal of 0.) |
 | SOB-AB-1 Drop, Toss or Roll | (b) `behematDropTossRoll` | Datasheet ability on both datasheets, `timing phase shooting / your`, no declare (the unit itself). `modesFor(state, unitId, player)` = the options of `drop` / `toss` / `roll` that are not yet in the turn ledger `mission.custom.sobDtr[player] = { key: 'round:activePlayer', used: ModeId[] }` (stale key = empty). `canUse` = at least one mode left and the unit on the board. Resolve: record the mode, then grant `untilEndOfTurn` on self: drop → `{ grantWeaponAbility: { ability: 'SHOOT_IN_COMBAT' }, when: { weaponType: 'ranged' } }`; toss → `{ modifyStat: { stat: 'range', value: 6 }, when: { weaponType: 'ranged' } }`; roll → `{ modifyRoll: { roll: 'hit', value: 1 }, when: { weaponType: 'ranged' } }`. Offered at the start of the shooting phase and in the between-activation windows (`shooting:after:<unitId>`, F8), before the unit is picked to shoot. `modesFor` already exists on the activated-hook interface (`abilities.ts`). |
 | SOB-BT-2 Bowled Over (declare + roll) | (b) `behematBowledOver` | Battle trait, `timing phase shooting / your`, `declare [{ role: 'unit', owner: 'enemy' }]`, `roll { dice: 'D6', succeedOn: 3 }`. `targets` = enemy units on the board in the union of `damagedByShootingThisPhase(state, f)` over friendly units `f` (`attack.ts` phase marks `shotDmg:a>t`, damage after wards). Offered in the shooting windows after each activation (`shooting:after:<unitId>`, F8). Resolve on 3+: drop any older Bowled Over marker on the target and grant an empty marker effect (scope self, `duration 'untilNextTurn'`), then set `active.expires = { kind: 'nextOwnTurn', round, player: use.player }`. The default expiry belongs to the holder, which is the enemy here, so it is set by hand, as in the Tzeentch Mutative Aura pattern (`tzeentch.ts`). |
@@ -252,13 +253,24 @@ Hero; the rules give no other visible difference. Wallsmasher Stomp figures (App
 
 ## 11. Implementation notes
 
-Not built. Plan: data in `src/data/factions/behemat/` (faction.json, datasheets/{boulder-basher, rock-hurler}.json,
+Built (F18, 2026-10-31). Data in `src/data/factions/behemat/` (faction.json, datasheets/{boulder-basher, rock-hurler}.json,
 weapons.json, abilities.json, enhancements.json, patrols/stone-lobbas.json); hooks in `src/engine/factions/behemat.ts`
-(`behematGrant`, `behematBowledOver`, `behematHungryGobbler`, `behematDropTossRoll`; `...behematHooks` in `code-hooks.ts`);
-tests in `tests/engine/behemat.test.ts` and `tests/data/behemat.test.ts`, one per SOB- id. Patrol `battleTraits:
-['behemat.ability.boulder-basher', 'behemat.ability.bowled-over', 'behemat.ability.close-one-eye']`, regiment list Greedy and
-Grabby (default) then Surly Sorts, enhancement list Humongous Strides (default), 'Ard 'Ead, Lucky Rock, Hungry Gobbler.
-Figure mapping keys `<datasheet id>/<modelId>`.
+(`behematCloseOneEye`, `behematSurlySorts`, `behematArdEad`, `behematLuckyRock` from one grant factory, plus `behematBowledOver`,
+`behematHungryGobbler`, `behematDropTossRoll`; `...behematHooks` in `code-hooks.ts`). Tests: `tests/engine/behemat.test.ts` (one test
+per SOB- id, plus SOB-REG and SOB-AI-1/2) and `tests/data/behemat.test.ts`. Patrol `battleTraits: ['behemat.ability.boulder-basher',
+'behemat.ability.bowled-over', 'behemat.ability.close-one-eye']`, regiment list Greedy and Grabby (default) then Surly Sorts,
+enhancement list Humongous Strides (default), 'Ard 'Ead, Lucky Rock, Hungry Gobbler. Figure mapping keys `<datasheet id>/<modelId>`.
+
+Details that differ from the plan above:
+- Bowled Over uses `effectService.grant(..., { duration: 'untilNextTurn', expiryOwner: use.player })` (F18 engine item) instead of a
+  hand-written `expires`.
+- The AI cannot see which unit an abilityUse option belongs to (the options carry no unit hint). `src/ai/utility.ts` therefore gets
+  one extra line that reads the unit from the option id (`<abilityId>#<unitId>`) for `behemat*` codes only (`behematOptionUnit`), plus
+  the usual three dispatch lines (timing, target bonus, mode bonus). No other armies are affected.
+- The bot leaves Drop, Toss or Roll unused on a unit for which none of the options helps (no target within 18", or Roll made
+  redundant by Close One Eye!), so the option stays free for another gargant.
+- Sim defaults: `npm run sim -- --games 20 --seed 5 --ai --armies behemat,<other>`, 0 violations against Cities, Stormcast, Nurgle,
+  Sylvaneth and Slaves (behemat wins 11-7, 6-13, 1-17, 5-15 and 13-7 of 20 in that order).
 
 ---
 

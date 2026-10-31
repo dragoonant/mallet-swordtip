@@ -1,0 +1,62 @@
+[
+  {
+    "id": "ogors.weapon.tyrants-meatcleavers",
+    "name": "Tyrant's Meatcleavers",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 2,
+    "rend": 2,
+    "D": 3,
+    "abilities": []
+  },
+  {
+    "id": "ogors.weapon.glutton-weapons",
+    "name": "Glutton Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 2,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "ogors.weapon.irongut-weapon",
+    "name": "Irongut Weapon",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 2,
+    "rend": 2,
+    "D": 3,
+    "abilities": []
+  },
+  {
+    "id": "ogors.weapon.gutbiter-weapons",
+    "name": "Gutbiter Weapons",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 4,
+    "wound": 2,
+    "rend": 2,
+    "D": 3,
+    "abilities": []
+  },
+  {
+    "id": "ogors.weapon.maulbeast-horns-and-fangs",
+    "name": "Maulbeast's Horns and Fangs",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 2,
+    "rend": 1,
+    "D": 2,
+    "abilities": [{ "ability": "COMPANION" }]
+  }
+]

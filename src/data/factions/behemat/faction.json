@@ -1,0 +1,17 @@
+{
+  "id": "behemat",
+  "name": "Sons of Behemat",
+  "factionKeyword": "SONS OF BEHEMAT",
+  "armyRule": "behemat.ability.stone-lobbas",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#c98a5a",
+    "secondary": "#6b4a2f",
+    "trim": "#d9c9a0",
+    "metal": "#7a828c",
+    "decal": "#c0392b"
+  },
+  "combatPatrols": [
+    "behemat.army.stone-lobbas"
+  ]
+}

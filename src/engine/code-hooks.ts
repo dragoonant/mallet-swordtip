@@ -4,7 +4,7 @@
 //
 // Reactions (Fire Overwatch, Heroic Intervention ...) are recorded in phaseState.marks (`reaction:<json>`); the owning module reads
 // them with `pendingReactions(state)` and removes them with `consumeReaction`. Kept for stratagems.ts and the phase modules.
-import type { CoreAbility, Scope, TimingWindowId } from '../data/types'
+import type { CoreAbility, DiceExpr, Scope, TimingWindowId } from '../data/types'
 import type { Action } from './actions'
 import { withinObjectiveRange, OBJECTIVE_MARKER_RADIUS, OBJECTIVE_RANGE } from './geometry'
 import type { CodeHook, HookName, HookResult } from './hooks'
@@ -31,7 +31,12 @@ import { sylvanethHooks } from './factions/sylvaneth'
 import { tzeentchHooks } from './factions/tzeentch'
 import { ossiarchHooks } from './factions/ossiarch'
 import { daughtersHooks } from './factions/daughters'
+import { slaaneshHooks } from './factions/slaanesh'
+import { fecHooks } from './factions/fec'
+import { helsmithsHooks } from './factions/helsmiths'
 import { idonethHooks } from './factions/idoneth'
+import { ogorsHooks } from './factions/ogors'
+import { behematHooks } from './factions/behemat'
 import { spearheadCallForReinforcements } from './factions/spearhead-core'
 import type {
   ChooseOptionDecision, ChooseOptionTopic, DiceRoll, GameState, Model, ModelId, Objective, PendingDecision, PlayerId, ReactionWindowDecision, Rejection,
@@ -218,6 +223,15 @@ export interface EngineCodeHook extends CodeHook {
   // resolved (follow-up included). Asked once per source code for `info.player`'s battle traits and regiment ability. May raise
   // a decision (ctx.decide); cards.ts returnTacticToDeckBottom moves the card from the discard pile to the bottom of the deck.
   onTacticCommandUsed?(ctx: EngineContext, entry: HookSourceEntry, info: { player: PlayerId; cardId: string }): void
+  // ---- F18 engine items (Slaanesh, Helsmiths, Flesh-eater Courts, Ogors, Sons of Behemat; 13-engine-port-plan §3.15) ----
+  // HOS C3 (ENH Twisted Grace): extra pile-in distance for `unitId`'s Fight activation, a dice expression rolled once per
+  // activation (phases/fight.ts doPileIn adds the total to the pile-in distance). Asked of every source entry after its gate;
+  // the hook filters the unit itself. null = no bonus.
+  pileInBonus?(state: GameState, entry: HookSourceEntry, unitId: UnitId): DiceExpr | null
+  // OGM C4 (OGM-BT-2 Exotic Giblets): a modifier to the ward rolls of `info.wardedUnitId` against damage from
+  // `info.attackerUnitId`'s pool of this kind (attack.ts wardThreshold adds it before the +-1 clamp). Asked of every source
+  // entry after its gate (hookService.wardRollModifierFor); each source counts once (its largest answer). 0 = no opinion.
+  wardRollModifier?(state: GameState, entry: HookSourceEntry, info: WardDenialInfo): number
 }
 
 // SER-AB-6 / F16 TZE C3: afterAttackSequence info
@@ -350,7 +364,12 @@ export const codeHooks: Record<string, EngineCodeHook> = {
   ...tzeentchHooks,
   ...ossiarchHooks,
   ...daughtersHooks,
+  ...slaaneshHooks,
+  ...fecHooks,
+  ...helsmithsHooks,
   ...idonethHooks,
+  ...ogorsHooks,
+  ...behematHooks,
   // core Spearhead abilities no data file names (Call for Reinforcements, SPH-12); abilities.ts adds their descriptor itself
   [spearheadCallForReinforcements.name]: spearheadCallForReinforcements,
 }

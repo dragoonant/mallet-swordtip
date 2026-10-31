@@ -278,7 +278,7 @@ describe('OBR-BT battle traits', () => {
     throw new Error('movement did not settle')
   }
 
-  it('OBR-BT-1 Heralds of Nagash / Dread Descent: the Morghast start in reserve; they arrive from round 2 (not round 1) in your movement phase, anywhere more than 6" from every enemy, and are destroyed if still in reserve at round 4', () => {
+  it('OBR-BT-1 Heralds of Nagash / Dread Descent: the Morghast start in reserve; they arrive from round 2 (not round 1) in your movement phase, anywhere more than 6" from every enemy, and are not destroyed at round 4 (no Deploy ability, core 24.1)', () => {
     const s = game()
     expect(s.units[MOR].location).toBe('reserves')
     expect(s.units[MOR].reserveArrival).toBe(DESCENT)
@@ -314,11 +314,11 @@ describe('OBR-BT battle traits', () => {
     expect(t.units[MOR].location).toBe('board')
     expect(t.units[MOR].setUpTurn).toEqual({ round: 2, player: 'A' }) // CORE-6.13: no Move abilities this phase
     for (const m of unitModels(t, MOR)) for (const x of unitModels(t, BOSS)) expect(horizontalGap(m, x)).toBeGreaterThan(6)
-    // a unit still in reserve at the start of round 4 is destroyed
+    // F18 (core 24.1): Heralds of Nagash is a battle trait, not a Deploy ability: the Morghast are not destroyed at round 4
     const u = game()
     u.round = 4
     missionService.onWindow(ctxFor(u, []), 'round.start', '4')
-    expect(u.units[MOR].location).toBe('destroyed')
+    expect(u.units[MOR].location).toBe('reserves')
     expect(u.units[GEN].location).toBe('board')
   })
 

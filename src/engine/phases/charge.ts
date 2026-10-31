@@ -76,6 +76,8 @@ export function canDeclareCharge(state: GameState, unitId: UnitId): boolean {
   const u = state.units[unitId]
   if (!u || u.location !== 'board') return false
   if (losService.unitInCombat(state, unitId)) return false
+  // F18 (HOH C4, Effect.noAbilities): the Charge ability is a Core ability the unit cannot use
+  if (hookService.unitHasEffectFlag(state, unitId, 'noAbilities')) return false
   if (leaderService.halves(state, unitId).some((id) => hookService.chargeForbidden(state, id))) return false
   // Run / Retreat block the Charge unless an ability says otherwise
   if ((u.turn.moveType === 'advance' || u.turn.moveType === 'fallBack') && !(hookService.eligibilityFor?.(state, unitId, 'charge') ?? false)) return false

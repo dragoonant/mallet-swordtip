@@ -1,0 +1,62 @@
+[
+  {
+    "id": "slaanesh.weapon.thricefold-arsenal",
+    "name": "Thricefold Arsenal",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 3,
+    "rend": 1,
+    "D": 2,
+    "abilities": []
+  },
+  {
+    "id": "slaanesh.weapon.deadly-pincers-and-barbed-stinger",
+    "name": "Deadly Pincers and Barbed Stinger",
+    "type": "melee",
+    "range": 0,
+    "A": 4,
+    "skill": 4,
+    "wound": 3,
+    "rend": 1,
+    "D": "D3",
+    "abilities": []
+  },
+  {
+    "id": "slaanesh.weapon.piercing-claws",
+    "name": "Piercing Claws",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": []
+  },
+  {
+    "id": "slaanesh.weapon.agonising-claws",
+    "name": "Agonising Claws",
+    "type": "melee",
+    "range": 0,
+    "A": 3,
+    "skill": 3,
+    "wound": 4,
+    "rend": 1,
+    "D": 1,
+    "abilities": [{ "ability": "ANTI", "keyword": "CAVALRY", "value": 1 }]
+  },
+  {
+    "id": "slaanesh.weapon.steeds-poisoned-tongue",
+    "name": "Steed's Poisoned Tongue",
+    "type": "melee",
+    "range": 0,
+    "A": 2,
+    "skill": 3,
+    "wound": 4,
+    "rend": 0,
+    "D": 1,
+    "abilities": [{ "ability": "COMPANION" }]
+  }
+]

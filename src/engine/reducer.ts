@@ -549,7 +549,19 @@ function transition(ctx: EngineContext, modules: ModuleTable): void {
   if (ctx.marked('battleEnd')) { endBattleChain(ctx, modules); return }
   if (ctx.marked('roundStart')) { startRoundChain(ctx, modules); return }
   if (s.phase === 'setup') { enterPhase(ctx, modules, 'deployment'); return }
-  if (s.phase === 'deployment') { startRoundChain(ctx, modules); return }
+  if (s.phase === 'deployment') {
+    // F18 (HOS C5 / HOH C1, CORE-4.5 step 3): once every unit is set up, Deployment-phase abilities, the player who began
+    // deployment (the attacker, SPH-7.1) first, then the opponent. runWindow drains MoveQueues bound to it (Daemonic Onslaught,
+    // Grinding Advance) before offering anything else
+    if (!ctx.marked('deploy:abilitiesDone')) {
+      const first = attackerOf(s)
+      const order: PlayerId[] = [first, first === 'A' ? 'B' : 'A']
+      if (abilityWindows(ctx, modules, 'deployment', order, 'deploy:abilities')) return
+      ctx.once('deploy:abilitiesDone')
+    }
+    startRoundChain(ctx, modules)
+    return
+  }
 
   if (ctx.window('phase.end', s.phase, ctx.order.active())) return
   const next = nextPhase(s.phase)

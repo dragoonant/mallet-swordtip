@@ -223,17 +223,17 @@ Shared helpers from `aos-common.ts`: `onBoard`, `liveModels`, `whollyWithinUnit`
 | ENH Irresistible Soul-Musk | (b) `slaaneshSoulMusk` | Enhancement, `timing phase movement / your`, `limit oncePerBattle`, declare a friendly unit. `targets` = visible friendly `SEEKERS` / `FIENDS` units wholly within 12" of the general. Resolve: `requestRedeploy(s, { abilityId, player, unitIds: [target], minEnemyDistance: 6, markSetUp: true })` (Skitterleap / Magmic Tunnels pattern; anywhere on the board). |
 | HOS-AB-2 Dispensers of Favour | (b) `slaaneshDispensersOfFavour` + (c) C6 | Activated, `timing phase command / your`, `keywords ['SPELL']`, `castingValue 6`, `declare [{ role: 'unit', owner: 'friendly' }]`, `params.range 12`. `targets` = friendly `DAEMONETTES` / `SEEKERS` / `FIENDS` units wholly within 12" of the caster; `maxTargets` = live models of the caster. Resolve per target, `duration 'untilNextTurn'`, scope self: Daemonettes `{ grantWeaponAbility: { ability: 'ANTI', keyword: '@charged' } }`; Seekers `{ modifyStat: { stat: 'M', value: 2 } }`; Fiends `{ when: { weaponType: 'melee' }, modifyRoll: { roll: 'hit', value: 1 } }`. |
 | HOS-AB-3 Soporific Musk | (b) `slaaneshSoporificMusk` | Activated, `timing phase charge / any`, `limit oncePerTurnArmy`, `declare [{ role: 'unit', owner: 'enemy' }]`, `roll { dice: 'D6', succeedOn: 4 }`, `params.range 9`. `targets` = `inCombat(self)` ? `enemiesInCombat(self)` : visible enemy units on the board within 9" (`unitGap`). Resolve (on a pass): `target.turn.fightsLast = true` (the `skavenCageOfWarpLightning` pattern; turn flag = "rest of the turn"). Offered in the end-of-charge-phase window (both players, active first). |
-| HOS-AB-5 Quicksilver Speed | (a) + (c) C2 | Passive, scope self, `effect { runRollFloor: 4 }`. |
+| HOS-AB-5 Quicksilver Speed | (a) + (c) C2 | Passive, scope self, `effect { rollFloor: { roll: 'advance', value: 4 } }` (built as `Effect.rollFloor`, ENG-F18-2). |
 
 **Engine changes (c):**
 - **C1 Companion roll modifiers** (`hooks.ts` frozen, additive; `hooks-impl.ts`; `attack.ts`): `RollModifierResult + affectsCompanion?:
   boolean`; `hooks-impl` copies `Effect.affectsCompanion` onto the roll result of a `modifyRoll` match; `attack.ts runStage` skips a
   friendly positive modifier on a Companion weapon only when `!r.affectsCompanion` (today it always skips, CORE-12.4). Additive:
   no shipped effect sets `affectsCompanion` on a `modifyRoll`.
-- **C2 run-roll floor** (`src/data/types.ts` + `common.schema.json` + `hooks-impl.ts`): `Effect.runRollFloor?: number`.
+- **C2 run-roll floor** (built as ENG-F18-2; `src/data/types.ts` + `common.schema.json` + `hooks-impl.ts`): `Effect.rollFloor?: { roll: 'advance'; value: number }` (this spec first called it `runRollFloor`).
   `advanceRollFor(state, unitId, rolled)` first replaces `rolled` with `max(rolled, floor)` (the highest floor among the unit's
   matching effects; read at `onAdvanceRoll`), then halves / adds modifiers as today. The dice tray notes "counted as 4".
-  `EFFECT_HOOKS + runRollFloor: ['onAdvanceRoll']` (frozen `hooks.ts`, additive).
+  `EFFECT_HOOKS + rollFloor: ['onAdvanceRoll']` (frozen `hooks.ts`, additive).
 - **C3 pile-in bonus** (`code-hooks.ts`, `hooks-impl.ts`, `phases/fight.ts`): `EngineCodeHook.pileInBonus?(state: GameState,
   entry: HookSourceEntry, unitId: UnitId): DiceExpr | null` → `hookService.pileInBonusFor(state, unitId): DiceExpr[]`. In the
   activation's pile-in step, before planning, `fight.ts` rolls the bonuses once per activation (`ctx.rollOnce('fi:pileBonus:<act>',
@@ -342,14 +342,31 @@ rules. Blades of the Lurid Dream figures (Appendix A) are listed there.
 
 ## 11. Implementation notes
 
-Not built yet. Expected layout: `src/data/factions/slaanesh/` (faction.json, datasheets/{thricefold-discord, fiends, daemonettes,
-seekers}.json, weapons.json, abilities.json, enhancements.json, patrols/epicurean-revellers.json); hooks in
-`src/engine/factions/slaanesh.ts` (`...slaaneshHooks` in `code-hooks.ts`; AI hints `slaaneshAbilityTiming` /
-`slaaneshTargetBonus` in `src/ai/utility.ts`); tests `tests/engine/slaanesh.test.ts`, `tests/data/slaanesh.test.ts` (one test per
-HOS- id) and `tests/engine/engine-f18.test.ts` (or the next F-stage file) for C1–C6. Patrol `battleTraits:
-['slaanesh.ability.favour-most-fickle']`; regiment list Bringers of Degradation (default), Daemonic Onslaught; enhancement list
-High Courtiers (default), Twisted Grace, Excess of Violence, Irresistible Soul-Musk. Figure mapping keys `<datasheet id>/<modelId>`
-(`slaanesh.unit.thricefold-discord/vexmor` etc.).
+Built (F18). Layout: `src/data/factions/slaanesh/` (faction.json, datasheets/{thricefold-discord, fiends, daemonettes, seekers}.json,
+weapons.json, abilities.json, enhancements.json, patrols/epicurean-revellers.json); hooks in `src/engine/factions/slaanesh.ts`
+(`...slaaneshHooks` in `code-hooks.ts`; AI hints `slaaneshAbilityTiming` / `slaaneshTargetBonus` exported there and dispatched from
+`src/ai/utility.ts` by the `slaanesh` code prefix); tests `tests/engine/slaanesh.test.ts` and `tests/data/slaanesh.test.ts` (one test
+per HOS- id; the HOS-AB-5 / HOS-BT tests drive the real data on the AoS fixture bundle) and `tests/engine/engine-f18.test.ts` (ENG-F18-1..14
+for C1-C6). Patrol `battleTraits: ['slaanesh.ability.favour-most-fickle']`; regiment list Bringers of Degradation (default), Daemonic
+Onslaught; enhancement list High Courtiers (default), Twisted Grace, Excess of Violence, Irresistible Soul-Musk. Figure mapping keys
+`<datasheet id>/<modelId>` (`slaanesh.unit.thricefold-discord/vexmor` etc.; client work, not part of the engine stage).
+
+Decisions made while building (all additive):
+- **Favour gate.** `slaaneshFavourMostFickle.gate` tells the seven effects apart by the hook data: `data.stat` ('OC' / 'A') for the stat
+  queries, `data.roll.purpose` ('hit' / 'wound' / 'fnp') for attack and ward rolls, `chargingUnitId` / `movingUnitId` for the charge
+  and run rolls. With no data (any query that is not one of these) the gate is closed. The Ward band rides the data `feelNoPain: 5`
+  effect, not `adjustFeelNoPain`.
+- **Dispensers of Favour** accepts only Daemonettes, Seekers and Fiends units as targets (the other types would get nothing); the
+  caster itself is never one. `maxTargets` is read when the declare step starts; the casting roll comes after the picks.
+- **Daemonic Onslaught** offers a unit only when it is not in combat and a short Normal-Move slide exists (probe), so the window never
+  opens an empty move decision.
+- **Irresistible Soul-Musk** redeploys through `requestRedeploy`; `redeploy.ts redeployFormation` closes its rows up to an oval base's
+  short side, otherwise a 5-model unit of 60x35 mm ovals (the Seekers) could never keep coherency and the unit found no spot.
+- **Enhancement bearer.** The engine puts the enhancement on the general's first model (Vexmor), and an enhancement is lost with its
+  bearer. The spec gives it to the whole three-model general, so `slaaneshFavourMostFickle.onOwnModelSlain` hands the enhancement to
+  the next surviving model of the Thricefold Discord the moment its bearer is slain (it is only gone with the last model).
+- **Soporific Musk** target in combat = `enemiesInCombat` (range only), out of combat = visible within 9". The flag set is
+  `turn.fightsLast`, which lapses with the turn.
 
 ---
 

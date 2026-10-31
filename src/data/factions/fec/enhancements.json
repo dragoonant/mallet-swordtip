@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fec.enh.ulguan-cloak",
+    "faction": "fec",
+    "name": "Ulguan Cloak",
+    "text": "The general is not visible to enemy models that are more than 12\" away from it.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fec.ability.ulguan-cloak"
+  },
+  {
+    "id": "fec.enh.blood-river-chalice",
+    "faction": "fec",
+    "name": "Blood-River Chalice",
+    "text": "Once per battle, in your hero phase, Heal (2D3) the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fec.ability.blood-river-chalice"
+  },
+  {
+    "id": "fec.enh.rousing-oration",
+    "faction": "fec",
+    "name": "Rousing Oration",
+    "text": "In your hero phase, roll a dice for each friendly unit wholly within 12\" of the general, not counting the general. For each 5+, the general gains 1 noble deeds point.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fec.ability.rousing-oration"
+  },
+  {
+    "id": "fec.enh.crimson-victuals",
+    "faction": "fec",
+    "name": "Crimson Victuals",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible enemy unit within 18\" of the general. If the spell is cast, it suffers D3 mortal damage, then your Cryptguard unit within 6\" of it gets back 1 slain model per damage point allocated.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "fec.ability.crimson-victuals"
+  }
+]

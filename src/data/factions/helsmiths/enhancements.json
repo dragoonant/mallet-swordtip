@@ -1,0 +1,38 @@
+[
+  {
+    "id": "helsmiths.enh.talisman-of-obsidian",
+    "faction": "helsmiths",
+    "name": "Talisman of Obsidian",
+    "text": "In each phase, ignore the first damage point allocated to the general.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "helsmiths.ability.talisman-of-obsidian"
+  },
+  {
+    "id": "helsmiths.enh.amulet-of-burning-hate",
+    "faction": "helsmiths",
+    "name": "Amulet of Burning Hate",
+    "text": "Once per battle, in any combat phase: until the end of the turn, an unmodified hit roll of 5+ for the general's attacks is a critical hit.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "helsmiths.ability.amulet-of-burning-hate"
+  },
+  {
+    "id": "helsmiths.enh.chalice-of-darkness",
+    "faction": "helsmiths",
+    "name": "Chalice of Darkness",
+    "text": "Once per battle, in your shooting phase, pick a visible enemy unit within 12\" of the general. That unit suffers D3 mortal damage.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "helsmiths.ability.chalice-of-darkness"
+  },
+  {
+    "id": "helsmiths.enh.scroll-of-petrification",
+    "faction": "helsmiths",
+    "name": "Scroll of Petrification",
+    "text": "Once per battle, in any hero phase: until the end of the turn the general has Ward (2+), but it cannot use abilities and friendly abilities cannot pick it.",
+    "cost": 0,
+    "restriction": {},
+    "effect": "helsmiths.ability.scroll-of-petrification"
+  }
+]

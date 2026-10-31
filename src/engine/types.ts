@@ -239,6 +239,10 @@ export interface Unit {
   // ---- AoS (13-port-plan §2.1) ----
   // the ability that brings this unit on from reserve (PatrolUnitData.reserve.ability); null = deploys normally
   reserveArrival: AbilityId | null
+  // F18 (core 24.1, additive): how the unit went into reserve: the ability that put it there (null = held back by a battle trait
+  // or never deployed) and whether that ability is a Deploy ability (keyword DEPLOY). missions.ts destroys only `deploy` reserves
+  // at the start of battle round 4. Absent (older saves) = not a Deploy reserve
+  reserveVia?: { abilityId: AbilityId | null; deploy: boolean }
   // when the unit was last set up on the battlefield (CORE-6.13 "set up this turn"); null = at deployment / never
   setUpTurn: { round: number; player: PlayerId } | null
   // SPH-12 Call for Reinforcements (P1): the unit this one replaces / this unit has been replaced

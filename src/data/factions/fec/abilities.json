@@ -1,0 +1,158 @@
+[
+  {
+    "id": "fec.ability.carrion-retainers",
+    "name": "Carrion Retainers",
+    "text": "Army marker for the Flesh-eater Courts Carrion Retainers. Its battle traits, regiment abilities and enhancements are listed on the army.",
+    "trigger": "always",
+    "timing": { "kind": "passive" }
+  },
+  {
+    "id": "fec.ability.noble-deeds",
+    "name": "Noble Deeds",
+    "text": "Every friendly Hero keeps its own tally of noble deeds points, up to 6. Each time a friendly Hero uses a Fight ability, once its attacks are resolved, it gains points equal to the damage points that Fight allocated.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "code": "fecNobleDeeds",
+    "params": { "max": 6 }
+  },
+  {
+    "id": "fec.ability.summon-loyal-subjects",
+    "name": "Summon Loyal Subjects",
+    "text": "In your movement phase, pick a friendly Hero that has any noble deeds points to use this ability. It may spend any number of its points: 1 point returns 1 slain model to a friendly Cryptguard unit within 9\" of it, and 2 points return 1 slain model to a friendly Morbheg Knights unit within 9\" of it.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "movement", "whose": "your" },
+    "keywords": ["UNLIMITED"],
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "code": "fecSummonLoyalSubjects",
+    "params": { "army": true, "range": 9, "cryptguardCost": 1, "knightsCost": 2, "priority": "P1" }
+  },
+  {
+    "id": "fec.ability.feeding-frenzy",
+    "name": "Feeding Frenzy",
+    "text": "Add 1 to the Attacks characteristic of the melee weapons used by friendly units while they are wholly within 12\" of any friendly Hero that has 6 noble deeds points. Companion weapons are not affected, and several such Heroes do not stack.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "weaponType": "melee" },
+      "modifyStat": { "stat": "A", "value": 1 }
+    },
+    "code": "fecFeedingFrenzy",
+    "params": { "range": 12, "points": 6 }
+  },
+  {
+    "id": "fec.ability.crusading-army",
+    "name": "Crusading Army",
+    "text": "Add 1 to run rolls and charge rolls for friendly units.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": [
+      { "modifyRoll": { "roll": "advance", "value": 1 } },
+      { "modifyRoll": { "roll": "charge", "value": 1 } }
+    ]
+  },
+  {
+    "id": "fec.ability.defenders-of-the-realm",
+    "name": "Defenders of the Realm",
+    "text": "Add 1 to save rolls for friendly units while they are contesting an objective you control.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": {
+      "when": { "unitOnObjectiveControlledBy": "self" },
+      "modifyRoll": { "roll": "save", "value": 1 }
+    }
+  },
+  {
+    "id": "fec.ability.deranged-transformation",
+    "name": "Deranged Transformation",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible friendly unit wholly within 18\" of this unit (itself allowed). If the spell is cast, until the start of your next turn add 2\" to the target's Move characteristic and add 1 to the wound rolls of its attacks. The Archregent casts without being a Wizard: it cannot unbind.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "declare": [{ "role": "unit", "owner": "friendly" }],
+    "duration": "untilNextTurn",
+    "code": "fecDerangedTransformation",
+    "params": {
+      "range": 18,
+      "grant": [
+        { "modifyStat": { "stat": "M", "value": 2 } },
+        { "modifyRoll": { "roll": "wound", "value": 1 } }
+      ],
+      "priority": "P1"
+    }
+  },
+  {
+    "id": "fec.ability.royal-bodyguard",
+    "name": "Royal Bodyguard",
+    "text": "Add 1 to the ward rolls of friendly Heroes that are wholly within this unit's combat range.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "friendly", "within": 3, "wholly": true, "keyword": "HERO" },
+    "effect": { "modifyRoll": { "roll": "feelNoPain", "value": 1 } }
+  },
+  {
+    "id": "fec.ability.predators-pounce",
+    "name": "Predator's Pounce",
+    "text": "This unit can use Charge abilities in a turn in which it used a Retreat ability, and no mortal damage is inflicted on it when it uses a Retreat ability.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "self" },
+    "effect": { "chargeAfterFallBack": true, "noRetreatDamage": true }
+  },
+  {
+    "id": "fec.ability.victory-feast",
+    "name": "Victory Feast",
+    "text": "At the end of any turn, if this unit slew any models that turn, Heal (D6) this unit. It may then immediately use the Retreat ability with no mortal damage inflicted on it.",
+    "trigger": "activated",
+    "timing": { "kind": "endOfTurn", "whose": "any" },
+    "code": "fecVictoryFeast",
+    "params": { "heal": "D6", "priority": "P1" }
+  },
+  {
+    "id": "fec.ability.ulguan-cloak",
+    "name": "Ulguan Cloak",
+    "text": "The general is not visible to enemy models that are more than 12\" away from it.",
+    "trigger": "always",
+    "timing": { "kind": "passive" },
+    "scope": { "who": "bearer" },
+    "code": "fecUlguanCloak",
+    "params": { "hiddenBeyond": 12 }
+  },
+  {
+    "id": "fec.ability.blood-river-chalice",
+    "name": "Blood-River Chalice",
+    "text": "Once per battle, in your hero phase, Heal (2D3) the general.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "limit": "oncePerBattle",
+    "scope": { "who": "bearer" },
+    "code": "fecBloodRiverChalice",
+    "params": { "heal": "2D3", "priority": "P2" }
+  },
+  {
+    "id": "fec.ability.rousing-oration",
+    "name": "Rousing Oration",
+    "text": "In your hero phase, roll a dice for each friendly unit wholly within 12\" of the general, not counting the general's own unit. For each 5+, the general gains 1 noble deeds point.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "scope": { "who": "bearer" },
+    "code": "fecRousingOration",
+    "params": { "range": 12, "succeedOn": 5, "priority": "P1" }
+  },
+  {
+    "id": "fec.ability.crimson-victuals",
+    "name": "Crimson Victuals",
+    "text": "Spell (casting value 6). In your hero phase, pick a visible enemy unit within 18\" of the general. If the spell is cast, that unit suffers D3 mortal damage. Then, if your Cryptguard unit is within 6\" of the target, return 1 slain model to it for each damage point that mortal damage allocated.",
+    "trigger": "activated",
+    "timing": { "kind": "phase", "phase": "command", "whose": "your" },
+    "keywords": ["SPELL"],
+    "castingValue": 6,
+    "declare": [{ "role": "unit", "owner": "enemy" }],
+    "scope": { "who": "bearer" },
+    "code": "fecCrimsonVictuals",
+    "params": { "range": 18, "damage": "D3", "returnRange": 6, "priority": "P1" }
+  }
+]

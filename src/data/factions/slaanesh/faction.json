@@ -1,0 +1,17 @@
+{
+  "id": "slaanesh",
+  "name": "Hedonites of Slaanesh",
+  "factionKeyword": "HEDONITES OF SLAANESH",
+  "armyRule": "slaanesh.ability.epicurean-revellers",
+  "detachments": [],
+  "paintScheme": {
+    "primary": "#a98bd6",
+    "secondary": "#4b1f7a",
+    "trim": "#d9b45a",
+    "metal": "#2a1530",
+    "decal": "#ff5fae"
+  },
+  "combatPatrols": [
+    "slaanesh.army.epicurean-revellers"
+  ]
+}
