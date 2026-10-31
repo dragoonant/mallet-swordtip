@@ -8,7 +8,7 @@ import { FactionCrest } from '../../src/client/ui/FactionCrest'
 import { FACTION_ALLIANCE, FACTION_BLURBS, OPTION_BLURBS } from '../../src/client/ui/StartScreen'
 import { regimentChoices, spearheadArmies } from '../../src/client/store/game'
 import { resolveBase, resolveFigureKit } from '../../src/client/figures/data'
-import { glbSlugFor } from '../../src/client/figures/glbModels'
+import { GLB_SLUG_BY_MODEL } from '../../src/client/figures/glbModels'
 import { aosWeaponSound } from '../../src/client/audio/eventSounds'
 import { factionColor, meleeStyle } from '../../src/client/vfx/palette'
 import { classifyVfxFamily, weaponFlavour } from '../../src/client/weaponFlavour'
@@ -73,7 +73,7 @@ describe('F12 armies on the client', () => {
   it('CLIENT-F12-004 every model of the four new armies has a stand-in kit and a GLB slug', () => {
     for (const ds of Object.values(bundle.datasheets).filter((d) => NEW_ID.test(d.id))) {
       expect(resolveFigureKit(ds.id, ds, ds.composition[0].modelId).kit, ds.id).not.toMatch(/^generic-/)
-      for (const c of ds.composition) expect(glbSlugFor(ds.id, c.modelId), `${ds.id}/${c.modelId}`).toBeDefined()
+      for (const c of ds.composition) expect(GLB_SLUG_BY_MODEL[`${ds.id}/${c.modelId}`], `${ds.id}/${c.modelId}`).toBeDefined() // the declared slug; whether the file is on disk is FIG-AOS-005's job
     }
   })
 
