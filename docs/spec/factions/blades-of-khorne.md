@@ -98,7 +98,8 @@ standard or musician rules); they exist only as visibly different figures and ba
 Notes:
 - Evasive Hunter stacks with Guarded Hero (CORE-14.2: Karanak is a Hero but not Infantry, so only its −1 to hit applies)
   under the ±1 hit cap, so the hit penalty stays −1; the wound penalty is Evasive Hunter's alone.
-- Killing Pounce: "any charge phase" but the general can only charge in its own. A ½" charge end (CORE-9.2) is still needed;
+- Killing Pounce: "any charge phase", so it is also offered at the start of the **enemy** charge phase, where Karanak can
+  charge through a Counter-charge (CORE-5.9; audit F14 fixed the data from `your` to `any`). A ½" charge end (CORE-9.2) is still needed;
   the quarry requirement is on top. RULING: the extra die is chosen when the ability is used (start of the charge phase,
   before any charge roll); from then until the end of the turn every charge roll of the general uses 3 dice and must end
   in combat with the quarry. approximation: the card lets the player decide per roll; one Charge per phase means only one
@@ -123,7 +124,8 @@ Keywords: **Hero, Beast, Ward (6+)**
 | Savage Maws and Goreslick Claws (`khorne.weapon.savage-maws-and-goreslick-claws`) | Melee | — | 6 | 4+ | 3+ | 1 | 2 | Anti-Hero (+1 Rend) |
 
 **BOK-AB-1 `khorne.ability.stalk-the-prey` — Stalk the Prey**
-- **Timing:** **Any hero phase** (yours or the opponent's; once per phase, CORE-3.4). Move keyword.
+- **Timing:** **Any hero phase** (yours or the opponent's; once per phase, CORE-3.4). The card prints **no ability keywords**
+  (no Move keyword; audit F14 removed `MOVE` from the data).
 - **Effect:** Roll a D6; this unit may move **up to that many inches**.
   - If it was **not in combat** at the start of the move, it **cannot end the move in combat**.
   - If it **was in combat** at the start, it may end in or out of combat.
@@ -201,9 +203,9 @@ army's units). `quarryOnBoard(state, player)` = the same, location board only.
 | BOK-BT-2 Blood-Drenched | (b) `khorneBloodDrenched` + (c) C1 | Battle trait, `timing endOfTurn / any`, `limit oncePerTurnArmy`, `declare [{ role: 'unit', owner: 'friendly' }]`. `targets` = friendly units on board with `slewInFightThisTurn(state, id)` and not already holding this effect. Resolve: `effects.grant(ctx, id, { grantWeaponAbility: { ability: 'CRIT_MORTAL' }, when: { weaponType: 'melee' } }, { scope: { who: 'self' }, duration: 'battle' })`. |
 | BOK-RA-1 The Scent of Blood | (a) + (b) gate `khorneScentOfBlood` + (c) C1 | Passive regiment descriptor (sits on every friendly unit), scope self, `effect [{ modifyRoll: { roll: 'hit', value: 1 }, when: { weaponType: 'melee' } }, { modifyRoll: { roll: 'wound', value: 1 }, when: { weaponType: 'melee' } }]`, `code khorneScentOfBlood` whose `gate(state, holder, entry, data)` returns `damagedThisTurn(state, data.attack.targetUnitId)` (false with no attack in `data`). |
 | BOK-RA-2 Savagery Upon Savagery | (b) `khorneSavagery` | Regiment ability, `timing phase fight / any`, `limit oncePerBattle`, `declare [{ role: 'unit', owner: 'friendly' }]`. Targets = friendly units on board and `inCombat`. Resolve: `n = HERO keyword ? rollExpr('D3') : 1`; grant `{ modifyStat: { stat: 'A', value: n }, when: { weaponType: 'melee' } }`, scope self, `duration 'untilEndOfTurn'`. Offered in the start-of-combat window and between fight activations. |
-| BOK-ENH Killing Pounce | (b) `khorneKillingPounce` + (c) C3 | Enhancement, `timing phase charge / your` (shipped as `your`: only the owner charges, and the F10 chargeStart window only runs for the active player), `params.window 'phaseStart'` (F10 chargeStart window), `limit oncePerBattle`. `canUse` = general on board, not in combat, and `quarryOnBoard`. Resolve: grant the general `{ extraChargeDice: 1 }` until end of turn (`chargeDiceCount` = 3; never above 3 in this army) and record the commitment (the granted ActiveEffect carries `code khorneKillingPounce`). The same hook answers C3 `chargeMustEndInCombatWith(state, entry, unitId)` = `[quarry]` while that ActiveEffect is on `unitId` (`entry.active` set). |
+| BOK-ENH Killing Pounce | (b) `khorneKillingPounce` + (c) C3 | Enhancement, `timing phase charge / any` (the card: any charge phase; the F10 chargeStart window runs for both players, so the enemy charge phase offers it before a Counter-charge), `params.window 'phaseStart'` (F10 chargeStart window), `limit oncePerBattle`. `canUse` = general on board, not in combat, and `quarryOnBoard`. Resolve: grant the general `{ extraChargeDice: 1 }` until end of turn (`chargeDiceCount` = 3; never above 3 in this army) and record the commitment (the granted ActiveEffect carries `code khorneKillingPounce`). The same hook answers C3 `chargeMustEndInCombatWith(state, entry, unitId)` = `[quarry]` while that ActiveEffect is on `unitId` (`entry.active` set). |
 | BOK-ENH Furious Bites | (b) `khorneFuriousBites` | Enhancement, `timing endOfTurn / any` (once per turn by CORE-3.4 since end of turn is one phase). `canUse` = general on board and the quarry is in `enemiesInCombat(state, general)`. Resolve: `inflictMortal(ctx, use, quarry, rollExpr('D3'))`. No roll to pass. |
-| BOK-AB-1 Stalk the Prey | (b) `khorneStalkThePrey` + (c) C2 | Datasheet ability, `timing phase command / any`, keyword `MOVE`. `canUse` = on board and at least one legal slide for 6" exists (cheap pre-check; the real distance is rolled). Resolve: `d = rollExpr('D6')`; `writeMoveQueue(s, { abilityId, player, maxDistance: d, queue: [self], opts })` with `opts = inCombat(self) ? { endFree: true } : { mayNotEndInCombat: true }` plus `closerToUnit: quarry` when `quarryOnBoard`. If no slide is legal after the roll, the move is skipped (announce "no legal move"). |
+| BOK-AB-1 Stalk the Prey | (b) `khorneStalkThePrey` + (c) C2 | Datasheet ability, `timing phase command / any`, no ability keywords (none printed). `canUse` = on board and at least one legal slide for 6" exists (cheap pre-check; the real distance is rolled). Resolve: `d = rollExpr('D6')`; `writeMoveQueue(s, { abilityId, player, maxDistance: d, queue: [self], opts })` with `opts = inCombat(self) ? { endFree: true } : { mayNotEndInCombat: true }` plus `closerToUnit: quarry` when `quarryOnBoard`. If no slide is legal after the roll, the move is skipped (announce "no legal move"). |
 | BOK-AB-3 Pack Hunters | (b) `khornePackHunters` | Datasheet ability, `timing phase fight / any`, `declare [{ role: 'unit', owner: 'enemy' }]`. Targets = enemy units in `enemiesInCombat(state, self)` that are also in combat with a friendly unit `isDatasheet(…, 'khorne.unit.flesh-hounds')` on board. Resolve: grant self `{ lethalOn: 5, when: { weaponType: 'melee' } }` (crit threshold 5 at onHitRoll, hooks-impl `lethalOn`), `duration 'untilEndOfTurn'`, and store the target in a ledger `mission.custom.bokPack[effectId] = targetUnitId`; `gateEffect(state, holder, entry, data)` passes only when `data.attack.targetUnitId === ledger[entry.active.id]` (the `luminethHurricaneWinds` / `citiesConsecrate` gateEffect pattern). Prune ledger entries whose effect is gone at the next grant. |
 
 **Engine changes (c):**
@@ -255,7 +257,7 @@ All four are built and recorded in `docs/spec/13-engine-port-plan.md` §3.12 (F1
 6. **AI:** The Quarry — the enemy unit with the highest threat that Karanak can reach soonest (prefer the enemy general if
    within 20", else the closest enemy unit with Health ≤ 10; reserve units only if nothing is on the board). Stalk the
    Prey — use in every hero phase where a legal move ends closer to the quarry, or in the enemy hero phase to step out of a
-   losing combat. Killing Pounce — when the 2-dice chance to reach the quarry is < 60% and the 3-dice chance ≥ 40%.
+   losing combat. Killing Pounce — in its own charge phase only (the bot plans no Counter-charge), when the 2-dice chance to reach the quarry is < 60% and the 3-dice chance ≥ 40%.
    Savagery — on Karanak when it is in combat with the quarry or an enemy Hero, else the unit in combat with the most
    attacks. Pack Hunters — always when legal. Blood-Drenched — Karanak first, then the Claws, then Flesh Hounds.
    Furious Bites and Sustained by Gore — always when legal.
@@ -280,9 +282,9 @@ All four are built and recorded in `docs/spec/13-engine-port-plan.md` §3.12 (F1
 | BOK-RA-2 | Savagery Upon Savagery: +1 Attacks to melee weapons of a friendly unit in combat until end of turn; +D3 for a Hero; once per battle. |
 | BOK-ENH-1 | Sustained by Gore: Heal (D3) the general at the end of any turn; not offered while undamaged. |
 | BOK-ENH-2 | Evasive Hunter: −1 hit and −1 wound for shooting attacks targeting the general; melee attacks unaffected; hit penalty stays −1 with Guarded Hero. |
-| BOK-ENH-3 | Killing Pounce: general charges with 3 dice for the rest of the turn and the charge must end in combat with the quarry; not offered without a quarry on the board; once per battle. |
+| BOK-ENH-3 | Killing Pounce: general charges with 3 dice for the rest of the turn and the charge must end in combat with the quarry; not offered without a quarry on the board; offered at the start of either player's charge phase (Counter-charge); once per battle. |
 | BOK-ENH-4 | Furious Bites: D3 mortal damage to the quarry at end of any turn only while the general is in combat with it. |
-| BOK-AB-1 | Stalk the Prey: in any hero phase Karanak moves up to D6"; out of combat it cannot end in combat; in combat it may end in or out. |
+| BOK-AB-1 | Stalk the Prey: in any hero phase Karanak moves up to D6"; out of combat it cannot end in combat; in combat it may end in or out; the ability carries no keywords (none printed). |
 | BOK-AB-1b | Stalk the Prey: with the quarry on the board every accepted move ends closer to it; with the quarry in reserve or none, no closer rule. |
 | BOK-AB-2 | Unflagging Hunters: Flesh Hounds add 1 to charge rolls. |
 | BOK-AB-3 | Pack Hunters: only an enemy unit in combat with both the Claws and a friendly Flesh Hounds unit can be picked; Claws' melee attacks against it crit on unmodified 5+ until end of turn; other targets crit on 6 only. |

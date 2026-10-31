@@ -458,6 +458,12 @@ describe('BOK-ENH enhancements', () => {
     expect(offered(s, 'A', 'chargeStart')).toEqual([])
     s.units[BOSS].location = 'board'
     expect(offered(s, 'A', 'chargeStart')).toEqual([POUNCE_AB])
+    // the card says any charge phase: the enemy's one offers it too (Karanak can charge there through a Counter-charge)
+    expect((abilitiesJson as unknown as AbilityDescriptor[]).find((a) => a.id === POUNCE_AB)?.timing).toMatchObject({ kind: 'phase', phase: 'charge', whose: 'any' })
+    s.activePlayer = 'B'
+    expect(offered(s, 'A', 'chargeStart')).toEqual([POUNCE_AB])
+    expect(khorneAbilityTiming(s, 'A', 'khorneKillingPounce', KARANAK)).toBe(-3) // the bot plans no Counter-charge
+    s.activePlayer = 'A'
     expect(chargeDiceCount(s, KARANAK)).toBe(2)
     const before = neededChargeDistance(s, KARANAK) as number
     const ctx = ctxFor(s)
@@ -523,6 +529,8 @@ describe('BOK-AB datasheet abilities', () => {
 
   it('BOK-AB-1 Stalk the Prey: in any hero phase Karanak moves up to D6"; out of combat it cannot end in combat; in combat it may end in or out', () => {
     // out of combat: an enemy 6.5" away, a roll of 5 lets it close in but never into combat range
+    // the card prints no ability keywords (no Move keyword)
+    expect((abilitiesJson as unknown as AbilityDescriptor[]).find((a) => a.id === STALK)?.keywords ?? []).toEqual([])
     const s = game()
     put(s, KARANAK, 0, 0); put(s, GUARD, 0, 6.2, 1)
     s.phase = 'command'

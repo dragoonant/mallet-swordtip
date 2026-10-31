@@ -1,9 +1,10 @@
 // AI diagnostics: plays one AI-vs-AI sim game and prints, at the end of every turn, where each unit stands (centre, models
 // left, objective it contests, nearest enemy gap), objective control and VP, plus every charge, kill and VP event.
-// Usage: npx tsx tools/ai-trace.ts <gameIndex> [seed] [--armies a,b]
+// --moves also logs every move (type, gap to the nearest enemy before and after) and every charge-phase pick, pass included.
+// Usage: npx tsx tools/ai-trace.ts <gameIndex> [seed] [--armies a,b] [--moves]
 import { DATA_VERSION, loadBundle } from '../src/data/index'
 import { makeSimSetup } from './sim-core'
-import { UtilityDecider } from '../src/ai/utility'
+import { UtilityDecider, nearestEnemyUnit } from '../src/ai/utility'
 import { DEFAULT_SERVICES, createGame, legalActions, step, unitModels, view, withinObjectiveRange, type GameState } from '../src/engine'
 
 const ai = process.argv.indexOf('--armies')
@@ -11,6 +12,7 @@ const only = ai >= 0 ? (process.argv[ai + 1] ?? '').split(',').map((x) => x.trim
 const pos = process.argv.slice(2).filter((a, i, all) => !a.startsWith('-') && all[i - 1] !== '--armies')
 const g = Number(pos[0] ?? 0)
 const seedBase = pos[1] ?? '11'
+const moves = process.argv.includes('--moves')
 
 const short = (s: GameState, id: string) => { const u = s.units[id]; return `${u?.player ?? '?'}:${(u?.datasheetId ?? id).split('.').pop()}${id.match(/-[a-z0-9]$/) ? id.slice(-2) : ''}` }
 
@@ -38,8 +40,21 @@ async function main() {
     const legal = legalActions(r.state, r.pending)
     const a = await bots[r.pending.player].decide(view(r.state, r.pending.player), r.pending, legal)
     if (r.pending.kind === 'chooseOption' && (r.pending.context as { topic?: string }).topic?.startsWith('ability')) console.log(`   [${r.state.round}${r.state.activePlayer}] ${r.pending.player} ${(r.pending.context as { topic?: string }).topic} -> ${(a as { optionId?: string }).optionId ?? a.type}`)
+    const before = moves && r.pending.kind === 'moveUnit' ? nearestEnemyUnit(r.state, r.pending.player, (r.pending.context as { unitId: string }).unitId) : null
     const nx = step(r.state, a)
     if (nx.rejection) { console.log('reject', nx.rejection); break }
+    if (moves) {
+      const p = r.pending, tag = `[${r.state.round}${r.state.activePlayer}]`
+      if (p.kind === 'declareMove') console.log(`   ${tag} move ${short(r.state, (p.context as { unitId: string }).unitId)} -> ${(a as { moveType?: string }).moveType ?? a.type}`)
+      if (p.kind === 'moveUnit') {
+        const id = (p.context as { unitId: string }).unitId, after = nearestEnemyUnit(nx.state, p.player, id)
+        console.log(`   ${tag}   ${short(r.state, id)} gap ${before?.gap.toFixed(1) ?? '-'} -> ${after?.gap.toFixed(1) ?? '-'} (${after ? short(nx.state, after.unitId) : '-'})`)
+      }
+      if (p.kind === 'chooseUnitToActivate' && (p.context as { phase?: string }).phase === 'charge') {
+        const elig = ((p.context as { eligible?: string[] }).eligible ?? []).map((id) => short(r.state, id)).join(' ')
+        console.log(`   ${tag} charge pick [${elig}] -> ${(a as { unitId?: string }).unitId ? short(r.state, (a as { unitId: string }).unitId) : a.type}`)
+      }
+    }
     for (const e of nx.events as unknown as Record<string, unknown>[]) {
       const tag = `[${nx.state.round}${nx.state.activePlayer}]`
       if (e.type === 'ChargeRolled') console.log(`   ${tag} charge ${short(nx.state, e.unitId as string)} rolled ${e.total} needed ${e.needed}`)

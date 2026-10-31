@@ -13,7 +13,7 @@ import { createRng, restoreRng, type Rng } from '../engine/rng'
 import { deployTerrainBlock } from '../engine/terrain'
 import { terrainLineClear } from '../engine/los'
 import { hookService } from '../engine/hooks-impl'
-import { chargeDiceCount } from '../engine/phases/charge'
+import { chargeDiceCount, chargeMustEndInCombatWith, neededChargeDistance } from '../engine/phases/charge'
 import { tacticOdds } from '../engine/cards'
 import { kruleboyzAbilityTiming, kruleboyzTargetBonus } from '../engine/factions/kruleboyz'
 import { gloomspiteAbilityTiming, retreatsAndCharges } from '../engine/factions/gloomspite'
@@ -24,10 +24,12 @@ import { soulblightAbilityTiming, soulblightChargeBonus, soulblightModeBonus, so
 import { skavenAbilityTiming, skavenTargetBonus } from '../engine/factions/skaven'
 import { nurgleAbilityTiming, nurgleModeBonus, nurgleTargetBonus } from '../engine/factions/nurgle'
 import { seraphonAbilityTiming, seraphonTargetBonus } from '../engine/factions/seraphon'
-import { khorneAbilityTiming, khorneTargetBonus } from '../engine/factions/khorne'
+import { khorneAbilityTiming, khorneChargeFocus, khorneTargetBonus } from '../engine/factions/khorne'
 import { nighthauntAbilityTiming, nighthauntTargetBonus } from '../engine/factions/nighthaunt'
 import { sylvanethAbilityTiming, sylvanethTargetBonus } from '../engine/factions/sylvaneth'
 import { citiesHoldWeight } from '../engine/factions/cities'
+import { reinforcementOptions } from '../engine/factions/aos-moves'
+import { datasheetOf } from '../engine/state'
 import { extraMoveCandidates } from './moves'
 import { underdogCardChase, underdogExposure, underdogObjectiveScale } from './underdogs'
 import { objectiveVp } from './objectives'
@@ -290,10 +292,9 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
       // (nor can one that may not charge this turn at all: carried by Ply the Skies, and the like)
       const chargeNow = state.phase === 'movement' && mt !== 'advance' && (mt !== 'fallBack' || retreatsAndCharges(state, unitId)) && !hookService.chargeForbidden(state, unitId)
       const gap = placementGapTo(state, placements, enemy.unitId)
-      const trade = chargeTrade(state, player, unitId, enemy.unitId)
       if (chargeNow) chargeNowP = chargeProb(Math.ceil(Math.max(0, gap - 0.5)), chargeDiceCount(state, unitId))
-      if (chargeNow) score += chargeNowP * trade * (hammer ? 1 : 0.6)
-      else if (!final) score += chargeProb(Math.ceil(Math.max(0, gap - 0.5 - stats0(state, unitId).M)), chargeDiceCount(state, unitId)) * trade * (hammer ? 0.35 : 0.2)
+      if (chargeNow) score += chargeOutlook(state, player, unitId, placements, enemy.unitId, gap, 0) * (hammer ? 1 : 0.6)
+      else if (!final) score += chargeOutlook(state, player, unitId, placements, enemy.unitId, gap, stats0(state, unitId).M) * (hammer ? 0.35 : 0.2)
     }
     if (hasAnyRangedWeapon(state, unitId)) {
       const range = bestRangedRangeOfUnit(state, unitId)
@@ -301,7 +302,7 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
     }
   }
   if (bonusEngage) score += countEngagedAfter(state, unitId, placements) * 3
-  // army hints (src/ai/underdogs.ts, Slaves only): what ending a move here leaves the unit open to in the enemy's next turn, and
+  // army hints (src/ai/underdogs.ts, Slaves and Khorne only): what ending a move here leaves the unit open to in the enemy's next turn, and
   // the battle tactics in hand it completes
   else {
     if (!final) score -= underdogExposure(state, player, unitId, placements, chargeNowP)
@@ -313,11 +314,41 @@ function scorePosition(state: GameState, player: PlayerId, unitId: UnitId, place
   return score
 }
 
+// what the charge a unit could make from `placements` (after `extraMove` more inches of movement first) is worth: the nearest enemy
+// with the unit's own dice, or the charge an army plans around (Killing Pounce: one more die, but it must end in combat with the
+// quarry, measured to the quarry, not the nearest enemy), whichever pays more
+function chargeOutlook(state: GameState, player: PlayerId, unitId: UnitId, placements: ModelPlacement[], nearestId: UnitId, gap: number, extraMove: number): number {
+  const dice = chargeDiceCount(state, unitId)
+  let best = chargeProb(Math.ceil(Math.max(0, gap - 0.5 - extraMove)), dice) * chargeTrade(state, player, unitId, nearestId)
+  const focus = khorneChargeFocus(state, player, unitId)
+  if (focus) {
+    // the roll has to reach ½" of an enemy model and 3" of the quarry: the larger of the two distances
+    const need = Math.max(gap - 0.5, placementGapTo(state, placements, focus.targetId) - ENGAGEMENT_H) - extraMove
+    best = Math.max(best, chargeProb(Math.ceil(Math.max(0, need)), dice + focus.extraDice) * chargeTrade(state, player, unitId, focus.targetId))
+  }
+  return best
+}
+
 // a Reinforcements unit that has not been replaced yet comes back once when it is destroyed (Call for Reinforcements, SPH core):
-// losing it costs less, so its risk terms are scaled by `factor`
+// losing it costs less, so the bot risks it more (`factor` < 1). Only when its replacement has somewhere to be set up: the engine
+// needs a legal formation for the full unit in the edge band of our territory, and a unit whose bases never fit there (asked once
+// per army and warscroll, at full strength) is no more expendable than any other
+const fitCache = new WeakMap<object, Map<string, boolean>>()
+function replacementCanFit(state: GameState, unitId: UnitId): boolean {
+  const u = state.units[unitId]
+  let m = fitCache.get(state.board)
+  if (!m) { m = new Map(); fitCache.set(state.board, m) }
+  const key = `${u.player}|${u.datasheetId}`
+  const hit = m.get(key)
+  if (hit !== undefined) return hit
+  const models = unitModels(state, unitId)
+  const fits = reinforcementOptions(state, u.player, models, datasheetOf(state, unitId).coherencyRange, 1).length > 0
+  if (models.length >= u.startingStrength) m.set(key, fits)
+  return fits
+}
 function expendable(state: GameState, unitId: UnitId, factor: number): number {
   const u = state.units[unitId]
-  return u && u.replacementOf === null && !u.replaced && hasKeyword(state, unitId, 'REINFORCEMENTS') ? factor : 1
+  return u && u.replacementOf === null && !u.replaced && hasKeyword(state, unitId, 'REINFORCEMENTS') && replacementCanFit(state, unitId) ? factor : 1
 }
 
 // the last turn of the battle is `player`'s own (the second turn of the last round): no enemy turn follows it
@@ -928,9 +959,14 @@ function scoreDeclareCharge(state: GameState, player: PlayerId, pending: Pending
   const reroll = hasChargeReroll(state, unitId)
   // what the unit's Control on the circle it stands on is worth at the end of this turn (lost if it charges off it)
   const leaveCost = myObjectives.length > 0 ? Math.max(0, objectiveVp(state, player) - objectiveVp(state, player, { unitId, placements: [] })) * VP_W * 0.25 : 0
-  for (const targetId of targets) {
+  // a charge that must end in combat with a named unit (Killing Pounce: the quarry) is judged against that unit only, and needs
+  // the distance the engine's own reach check measures (½" of an enemy model and 3" of each named unit)
+  const must = chargeMustEndInCombatWith(state, unitId)
+  const mustNeed = must.length > 0 ? neededChargeDistance(state, unitId) : null
+  if (must.length > 0 && mustNeed === null) return -2
+  for (const targetId of must.length > 0 ? must : targets) {
     const gap = minGapBetweenUnits(state, unitId, targetId)
-    const needed = Math.max(0, gap - 0.5)
+    const needed = mustNeed ?? Math.max(0, gap - 0.5)
     const dmg = unitMeleeDamage(state, unitId, targetId, { charged: true })
     const wounds = unitModels(state, targetId).reduce((a, m) => a + m.woundsRemaining, 0)
     let ret = unitMeleeDamage(state, targetId, unitId, {})
@@ -1106,10 +1142,14 @@ function abilityTiming(state: GameState, player: PlayerId, abilityId: string, un
 function chargeRerollGain(state: GameState, player: PlayerId, unitId: UnitId): number {
   if (engagedEnemyUnits(state, player, unitId).length > 0 || !hasAnyMeleeWeapon(state, unitId)) return 0
   let best = 0
+  const must = chargeMustEndInCombatWith(state, unitId)
+  const mustNeed = must.length > 0 ? neededChargeDistance(state, unitId) : null
+  if (must.length > 0 && mustNeed === null) return 0
   for (const e of boardUnitsOf(state, other(player))) {
+    if (must.length > 0 && !must.includes(e.id)) continue
     const gap = minGapBetweenUnits(state, unitId, e.id)
     if (gap <= ENGAGEMENT_H || gap > 6 * chargeDiceCount(state, unitId) + 0.5) continue
-    const p = chargeProb(Math.ceil(Math.max(0, gap - 0.5)), chargeDiceCount(state, unitId))
+    const p = chargeProb(Math.ceil(mustNeed ?? Math.max(0, gap - 0.5)), chargeDiceCount(state, unitId))
     const gain = (1 - (1 - p) * (1 - p)) - p
     best = Math.max(best, gain * (unitMeleeDamage(state, unitId, e.id, { charged: true }) * unitValue(state, e.id) * 0.02 + 1))
   }

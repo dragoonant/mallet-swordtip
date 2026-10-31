@@ -59,7 +59,6 @@
     "text": "In any hero phase, roll a dice: this unit can move up to that many inches. If it started the move out of combat it cannot end in combat. While your quarry is on the battlefield the move must end closer to it than it started.",
     "trigger": "activated",
     "timing": { "kind": "phase", "phase": "command", "whose": "any" },
-    "keywords": ["MOVE"],
     "code": "khorneStalkThePrey",
     "params": { "dice": "D6", "priority": "P2" }
   },
@@ -108,9 +107,9 @@
   {
     "id": "khorne.ability.killing-pounce",
     "name": "Killing Pounce",
-    "text": "Once per battle, in your charge phase, the general rolls 1 extra dice when it makes a charge roll for the rest of the turn (3 dice in total). While it does, its charge must end in combat with your quarry.",
+    "text": "Once per battle, at the start of any charge phase (the enemy's too, for a Counter-charge), the general rolls 1 extra dice when it makes a charge roll for the rest of the turn (3 dice in total). While it does, its charge must end in combat with your quarry.",
     "trigger": "activated",
-    "timing": { "kind": "phase", "phase": "charge", "whose": "your" },
+    "timing": { "kind": "phase", "phase": "charge", "whose": "any" },
     "limit": "oncePerBattle",
     "scope": { "who": "bearer" },
     "duration": "untilEndOfTurn",

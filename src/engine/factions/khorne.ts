@@ -19,8 +19,9 @@
 //        grants { lethalOn 5 } on melee until the end of the turn, `gateEffect` limits it to attacks on that target (ledger
 //        mission.custom.bokPack keyed by the granted effect's id).
 //  khorneSustainedByGore (ENH-1)  end of any turn; Heal (params.heal) the bearer while it is damaged.
-//  khorneKillingPounce (ENH-3)    charge phase start / your, oncePerBattle. Grants the bearer { extraChargeDice 1 } until the end of the turn; the
-//        same hook answers chargeMustEndInCombatWith (F14 C3) with the quarry while that effect is on the unit.
+//  khorneKillingPounce (ENH-3)    charge phase start / any (the card says any charge phase: the enemy's one matters for a Counter-charge),
+//        oncePerBattle. Grants the bearer { extraChargeDice 1 } until the end of the turn; the same hook answers chargeMustEndInCombatWith
+//        (F14 C3) with the quarry while that effect is on the unit.
 //  khorneFuriousBites (ENH-4)     end of any turn; params.damage mortal damage on the quarry while the bearer is in combat with it.
 //  Unflagging Hunters (AB-2, +1 charge) and Evasive Hunter (ENH-2, scope attacker) are data only.
 //
@@ -387,7 +388,8 @@ export function khorneAbilityTiming(state: GameState, player: PlayerId, code: st
       // when two dice rarely reach the quarry and three dice usually do
       const general = self && onBoard(state, self)
       const quarry = quarryOnBoard(state, player)
-      if (!general || !quarry) return -3
+      // the bot only charges in its own turn (no Counter-charge plan), so it keeps the once-per-battle use for its own charge phase
+      if (!general || !quarry || state.activePlayer !== player) return -3
       const need = neededChargeDistance(state, general.id, [quarry])
       if (need === null) return -3
       const two = sumAtLeast(Math.ceil(need), chargeDiceCount(state, general.id))
@@ -402,6 +404,18 @@ export function khorneAbilityTiming(state: GameState, player: PlayerId, code: st
     default:
       return null
   }
+}
+
+// the charge the bot plans its moves around (src/ai/utility.ts chargeOutlook): a general holding an unused Killing Pounce, with the
+// quarry on the battlefield, can roll one more die next charge phase, but that charge has to end in combat with the quarry
+export function khorneChargeFocus(state: GameState, player: PlayerId, unitId: UnitId): { targetId: UnitId; extraDice: number } | null {
+  const unit = state.units[unitId]
+  if (!unit || unit.player !== player) return null
+  const quarry = quarryOnBoard(state, player)
+  if (!quarry) return null
+  const pounce = Object.values(state.abilities).find((a) => a.code === CODE_POUNCE && a.bearerModelId !== null && unit.models.includes(a.bearerModelId))
+  if (!pounce || state.players[player].abilityUses.some((u) => u.abilityId === pounce.id)) return null
+  return { targetId: quarry, extraDice: num(paramOf(state, pounce.id, 'extraDice', 1), 1) }
 }
 
 export function khorneTargetBonus(state: GameState, player: PlayerId, code: string, unitId: UnitId): number | null {

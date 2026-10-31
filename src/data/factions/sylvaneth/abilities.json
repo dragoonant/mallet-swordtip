@@ -119,7 +119,6 @@
     "text": "When you declare a Fight ability for the bearer's unit and it charged this turn, once that ability has been resolved it can move up to 2D6\". It cannot end that move in combat.",
     "trigger": "activated",
     "timing": { "kind": "reaction", "trigger": "youDeclared", "keyword": "ATTACK" },
-    "keywords": ["MOVE"],
     "scope": { "who": "bearer" },
     "code": "sylvanethZephyrkin",
     "params": { "dice": "2D6", "priority": "P2" }

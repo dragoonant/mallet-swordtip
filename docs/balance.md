@@ -1,6 +1,130 @@
 # Balance matrix: AI vs AI
 
-Three dated sections follow: F13 (the latest, all twelve armies), F10 and F9 (the eight-army runs).
+Four dated sections follow: F15 (the latest, all sixteen armies), F13 (twelve armies), F10 and F9 (the eight-army runs).
+
+## 2026-10-31, F15
+
+The first matrix with all sixteen Spearhead armies: the twelve from F13 plus Blades of Khorne, Maggotkin of Nurgle,
+Nighthaunt and Sylvaneth (added in F14). 120 pairings, 24 games each, 2,880 games, seed 21, Fire and Jade Aqshy, utility AI
+on both seats, seats and loadouts alternating as before. Every run reported 0 invariant violations; 173 games were drawn.
+The F14 rules audit of the four new armies had landed before the run started, and none of their data or hook files changed
+while it ran.
+
+Commands: `npm run sim -- --games 6 --from N --seed 21 --ai --armies a,b` for N = 0, 6, 12 and 18, once per pair of the
+sixteen armies taken in the order cities, ironjawz, slaves, fyreslayers, kruleboyz, gloomspite, lumineth, kharadron,
+stormcast, skaven, seraphon, soulblight, khorne, nurgle, nighthaunt, sylvaneth, about 20 processes at a time. Splitting a
+pairing with `--from` gives the same games as one 24-game run.
+
+### Army overall win rate
+
+Each army played 15 pairings x 24 games = 360 games. "Score" counts a draw as half a win. The last column is the F13 win %
+(twelve armies, 11 pairings each).
+
+| army | wins | draws | losses | win % | score % | win % F13 |
+|---|---|---|---|---|---|---|
+| sylvaneth | 253 | 23 | 84 | 70.3% | 73.5% | new |
+| nurgle | 251 | 28 | 81 | 69.7% | 73.6% | new |
+| nighthaunt | 226 | 27 | 107 | 62.8% | 66.5% | new |
+| kharadron | 221 | 28 | 111 | 61.4% | 65.3% | 63.6% |
+| stormcast | 215 | 22 | 123 | 59.7% | 62.8% | 64.8% |
+| ironjawz | 208 | 24 | 128 | 57.8% | 61.1% | 59.5% |
+| soulblight | 190 | 26 | 144 | 52.8% | 56.4% | 59.1% |
+| seraphon | 185 | 28 | 147 | 51.4% | 55.3% | 50.4% |
+| kruleboyz | 183 | 22 | 155 | 50.8% | 53.9% | 53.0% |
+| fyreslayers | 151 | 18 | 191 | 41.9% | 44.4% | 42.8% |
+| lumineth | 148 | 19 | 193 | 41.1% | 43.8% | 41.7% |
+| skaven | 128 | 18 | 214 | 35.6% | 38.1% | 37.5% |
+| cities | 125 | 28 | 207 | 34.7% | 38.6% | 36.7% |
+| gloomspite | 111 | 16 | 233 | 30.8% | 33.1% | 28.0% |
+| slaves | 90 | 14 | 256 | 25.0% | 26.9% | 23.9% |
+| khorne | 22 | 5 | 333 | 6.1% | 6.8% | new |
+
+### Head-to-head wins (out of 24 games each)
+
+Read across: the number is how many of the 24 games the row army won against the column army.
+
+| row beat column | cities | ironjawz | slaves | fyreslayers | kruleboyz | gloomspite | lumineth | kharadron | stormcast | skaven | seraphon | soulblight | khorne | nurgle | nighthaunt | sylvaneth |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **cities** | - | 6 | 14 | 6 | 6 | 13 | 10 | 9 | 4 | 15 | 5 | 8 | 16 | 1 | 8 | 4 |
+| **ironjawz** | 15 | - | 21 | 17 | 8 | 20 | 11 | 11 | 10 | 15 | 11 | 17 | 22 | 11 | 10 | 9 |
+| **slaves** | 9 | 3 | - | 10 | 4 | 7 | 8 | 1 | 5 | 6 | 7 | 3 | 20 | 1 | 2 | 4 |
+| **fyreslayers** | 13 | 7 | 13 | - | 13 | 16 | 11 | 6 | 4 | 15 | 9 | 6 | 22 | 9 | 4 | 3 |
+| **kruleboyz** | 15 | 15 | 18 | 9 | - | 18 | 13 | 2 | 5 | 17 | 17 | 12 | 24 | 6 | 6 | 6 |
+| **gloomspite** | 8 | 3 | 16 | 8 | 6 | - | 11 | 3 | 4 | 8 | 6 | 2 | 23 | 4 | 7 | 2 |
+| **lumineth** | 12 | 10 | 16 | 11 | 9 | 11 | - | 7 | 4 | 17 | 6 | 8 | 23 | 4 | 4 | 6 |
+| **kharadron** | 15 | 9 | 22 | 16 | 22 | 20 | 14 | - | 9 | 16 | 16 | 11 | 24 | 11 | 7 | 9 |
+| **stormcast** | 19 | 12 | 18 | 20 | 19 | 18 | 18 | 11 | - | 18 | 12 | 8 | 24 | 2 | 7 | 9 |
+| **skaven** | 9 | 7 | 17 | 9 | 6 | 15 | 7 | 5 | 6 | - | 11 | 6 | 21 | 4 | 1 | 4 |
+| **seraphon** | 16 | 12 | 16 | 13 | 5 | 16 | 18 | 5 | 11 | 10 | - | 9 | 24 | 10 | 12 | 8 |
+| **soulblight** | 15 | 5 | 19 | 17 | 10 | 21 | 16 | 12 | 15 | 16 | 10 | - | 20 | 1 | 7 | 6 |
+| **khorne** | 7 | 1 | 4 | 2 | 0 | 1 | 1 | 0 | 0 | 2 | 0 | 3 | - | 0 | 0 | 1 |
+| **nurgle** | 21 | 12 | 22 | 15 | 15 | 20 | 19 | 12 | 16 | 20 | 10 | 20 | 24 | - | 17 | 8 |
+| **nighthaunt** | 15 | 12 | 21 | 18 | 15 | 17 | 18 | 13 | 16 | 21 | 12 | 14 | 23 | 6 | - | 5 |
+| **sylvaneth** | 18 | 14 | 19 | 20 | 17 | 20 | 18 | 14 | 14 | 18 | 15 | 17 | 23 | 11 | 15 | - |
+
+### Most lopsided pairings
+
+| pairing | first army wins | second army wins | draws |
+|---|---|---|---|
+| kruleboyz v khorne | 24 | 0 | 0 |
+| kharadron v khorne | 24 | 0 | 0 |
+| stormcast v khorne | 24 | 0 | 0 |
+| seraphon v khorne | 24 | 0 | 0 |
+| khorne v nurgle | 0 | 24 | 0 |
+| khorne v nighthaunt | 0 | 23 | 1 |
+| gloomspite v khorne | 23 | 1 | 0 |
+| lumineth v khorne | 23 | 1 | 0 |
+| khorne v sylvaneth | 1 | 23 | 0 |
+| ironjawz v khorne | 22 | 1 | 1 |
+| slaves v kharadron | 1 | 22 | 1 |
+| slaves v nurgle | 1 | 22 | 1 |
+| cities v nurgle | 1 | 21 | 2 |
+| fyreslayers v khorne | 22 | 2 | 0 |
+| kruleboyz v kharadron | 2 | 22 | 0 |
+
+### Notes
+
+- Outliers: **Blades of Khorne at 6.1%** (22 wins in 360) is far below 25%, and **Sylvaneth at 70.3%** is just above 70%,
+  with **Nurgle** right under it at 69.7%. Slaves to Darkness sit exactly on the line at 25.0%. Nighthaunt land at 62.8%.
+- Against the twelve older armies only: Sylvaneth 70.8%, Nurgle 70.1%, Nighthaunt 66.7%, Khorne 7.3%. Nurgle lose only to
+  Sylvaneth (8-11), tie Seraphon 10-10 and beat Nighthaunt 17-6; Sylvaneth win the majority of games in all 15 pairings. Khorne's best result is 7-16 against
+  Cities; they won 0 games against Kruleboyz, Kharadron, Stormcast, Seraphon, Nurgle and Nighthaunt.
+- Why Khorne loses: all three of its non-Hero units carry Reinforcements and are meant to come back once, and none ever
+  does. The engine cannot find a legal place for the replacement of a Flesh Hounds unit (five 60x35 mm ovals) or the
+  Claws of Karanak (four different base sizes), so Call for Reinforcements is never offered for them. The same is true of
+  the Cities Freeguild Cavaliers and the Slaves Fellriders. The cause is in `src/engine/factions/aos-moves.ts`
+  `reinforcementFormation`: it lays its candidate grid out at the long radius of the largest base, so oval or mixed bases
+  end up more than ½" apart and fail coherency. That file is outside this stage; fixing it is the next balance step for
+  Khorne. Beyond that the army is fragile (35 Health, 6+ and 5+ saves) and its traced games show it winning early fights
+  and then being worn down with nothing coming back.
+- The twelve older armies barely moved against each other: their win rates against the older twelve match F13 within 1
+  point. The runs are deterministic and every AI change below is gated to the armies it names or to Reinforcements units
+  that cannot come back, so the only older cells that changed involve Cities or Slaves (their Cavaliers and Fellriders are
+  now valued as units that will not return). Spot check Kharadron v Cities: 15-9 (F13 14-10), within noise.
+- AI changes in F15:
+  - Killing Pounce (`src/ai/utility.ts` `chargeOutlook` and `scoreDeclareCharge`, hint `khorneChargeFocus` in
+    `src/engine/factions/khorne.ts`): position scores used to price the general's charge against the nearest enemy only.
+    While the enhancement is unused and the quarry is on the battlefield, they now also price a charge with one more die
+    measured to the quarry (the roll must reach ½" of an enemy and 3" of the quarry), and keep whichever is worth more. Once
+    Pounce is active, the charge declaration and the charge re-roll value are judged against the quarry only, using the
+    engine's own constrained distance. The sim never deals Killing Pounce (it uses the default and the last enhancement,
+    Evasive Hunter and Furious Bites), so the matrix cannot see this. A 6-game probe against Cities with Pounce forced in
+    used it 4 times with no rejected actions. Test: tests/ai/khorne-ai.test.ts (BOK-AI-1).
+  - Khorne joins the Slaves "underdog" hints (`src/ai/underdogs.ts`): what a move leaves the unit open to on the enemy
+    turn, the battle tactics it completes, and a heavier weight on held objectives. Traces showed Flesh Hounds running to
+    3 or 4" from an enemy (no charge is allowed after a Run) and being charged off the table, and Karanak stepping out
+    alone in round 1. A 6-game-a-pairing check against all 15 opponents went from 3 to 7 wins in 90.
+  - `expendable` (`src/ai/utility.ts`) now asks whether the engine can set a replacement up before it treats a
+    Reinforcements unit as cheap to lose. That keeps Khorne's units, the Cavaliers and the Fellriders from trading as if
+    they would come back. It returns to the old behaviour on its own once the placement bug is fixed.
+  - `tools/ai-trace.ts --moves` also logs every move (type, gap to the nearest enemy before and after) and every
+    charge-phase pick or pass.
+- Nurgle, Nighthaunt and Sylvaneth traces and `tools/balance-stats.ts` runs (6 games each against Ironjawz) showed no clearly
+  wrong play: they use their abilities every turn they can, charge with their melee units, and Sylvaneth spend their
+  Spiterider charges and Heartwood Hunting Horn. Their high rates come from the warscrolls, not from AI mistakes the
+  opponents make against them.
+- With 24 games a pairing, a single cell can move by 4 or 5 wins from sampling alone, and an army's overall rate by about
+  3 points.
 
 ## 2026-10-31, F13
 

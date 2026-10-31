@@ -21,7 +21,7 @@
     "id": "khorne.enh.killing-pounce",
     "faction": "khorne",
     "name": "Killing Pounce",
-    "text": "Once per battle, in your charge phase, the general rolls one extra charge die for the turn, but its charge then has to end in combat with your quarry.",
+    "text": "Once per battle, in any charge phase, the general rolls one extra charge die for the turn, but its charge then has to end in combat with your quarry.",
     "cost": 0,
     "restriction": {},
     "effect": "khorne.ability.killing-pounce"

@@ -565,6 +565,10 @@ describe('SYL-ENH enhancements', () => {
   })
 
   it('SYL-ENH-2 Zephyrkin: offered when the general is picked to fight after charging; after its attacks it may move up to 2D6" and must end out of combat; not offered if it did not charge', () => {
+    // the card prints no ability keywords (unlike Zephyrspites, which prints Move)
+    const descriptors = abilitiesJson as unknown as AbilityDescriptor[]
+    expect(descriptors.find((a) => a.id === 'sylvaneth.ability.zephyrkin')?.keywords ?? []).toEqual([])
+    expect(descriptors.find((a) => a.id === 'sylvaneth.ability.zephyrspites')?.keywords).toEqual(['MOVE'])
     const s = game({ enh: KIN })
     s.phase = 'fight'
     centreRow(s, ARCH, 0, -2)

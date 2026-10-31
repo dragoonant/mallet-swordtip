@@ -4,6 +4,8 @@
 // F11 measured (24 games a pairing, seeds 21 and 22, Slaves vs the 7 others): 74/336 wins -> 90/336. The same terms tried on
 // Gloomspite Gitz, and charge focus, Flankin' Force placement, twist-aware play, Kunnin' timing, boss escort and turn-order
 // choices for either army, measured flat or worse, so they are not here.
+// F15: Blades of Khorne join (fragile Beasts that ran to 3-4" of an enemy, where they could not charge, and were charged off):
+// 3/90 -> 7/90 wins in a 6-game-a-pairing check against the other 15 armies.
 import { boardUnitsOf, modelStats, unitModels, type GameState, type ModelPlacement, type PlayerId, type UnitId } from '../engine'
 import { losService } from '../engine/los'
 import { objectiveByName } from '../engine/cardFlags'
@@ -11,7 +13,7 @@ import { tacticMet } from '../engine/cards'
 import { unitMeleeDamage, unitRangedDamage, unitValue } from './expected'
 import { controlAfter } from './objectives'
 
-const UNDERDOGS: ReadonlySet<string> = new Set(['slaves'])
+const UNDERDOGS: ReadonlySet<string> = new Set(['slaves', 'khorne'])
 
 export function isUnderdog(state: GameState, player: PlayerId): boolean {
   return UNDERDOGS.has(state.players[player]?.faction ?? '')
